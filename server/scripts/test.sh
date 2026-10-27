@@ -30,7 +30,9 @@ docker run -d --name "$CONTAINER" \
   -p "$PORT":5432 postgres:16-alpine >/dev/null
 
 i=0
-until docker exec "$CONTAINER" pg_isready -U newme >/dev/null 2>&1; do
+# Probing over TCP skips the init-time server, which listens on the unix socket only and
+# restarts before the real one comes up.
+until docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U newme >/dev/null 2>&1; do
   i=$((i + 1))
   if [ "$i" -gt 60 ]; then
     echo "Postgres did not become ready in 60s" >&2

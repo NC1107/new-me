@@ -1,10 +1,17 @@
 // Command server runs the New Me API server.
+//
+// Subcommands and flags:
+//
+//	server               run the API server and the day scheduler
+//	server invite        print a fresh single-use invite code and exit
+//	server -healthcheck  probe the local health endpoint and exit 0 or 1
 package main
 
 import (
 	"context"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,7 +21,11 @@ import (
 	"github.com/nc1107/new-me/server/internal/api"
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/sched"
 )
+
+// version is stamped at build time with -ldflags "-X main.version=1.2.3".
+var version = "dev"
 
 func main() {
 	// The distroless image has no shell or curl, so the container probes itself.
@@ -27,12 +38,20 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	database, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
 	defer database.Close()
+
+	if len(os.Args) > 1 && os.Args[1] == "invite" {
+		if err := runInvite(ctx, database, os.Stdout, os.Stderr); err != nil {
+			log.Fatalf("invite: %v", err)
+		}
+		return
+	}
 
 	if err := database.Migrate(ctx); err != nil {
 		log.Fatalf("migrate: %v", err)
@@ -41,9 +60,11 @@ func main() {
 		log.Printf("seed server name: %v", err)
 	}
 
+	go sched.New(database).Run(ctx)
+
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           api.New(cfg, database).Router(),
+		Handler:           api.New(cfg, database).WithVersion(version).Router(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -51,15 +72,13 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("[NEWME] server listening on %s", cfg.HTTPAddr)
+		log.Printf("[NEWME] server %s listening on %s", version, cfg.HTTPAddr)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("listen: %v", err)
 		}
 	}()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
+	<-ctx.Done()
 	log.Println("[NEWME] shutting down...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -72,8 +91,12 @@ func healthcheck() int {
 	if addr == "" {
 		addr = ":8080"
 	}
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 1
+	}
 	client := http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get("http://127.0.0.1" + addr + "/api/health")
+	resp, err := client.Get("http://" + net.JoinHostPort("127.0.0.1", port) + "/api/health")
 	if err != nil {
 		return 1
 	}

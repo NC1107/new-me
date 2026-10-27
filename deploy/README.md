@@ -10,3 +10,5 @@ Traefik routes `new-me.npc-server.top` to the server container and issues the ce
 Watchtower in label mode pulls a new `ghcr.io/nc1107/new-me:latest` after every release, so merging to `main` is a deploy.
 Migrations run when the server starts.
 Database dumps land in `./backups` daily and are kept for 7 days, 4 weeks and 12 months.
+
+Rollback: watchtower never rolls back, so set `NEWME_TAG` in `.env` to the previous `X.Y.Z` and run `docker compose up -d`.

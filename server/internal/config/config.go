@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
+
+	"github.com/nc1107/new-me/server/internal/semver"
 )
 
 // minAppKeyLen keeps the shared app key from being a guessable word.
@@ -25,8 +26,13 @@ type Config struct {
 	// The client IP is read from the X-Forwarded-For chain at that exact position, so a
 	// caller cannot forge it; the default is one (Traefik).
 	TrustedProxyHops int
-	// SeasonStart optionally overrides when the first season begins. Zero means unset.
-	SeasonStart time.Time
+	// MaxUsers caps how many people may join this server.
+	MaxUsers int
+	// MinClientVersion is the oldest app version the server serves; older ones get a 426.
+	MinClientVersion string
+	// DevCORS allows localhost browser origins, for reviewing the web build. Never set in
+	// production.
+	DevCORS bool
 }
 
 // Load reads configuration from the environment.
@@ -38,20 +44,23 @@ func Load() (Config, error) {
 		AppKey:           os.Getenv("NEWME_APP_KEY"),
 		ServerName:       getenv("NEWME_SERVER_NAME", "New Me"),
 		TrustedProxyHops: getPositiveInt("NEWME_TRUSTED_PROXY_HOPS", 1),
+		MaxUsers:         getPositiveInt("NEWME_MAX_USERS", 2),
+		MinClientVersion: getenv("NEWME_MIN_CLIENT_VERSION", "0.0.0"),
 	}
+	if _, err := semver.Parse(cfg.MinClientVersion); err != nil {
+		return cfg, fmt.Errorf("NEWME_MIN_CLIENT_VERSION: %w", err)
+	}
+	devCORS, err := getBool("NEWME_DEV_CORS")
+	if err != nil {
+		return cfg, err
+	}
+	cfg.DevCORS = devCORS
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf(
 			"NEWME_DATABASE_URL is required, e.g. postgres://user:password@host:5432/newme?sslmode=disable")
 	}
 	if len(cfg.AppKey) < minAppKeyLen {
 		return cfg, fmt.Errorf("NEWME_APP_KEY is required and must be at least %d characters", minAppKeyLen)
-	}
-	if v := os.Getenv("NEWME_SEASON_START"); v != "" {
-		t, err := time.Parse(time.DateOnly, v)
-		if err != nil {
-			return cfg, fmt.Errorf("NEWME_SEASON_START must be an ISO date (YYYY-MM-DD): %w", err)
-		}
-		cfg.SeasonStart = t
 	}
 	return cfg, nil
 }
@@ -72,4 +81,18 @@ func getPositiveInt(key string, def int) int {
 		}
 	}
 	return def
+}
+
+// getBool reads a boolean flag, treating unset as false and rejecting anything unparseable so a
+// typo cannot silently leave a safety switch in the wrong position.
+func getBool(key string) (bool, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return false, nil
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean: %w", key, err)
+	}
+	return b, nil
 }

@@ -5,6 +5,10 @@ name: Release
 # only rebuild the latest tag for TestFlight so the newest build never nears the 90 day
 # expiry. One workflow means one run_number counter and one concurrency group, so build
 # numbers never collide and an untagged commit can never ship.
+#
+# A manual run with dry_run builds, signs, exports and validates the IPA from the chosen
+# branch and stops there: no tests, tag, upload, image or GitHub release. It is how a branch
+# proves a signing change before it reaches main.
 
 on:
   push:
@@ -12,12 +16,18 @@ on:
   schedule:
     - cron: '17 6 1,15 * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only build, sign, export and validate the IPA from this ref
+        type: boolean
+        default: false
 
 # No workflow-wide permissions: every job states exactly what it needs.
 permissions: {}
 
 concurrency:
-  group: release
+  # A dry run never tags or uploads, so it need not wait behind a real release.
+  group: ${{ inputs.dry_run && format('release-dry-run-{0}', github.ref) || 'release' }}
   cancel-in-progress: false
 
 env:
@@ -27,6 +37,7 @@ jobs:
   # ci.yml ignores main, so without this gate a broken merge would publish untested.
   test-server:
     name: Test server (Go)
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -65,6 +76,7 @@ jobs:
 
   test-app:
     name: Test app (Flutter)
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -90,6 +102,7 @@ jobs:
   version:
     name: Compute version
     needs: [test-server, test-app]
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: write # pushes the release tag
@@ -189,6 +202,8 @@ jobs:
   app-store:
     name: Build & upload iOS to TestFlight
     needs: version
+    # A dry run skips the version job, which would otherwise skip this one too.
+    if: ${{ !cancelled() && (inputs.dry_run || needs.version.result == 'success') }}
     runs-on: macos-15
     permissions:
       contents: read
@@ -196,19 +211,39 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          # Rebuilds must ship the tagged commit, not whatever main has moved on to.
-          ref: ${{ github.event_name != 'push' && needs.version.outputs.tag || '' }}
+          # Rebuilds must ship the tagged commit, not whatever main has moved on to. A dry run
+          # builds the ref it was started on.
+          ref: ${{ !inputs.dry_run && github.event_name != 'push' && needs.version.outputs.tag || '' }}
+      - name: Resolve version and build number
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            git fetch --tags --quiet
+            last=$(git tag --list 'v*' --sort=-v:refname | head -1)
+            VERSION=${last#v}
+            VERSION=${VERSION:-0.0.1}
+            BUILD_NUMBER=$(( ${{ github.run_number }} * 100 + ${{ github.run_attempt }} ))
+          fi
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "APP_BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "building $VERSION ($BUILD_NUMBER)"
       - name: Require signing and app secrets
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_WIDGET_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROFILE_BASE64 }}
+          IOS_WATCH_PROFILE_BASE64: ${{ secrets.IOS_WATCH_PROFILE_BASE64 }}
+          IOS_WATCH_WIDGETS_PROFILE_BASE64: ${{ secrets.IOS_WATCH_WIDGETS_PROFILE_BASE64 }}
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           NEWME_APP_KEY: ${{ secrets.NEWME_APP_KEY }}
         run: |
           for name in IOS_CERTIFICATE_BASE64 IOS_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 \
+                      IOS_WIDGET_PROFILE_BASE64 IOS_WATCH_PROFILE_BASE64 IOS_WATCH_WIDGETS_PROFILE_BASE64 \
                       ASC_API_KEY_BASE64 ASC_KEY_ID ASC_ISSUER_ID NEWME_APP_KEY; do
             test -n "${!name}" || { echo "::error::Secret $name is not set"; exit 1; }
           done
@@ -249,14 +284,15 @@ jobs:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_WIDGET_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROFILE_BASE64 }}
+          IOS_WATCH_PROFILE_BASE64: ${{ secrets.IOS_WATCH_PROFILE_BASE64 }}
+          IOS_WATCH_WIDGETS_PROFILE_BASE64: ${{ secrets.IOS_WATCH_WIDGETS_PROFILE_BASE64 }}
         run: |
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
           echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
-          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PP_PATH"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -267,10 +303,18 @@ jobs:
             -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< \
-            $(security cms -D -i "$PP_PATH"))
-          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          # The app, its widgets, the Watch app and its complication each have their own profile.
+          PROFILES_DIR=~/Library/MobileDevice/Provisioning\ Profiles
+          mkdir -p "$PROFILES_DIR"
+          for name in IOS_PROVISIONING_PROFILE_BASE64 IOS_WIDGET_PROFILE_BASE64 IOS_WATCH_PROFILE_BASE64 \
+                      IOS_WATCH_WIDGETS_PROFILE_BASE64; do
+            PP_PATH=$RUNNER_TEMP/$name.mobileprovision
+            echo "${!name}" | base64 --decode > "$PP_PATH"
+            security cms -D -i "$PP_PATH" > "$RUNNER_TEMP/$name.plist"
+            UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$RUNNER_TEMP/$name.plist")
+            echo "installed $(/usr/libexec/PlistBuddy -c "Print Name" "$RUNNER_TEMP/$name.plist") ($UUID)"
+            cp "$PP_PATH" "$PROFILES_DIR/$UUID.mobileprovision"
+          done
       - name: Set up App Store Connect API key
         env:
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
@@ -286,12 +330,31 @@ jobs:
           flutter config --no-enable-swift-package-manager
           flutter pub get --enforce-lockfile
           flutter build ipa --release \
-            --build-name=${{ needs.version.outputs.version }} \
-            --build-number=${{ needs.version.outputs.build_number }} \
+            --build-name="$APP_VERSION" \
+            --build-number="$APP_BUILD_NUMBER" \
             --export-options-plist=ios/ExportOptions.plist \
             --dart-define=NEWME_APP_KEY="$NEWME_APP_KEY" \
-            --dart-define=NEWME_CLIENT_VERSION=${{ needs.version.outputs.version }}
+            --dart-define=NEWME_CLIENT_VERSION="$APP_VERSION"
+      # App Store Connect rejects an embedded bundle whose version differs from the app's or
+      # whose signature does not hold, so fail here with a readable reason instead.
+      - name: Check embedded bundles
+        run: bash scripts/check-ipa.sh "$(find app/build/ios -name '*.ipa' | head -1)" "$APP_VERSION" "$APP_BUILD_NUMBER"
+      - name: Validate with App Store Connect
+        if: ${{ inputs.dry_run }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          IPA=$(find app/build/ios -name "*.ipa" | head -1)
+          xcrun altool --validate-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee validate.log
+          if grep -qE "Validation failed|VALIDATION FAILED" validate.log; then
+            echo "::error::App Store Connect validation failed"
+            exit 1
+          fi
       - name: Upload to TestFlight
+        if: ${{ !inputs.dry_run }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -310,11 +373,12 @@ jobs:
           fi
       # A green upload does not mean a usable build: processing can still reject it.
       - name: Wait for App Store Connect processing
+        if: ${{ !inputs.dry_run }}
         env:
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+          BUILD_NUMBER: ${{ env.APP_BUILD_NUMBER }}
         run: bash scripts/asc-wait.sh
 
   release:
@@ -364,7 +428,7 @@ jobs:
   report-failure:
     name: Open issue on failure
     needs: [test-server, test-app, version, docker, app-store, release, deploy-verify]
-    if: failure()
+    if: ${{ failure() && !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       issues: write

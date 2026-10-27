@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/board.dart';
+import '../../state/companion.dart';
 import '../../state/habit_reminders.dart';
 import '../../state/health_sync.dart';
 import '../../state/listening_sync.dart';
@@ -41,6 +42,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.read(remindersProvider);
     ref.read(habitRemindersProvider);
     ref.read(pushProvider);
+    ref.read(companionProvider);
     unawaited(_followDeviceTimezone());
     unawaited(ref.read(listeningSyncProvider).syncThenRefreshToday(onlyIfSynced: true));
     _lifecycle = AppLifecycleListener(onResume: _onResume);

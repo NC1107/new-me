@@ -62,7 +62,7 @@ A watchOS app (`top.npcserver.newme.watchkitapp`, HealthKit and App Group), Swif
 
 ## Build and release
 
-- The widget and Watch targets are added to the Xcode project; `release.yml` installs the three profiles (secrets `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_WIDGET_PROFILE_BASE64`, `IOS_WATCH_PROFILE_BASE64`) and `ExportOptions.plist` maps each bundle id to its profile.
+- The widget and Watch targets are added to the Xcode project; `release.yml` installs the four profiles (secrets `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_WIDGET_PROFILE_BASE64`, `IOS_WATCH_PROFILE_BASE64`, `IOS_WATCH_WIDGETS_PROFILE_BASE64`) and `ExportOptions.plist` maps each bundle id to its profile.
 - Every native change is verified by the CI iOS build before it reaches `main`.
 
 ## Server decisions
@@ -128,3 +128,25 @@ Where this document left a choice open, the server does the following.
 | `NEWME_ANTHROPIC_BASE_URL` | optional override of `https://api.anthropic.com` |
 
 The listening and nudge features need no new configuration: listening follows `NEWME_ABS_URL` and nudges follow the APNs variables.
+
+- A manual `release.yml` run with `dry_run` builds, signs, exports, checks and validates the IPA from a branch without tagging or uploading, so signing changes are proven before they merge.
+
+## Decisions for widgets and Watch
+
+The build is described in `docs/design.md` under "Widgets and Watch (v6)"; these are the choices behind it.
+
+- **One snapshot, written by Dart.** Flutter already holds Today and the session, so it builds the JSON and the native side only stores and forwards it.
+  Swift never fetches `/api/today`, which keeps the flattening of habits into slots in one tested place.
+- **A file in the App Group, not shared defaults.** An atomic write with "complete until first user authentication" protection never leaves a half-written snapshot and stays readable when a widget refreshes on a locked phone.
+- **The token travels in the snapshot.** The interactive widget and the Watch call the API themselves; the App Group is readable only by this team's signed bundles.
+  Sign-out deletes the file and sends an empty context to the Watch.
+- **Optimistic widget taps.** The intent writes the change and reloads before the request, then folds in the server's answer or undoes only its own change.
+  A count habit goes up by one per tap.
+- **Watch: network first, then the phone.** A Watch with its own connection talks to the API directly; with none (or a 5xx) it hands the same request to the phone over `sendMessage`, and the phone answers with the status and body.
+  The phone activates WatchConnectivity at launch, before any Flutter engine, because that message can wake it in the background.
+- **Midnight makes the snapshot stale.** Widgets and the Watch show "New day" instead of yesterday's numbers until the app runs again.
+- **Reading minutes on the Watch** sit beside push-ups on the Log page, as section 5 lists, both on the Digital Crown.
+- **The complication is its own extension.** A watchOS complication must be a widget extension with its own bundle id and profile, so `NewMeComplication` (`top.npcserver.newme.watchkitapp.widgets`, profile "New Me Watch Widgets App Store") is embedded in the Watch app by an "Embed Foundation Extensions" phase.
+  Apple refused `top.npcserver.newme.watchkitapp.complication` as unavailable, so the id ends in `.widgets` while the target keeps its name.
+- **HealthKit on the Watch** is entitled and described because the profile carries it, but nothing reads Health on the Watch yet; the phone's background delivery already covers the data.
+- **Icons.** The Watch icon is a single 1024 px opaque PNG generated from `assets/brand/icon-1024.png` with ImageMagick; widget extensions need none.

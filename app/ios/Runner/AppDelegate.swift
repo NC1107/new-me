@@ -13,6 +13,9 @@ import UserNotifications
   ) -> Bool {
     // Without this the evening reminder is dropped while the app is in the foreground.
     UNUserNotificationCenter.current().delegate = self
+    // A Watch tap with no network of its own wakes the phone in the background, before any
+    // Flutter engine exists, so the session has to be live from launch.
+    WatchRelay.shared.activate()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -31,6 +34,9 @@ import UserNotifications
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "PushBridge") {
       PushBridge.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "CompanionBridge") {
+      CompanionBridge.register(with: registrar)
     }
   }
 }

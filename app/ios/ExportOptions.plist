@@ -12,6 +12,12 @@
 	<dict>
 		<key>top.npcserver.newme</key>
 		<string>New Me App Store Distribution</string>
+		<key>top.npcserver.newme.widgets</key>
+		<string>New Me Widgets App Store</string>
+		<key>top.npcserver.newme.watchkitapp</key>
+		<string>New Me Watch App Store</string>
+		<key>top.npcserver.newme.watchkitapp.widgets</key>
+		<string>New Me Watch Widgets App Store</string>
 	</dict>
 	<key>signingCertificate</key>
 	<string>Apple Distribution</string>

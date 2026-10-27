@@ -57,29 +57,32 @@ class SetupNowCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Finish your setup', style: AppText.headline.copyWith(fontSize: 18)),
-                  const SizedBox(height: 2),
-                  Text(line, style: AppText.label.copyWith(color: kInkSecondary)),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Open About you',
-                            style: AppText.label.copyWith(color: context.accentText),
+            // The card's label reads this text, so it is not read a second time.
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Finish your setup', style: AppText.headline.copyWith(fontSize: 18)),
+                    const SizedBox(height: 2),
+                    Text(line, style: AppText.label.copyWith(color: kInkSecondary)),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Open About you',
+                              style: AppText.label.copyWith(color: context.accentText),
+                            ),
                           ),
-                        ),
-                        Icon(Icons.chevron_right_rounded, color: context.accentText),
-                      ],
+                          Icon(Icons.chevron_right_rounded, color: context.accentText),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

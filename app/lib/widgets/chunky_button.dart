@@ -154,7 +154,10 @@ class _ChunkyButtonState extends State<ChunkyButton> {
       ),
     );
 
+    // A container, so text next to the button in a card stays its own node instead of merging
+    // into the button's label.
     return Semantics(
+      container: true,
       button: true,
       enabled: _enabled,
       label: widget.label,

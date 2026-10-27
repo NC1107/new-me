@@ -159,34 +159,37 @@ class _EmptyCard extends StatelessWidget {
     final palette = context.accentPalette;
     return AppCard(
       onTap: onTap,
-      semanticLabel: 'Add your first habit',
+      semanticLabel: 'Add your first habit. Brush teeth, creatine, water. Marked off in one tap.',
       padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-            child: Icon(Icons.add_rounded, color: palette.lip),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add your first habit',
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w800),
-                ),
-                Text(
-                  'Brush teeth, creatine, water. Marked off in one tap.',
-                  style: AppText.caption.copyWith(color: kInkSecondary),
-                ),
-              ],
+      // The label reads this text, so it is not read a second time.
+      child: ExcludeSemantics(
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+              child: Icon(Icons.add_rounded, color: palette.lip),
             ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: kInkMuted),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add your first habit',
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    'Brush teeth, creatine, water. Marked off in one tap.',
+                    style: AppText.caption.copyWith(color: kInkSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+          ],
+        ),
       ),
     );
   }

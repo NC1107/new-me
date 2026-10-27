@@ -50,8 +50,11 @@ class ReadinessCard extends StatelessWidget {
     final reasons = readiness.findings.take(2).toList();
     return AppCard(
       onTap: onTap,
-      semanticLabel:
-          'Readiness: ${readinessTitle(level)}. ${reasons.map((r) => r.text).join('. ')}',
+      semanticLabel: [
+        'Readiness: ${readinessTitle(level)}',
+        for (final r in reasons) r.text,
+        ?readiness.basisNote,
+      ].join('. '),
       padding: const EdgeInsets.fromLTRB(14, 6, 2, 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,37 +70,40 @@ class ReadinessCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(readinessTitle(level), style: AppText.headline.copyWith(fontSize: 18)),
-                  for (final r in reasons)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(r.text, style: AppText.label.copyWith(color: kInkSecondary)),
-                    ),
-                  if (readiness.basisNote case final note?)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(note, style: AppText.caption),
-                    ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'See why and the plan',
-                            style: AppText.label.copyWith(color: context.accentText),
+            // The card's label reads this text, so it is not read a second time.
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(readinessTitle(level), style: AppText.headline.copyWith(fontSize: 18)),
+                    for (final r in reasons)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(r.text, style: AppText.label.copyWith(color: kInkSecondary)),
+                      ),
+                    if (readiness.basisNote case final note?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(note, style: AppText.caption),
+                      ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'See why and the plan',
+                              style: AppText.label.copyWith(color: context.accentText),
+                            ),
                           ),
-                        ),
-                        Icon(Icons.chevron_right_rounded, color: context.accentText),
-                      ],
+                          Icon(Icons.chevron_right_rounded, color: context.accentText),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

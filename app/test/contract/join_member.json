@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "path": "/api/join",
+  "status": 201,
+  "request": {
+    "code": "ABCD-EFGH-JKLM-NPQR",
+    "name": "Sam",
+    "color": "violet",
+    "timezone": "America/New_York"
+  },
+  "body": {
+    "token": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "user": {
+      "id": 2,
+      "name": "Sam",
+      "color": "violet",
+      "timezone": "America/New_York",
+      "isAdmin": false
+    }
+  }
+}

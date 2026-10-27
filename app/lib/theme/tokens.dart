@@ -19,3 +19,9 @@ const kSuccess = Color(0xFF37E07E);
 const kBottomNavIconSize = 23.0;
 const kBottomNavIconLabelGap = 3.0;
 const kBottomNavLabelStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.w600);
+
+/// The bottom bar has a fixed height, so its labels follow Dynamic Type only up to this factor.
+const kBottomNavMaxTextScale = 1.2;
+
+/// The Board columns hold a 7-day strip that cannot grow with the largest text sizes.
+const kBoardColumnMaxTextScale = 1.5;

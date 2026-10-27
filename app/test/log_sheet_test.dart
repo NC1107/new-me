@@ -24,7 +24,7 @@ class _Opener extends StatelessWidget {
 
 StubAdapter _server() => fullServer()
   ..on('POST /api/logs', StubResponse(201, logResultJson()))
-  ..on('DELETE /api/logs/77', const StubResponse(200, {}));
+  ..on('DELETE /api/logs/77', StubResponse(200, deleteLogJson()));
 
 Future<TestApp> _open(WidgetTester tester, StubAdapter adapter, {LogKind? kind}) async {
   final app = TestApp(tester, adapter);
@@ -99,7 +99,7 @@ void main() {
     expect(body['quantity'], 20);
     expect(body['unit'], 'reps');
     expect(body['clientOpId'], isA<String>());
-    expect(body.containsKey('localDate'), isFalse);
+    expect(body.containsKey('date'), isFalse);
 
     expect(find.text('Quick add'), findsNothing);
     expect(find.text('Added 20'), findsOneWidget);
@@ -107,7 +107,7 @@ void main() {
     expect((await LocalPrefs.lastLogKind()), 'pushups');
 
     await app.tap(find.text('Undo'));
-    expect(adapter.to('DELETE /api/logs/77').single.queryParameters['kind'], 'activity');
+    expect(adapter.to('DELETE /api/logs/77').single.queryParameters, isEmpty);
   });
 
   testWidgets('a failed save keeps the sheet open and the retry reuses the client op id', (
@@ -195,15 +195,16 @@ void main() {
     expect(body['kind'], 'meal');
     expect(body['name'], 'Chicken bowl');
     expect(body['kcal'], 900);
-    expect(body['proteinG'], 60);
-    expect(body['carbsG'], 90);
-    expect(body['fatG'], 30);
-    expect(body['fiberG'], 7.5);
+    expect(body['protein'], 60);
+    expect(body['carbs'], 90);
+    expect(body['fat'], 30);
+    expect(body['fiber'], 7.5);
     expect(find.text('Added Chicken bowl'), findsOneWidget);
   });
 
   testWidgets('with no recent meals the chip row is hidden', (tester) async {
-    final adapter = _server()..on('GET /api/meals/recent', const StubResponse(200, <Object>[]));
+    final adapter = _server()
+      ..on('GET /api/meals/recent', const StubResponse(200, {'meals': <Object>[]}));
     await _open(tester, adapter, kind: LogKind.meal);
     expect(find.textContaining('Recent meals'), findsNothing);
   });
@@ -233,7 +234,7 @@ void main() {
     final body = app.body('POST /api/logs');
     expect(body['name'], 'Toast');
     expect(body['kcal'], 600);
-    expect(body['proteinG'], 21);
+    expect(body['protein'], 21);
   });
 
   testWidgets('a meal over 3000 kcal asks first', (tester) async {
@@ -254,7 +255,7 @@ void main() {
     expect(find.textContaining('Add to yesterday'), findsOneWidget);
     await app.tap(find.byType(Switch));
     await app.tap(find.text('20'));
-    expect(app.body('POST /api/logs')['localDate'], '2026-10-25');
+    expect(app.body('POST /api/logs')['date'], '2026-10-25');
   });
 
   testWidgets('add to yesterday is hidden once the window has closed', (tester) async {

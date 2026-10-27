@@ -16,6 +16,9 @@ class FakeHealthSource implements HealthSource {
   /// Lets a test hold a read open to exercise single-flight.
   Duration latency;
 
+  /// Answers every read with null, like HealthKit does when it has nothing it may share.
+  bool unreadable = false;
+
   int accessRequests = 0;
   final List<({DateTime start, DateTime end})> reads = [];
 
@@ -29,6 +32,7 @@ class FakeHealthSource implements HealthSource {
   Future<HealthTotals?> totals(DateTime start, DateTime end) async {
     reads.add((start: start, end: end));
     if (latency > Duration.zero) await Future<void>.delayed(latency);
+    if (unreadable) return null;
     return HealthTotals(steps: steps, activeEnergyKcal: activeEnergyKcal);
   }
 }

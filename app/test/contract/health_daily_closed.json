@@ -1,0 +1,27 @@
+{
+  "method": "PUT",
+  "path": "/api/health/daily",
+  "status": 422,
+  "request": {
+    "items": [
+      {
+        "date": "2020-01-01",
+        "metric": "steps",
+        "value": 10,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T01:31:16.560Z"
+      }
+    ]
+  },
+  "body": {
+    "code": "date_closed",
+    "error": "that day is closed for entries",
+    "items": [
+      {
+        "index": 0,
+        "code": "date_closed",
+        "error": "that day is closed for entries"
+      }
+    ]
+  }
+}

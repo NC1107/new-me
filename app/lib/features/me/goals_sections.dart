@@ -25,10 +25,10 @@ class TargetsSection extends ConsumerStatefulWidget {
 }
 
 class _TargetsSectionState extends ConsumerState<TargetsSection> {
-  late final _kcal = TextEditingController(text: _text(widget.me.kcalTarget));
-  late final _protein = TextEditingController(text: _text(widget.me.proteinTarget));
-  late final _carbs = TextEditingController(text: _text(widget.me.carbsTarget));
-  late final _fat = TextEditingController(text: _text(widget.me.fatTarget));
+  late final _kcal = TextEditingController(text: _text(widget.me.targets.kcal));
+  late final _protein = TextEditingController(text: _text(widget.me.targets.protein));
+  late final _carbs = TextEditingController(text: _text(widget.me.targets.carbs));
+  late final _fat = TextEditingController(text: _text(widget.me.targets.fat));
   bool _saving = false;
   String? _error;
 
@@ -37,11 +37,13 @@ class _TargetsSectionState extends ConsumerState<TargetsSection> {
   @override
   void didUpdateWidget(TargetsSection old) {
     super.didUpdateWidget(old);
-    if (identical(old.me, widget.me)) return;
-    _kcal.text = _text(widget.me.kcalTarget);
-    _protein.text = _text(widget.me.proteinTarget);
-    _carbs.text = _text(widget.me.carbsTarget);
-    _fat.text = _text(widget.me.fatTarget);
+    // Only a changed target replaces what is typed, so saving another section keeps the edits.
+    final before = old.me.targets;
+    final after = widget.me.targets;
+    if (before.kcal != after.kcal) _kcal.text = _text(after.kcal);
+    if (before.protein != after.protein) _protein.text = _text(after.protein);
+    if (before.carbs != after.carbs) _carbs.text = _text(after.carbs);
+    if (before.fat != after.fat) _fat.text = _text(after.fat);
   }
 
   @override
@@ -53,16 +55,16 @@ class _TargetsSectionState extends ConsumerState<TargetsSection> {
   }
 
   /// Null when the field is blank or unchanged, so only edits go to the server.
-  num? _changed(TextEditingController c, num? current) {
+  int? _changed(TextEditingController c, int? current) {
     final v = int.tryParse(c.text);
-    return v == null || v <= 0 || v == current?.round() ? null : v;
+    return v == null || v <= 0 || v == current ? null : v;
   }
 
   MePatch get _patch => MePatch(
-    kcalTarget: _changed(_kcal, widget.me.kcalTarget),
-    proteinTarget: _changed(_protein, widget.me.proteinTarget),
-    carbsTarget: _changed(_carbs, widget.me.carbsTarget),
-    fatTarget: _changed(_fat, widget.me.fatTarget),
+    kcalTarget: _changed(_kcal, widget.me.targets.kcal),
+    proteinTarget: _changed(_protein, widget.me.targets.protein),
+    carbsTarget: _changed(_carbs, widget.me.targets.carbs),
+    fatTarget: _changed(_fat, widget.me.targets.fat),
   );
 
   bool get _dirty => _patch.toJson().isNotEmpty;
@@ -130,6 +132,7 @@ class _TargetsSectionState extends ConsumerState<TargetsSection> {
         child: AppTextField(
           controller: controller,
           hint: 'Not set',
+          semanticLabel: label,
           keyboardType: TextInputType.number,
           inputFormatters: _digits,
           onChanged: (_) => setState(() {}),
@@ -165,11 +168,15 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
   @override
   void didUpdateWidget(QuestsSection old) {
     super.didUpdateWidget(old);
-    if (!identical(old.me, widget.me)) _reset();
+    final before = {for (final q in old.me.questTemplates) q.key: q};
+    _reset(unchangedFrom: before);
   }
 
-  void _reset() {
-    for (final q in widget.me.quests) {
+  /// Fills the rows from the server's templates, leaving rows that match [unchangedFrom] alone
+  /// so saving another section keeps what is typed here.
+  void _reset({Map<String, QuestTemplate> unchangedFrom = const {}}) {
+    for (final q in widget.me.questTemplates) {
+      if (_sameEditableFields(unchangedFrom[q.key], q)) continue;
       _enabled[q.key] = q.enabled;
       (_targets[q.key] ??= TextEditingController()).text = q.target.round().toString();
       if (q.targetAlt != null) {
@@ -177,6 +184,9 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
       }
     }
   }
+
+  bool _sameEditableFields(QuestTemplate? a, QuestTemplate b) =>
+      a != null && a.enabled == b.enabled && a.target == b.target && a.targetAlt == b.targetAlt;
 
   @override
   void dispose() {
@@ -188,7 +198,7 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
 
   List<QuestEdit> get _edits {
     final edits = <QuestEdit>[];
-    for (final q in widget.me.quests) {
+    for (final q in widget.me.questTemplates) {
       final enabled = _enabled[q.key]!;
       final target = int.tryParse(_targets[q.key]!.text);
       final alt = int.tryParse(_targetsAlt[q.key]?.text ?? '');
@@ -215,7 +225,7 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
       _error = null;
     });
     try {
-      await ref.read(meProvider.notifier).save(MePatch(quests: _edits));
+      await ref.read(meProvider.notifier).save(MePatch(questTemplates: _edits));
       HapticFeedback.lightImpact();
       if (mounted) setState(() => _saving = false);
     } on ApiException catch (e) {
@@ -238,7 +248,7 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
             'Takes effect tomorrow',
             style: TextStyle(color: kFgSecondary, fontSize: 13, fontWeight: FontWeight.w600),
           ),
-          for (final q in widget.me.quests) ...[
+          for (final q in widget.me.questTemplates) ...[
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(height: 1, color: kBorder),
@@ -274,16 +284,19 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
                 ),
               ),
             ),
-            Switch(
-              value: enabled,
-              onChanged: widget.editable
-                  ? (v) {
-                      HapticFeedback.selectionClick();
-                      setState(() => _enabled[q.key] = v);
-                    }
-                  : null,
-              activeThumbColor: context.onAccent,
-              activeTrackColor: context.accent,
+            Semantics(
+              label: q.title,
+              child: Switch(
+                value: enabled,
+                onChanged: widget.editable
+                    ? (v) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _enabled[q.key] = v);
+                      }
+                    : null,
+                activeThumbColor: context.onAccent,
+                activeTrackColor: context.accent,
+              ),
             ),
           ],
         ),
@@ -292,10 +305,16 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _target('Target (${shortUnit(q.unit)})', _targets[q.key]!)),
+              Expanded(child: _target(q.title, 'Target (${shortUnit(q.unit)})', _targets[q.key]!)),
               if (q.targetAlt != null) ...[
                 const SizedBox(width: 10),
-                Expanded(child: _target('Or (${shortUnit(q.unitAlt ?? '')})', _targetsAlt[q.key]!)),
+                Expanded(
+                  child: _target(
+                    q.title,
+                    'Or (${shortUnit(q.unitAlt ?? '')})',
+                    _targetsAlt[q.key]!,
+                  ),
+                ),
               ],
             ],
           ),
@@ -304,7 +323,7 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
     );
   }
 
-  Widget _target(String label, TextEditingController controller) => Column(
+  Widget _target(String questTitle, String label, TextEditingController controller) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       FieldLabel(label),
@@ -313,6 +332,7 @@ class _QuestsSectionState extends ConsumerState<QuestsSection> {
         child: AppTextField(
           controller: controller,
           hint: '0',
+          semanticLabel: '$questTitle $label',
           keyboardType: TextInputType.number,
           inputFormatters: _digits,
           onChanged: (_) => setState(() {}),

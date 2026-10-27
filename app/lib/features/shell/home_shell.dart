@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/board.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
+import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../board/board_screen.dart';
@@ -22,12 +24,43 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
     // Reading the provider is what starts Health sync and its lifecycle listener.
     ref.read(healthSyncProvider);
     unawaited(_followDeviceTimezone());
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  /// A screen drawn from the cache stays under its offline banner until something reloads it.
+  void _refreshOffline() {
+    if (ref.read(todayProvider).value?.offline != null) {
+      unawaited(ref.read(todayProvider.notifier).refresh());
+    }
+    if (ref.read(boardProvider).value?.offline != null) {
+      unawaited(ref.read(boardProvider.notifier).refresh());
+    }
+    if (ref.read(meProvider).value?.offline != null) {
+      unawaited(ref.read(meProvider.notifier).refresh());
+    }
+  }
+
+  /// A phone left locked overnight would otherwise open on yesterday's score.
+  void _onResume() {
+    unawaited(ref.read(todayProvider.notifier).refresh());
+    unawaited(ref.read(boardProvider.notifier).refresh());
+    if (ref.read(meProvider).value?.offline != null) {
+      unawaited(ref.read(meProvider.notifier).refresh());
+    }
   }
 
   Future<void> _followDeviceTimezone() async {
@@ -47,6 +80,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(homeTabProvider);
+    ref.listen(homeTabProvider, (_, _) => _refreshOffline());
     return Scaffold(
       body: IndexedStack(
         index: tab.index,
@@ -80,25 +114,30 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: kBorder)),
           ),
-          child: Row(
-            children: [
-              for (var i = 0; i < _tabs.length; i++) ...[
+          // The bar has a fixed height, so a large Dynamic Type size would overflow its labels.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: kBottomNavMaxTextScale,
+            child: Row(
+              children: [
+                Expanded(child: Row(children: [_item(0, tab), _item(1, tab)])),
                 // Keeps the notch clear of the centered FAB.
-                if (i == 2) const SizedBox(width: 64),
-                _NavItem(
-                  icon: _tabs[i].icon,
-                  activeIcon: _tabs[i].activeIcon,
-                  label: _tabs[i].label,
-                  selected: tab.index == i,
-                  onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
-                ),
+                const SizedBox(width: 64),
+                Expanded(child: Row(children: [_item(2, tab)])),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _item(int i, HomeTab tab) => _NavItem(
+    icon: _tabs[i].icon,
+    activeIcon: _tabs[i].activeIcon,
+    label: _tabs[i].label,
+    selected: tab.index == i,
+    onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
+  );
 }
 
 class _NavItem extends StatelessWidget {
@@ -132,6 +171,10 @@ class _NavItem extends StatelessWidget {
             onTap();
           },
           radius: 42,
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          focusColor: Colors.transparent,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -14,9 +14,6 @@ import '../../widgets/dashed_border.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/skeletons.dart';
 
-/// A day counts for the streak at this percent, the same line Today draws on the ring.
-const _kCountedPercent = 70;
-
 class BoardScreen extends ConsumerWidget {
   const BoardScreen({super.key});
 
@@ -106,109 +103,112 @@ class _UserColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
-    return Theme(
-      data: base.copyWith(extensions: [accentById(user.color)]),
-      child: Builder(
-        builder: (context) {
-          final rests = user.last7.where((d) => d.rest).length;
-          return OnyxCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: context.accent,
-                      child: Text(
-                        user.name.isEmpty ? '?' : user.name.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          color: context.onAccent,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: kBoardColumnMaxTextScale,
+      child: Theme(
+        data: base.copyWith(extensions: [accentById(user.color)]),
+        child: Builder(
+          builder: (context) {
+            final rests = user.last7.where((d) => d.rest).length;
+            return OnyxCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: context.accent,
+                        child: Text(
+                          user.name.isEmpty ? '?' : user.name.substring(0, 1).toUpperCase(),
+                          style: TextStyle(
+                            color: context.onAccent,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        user.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: kFgPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: kFgPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const _Caption('Today'),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    user.today.points.formatted,
-                    style: TextStyle(
-                      color: context.accent,
-                      fontSize: 40,
-                      fontWeight: FontWeight.w700,
-                      height: 1.1,
-                    ),
+                    ],
                   ),
-                ),
-                Text(
-                  '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
-                  style: const TextStyle(
-                    color: kFgSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.local_fire_department_outlined, size: 16, color: context.accent),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${user.streak}-day streak',
-                        style: const TextStyle(
-                          color: kFgPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (rests > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2, left: 20),
+                  const SizedBox(height: 18),
+                  const _Caption('Today'),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      rests == 1 ? '1 rest day' : '$rests rest days',
-                      style: const TextStyle(color: kFgMuted, fontSize: 12),
+                      user.today.points.formatted,
+                      style: TextStyle(
+                        color: context.accent,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
                     ),
                   ),
-                const SizedBox(height: 14),
-                _StatRow(label: 'Week', value: user.week),
-                const SizedBox(height: 6),
-                _StatRow(label: 'Season', value: user.season),
-                const SizedBox(height: 16),
-                _Strip(days: user.last7),
-                const SizedBox(height: 14),
-                Text(
-                  user.syncedAt == null
-                      ? 'Health not synced'
-                      : 'synced ${relativeTime(user.syncedAt!, now)}',
-                  style: const TextStyle(color: kFgMuted, fontSize: 12),
-                ),
-              ],
-            ),
-          );
-        },
+                  Text(
+                    '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
+                    style: const TextStyle(
+                      color: kFgSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(Icons.local_fire_department_outlined, size: 16, color: context.accent),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          user.streak < 1 ? 'No streak yet' : '${user.streak}-day streak',
+                          style: const TextStyle(
+                            color: kFgPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (rests > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2, left: 20),
+                      child: Text(
+                        rests == 1 ? '1 rest day' : '$rests rest days',
+                        style: const TextStyle(color: kFgMuted, fontSize: 12),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  _StatRow(label: 'Week', value: user.week),
+                  const SizedBox(height: 6),
+                  _StatRow(label: 'Season', value: user.season),
+                  const SizedBox(height: 16),
+                  _Strip(days: user.last7),
+                  const SizedBox(height: 14),
+                  Text(
+                    user.syncedAt == null
+                        ? 'Health not synced'
+                        : 'synced ${relativeTime(user.syncedAt!, now)}',
+                    style: const TextStyle(color: kFgMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -263,7 +263,7 @@ class _Strip extends StatelessWidget {
     final slots = <DayMark?>[for (var i = shown.length; i < 7; i++) null, ...shown];
     return Semantics(
       label:
-          'Last 7 days: ${shown.where((d) => !d.rest && d.percent >= _kCountedPercent).length} '
+          'Last 7 days: ${shown.where((d) => !d.rest && d.counted).length} '
           'counted, ${shown.where((d) => d.rest).length} rest',
       excludeSemantics: true,
       child: Row(
@@ -302,7 +302,7 @@ class _Dot extends StatelessWidget {
     } else if (mark.rest) {
       fill = null;
       border = Border.all(color: context.accent, width: 1.5);
-    } else if (mark.percent >= _kCountedPercent) {
+    } else if (mark.counted) {
       fill = context.accent;
       border = null;
     } else {

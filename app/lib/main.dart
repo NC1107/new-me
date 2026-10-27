@@ -34,12 +34,17 @@ void main() {
   }, (error, stack) => debugPrint('[NEWME] uncaught: $error'));
 }
 
+final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+
 class NewMeApp extends ConsumerWidget {
   const NewMeApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sessionProvider);
+    ref.listen(sessionProvider.select((s) => s.session?.userId), (_, userId) {
+      if (userId == null) _messengerKey.currentState?.clearSnackBars();
+    });
     final session = state.session;
     final updateRequired = ref.watch(updateGateProvider);
     final finishingOnboarding = ref.watch(
@@ -55,6 +60,7 @@ class NewMeApp extends ConsumerWidget {
     return MaterialApp(
       title: 'New Me',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _messengerKey,
       theme: themeFor(accentById(session?.color)),
       home: home,
     );

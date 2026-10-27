@@ -87,7 +87,7 @@ void main() {
   });
 
   testWidgets('once steps have arrived the steps quest is a normal card', (tester) async {
-    final today = richTodayJson(hasSteps: true);
+    final today = richTodayJson(stepsEverSynced: true);
     ((today['quests']! as List).first as Map<String, dynamic>)['actual'] = 2000;
     final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
     await TestApp(tester, adapter).pump(const TodayScreen());
@@ -120,7 +120,7 @@ void main() {
   });
 
   testWidgets('steps have no plus button', (tester) async {
-    final today = richTodayJson(hasSteps: true);
+    final today = richTodayJson(stepsEverSynced: true);
     final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
     await TestApp(tester, adapter).pump(const TodayScreen());
     expect(find.byIcon(Icons.add_rounded), findsNWidgets(3));

@@ -4,14 +4,14 @@ import 'package:flutter/services.dart';
 import 'accent.dart';
 import 'tokens.dart';
 
-/// A row of accent swatches. Colors in [taken] belong to someone else and cannot be chosen.
+/// One row of accent swatches, a slot each so the six always fit. Colors in [taken] belong to someone else and cannot be chosen.
 class AccentPicker extends StatelessWidget {
   const AccentPicker({
     super.key,
     required this.selected,
     required this.onChanged,
     this.taken = const {},
-    this.swatchSize = 48,
+    this.swatchSize = 44,
   });
 
   final String selected;
@@ -21,20 +21,21 @@ class AccentPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final p in kAccentPresets)
-          _Swatch(
-            palette: p,
-            selected: p.id == selected,
-            taken: taken.contains(p.id),
-            size: swatchSize,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onChanged(p.id);
-            },
+          Expanded(
+            child: _Swatch(
+              palette: p,
+              selected: p.id == selected,
+              taken: taken.contains(p.id),
+              size: swatchSize,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(p.id);
+              },
+            ),
           ),
       ],
     );
@@ -88,12 +89,16 @@ class _Swatch extends StatelessWidget {
                   : null,
             ),
             const SizedBox(height: 6),
-            Text(
-              palette.name,
-              style: TextStyle(
-                color: taken ? kFgMuted : (selected ? kFgPrimary : kFgSecondary),
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                // The full name is in the semantics label; six equal slots only fit one word.
+                palette.name.split(' ').last,
+                style: TextStyle(
+                  color: taken ? kFgMuted : (selected ? kFgPrimary : kFgSecondary),
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
               ),
             ),
           ],

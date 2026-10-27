@@ -24,8 +24,8 @@ String _goalLabel(Quest q) =>
     '${shortUnit(q.unitAlt ?? '')}';
 
 double questFraction(Quest q) {
-  if (q.completed) return 1;
-  return q.points == 0 ? 0 : q.earned / q.points;
+  if (q.done) return 1;
+  return q.points == 0 ? 0 : q.basePoints / q.points;
 }
 
 /// One quest: title, progress, and a "+" that opens the log sheet on its metric.
@@ -46,7 +46,7 @@ class _QuestCardState extends State<QuestCard> with SingleTickerProviderStateMix
   late final AnimationController _check = AnimationController(
     vsync: this,
     duration: _kCheckMotion,
-    value: widget.quest.completed ? 1 : 0,
+    value: widget.quest.done ? 1 : 0,
   );
 
   late final Animation<double> _checkCurve = CurvedAnimation(parent: _check, curve: Curves.easeOut);
@@ -54,8 +54,8 @@ class _QuestCardState extends State<QuestCard> with SingleTickerProviderStateMix
   @override
   void didUpdateWidget(QuestCard old) {
     super.didUpdateWidget(old);
-    final done = widget.quest.completed;
-    if (done == old.quest.completed) return;
+    final done = widget.quest.done;
+    if (done == old.quest.done) return;
     if (!done) {
       _check.value = 0;
       return;
@@ -82,49 +82,55 @@ class _QuestCardState extends State<QuestCard> with SingleTickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              AnimatedBuilder(
-                animation: _check,
-                builder: (context, _) => _check.value == 0
-                    ? const SizedBox.shrink()
-                    : SizeTransition(
-                        axis: Axis.horizontal,
-                        alignment: Alignment.centerLeft,
-                        sizeFactor: _checkCurve,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ScaleTransition(
-                            scale: _checkCurve,
-                            child: Icon(
-                              Icons.check_circle_rounded,
-                              size: 18,
-                              color: context.accent,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _check,
+                  builder: (context, _) => _check.value == 0
+                      ? const SizedBox.shrink()
+                      : SizeTransition(
+                          axis: Axis.horizontal,
+                          alignment: Alignment.centerLeft,
+                          sizeFactor: _checkCurve,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ScaleTransition(
+                              scale: _checkCurve,
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                size: 18,
+                                color: context.accent,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-              ),
-              Expanded(
-                child: Text(
-                  q.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kFgPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                ),
+                Expanded(
+                  child: Text(
+                    q.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: kFgPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              if (q.bonus > 0) ...[const SizedBox(width: 8), _BonusChip(bonus: q.bonus)],
-              if (widget.onAdd != null) ...[
-                const SizedBox(width: 8),
-                _AddButton(label: 'Log ${q.title}', onTap: widget.onAdd!),
+                if (q.bonusPoints > 0) ...[
+                  const SizedBox(width: 8),
+                  _BonusChip(bonus: q.bonusPoints),
+                ],
+                if (widget.onAdd != null) ...[
+                  const SizedBox(width: 8),
+                  _AddButton(label: 'Log ${q.title}', onTap: widget.onAdd!),
+                ],
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           ProgressBar(value: questFraction(q)),
           const SizedBox(height: 10),
           Row(
@@ -140,7 +146,7 @@ class _QuestCardState extends State<QuestCard> with SingleTickerProviderStateMix
                 ),
               ),
               Text(
-                '${q.earned} / ${q.points} pts',
+                '${q.basePoints} / ${q.points} pts',
                 style: const TextStyle(color: kFgMuted, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ],
@@ -193,7 +199,7 @@ class _AddButton extends StatelessWidget {
       },
       child: SizedBox(
         width: 44,
-        height: 34,
+        height: 44,
         child: Center(
           child: Container(
             width: 30,

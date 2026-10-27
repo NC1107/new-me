@@ -13,10 +13,14 @@ class OfflineInfo {
 
 /// A value plus, when it came from the cache, how old it is.
 class Cached<T> {
-  const Cached(this.data, {this.offline});
+  const Cached(this.data, {required this.userId, this.offline});
 
   final T data;
   final OfflineInfo? offline;
+
+  /// Whose session fetched it. Riverpod keeps the previous value while a provider reloads for
+  /// the next session, so screens use this to avoid showing one person's data to another.
+  final int? userId;
 }
 
 /// The last good response of one endpoint, tied to the user and server that fetched it.
@@ -53,7 +57,11 @@ class ResponseCache<T> {
       final j = jsonDecode(raw) as Json;
       if (j['userId'] != userId || j['baseUrl'] != baseUrl) return null;
       final updatedAt = DateTime.parse(j['updatedAt'] as String);
-      return Cached(fromJson(j['data'] as Json), offline: OfflineInfo(updatedAt: updatedAt));
+      return Cached(
+        fromJson(j['data'] as Json),
+        userId: userId,
+        offline: OfflineInfo(updatedAt: updatedAt),
+      );
     } on Object {
       return null;
     }

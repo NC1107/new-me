@@ -47,7 +47,7 @@ class Segmented<T> extends StatelessWidget {
                         ? Duration.zero
                         : const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
                       color: value == selected ? context.accentLight : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
@@ -111,7 +111,7 @@ class ChipButton extends StatelessWidget {
               ? Duration.zero
               : const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           alignment: fill ? Alignment.center : null,
           decoration: BoxDecoration(
             color: selected ? context.accentLight : kBgMain,

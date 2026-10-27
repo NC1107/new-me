@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "path": "/api/invites",
+  "status": 201,
+  "request": null,
+  "body": {
+    "code": "ABCD-EFGH-JKLM-NPQR",
+    "expiresAt": "2026-10-27T01:47:03Z"
+  }
+}

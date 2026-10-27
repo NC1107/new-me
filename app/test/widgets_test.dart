@@ -25,6 +25,26 @@ void main() {
     expect(find.byIcon(Icons.block), findsOneWidget);
   });
 
+  testWidgets('all six swatches share one row even in a narrow card', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        Center(
+          child: SizedBox(
+            width: 326,
+            child: AccentPicker(selected: 'green', onChanged: (_) {}, swatchSize: 40),
+          ),
+        ),
+      ),
+    );
+
+    final circles = find.byType(AnimatedContainer);
+    expect(circles, findsNWidgets(kAccentPresets.length));
+    final tops = {
+      for (final c in circles.evaluate()) tester.getTopLeft(find.byWidget(c.widget)).dy,
+    };
+    expect(tops, hasLength(1));
+  });
+
   testWidgets('the offline banner shows when the screen was last updated', (tester) async {
     await tester.pumpWidget(
       _host(OfflineBanner(info: OfflineInfo(updatedAt: DateTime(2026, 10, 26, 14, 2)))),

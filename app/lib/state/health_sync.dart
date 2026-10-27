@@ -67,6 +67,7 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     _pushed.clear();
     _closedDates.clear();
     _lastRun = null;
+    _inFlight = null;
     final listener = AppLifecycleListener(onResume: () => unawaited(sync(SyncTrigger.resume)));
     ref.onDispose(listener.dispose);
     _ready = _restore();
@@ -83,6 +84,8 @@ class HealthSyncController extends Notifier<HealthSyncState> {
 
   /// Asks for access from an explicit tap, then syncs once without the resume throttle.
   Future<bool> connect() async {
+    // A restore still reading prefs would otherwise overwrite the prompt state set below.
+    await _ready;
     final bool granted;
     try {
       granted = await ref.read(healthSourceProvider).requestAccess();
@@ -101,7 +104,11 @@ class HealthSyncController extends Notifier<HealthSyncState> {
   Future<bool> sync(SyncTrigger trigger) {
     final running = _inFlight;
     if (running != null) return running;
-    return _inFlight = _run(trigger).whenComplete(() => _inFlight = null);
+    late final Future<bool> flight;
+    flight = _run(trigger).whenComplete(() {
+      if (identical(_inFlight, flight)) _inFlight = null;
+    });
+    return _inFlight = flight;
   }
 
   Future<bool> _run(SyncTrigger trigger) async {
@@ -119,6 +126,10 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     state = state.copyWith(syncing: true);
     try {
       final items = await _readItems(now);
+      // Health answering with nothing is not a sync, and the next resume should try again.
+      if (items.isEmpty) return false;
+      // The session changed while Health was being read; these totals belong to the old one.
+      if (!identical(ref.read(apiClientProvider), client)) return false;
       await _push(client, items);
       _lastRun = now;
       await LocalPrefs.setLastSyncedAt(now);
@@ -180,7 +191,17 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     for (final item in sent) {
       _pushed[_keyOf(item)] = item.value;
     }
-    if (ref.exists(todayProvider)) await ref.read(todayProvider.notifier).applyRescored(result);
+    if (ref.exists(todayProvider)) {
+      await ref
+          .read(todayProvider.notifier)
+          .applyRescored(
+            result,
+            burnedByDate: {
+              for (final item in sent)
+                if (item.metric == 'active_energy') item.date: item.value,
+            },
+          );
+    }
   }
 
   /// The batch is one transaction, so a closed yesterday would also drop today's totals.

@@ -11,9 +11,9 @@ Quest _quest({required bool completed}) => Quest.fromJson(
   quest('pushups', 'Pushups', {
     'target': 30,
     'actual': completed ? 30 : 12,
-    'earned': completed ? 100 : 40,
-    'bonus': completed ? 20 : 0,
-    'completed': completed,
+    'basePoints': completed ? 100 : 40,
+    'bonusPoints': completed ? 20 : 0,
+    'done': completed,
   }),
 );
 
@@ -25,6 +25,17 @@ Widget _host(Quest q) => MaterialApp(
 );
 
 void main() {
+  testWidgets('the add button is a 44pt touch target', (tester) async {
+    await tester.pumpWidget(_host(_quest(completed: false)));
+    final size = tester.getSize(
+      find
+          .ancestor(of: find.byIcon(Icons.add_rounded), matching: find.byType(GestureDetector))
+          .first,
+    );
+    expect(size.width, greaterThanOrEqualTo(44));
+    expect(size.height, greaterThanOrEqualTo(44));
+  });
+
   testWidgets('completing a quest plays the check and a medium impact, once', (tester) async {
     final haptics = <Object?>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (

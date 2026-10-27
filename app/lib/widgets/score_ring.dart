@@ -8,6 +8,9 @@ import '../util/format.dart';
 
 const kRingMotion = Duration(milliseconds: 260);
 
+/// The ring is a fixed-size graphic, so its numbers follow Dynamic Type only up to this factor.
+const kRingMaxTextScale = 1.2;
+
 /// The day's score: an arc that fills to the day percent, a tick on the streak line, the points in
 /// the middle. It sweeps only when the numbers change; [countUp] adds one sweep from zero on
 /// first build, which the caller grants once per day.
@@ -99,33 +102,36 @@ class _ScoreRingState extends State<ScoreRing> with SingleTickerProviderStateMix
             child: Center(
               child: Padding(
                 padding: EdgeInsets.all(widget.size * 0.18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _points.round().formatted,
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: kRingMaxTextScale,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _points.round().formatted,
+                          style: const TextStyle(
+                            color: kFgPrimary,
+                            fontSize: 52,
+                            fontWeight: FontWeight.w700,
+                            height: 1.05,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_percent.round()}%',
                         style: const TextStyle(
-                          color: kFgPrimary,
-                          fontSize: 52,
-                          fontWeight: FontWeight.w700,
-                          height: 1.05,
+                          color: kFgSecondary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
                           fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${_percent.round()}%',
-                      style: const TextStyle(
-                        color: kFgSecondary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

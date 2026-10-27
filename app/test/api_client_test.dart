@@ -62,9 +62,17 @@ void main() {
       expect((e.kind, e.message), (ApiErrorKind.other, 'admins only'));
     });
 
-    test('426 update required', () async {
-      final e = await _failure(() => failing(const StubResponse(426, {'error': 'old'})).me());
-      expect(e.kind, ApiErrorKind.updateRequired);
+    test('426 update required carries the minimum version', () async {
+      final e = await _failure(
+        () => failing(
+          const StubResponse(426, {
+            'error': 'old',
+            'code': 'update_required',
+            'minClientVersion': '1.2.0',
+          }),
+        ).me(),
+      );
+      expect((e.kind, e.minClientVersion), (ApiErrorKind.updateRequired, '1.2.0'));
     });
 
     test('422 date_closed', () async {
@@ -152,16 +160,24 @@ void main() {
       ..on(
         'POST /api/join',
         const StubResponse(201, {
-          'user': {'id': 3, 'name': 'Ana', 'color': 'sky'},
+          'user': {
+            'id': 3,
+            'name': 'Ana',
+            'color': 'sky',
+            'timezone': 'Europe/Paris',
+            'isAdmin': false,
+          },
           'token': 'abc',
         }),
       )
       ..on(
         'POST /api/invites/check',
         const StubResponse(200, {
+          'valid': true,
           'users': [
             {'id': 1, 'name': 'Nick', 'color': 'green'},
           ],
+          'canJoinNew': false,
         }),
       )
       ..on('PUT /api/health/daily', const StubResponse(200, {'days': []}))
@@ -180,7 +196,7 @@ void main() {
     });
 
     final check = await client.checkInvite('C0DE');
-    expect(check.users.single.name, 'Nick');
+    expect((check.valid, check.users.single.name, check.canJoinNew), (true, 'Nick', false));
 
     await client.putHealthDaily([
       HealthItem(
@@ -215,10 +231,10 @@ void main() {
       'loggedAt': '2026-10-26T12:00:00Z',
       'name': 'Soup',
       'kcal': 300,
-      'proteinG': 12.5,
-      'carbsG': 30,
-      'fatG': 8,
-      'fiberG': 4,
+      'protein': 12.5,
+      'carbs': 30,
+      'fat': 8,
+      'fiber': 4,
     });
     expect(meal, isA<MealLog>());
     expect(LogEntry.fromJson(meal.toJson()).toJson(), meal.toJson());
@@ -226,7 +242,8 @@ void main() {
   });
 
   test('today and board survive a JSON round trip', () {
-    expect(Today.fromJson(todayJson()).toJson(), Today.fromJson(todayJson()).toJson());
+    expect(canonicalInstants(Today.fromJson(todayJson()).toJson()), canonicalInstants(todayJson()));
+    expect(canonicalInstants(Board.fromJson(boardJson()).toJson()), canonicalInstants(boardJson()));
     final today = Today.fromJson(todayJson());
     expect(Today.fromJson(today.toJson()).quests.single.actual, 2000);
     final board = Board.fromJson(boardJson());

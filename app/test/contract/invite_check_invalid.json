@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "path": "/api/invites/check",
+  "status": 200,
+  "request": {
+    "code": "ABCD-EFGH-JKLM-NPQR"
+  },
+  "body": {
+    "canJoinNew": false,
+    "users": [],
+    "valid": false
+  }
+}

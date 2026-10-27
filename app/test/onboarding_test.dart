@@ -8,6 +8,7 @@ import 'package:newme/health/health_source_factory.dart';
 import 'package:newme/main.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/state/timezone.dart';
+import 'package:newme/theme/accent.dart';
 
 import 'test_support.dart';
 
@@ -75,14 +76,22 @@ StubAdapter _server({Map<String, dynamic> info = _info}) => StubAdapter()
   ..on(
     'POST /api/join',
     const StubResponse(201, {
-      'user': {'id': 2, 'name': 'Ana', 'color': 'sky'},
+      'user': {
+        'id': 2,
+        'name': 'Ana',
+        'color': 'sky',
+        'timezone': 'America/New_York',
+        'isAdmin': false,
+      },
       'token': 'new-token',
     }),
   )
   ..on(
     'POST /api/invites/check',
     const StubResponse(200, {
+      'valid': true,
       'users': [_nick],
+      'canJoinNew': true,
     }),
   );
 
@@ -132,7 +141,8 @@ void main() {
 
     expect(find.text('Enter your code'), findsOneWidget);
     expect(find.text('You were signed out. Enter a code to come back.'), findsNothing);
-    await app.enter(0, ' K7QM-2XPA ');
+    await app.enter(0, ' k7qm2xpa ');
+    expect(find.text('K7QM-2XPA'), findsOneWidget, reason: 'typed codes are shown grouped');
     await app.tapButton('Continue');
     expect(app.lastBody('POST /api/invites/check'), {'code': 'K7QM-2XPA'});
 
@@ -140,7 +150,7 @@ void main() {
     await app.tapButton("I'm new");
 
     await app.enter(0, 'Ana');
-    await app.tapText('Onyx Green');
+    await app.tapText('Green');
     expect(find.bySemanticsLabel('Onyx Green, taken'), findsOneWidget);
     await app.tapText('Violet');
     await app.tapButton('Join');
@@ -157,7 +167,20 @@ void main() {
   });
 
   testWidgets('a returning person taps their chip to re-pair', (tester) async {
-    final adapter = _server();
+    final adapter = _server()
+      ..on(
+        'POST /api/join',
+        const StubResponse(201, {
+          'user': {
+            'id': 1,
+            'name': 'Nick',
+            'color': 'amber',
+            'timezone': 'America/New_York',
+            'isAdmin': true,
+          },
+          'token': 'repaired-token',
+        }),
+      );
     final app = _App(tester, adapter);
     await app.launch();
 
@@ -165,18 +188,25 @@ void main() {
     await app.tapButton('Continue');
     await app.tapText('Nick');
 
-    expect(app.lastBody('POST /api/join'), {
-      'code': 'CODE',
-      'userId': 1,
-      'timezone': 'America/New_York',
-    });
+    expect(app.lastBody('POST /api/join'), {'code': 'CODE', 'userId': 1});
+    final healthButton = find.widgetWithText(FilledButton, 'Connect Health');
+    expect(
+      tester.widget<FilledButton>(healthButton).style?.backgroundColor?.resolve({}),
+      accentById('amber').base,
+      reason: 'the health step already wears the returning person color',
+    );
     await app.tapText('Skip for now');
     await app.expectSignedIn();
   });
 
-  testWidgets('a code the server rejects explains itself and stays editable', (tester) async {
+  testWidgets('a code the server does not accept explains itself and stays editable', (
+    tester,
+  ) async {
     final adapter = _server()
-      ..on('POST /api/invites/check', const StubResponse(401, {'error': 'invalid code'}));
+      ..on(
+        'POST /api/invites/check',
+        const StubResponse(200, {'valid': false, 'users': <Object>[], 'canJoinNew': false}),
+      );
     final app = _App(tester, adapter);
     await app.launch();
 
@@ -185,6 +215,27 @@ void main() {
 
     expect(find.text('That code did not work. Ask for a fresh one.'), findsOneWidget);
     expect(find.text('Enter your code'), findsOneWidget);
+  });
+
+  testWidgets('a full server offers only the people already on it', (tester) async {
+    final adapter = _server()
+      ..on(
+        'POST /api/invites/check',
+        const StubResponse(200, {
+          'valid': true,
+          'users': [_nick],
+          'canJoinNew': false,
+        }),
+      );
+    final app = _App(tester, adapter);
+    await app.launch();
+
+    await app.enter(0, 'CODE');
+    await app.tapButton('Continue');
+
+    expect(find.text('Who are you?'), findsOneWidget);
+    expect(find.text('Nick'), findsOneWidget);
+    expect(find.text("I'm new"), findsNothing);
   });
 
   testWidgets('an unreachable server shows the field and recovers after changing the address', (
@@ -248,6 +299,24 @@ void main() {
 
     expect(find.text('You were signed out. Enter a code to come back.'), findsOneWidget);
     expect(adapter.to('GET /api/server-info').last.uri.host, 'me.invalid');
+  });
+
+  testWidgets('a snackbar from the signed-out session does not follow to onboarding', (
+    tester,
+  ) async {
+    final app = _App(tester, _server());
+    await app.launch(session: () => SessionController.seeded(testSession));
+    final context = tester.element(find.byType(Scaffold).first);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added Meal')));
+    await app.settle();
+    expect(find.text('Added Meal'), findsOneWidget);
+
+    final container = ProviderScope.containerOf(context);
+    unawaited(container.read(sessionProvider.notifier).signOut());
+    await app.settle();
+
+    expect(find.text('Enter your code'), findsOneWidget);
+    expect(find.text('Added Meal'), findsNothing);
   });
 
   testWidgets('a 426 anywhere in the app blocks it with the update screen', (tester) async {

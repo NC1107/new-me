@@ -30,7 +30,13 @@ enum ApiErrorKind {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.kind = ApiErrorKind.other, this.statusCode, this.code});
+  const ApiException(
+    this.message, {
+    this.kind = ApiErrorKind.other,
+    this.statusCode,
+    this.code,
+    this.minClientVersion,
+  });
 
   const ApiException.badAppKey({int? statusCode})
     : this(
@@ -40,8 +46,14 @@ class ApiException implements Exception {
         code: 'bad_app_key',
       );
 
-  const ApiException.updateRequired()
-    : this('Update required', kind: ApiErrorKind.updateRequired, statusCode: 426);
+  const ApiException.updateRequired({String? minClientVersion})
+    : this(
+        'Update required',
+        kind: ApiErrorKind.updateRequired,
+        statusCode: 426,
+        code: 'update_required',
+        minClientVersion: minClientVersion,
+      );
 
   const ApiException.dateClosed({String message = 'That day is closed'})
     : this(message, kind: ApiErrorKind.dateClosed, statusCode: 422, code: 'date_closed');
@@ -65,7 +77,9 @@ class ApiException implements Exception {
     final serverMessage = body['error'] as String?;
 
     if (status == 403 && code == 'bad_app_key') return ApiException.badAppKey(statusCode: status);
-    if (status == 426) return const ApiException.updateRequired();
+    if (status == 426) {
+      return ApiException.updateRequired(minClientVersion: body['minClientVersion'] as String?);
+    }
     if (status == 422 && code == 'date_closed') {
       return ApiException.dateClosed(message: serverMessage ?? 'That day is closed');
     }
@@ -82,7 +96,12 @@ class ApiException implements Exception {
   final String message;
   final ApiErrorKind kind;
   final int? statusCode;
+
+  /// The server's machine-readable error code, such as `date_closed`.
   final String? code;
+
+  /// On a 426, the oldest client version the server still accepts.
+  final String? minClientVersion;
 
   @override
   String toString() => 'ApiException($kind, $statusCode): $message';
@@ -183,7 +202,7 @@ class ApiClient {
 
   Future<List<LogEntry>> logs({required String date}) => _send(
     () => _dio.get<dynamic>('/api/logs', queryParameters: {'date': date}),
-    (data) => [for (final j in data as List) LogEntry.fromJson(j as Json)],
+    (data) => [for (final j in (data as Json)['logs'] as List) LogEntry.fromJson(j as Json)],
   );
 
   Future<LogResult> createLog(LogDraft draft) => _send(
@@ -191,14 +210,14 @@ class ApiClient {
     (data) => LogResult.fromJson(data as Json),
   );
 
-  Future<void> deleteLog(LogEntry entry) => _send(
-    () => _dio.delete<dynamic>('/api/logs/${entry.id}', queryParameters: {'kind': entry.kind}),
-    (_) {},
+  Future<LogDeleteResult> deleteLog(LogEntry entry) => _send(
+    () => _dio.delete<dynamic>('/api/logs/${entry.id}'),
+    (data) => LogDeleteResult.fromJson(data as Json),
   );
 
   Future<List<RecentMeal>> recentMeals({int limit = 20}) => _send(
     () => _dio.get<dynamic>('/api/meals/recent', queryParameters: {'limit': limit}),
-    (data) => [for (final j in data as List) RecentMeal.fromJson(j as Json)],
+    (data) => [for (final j in (data as Json)['meals'] as List) RecentMeal.fromJson(j as Json)],
   );
 
   Future<HealthDailyResult> putHealthDaily(List<HealthItem> items) => _send(

@@ -43,6 +43,17 @@ void main() {
     expect(find.text('Leave this server'), findsOneWidget);
   });
 
+  testWidgets('quest switches and target fields are named for screen readers', (tester) async {
+    final handle = tester.ensureSemantics();
+    final app = _app(tester, _server());
+    await app.pump(const MeScreen());
+
+    expect(find.bySemanticsLabel('Pushups'), findsWidgets);
+    expect(tester.getSemantics(fieldWith('30')).label, contains('Pushups Target (reps)'));
+    expect(tester.getSemantics(fieldWith('2200')).label, contains('Calories (kcal)'));
+    handle.dispose();
+  });
+
   testWidgets('a quest edit sends only what changed and is disabled until then', (tester) async {
     final adapter = _server();
     final app = _app(tester, adapter);
@@ -56,7 +67,7 @@ void main() {
     await app.tap(find.widgetWithText(FilledButton, 'Save').at(2));
 
     expect(app.body('PATCH /api/me'), {
-      'quests': [
+      'questTemplates': [
         {'key': 'pushups', 'target': 40},
         {'key': 'yoga', 'enabled': true},
       ],
@@ -70,7 +81,9 @@ void main() {
 
     await app.enter(fieldWith('2200'), '2400');
     await app.tap(find.widgetWithText(FilledButton, 'Save').at(1));
-    expect(app.body('PATCH /api/me'), {'kcalTarget': 2400});
+    expect(app.body('PATCH /api/me'), {
+      'targets': {'kcal': 2400},
+    });
   });
 
   testWidgets('a color change saves and recolors the app', (tester) async {
@@ -200,6 +213,14 @@ void main() {
     expect(adapter.to('DELETE /api/devices/me'), hasLength(1));
   });
 
+  testWidgets('an admin is warned that only the server can bring them back', (tester) async {
+    final app = _app(tester, _server(admin: true));
+    await app.pump(const MeScreen());
+
+    await app.tap(find.text('Leave this server'));
+    expect(find.textContaining('You are the admin'), findsOneWidget);
+  });
+
   testWidgets('offline, the cached profile is shown and every edit is disabled', (tester) async {
     final adapter = _server();
     final app = _app(tester, adapter);
@@ -218,5 +239,32 @@ void main() {
     expect(find.text('Use this zone'), findsNothing);
     final guard = find.ancestor(of: fieldWith('30'), matching: find.byType(IgnorePointer));
     expect(tester.widget<IgnorePointer>(guard.first).ignoring, isTrue);
+  });
+
+  testWidgets('saving the profile does not reload Me', (tester) async {
+    final adapter = _server()..on('PATCH /api/me', StubResponse(200, meJson(color: 'amber')));
+    final app = _app(tester, adapter);
+    await app.pump(const MeScreen());
+    final loads = adapter.to('GET /api/me').length;
+
+    await app.tap(find.text('Amber'));
+    await app.tap(find.widgetWithText(FilledButton, 'Save').first);
+
+    expect(adapter.to('PATCH /api/me'), hasLength(1));
+    expect(adapter.to('GET /api/me'), hasLength(loads));
+  });
+
+  testWidgets('saving one section keeps what is typed in the others', (tester) async {
+    final adapter = _server()..on('PATCH /api/me', StubResponse(200, meJson(color: 'amber')));
+    final app = _app(tester, adapter);
+    await app.pump(const MeScreen());
+
+    await app.enter(fieldWith('2200'), '2400');
+    await app.enter(fieldWith('30'), '45');
+    await app.tap(find.text('Amber'));
+    await app.tap(find.widgetWithText(FilledButton, 'Save').first);
+
+    expect(fieldWith('2400'), findsOneWidget);
+    expect(fieldWith('45'), findsOneWidget);
   });
 }

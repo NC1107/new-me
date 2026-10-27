@@ -7,6 +7,7 @@ import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
 import '../../state/health_sync.dart';
+import '../../state/me.dart';
 import '../../state/session.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
@@ -14,7 +15,6 @@ import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/dialogs.dart';
-import '../shell/home_tab.dart';
 
 class HealthSection extends ConsumerWidget {
   const HealthSection({super.key});
@@ -134,13 +134,19 @@ class _AdminSectionState extends ConsumerState<AdminSection> {
             Row(
               children: [
                 Expanded(
-                  child: SelectableText(
-                    invite.code,
-                    style: const TextStyle(
-                      color: kFgPrimary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: SelectableText(
+                      invite.code,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: kFgPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                 ),
@@ -210,6 +216,7 @@ class LeaveButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(meProvider.select((m) => m.value?.data.user.isAdmin)) ?? false;
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
@@ -217,16 +224,17 @@ class LeaveButton extends ConsumerWidget {
           final confirmed = await confirmDialog(
             context,
             title: 'Leave this server?',
-            message:
-                'This phone is signed out. Your scores stay on the server and a new pairing code '
-                'brings you back.',
+            message: isAdmin
+                ? 'This phone is signed out. You are the admin, so a new pairing code can only come '
+                      'from the server itself.'
+                : 'This phone is signed out. Your scores stay on the server and a new pairing '
+                      'code brings you back.',
             confirmLabel: 'Leave',
             destructive: true,
           );
           if (!confirmed) return;
           HapticFeedback.mediumImpact();
           await ref.read(sessionProvider.notifier).signOut();
-          ref.invalidate(homeTabProvider);
         },
         style: OutlinedButton.styleFrom(
           foregroundColor: kDanger,

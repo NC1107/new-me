@@ -1,0 +1,12 @@
+{
+  "method": "PATCH",
+  "path": "/api/me",
+  "status": 400,
+  "request": {
+    "kcalTarget": 2000
+  },
+  "body": {
+    "code": "invalid_json",
+    "error": "request body is not valid JSON for this endpoint"
+  }
+}

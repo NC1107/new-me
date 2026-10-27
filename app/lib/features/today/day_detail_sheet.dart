@@ -1,3 +1,5 @@
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,7 +161,12 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
             color: kDanger.withValues(alpha: 0.2),
             child: const Icon(Icons.delete_outline_rounded, color: kDanger),
           ),
-          child: _EntryRow(entry: entry),
+          child: Semantics(
+            customSemanticsActions: {
+              const CustomSemanticsAction(label: 'Delete'): () => _delete(entry, messenger),
+            },
+            child: _EntryRow(entry: entry),
+          ),
         );
       },
     );
@@ -217,7 +224,7 @@ class _EntryRow extends StatelessWidget {
   (IconData, String, String, String?) _describe(LogEntry entry) => switch (entry) {
     final ActivityLog a => (
       switch (a.type) {
-        'pushups' => Icons.fitness_center_rounded,
+        'pushups' => Icons.fitness_center_outlined,
         'reading' => Icons.menu_book_outlined,
         _ => Icons.self_improvement_outlined,
       },
@@ -229,7 +236,7 @@ class _EntryRow extends StatelessWidget {
       Icons.restaurant_outlined,
       m.name,
       '${m.kcal.formatted} kcal',
-      'P ${m.proteinG.formatted} C ${m.carbsG.formatted} F ${m.fatG.formatted}',
+      'P ${m.protein.formatted} C ${m.carbs.formatted} F ${m.fat.formatted}',
     ),
   };
 }

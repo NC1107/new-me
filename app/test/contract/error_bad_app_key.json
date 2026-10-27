@@ -1,0 +1,10 @@
+{
+  "method": "GET",
+  "path": "/api/server-info",
+  "status": 403,
+  "request": null,
+  "body": {
+    "code": "bad_app_key",
+    "error": "missing or invalid app key"
+  }
+}

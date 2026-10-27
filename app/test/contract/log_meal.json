@@ -1,0 +1,111 @@
+{
+  "method": "POST",
+  "path": "/api/logs",
+  "status": 201,
+  "request": {
+    "clientOpId": "00000000-0000-4000-8000-000000000003",
+    "kind": "meal",
+    "name": "Chicken bowl",
+    "kcal": 650,
+    "protein": 42.5,
+    "carbs": 60,
+    "fat": 18,
+    "fiber": 7
+  },
+  "body": {
+    "day": {
+      "date": "2026-10-26",
+      "basePoints": 226,
+      "bonusPoints": 20,
+      "points": 246,
+      "maxBase": 300,
+      "percent": 75,
+      "counted": true,
+      "streakLine": 70,
+      "quests": [
+        {
+          "key": "steps",
+          "title": "Steps",
+          "target": 8000,
+          "unit": "steps",
+          "targetAlt": null,
+          "unitAlt": null,
+          "actual": 0,
+          "actualAlt": null,
+          "points": 100,
+          "basePoints": 0,
+          "bonusPoints": 0,
+          "done": false
+        },
+        {
+          "key": "pushups",
+          "title": "Pushups",
+          "target": 30,
+          "unit": "reps",
+          "targetAlt": null,
+          "unitAlt": null,
+          "actual": 45,
+          "actualAlt": null,
+          "points": 100,
+          "basePoints": 100,
+          "bonusPoints": 20,
+          "done": true
+        },
+        {
+          "key": "reading",
+          "title": "Reading",
+          "target": 20,
+          "unit": "minutes",
+          "targetAlt": 15,
+          "unitAlt": "pages",
+          "actual": 0,
+          "actualAlt": 12,
+          "points": 100,
+          "basePoints": 80,
+          "bonusPoints": 0,
+          "done": false
+        },
+        {
+          "key": "meals_logged",
+          "title": "Meals",
+          "target": 2,
+          "unit": "meals",
+          "targetAlt": null,
+          "unitAlt": null,
+          "actual": 1,
+          "actualAlt": null,
+          "points": 50,
+          "basePoints": 25,
+          "bonusPoints": 0,
+          "done": false
+        },
+        {
+          "key": "protein",
+          "title": "Protein",
+          "target": 100,
+          "unit": "g",
+          "targetAlt": null,
+          "unitAlt": null,
+          "actual": 42,
+          "actualAlt": null,
+          "points": 50,
+          "basePoints": 21,
+          "bonusPoints": 0,
+          "done": false
+        }
+      ]
+    },
+    "log": {
+      "id": 3,
+      "kind": "meal",
+      "localDate": "2026-10-26",
+      "loggedAt": "2026-10-27T01:32:16Z",
+      "name": "Chicken bowl",
+      "kcal": 650,
+      "protein": 42.5,
+      "carbs": 60,
+      "fat": 18,
+      "fiber": 7
+    }
+  }
+}

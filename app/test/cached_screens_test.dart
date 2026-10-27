@@ -2,10 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/api_client.dart';
 import 'package:newme/state/board.dart';
+import 'package:newme/api/models.dart';
 import 'package:newme/state/clock.dart';
+import 'package:newme/state/log_actions.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/state/today.dart';
 
+import 'fixtures.dart';
 import 'test_support.dart';
 
 final _serverNow = DateTime.utc(2026, 10, 26, 14, 2);
@@ -111,5 +114,28 @@ void main() {
     await container.read(todayProvider.notifier).refresh();
     final value = container.read(todayProvider).requireValue;
     expect((value.offline, value.data.day.points), (null, 200));
+  });
+
+  test('a log that makes the day count reloads Today for the streak the server derives', () async {
+    final adapter = StubAdapter()
+      ..on('GET /api/today', StubResponse(200, todayJson()))
+      ..on('POST /api/logs', StubResponse(201, logResultJson()));
+    final container = _container(adapter);
+    container.listen(todayProvider, (_, _) {});
+    await container.read(todayProvider.future);
+
+    final counted = todayJson()
+      ..['streak'] = {'current': 4, 'restAvailable': true}
+      ..['day'] = dayJson(points: 170, percent: 70, counted: true);
+    adapter.on('GET /api/today', StubResponse(200, counted));
+    await container
+        .read(logActionsProvider)
+        .create(
+          const ActivityDraft(clientOpId: 'op-1', type: 'pushups', quantity: 20, unit: 'reps'),
+        );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final today = container.read(todayProvider).requireValue.data;
+    expect((today.day.counted, today.streak.current), (true, 4));
   });
 }

@@ -1,0 +1,144 @@
+{
+  "method": "GET",
+  "path": "/api/board",
+  "status": 200,
+  "request": null,
+  "body": {
+    "season": {
+      "name": "Season 0",
+      "startsOn": "2026-10-27",
+      "endsOn": "2026-12-31"
+    },
+    "serverNow": "2026-10-27T01:32:16Z",
+    "users": [
+      {
+        "id": 1,
+        "name": "Nick",
+        "color": "green",
+        "today": {
+          "points": 324,
+          "percent": 76,
+          "counted": true
+        },
+        "week": {
+          "points": 0
+        },
+        "season": {
+          "points": 0
+        },
+        "streak": {
+          "current": 1
+        },
+        "last7": [
+          {
+            "date": "2026-10-20",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-21",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-22",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-23",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-24",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-25",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-26",
+            "percent": 76,
+            "counted": true,
+            "rest": false
+          }
+        ],
+        "syncedAt": "2026-10-27T01:32:16Z"
+      },
+      {
+        "id": 2,
+        "name": "Sam",
+        "color": "violet",
+        "today": {
+          "points": 0,
+          "percent": 0,
+          "counted": false
+        },
+        "week": {
+          "points": 0
+        },
+        "season": {
+          "points": 0
+        },
+        "streak": {
+          "current": 0
+        },
+        "last7": [
+          {
+            "date": "2026-10-20",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-21",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-22",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-23",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-24",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-25",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-26",
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          }
+        ],
+        "syncedAt": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "path": "/api/logs",
+  "status": 422,
+  "request": {
+    "clientOpId": "00000000-0000-4000-8000-000000000004",
+    "kind": "activity",
+    "type": "pushups",
+    "unit": "reps",
+    "quantity": 5,
+    "date": "2020-01-01"
+  },
+  "body": {
+    "code": "date_closed",
+    "error": "that day is closed for entries"
+  }
+}

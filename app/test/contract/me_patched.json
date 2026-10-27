@@ -1,0 +1,110 @@
+{
+  "method": "PATCH",
+  "path": "/api/me",
+  "status": 200,
+  "request": {
+    "targets": {
+      "kcal": 2200,
+      "protein": 150,
+      "carbs": 220,
+      "fat": 70
+    },
+    "questTemplates": [
+      {
+        "key": "pushups",
+        "target": 40
+      },
+      {
+        "key": "yoga",
+        "enabled": true,
+        "target": 15
+      }
+    ]
+  },
+  "body": {
+    "user": {
+      "id": 1,
+      "name": "Nick",
+      "color": "green",
+      "timezone": "America/New_York",
+      "isAdmin": true
+    },
+    "targets": {
+      "kcal": 2200,
+      "protein": 150,
+      "carbs": 220,
+      "fat": 70
+    },
+    "questTemplates": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "enabled": true,
+        "target": 8000,
+        "unit": "steps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 0
+      },
+      {
+        "key": "pushups",
+        "title": "Pushups",
+        "enabled": true,
+        "target": 40,
+        "unit": "reps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 1
+      },
+      {
+        "key": "reading",
+        "title": "Reading",
+        "enabled": true,
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": 15,
+        "unitAlt": "pages",
+        "points": 100,
+        "position": 2
+      },
+      {
+        "key": "meals_logged",
+        "title": "Meals",
+        "enabled": true,
+        "target": 2,
+        "unit": "meals",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 3
+      },
+      {
+        "key": "protein",
+        "title": "Protein",
+        "enabled": true,
+        "target": 100,
+        "unit": "g",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 4
+      },
+      {
+        "key": "yoga",
+        "title": "Yoga",
+        "enabled": true,
+        "target": 15,
+        "unit": "minutes",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 5
+      }
+    ],
+    "localToday": "2026-10-26",
+    "backdateUntil": null,
+    "serverNow": "2026-10-27T01:32:16Z"
+  }
+}

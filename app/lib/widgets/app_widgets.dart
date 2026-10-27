@@ -33,6 +33,8 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.errorText,
     this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+    this.semanticLabel,
   });
 
   final TextEditingController controller;
@@ -47,15 +49,20 @@ class AppTextField extends StatelessWidget {
   final String? errorText;
 
   final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+
+  /// Names the field for screen readers when a separate label widget sits above it.
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     final hasError = errorText != null;
-    final field = TextField(
+    final textField = TextField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscure,
       inputFormatters: inputFormatters,
+      textCapitalization: textCapitalization,
       onChanged: onChanged,
       minLines: obscure ? 1 : minLines,
       maxLines: obscure ? 1 : maxLines,
@@ -77,6 +84,9 @@ class AppTextField extends StatelessWidget {
         ),
       ),
     );
+    final field = semanticLabel == null
+        ? textField
+        : Semantics(label: semanticLabel, child: textField);
     // Keep the bare field when there's no error so existing layouts are unchanged.
     if (!hasError) return field;
     return Column(

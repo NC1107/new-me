@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "path": "/api/me",
+  "status": 426,
+  "request": null,
+  "body": {
+    "code": "update_required",
+    "error": "this version of the app is no longer supported, please update",
+    "minClientVersion": "9.0.0"
+  }
+}

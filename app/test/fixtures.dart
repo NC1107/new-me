@@ -18,11 +18,14 @@ final testNow = DateTime.utc(2026, 10, 26, 14, 0);
 
 const _questDefaults = {
   'unit': 'reps',
-  'earned': 0,
-  'bonus': 0,
-  'completed': false,
+  'targetAlt': null,
+  'unitAlt': null,
   'actual': 0,
+  'actualAlt': null,
   'points': 100,
+  'basePoints': 0,
+  'bonusPoints': 0,
+  'done': false,
 };
 
 Map<String, dynamic> quest(String key, String title, Map<String, dynamic> fields) => {
@@ -32,112 +35,113 @@ Map<String, dynamic> quest(String key, String title, Map<String, dynamic> fields
   ...fields,
 };
 
+Map<String, dynamic> dayJson({int points = 150, int percent = 62, bool counted = false}) => {
+  'basePoints': points - 20,
+  'bonusPoints': 20,
+  'points': points,
+  'maxBase': 400,
+  'percent': percent,
+  'counted': counted,
+  'streakLine': 70,
+};
+
+final _richQuests = [
+  quest('steps', 'Steps', {'unit': 'steps', 'target': 8000}),
+  quest('pushups', 'Pushups', {
+    'target': 30,
+    'actual': 30,
+    'basePoints': 100,
+    'bonusPoints': 20,
+    'done': true,
+  }),
+  quest('reading', 'Reading', {
+    'unit': 'minutes',
+    'unitAlt': 'pages',
+    'target': 20,
+    'targetAlt': 15,
+    'actual': 12,
+    'actualAlt': 5,
+    'basePoints': 93,
+  }),
+  quest('meals_logged', 'Meals', {
+    'unit': 'meals',
+    'target': 2,
+    'actual': 1,
+    'basePoints': 25,
+    'points': 50,
+  }),
+];
+
+const _noTargets = {'kcal': null, 'protein': null, 'carbs': null, 'fat': null};
+
 /// A mid-day fixture: pushups done with the bonus, reading and meals partway, steps never synced,
 /// and only two of four food targets set.
 Map<String, dynamic> richTodayJson({
-  bool hasSteps = false,
+  bool stepsEverSynced = false,
   int streak = 3,
   bool counted = false,
   Object? backdateUntil = '2026-10-26T15:00:00Z',
   int points = 150,
   int percent = 62,
 }) => {
+  'date': '2026-10-26',
   'localToday': '2026-10-26',
-  'serverNow': '2026-10-26T14:00:00Z',
   'backdateUntil': backdateUntil,
-  'day': {
-    'points': points,
-    'maxPoints': 400,
-    'percent': percent,
-    'counted': counted,
-    'threshold': 70,
-  },
-  'quests': [
-    quest('steps', 'Steps', {'unit': 'steps', 'target': 8000, 'actual': 0}),
-    quest('pushups', 'Pushups', {
-      'target': 30,
-      'actual': 30,
-      'earned': 100,
-      'bonus': 20,
-      'completed': true,
-    }),
-    quest('reading', 'Reading', {
-      'unit': 'minutes',
-      'unitAlt': 'pages',
-      'target': 20,
-      'targetAlt': 15,
-      'actual': 12,
-      'actualAlt': 5,
-      'earned': 93,
-    }),
-    quest('meals_logged', 'Meals', {
-      'unit': 'meals',
-      'target': 2,
-      'actual': 1,
-      'earned': 25,
-      'points': 50,
-    }),
-  ],
-  'streak': {'current': streak, 'restAvailable': true},
+  'serverNow': '2026-10-26T14:00:00Z',
+  'quests': _richQuests,
+  'day': dayJson(points: points, percent: percent, counted: counted),
+  'streak': {'current': streak, 'restAvailable': true, 'restUsedOn': null},
   'food': {
     'kcal': 1850,
     'protein': 82,
     'carbs': 200,
     'fat': 60,
+    'fiber': 24,
     'burned': 540,
-    'kcalTarget': 2200,
-    'proteinTarget': 150,
+    'targets': {..._noTargets, 'kcal': 2200, 'protein': 150},
   },
-  'health': {'hasSteps': hasSteps, 'syncedAt': '2026-10-26T11:00:00Z'},
+  'health': {'stepsEverSynced': stepsEverSynced, 'syncedAt': '2026-10-26T11:00:00Z'},
 };
 
-Map<String, dynamic> meJson({bool admin = false, bool yoga = false, String color = 'violet'}) => {
-  'id': 2,
-  'name': 'Sam',
-  'color': color,
-  'timezone': 'America/New_York',
-  'isAdmin': admin,
-  'quests': [
-    {
-      'key': 'steps',
-      'title': 'Steps',
-      'enabled': true,
-      'target': 8000,
-      'unit': 'steps',
-      'points': 100,
-    },
-    {
-      'key': 'pushups',
-      'title': 'Pushups',
-      'enabled': true,
-      'target': 30,
-      'unit': 'reps',
-      'points': 100,
-    },
-    {
-      'key': 'reading',
-      'title': 'Reading',
-      'enabled': true,
-      'target': 20,
-      'unit': 'minutes',
-      'targetAlt': 15,
-      'unitAlt': 'pages',
-      'points': 100,
-    },
-    {
-      'key': 'yoga',
-      'title': 'Yoga',
-      'enabled': yoga,
-      'target': 20,
-      'unit': 'minutes',
-      'points': 50,
-    },
+Map<String, dynamic> _template(
+  String key,
+  String title,
+  num target,
+  String unit,
+  int points,
+  int position, {
+  bool enabled = true,
+  num? targetAlt,
+  String? unitAlt,
+}) => {
+  'key': key,
+  'title': title,
+  'enabled': enabled,
+  'target': target,
+  'unit': unit,
+  'targetAlt': targetAlt,
+  'unitAlt': unitAlt,
+  'points': points,
+  'position': position,
+};
+
+Map<String, dynamic> meJson({
+  bool admin = false,
+  bool yoga = false,
+  String color = 'violet',
+  String timezone = 'America/New_York',
+}) => {
+  'user': {'id': 2, 'name': 'Sam', 'color': color, 'timezone': timezone, 'isAdmin': admin},
+  'targets': {..._noTargets, 'kcal': 2200, 'protein': 150},
+  'questTemplates': [
+    _template('steps', 'Steps', 8000, 'steps', 100, 0),
+    _template('pushups', 'Pushups', 30, 'reps', 100, 1),
+    _template('reading', 'Reading', 20, 'minutes', 100, 2, targetAlt: 15, unitAlt: 'pages'),
+    _template('yoga', 'Yoga', 20, 'minutes', 50, 5, enabled: yoga),
   ],
   'localToday': '2026-10-26',
-  'serverNow': '2026-10-26T14:00:00Z',
   'backdateUntil': '2026-10-26T15:00:00Z',
-  'kcalTarget': 2200,
-  'proteinTarget': 150,
+  'serverNow': '2026-10-26T14:00:00Z',
 };
 
 Map<String, dynamic> boardUser(
@@ -148,31 +152,33 @@ Map<String, dynamic> boardUser(
   int percent = 30,
   int week = 300,
   int season = 900,
+  int streak = 4,
   List<Map<String, dynamic>>? last7,
 }) => {
   'id': id,
   'name': name,
   'color': color,
   'today': {'points': points, 'percent': percent, 'counted': false},
-  'week': week,
-  'season': season,
-  'streak': 4,
+  'week': {'points': week},
+  'season': {'points': season},
+  'streak': {'current': streak},
   'last7':
       last7 ??
       [
-        {'date': '2026-10-20', 'percent': 90, 'rest': false},
-        {'date': '2026-10-21', 'percent': 20, 'rest': false},
-        {'date': '2026-10-22', 'percent': 10, 'rest': true},
-        {'date': '2026-10-23', 'percent': 80, 'rest': false},
-        {'date': '2026-10-24', 'percent': 75, 'rest': false},
-        {'date': '2026-10-25', 'percent': 100, 'rest': false},
-        {'date': '2026-10-26', 'percent': 30, 'rest': false},
+        {'date': '2026-10-20', 'percent': 90, 'counted': true, 'rest': false},
+        {'date': '2026-10-21', 'percent': 20, 'counted': false, 'rest': false},
+        {'date': '2026-10-22', 'percent': 10, 'counted': false, 'rest': true},
+        {'date': '2026-10-23', 'percent': 80, 'counted': true, 'rest': false},
+        {'date': '2026-10-24', 'percent': 75, 'counted': true, 'rest': false},
+        {'date': '2026-10-25', 'percent': 100, 'counted': true, 'rest': false},
+        {'date': '2026-10-26', 'percent': 30, 'counted': false, 'rest': false},
       ],
   'syncedAt': '2026-10-26T11:00:00Z',
 };
 
 Map<String, dynamic> board(List<Map<String, dynamic>> users) => {
   'season': {'name': 'Season 0', 'startsOn': '2026-10-01', 'endsOn': '2026-12-31'},
+  'serverNow': '2026-10-26T14:00:00Z',
   'users': users,
 };
 
@@ -193,22 +199,34 @@ Map<String, dynamic> mealLogJson({int id = 78}) => {
   'loggedAt': '2026-10-26T12:00:00Z',
   'name': 'Chicken bowl',
   'kcal': 600,
-  'proteinG': 40,
-  'carbsG': 60,
-  'fatG': 20,
-  'fiberG': 5,
+  'protein': 40,
+  'carbs': 60,
+  'fat': 20,
+  'fiber': 5,
 };
 
 Map<String, dynamic> logResultJson({int id = 77, int quantity = 20}) => {
   'log': logJson(id: id, quantity: quantity),
-  'day': {'points': 170, 'maxPoints': 400, 'percent': 70, 'counted': true, 'threshold': 70},
-  'quests': richTodayJson()['quests'],
+  'day': {
+    'date': '2026-10-26',
+    ...dayJson(points: 170, percent: 70, counted: true),
+    'quests': _richQuests,
+  },
 };
 
-const recentMealsJson = [
-  {'name': 'Chicken bowl', 'kcal': 600, 'proteinG': 40, 'carbsG': 60, 'fatG': 20, 'fiberG': 5},
-  {'name': 'Oats', 'kcal': 300, 'proteinG': 10, 'carbsG': 50, 'fatG': 6, 'fiberG': 8},
-];
+Map<String, dynamic> deleteLogJson() => {'day': logResultJson()['day']};
+
+Map<String, dynamic> logsJson(List<Map<String, dynamic>> logs) => {
+  'date': '2026-10-26',
+  'logs': logs,
+};
+
+const recentMealsJson = {
+  'meals': [
+    {'name': 'Chicken bowl', 'kcal': 600, 'protein': 40, 'carbs': 60, 'fat': 20, 'fiber': 5},
+    {'name': 'Oats', 'kcal': 300, 'protein': 10, 'carbs': 50, 'fat': 6, 'fiber': 8},
+  ],
+};
 
 /// A server with every read a signed-in screen makes; tests replace routes they care about.
 StubAdapter fullServer() => StubAdapter()
@@ -216,7 +234,7 @@ StubAdapter fullServer() => StubAdapter()
   ..on('GET /api/me', StubResponse(200, meJson()))
   ..on('GET /api/board', StubResponse(200, board([boardUser(2, 'Sam', 'violet')])))
   ..on('GET /api/meals/recent', const StubResponse(200, recentMealsJson))
-  ..on('GET /api/logs', StubResponse(200, [logJson(), mealLogJson()]));
+  ..on('GET /api/logs', StubResponse(200, logsJson([logJson(), mealLogJson()])));
 
 class TestApp {
   TestApp(

@@ -1,0 +1,12 @@
+{
+  "method": "GET",
+  "path": "/api/server-info",
+  "status": 200,
+  "request": null,
+  "body": {
+    "initialized": true,
+    "joinOpen": true,
+    "minClientVersion": "0.0.0",
+    "name": "New Me"
+  }
+}

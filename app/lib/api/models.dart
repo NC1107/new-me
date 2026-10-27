@@ -2,6 +2,8 @@ typedef Json = Map<String, dynamic>;
 
 int _int(Object? v, [int fallback = 0]) => (v as num?)?.toInt() ?? fallback;
 
+int? _intOrNull(Object? v) => (v as num?)?.toInt();
+
 num _num(Object? v, [num fallback = 0]) => (v as num?) ?? fallback;
 
 String _str(Object? v, [String fallback = '']) => v as String? ?? fallback;
@@ -25,6 +27,39 @@ class UserSummary {
   final String color;
 
   Json toJson() => {'id': id, 'name': name, 'color': color};
+}
+
+/// The signed-in person as the server reports them after pairing and in GET /me.
+class AccountUser {
+  const AccountUser({
+    required this.id,
+    required this.name,
+    required this.color,
+    required this.timezone,
+    required this.isAdmin,
+  });
+
+  factory AccountUser.fromJson(Json j) => AccountUser(
+    id: _int(j['id']),
+    name: _str(j['name']),
+    color: _str(j['color']),
+    timezone: _str(j['timezone']),
+    isAdmin: j['isAdmin'] as bool? ?? false,
+  );
+
+  final int id;
+  final String name;
+  final String color;
+  final String timezone;
+  final bool isAdmin;
+
+  Json toJson() => {
+    'id': id,
+    'name': name,
+    'color': color,
+    'timezone': timezone,
+    'isAdmin': isAdmin,
+  };
 }
 
 class ServerInfo {
@@ -59,28 +94,28 @@ class JoinResult {
   const JoinResult({required this.user, required this.token});
 
   factory JoinResult.fromJson(Json j) =>
-      JoinResult(user: UserSummary.fromJson(j['user'] as Json), token: _str(j['token']));
+      JoinResult(user: AccountUser.fromJson(j['user'] as Json), token: _str(j['token']));
 
-  final UserSummary user;
+  final AccountUser user;
   final String token;
 
   Json toJson() => {'user': user.toJson(), 'token': token};
 }
 
-/// The three ways to call POST /join. Only the fields a case needs are sent.
+/// The three ways to call POST /join. The server rejects any field a case does not use.
 class JoinRequest {
-  const JoinRequest.first({required String name, required String color, String? timezone})
+  const JoinRequest.first({required String name, required String color, required String timezone})
     : this._(name: name, color: color, timezone: timezone);
 
   const JoinRequest.member({
     required String code,
     required String name,
     required String color,
-    String? timezone,
+    required String timezone,
   }) : this._(code: code, name: name, color: color, timezone: timezone);
 
-  const JoinRequest.repair({required String code, required int userId, String? timezone})
-    : this._(code: code, userId: userId, timezone: timezone);
+  const JoinRequest.repair({required String code, required int userId})
+    : this._(code: code, userId: userId);
 
   const JoinRequest._({this.code, this.name, this.color, this.userId, this.timezone});
 
@@ -99,17 +134,26 @@ class JoinRequest {
   };
 }
 
-/// The answer to POST /invites/check: who can be re-paired with a valid code.
+/// The answer to POST /invites/check. An unusable code is a 200 with [valid] false.
 class InviteCheck {
-  const InviteCheck({required this.users});
+  const InviteCheck({required this.valid, required this.users, required this.canJoinNew});
 
-  factory InviteCheck.fromJson(Json j) =>
-      InviteCheck(users: _list(j['users'], UserSummary.fromJson));
+  factory InviteCheck.fromJson(Json j) => InviteCheck(
+    valid: j['valid'] as bool? ?? false,
+    users: _list(j['users'], UserSummary.fromJson),
+    canJoinNew: j['canJoinNew'] as bool? ?? false,
+  );
 
+  final bool valid;
+
+  /// Who can be re-paired; empty unless the code is valid.
   final List<UserSummary> users;
+  final bool canJoinNew;
 
   Json toJson() => {
+    'valid': valid,
     'users': [for (final u in users) u.toJson()],
+    'canJoinNew': canJoinNew,
   };
 }
 
@@ -133,6 +177,7 @@ class QuestTemplate {
     required this.target,
     required this.unit,
     required this.points,
+    required this.position,
     this.targetAlt,
     this.unitAlt,
   });
@@ -144,6 +189,7 @@ class QuestTemplate {
     target: _num(j['target']),
     unit: _str(j['unit']),
     points: _int(j['points']),
+    position: _int(j['position']),
     targetAlt: j['targetAlt'] as num?,
     unitAlt: j['unitAlt'] as String?,
   );
@@ -154,6 +200,7 @@ class QuestTemplate {
   final num target;
   final String unit;
   final int points;
+  final int position;
   final num? targetAlt;
   final String? unitAlt;
 
@@ -164,66 +211,68 @@ class QuestTemplate {
     'target': target,
     'unit': unit,
     'points': points,
-    'targetAlt': ?targetAlt,
-    'unitAlt': ?unitAlt,
+    'position': position,
+    'targetAlt': targetAlt,
+    'unitAlt': unitAlt,
   };
+}
+
+/// The profile goals; a null target is one the person has not set.
+class Targets {
+  const Targets({this.kcal, this.protein, this.carbs, this.fat});
+
+  factory Targets.fromJson(Json j) => Targets(
+    kcal: _intOrNull(j['kcal']),
+    protein: _intOrNull(j['protein']),
+    carbs: _intOrNull(j['carbs']),
+    fat: _intOrNull(j['fat']),
+  );
+
+  final int? kcal;
+  final int? protein;
+  final int? carbs;
+  final int? fat;
+
+  bool get complete => kcal != null && protein != null && carbs != null && fat != null;
+
+  Json toJson() => {'kcal': kcal, 'protein': protein, 'carbs': carbs, 'fat': fat};
 }
 
 class Me {
   const Me({
     required this.user,
-    required this.timezone,
-    required this.isAdmin,
-    required this.quests,
+    required this.targets,
+    required this.questTemplates,
     required this.localToday,
     required this.serverNow,
     this.backdateUntil,
-    this.kcalTarget,
-    this.proteinTarget,
-    this.carbsTarget,
-    this.fatTarget,
   });
 
   factory Me.fromJson(Json j) => Me(
-    user: UserSummary.fromJson(j),
-    timezone: _str(j['timezone']),
-    isAdmin: j['isAdmin'] as bool? ?? false,
-    quests: _list(j['quests'], QuestTemplate.fromJson),
+    user: AccountUser.fromJson(j['user'] as Json),
+    targets: Targets.fromJson(j['targets'] as Json),
+    questTemplates: _list(j['questTemplates'], QuestTemplate.fromJson),
     localToday: _str(j['localToday']),
     serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     backdateUntil: _time(j['backdateUntil']),
-    kcalTarget: j['kcalTarget'] as num?,
-    proteinTarget: j['proteinTarget'] as num?,
-    carbsTarget: j['carbsTarget'] as num?,
-    fatTarget: j['fatTarget'] as num?,
   );
 
-  final UserSummary user;
-  final String timezone;
-  final bool isAdmin;
-  final List<QuestTemplate> quests;
+  final AccountUser user;
+  final Targets targets;
+  final List<QuestTemplate> questTemplates;
   final String localToday;
   final DateTime serverNow;
 
   /// Null once yesterday is closed for entries.
   final DateTime? backdateUntil;
-  final num? kcalTarget;
-  final num? proteinTarget;
-  final num? carbsTarget;
-  final num? fatTarget;
 
   Json toJson() => {
-    ...user.toJson(),
-    'timezone': timezone,
-    'isAdmin': isAdmin,
-    'quests': [for (final q in quests) q.toJson()],
+    'user': user.toJson(),
+    'targets': targets.toJson(),
+    'questTemplates': [for (final q in questTemplates) q.toJson()],
     'localToday': localToday,
     'serverNow': _timeJson(serverNow),
     'backdateUntil': _timeJson(backdateUntil),
-    'kcalTarget': kcalTarget,
-    'proteinTarget': proteinTarget,
-    'carbsTarget': carbsTarget,
-    'fatTarget': fatTarget,
   };
 }
 
@@ -237,28 +286,33 @@ class MePatch {
     this.proteinTarget,
     this.carbsTarget,
     this.fatTarget,
-    this.quests,
+    this.questTemplates,
   });
 
   final String? name;
   final String? color;
   final String? timezone;
-  final num? kcalTarget;
-  final num? proteinTarget;
-  final num? carbsTarget;
-  final num? fatTarget;
-  final List<QuestEdit>? quests;
+  final int? kcalTarget;
+  final int? proteinTarget;
+  final int? carbsTarget;
+  final int? fatTarget;
+  final List<QuestEdit>? questTemplates;
 
-  Json toJson() => {
-    'name': ?name,
-    'color': ?color,
-    'timezone': ?timezone,
-    'kcalTarget': ?kcalTarget,
-    'proteinTarget': ?proteinTarget,
-    'carbsTarget': ?carbsTarget,
-    'fatTarget': ?fatTarget,
-    if (quests != null) 'quests': [for (final q in quests!) q.toJson()],
-  };
+  Json toJson() {
+    final targets = {
+      'kcal': ?kcalTarget,
+      'protein': ?proteinTarget,
+      'carbs': ?carbsTarget,
+      'fat': ?fatTarget,
+    };
+    return {
+      'name': ?name,
+      'color': ?color,
+      'timezone': ?timezone,
+      if (targets.isNotEmpty) 'targets': targets,
+      if (questTemplates != null) 'questTemplates': [for (final q in questTemplates!) q.toJson()],
+    };
+  }
 }
 
 class QuestEdit {
@@ -266,8 +320,8 @@ class QuestEdit {
 
   final String key;
   final bool? enabled;
-  final num? target;
-  final num? targetAlt;
+  final int? target;
+  final int? targetAlt;
 
   Json toJson() => {'key': key, 'enabled': ?enabled, 'target': ?target, 'targetAlt': ?targetAlt};
 }
@@ -280,9 +334,9 @@ class Quest {
     required this.target,
     required this.actual,
     required this.points,
-    required this.earned,
-    required this.bonus,
-    required this.completed,
+    required this.basePoints,
+    required this.bonusPoints,
+    required this.done,
     this.unitAlt,
     this.targetAlt,
     this.actualAlt,
@@ -295,9 +349,9 @@ class Quest {
     target: _num(j['target']),
     actual: _num(j['actual']),
     points: _int(j['points']),
-    earned: _int(j['earned']),
-    bonus: _int(j['bonus']),
-    completed: j['completed'] as bool? ?? false,
+    basePoints: _int(j['basePoints']),
+    bonusPoints: _int(j['bonusPoints']),
+    done: j['done'] as bool? ?? false,
     unitAlt: j['unitAlt'] as String?,
     targetAlt: j['targetAlt'] as num?,
     actualAlt: j['actualAlt'] as num?,
@@ -309,15 +363,15 @@ class Quest {
   final num target;
   final num actual;
 
-  /// Base points this quest is worth, before the completion bonus.
+  /// Base points this quest is worth in full, before the completion bonus.
   final int points;
 
-  /// Points earned so far, excluding the bonus.
-  final int earned;
+  /// Base points earned so far.
+  final int basePoints;
 
-  /// The completion bonus; zero until the quest is complete.
-  final int bonus;
-  final bool completed;
+  /// The completion bonus earned; zero until the quest is done.
+  final int bonusPoints;
+  final bool done;
   final String? unitAlt;
   final num? targetAlt;
   final num? actualAlt;
@@ -329,48 +383,80 @@ class Quest {
     'target': target,
     'actual': actual,
     'points': points,
-    'earned': earned,
-    'bonus': bonus,
-    'completed': completed,
-    'unitAlt': ?unitAlt,
-    'targetAlt': ?targetAlt,
-    'actualAlt': ?actualAlt,
+    'basePoints': basePoints,
+    'bonusPoints': bonusPoints,
+    'done': done,
+    'unitAlt': unitAlt,
+    'targetAlt': targetAlt,
+    'actualAlt': actualAlt,
   };
 }
 
 class DayScore {
   const DayScore({
+    required this.basePoints,
+    required this.bonusPoints,
     required this.points,
-    required this.maxPoints,
+    required this.maxBase,
     required this.percent,
     required this.counted,
-    this.threshold = 70,
+    required this.streakLine,
   });
 
   factory DayScore.fromJson(Json j) => DayScore(
+    basePoints: _int(j['basePoints']),
+    bonusPoints: _int(j['bonusPoints']),
     points: _int(j['points']),
-    maxPoints: _int(j['maxPoints']),
+    maxBase: _int(j['maxBase']),
     percent: _int(j['percent']),
     counted: j['counted'] as bool? ?? false,
-    threshold: _int(j['threshold'], 70),
+    streakLine: _int(j['streakLine'], 70),
   );
 
+  final int basePoints;
+  final int bonusPoints;
+
+  /// Base plus bonus.
   final int points;
-  final int maxPoints;
+  final int maxBase;
 
   /// Computed by the server on base points; the app never recomputes it.
   final int percent;
   final bool counted;
 
   /// The percent a day needs to count toward the streak.
-  final int threshold;
+  final int streakLine;
 
   Json toJson() => {
+    'basePoints': basePoints,
+    'bonusPoints': bonusPoints,
     'points': points,
-    'maxPoints': maxPoints,
+    'maxBase': maxBase,
     'percent': percent,
     'counted': counted,
-    'threshold': threshold,
+    'streakLine': streakLine,
+  };
+}
+
+/// A scored day with its quests, what every write endpoint returns. The score fields sit next
+/// to `date` and `quests` on the wire.
+class DayDetail {
+  const DayDetail({required this.date, required this.score, required this.quests});
+
+  factory DayDetail.fromJson(Json j) => DayDetail(
+    date: _str(j['date']),
+    score: DayScore.fromJson(j),
+    quests: _list(j['quests'], Quest.fromJson),
+  );
+
+  final String date;
+  final DayScore score;
+  final List<Quest> quests;
+
+  Json toJson() => {
+    'date': date,
+    ...score.toJson(),
+    'quests': [for (final q in quests) q.toJson()],
   };
 }
 
@@ -389,7 +475,7 @@ class Streak {
   /// Local date of this week's rest day, when it has been used.
   final String? restUsedOn;
 
-  Json toJson() => {'current': current, 'restAvailable': restAvailable, 'restUsedOn': ?restUsedOn};
+  Json toJson() => {'current': current, 'restAvailable': restAvailable, 'restUsedOn': restUsedOn};
 }
 
 class Food {
@@ -398,11 +484,9 @@ class Food {
     required this.protein,
     required this.carbs,
     required this.fat,
+    required this.fiber,
     required this.burned,
-    this.kcalTarget,
-    this.proteinTarget,
-    this.carbsTarget,
-    this.fatTarget,
+    required this.targets,
   });
 
   factory Food.fromJson(Json j) => Food(
@@ -410,65 +494,70 @@ class Food {
     protein: _num(j['protein']),
     carbs: _num(j['carbs']),
     fat: _num(j['fat']),
+    fiber: _num(j['fiber']),
     burned: _num(j['burned']),
-    kcalTarget: j['kcalTarget'] as num?,
-    proteinTarget: j['proteinTarget'] as num?,
-    carbsTarget: j['carbsTarget'] as num?,
-    fatTarget: j['fatTarget'] as num?,
+    targets: Targets.fromJson(j['targets'] as Json),
   );
 
   final num kcal;
   final num protein;
   final num carbs;
   final num fat;
-
-  Food plusMeal(MealLog meal) => Food(
-    kcal: kcal + meal.kcal,
-    protein: protein + meal.proteinG,
-    carbs: carbs + meal.carbsG,
-    fat: fat + meal.fatG,
-    burned: burned,
-    kcalTarget: kcalTarget,
-    proteinTarget: proteinTarget,
-    carbsTarget: carbsTarget,
-    fatTarget: fatTarget,
-  );
+  final num fiber;
 
   /// Active energy from Health; shown, never scored.
   final num burned;
-  final num? kcalTarget;
-  final num? proteinTarget;
-  final num? carbsTarget;
-  final num? fatTarget;
+  final Targets targets;
+
+  Food plusMeal(MealLog meal) => Food(
+    kcal: kcal + meal.kcal,
+    protein: protein + meal.protein,
+    carbs: carbs + meal.carbs,
+    fat: fat + meal.fat,
+    fiber: fiber + meal.fiber,
+    burned: burned,
+    targets: targets,
+  );
+
+  Food withBurned(num value) => Food(
+    kcal: kcal,
+    protein: protein,
+    carbs: carbs,
+    fat: fat,
+    fiber: fiber,
+    burned: value,
+    targets: targets,
+  );
 
   Json toJson() => {
     'kcal': kcal,
     'protein': protein,
     'carbs': carbs,
     'fat': fat,
+    'fiber': fiber,
     'burned': burned,
-    'kcalTarget': ?kcalTarget,
-    'proteinTarget': ?proteinTarget,
-    'carbsTarget': ?carbsTarget,
-    'fatTarget': ?fatTarget,
+    'targets': targets.toJson(),
   };
 }
 
 class HealthStatus {
-  const HealthStatus({required this.hasSteps, this.syncedAt});
+  const HealthStatus({required this.stepsEverSynced, this.syncedAt});
 
-  factory HealthStatus.fromJson(Json j) =>
-      HealthStatus(hasSteps: j['hasSteps'] as bool? ?? false, syncedAt: _time(j['syncedAt']));
+  factory HealthStatus.fromJson(Json j) => HealthStatus(
+    stepsEverSynced: j['stepsEverSynced'] as bool? ?? false,
+    syncedAt: _time(j['syncedAt']),
+  );
 
   /// False until a steps row has ever arrived.
-  final bool hasSteps;
+  final bool stepsEverSynced;
   final DateTime? syncedAt;
 
-  Json toJson() => {'hasSteps': hasSteps, 'syncedAt': _timeJson(syncedAt)};
+  Json toJson() => {'stepsEverSynced': stepsEverSynced, 'syncedAt': _timeJson(syncedAt)};
 }
 
 class Today {
   const Today({
+    required this.date,
     required this.localToday,
     required this.serverNow,
     required this.day,
@@ -480,6 +569,7 @@ class Today {
   });
 
   factory Today.fromJson(Json j) => Today(
+    date: _str(j['date']),
     localToday: _str(j['localToday']),
     serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     backdateUntil: _time(j['backdateUntil']),
@@ -490,6 +580,8 @@ class Today {
     health: HealthStatus.fromJson(j['health'] as Json),
   );
 
+  /// The day shown; always [localToday] unless the request named an earlier one.
+  final String date;
   final String localToday;
   final DateTime serverNow;
   final DateTime? backdateUntil;
@@ -500,6 +592,7 @@ class Today {
   final HealthStatus health;
 
   Today copyWith({DayScore? day, List<Quest>? quests, Food? food, HealthStatus? health}) => Today(
+    date: date,
     localToday: localToday,
     serverNow: serverNow,
     backdateUntil: backdateUntil,
@@ -511,6 +604,7 @@ class Today {
   );
 
   Json toJson() => {
+    'date': date,
     'localToday': localToday,
     'serverNow': _timeJson(serverNow),
     'backdateUntil': _timeJson(backdateUntil),
@@ -523,19 +617,26 @@ class Today {
 }
 
 class DayMark {
-  const DayMark({required this.date, required this.percent, required this.rest});
+  const DayMark({
+    required this.date,
+    required this.percent,
+    required this.counted,
+    required this.rest,
+  });
 
   factory DayMark.fromJson(Json j) => DayMark(
     date: _str(j['date']),
     percent: _int(j['percent']),
+    counted: j['counted'] as bool? ?? false,
     rest: j['rest'] as bool? ?? false,
   );
 
   final String date;
   final int percent;
+  final bool counted;
   final bool rest;
 
-  Json toJson() => {'date': date, 'percent': percent, 'rest': rest};
+  Json toJson() => {'date': date, 'percent': percent, 'counted': counted, 'rest': rest};
 }
 
 class BoardDay {
@@ -572,9 +673,9 @@ class BoardUser {
     name: _str(j['name']),
     color: _str(j['color']),
     today: BoardDay.fromJson(j['today'] as Json),
-    week: _int(j['week']),
-    season: _int(j['season']),
-    streak: _int(j['streak']),
+    week: _int((j['week'] as Json)['points']),
+    season: _int((j['season'] as Json)['points']),
+    streak: _int((j['streak'] as Json)['current']),
     last7: _list(j['last7'], DayMark.fromJson),
     syncedAt: _time(j['syncedAt']),
   );
@@ -583,8 +684,14 @@ class BoardUser {
   final String name;
   final String color;
   final BoardDay today;
+
+  /// Points this season week, flattened from `week.points`.
   final int week;
+
+  /// Points this season, flattened from `season.points`.
   final int season;
+
+  /// The running streak, flattened from `streak.current`.
   final int streak;
   final List<DayMark> last7;
   final DateTime? syncedAt;
@@ -594,9 +701,9 @@ class BoardUser {
     'name': name,
     'color': color,
     'today': today.toJson(),
-    'week': week,
-    'season': season,
-    'streak': streak,
+    'week': {'points': week},
+    'season': {'points': season},
+    'streak': {'current': streak},
     'last7': [for (final d in last7) d.toJson()],
     'syncedAt': _timeJson(syncedAt),
   };
@@ -619,18 +726,23 @@ class SeasonInfo {
 }
 
 class Board {
-  const Board({required this.season, required this.users});
+  const Board({required this.season, required this.serverNow, required this.users});
 
   factory Board.fromJson(Json j) => Board(
     season: SeasonInfo.fromJson(j['season'] as Json),
+    serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     users: _list(j['users'], BoardUser.fromJson),
   );
 
   final SeasonInfo season;
+  final DateTime serverNow;
+
+  /// The signed-in person first.
   final List<BoardUser> users;
 
   Json toJson() => {
     'season': season.toJson(),
+    'serverNow': _timeJson(serverNow),
     'users': [for (final u in users) u.toJson()],
   };
 }
@@ -700,10 +812,10 @@ class MealLog extends LogEntry {
     required super.loggedAt,
     required this.name,
     required this.kcal,
-    required this.proteinG,
-    required this.carbsG,
-    required this.fatG,
-    required this.fiberG,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.fiber,
   });
 
   factory MealLog.fromJson(Json j) => MealLog(
@@ -712,18 +824,18 @@ class MealLog extends LogEntry {
     loggedAt: _time(j['loggedAt']) ?? DateTime.now().toUtc(),
     name: _str(j['name']),
     kcal: _int(j['kcal']),
-    proteinG: _num(j['proteinG']),
-    carbsG: _num(j['carbsG']),
-    fatG: _num(j['fatG']),
-    fiberG: _num(j['fiberG']),
+    protein: _num(j['protein']),
+    carbs: _num(j['carbs']),
+    fat: _num(j['fat']),
+    fiber: _num(j['fiber']),
   );
 
   final String name;
   final int kcal;
-  final num proteinG;
-  final num carbsG;
-  final num fatG;
-  final num fiberG;
+  final num protein;
+  final num carbs;
+  final num fat;
+  final num fiber;
 
   @override
   String get kind => 'meal';
@@ -736,25 +848,25 @@ class MealLog extends LogEntry {
     'loggedAt': _timeJson(loggedAt),
     'name': name,
     'kcal': kcal,
-    'proteinG': proteinG,
-    'carbsG': carbsG,
-    'fatG': fatG,
-    'fiberG': fiberG,
+    'protein': protein,
+    'carbs': carbs,
+    'fat': fat,
+    'fiber': fiber,
   };
 }
 
 /// The body of POST /logs. The date is omitted for today: the server decides it.
 sealed class LogDraft {
-  const LogDraft({required this.clientOpId, this.localDate});
+  const LogDraft({required this.clientOpId, this.date});
 
   final String clientOpId;
 
   /// Only set to backdate an entry to yesterday.
-  final String? localDate;
+  final String? date;
 
   String get kind;
 
-  Json toJson() => {'kind': kind, 'clientOpId': clientOpId, 'localDate': ?localDate};
+  Json toJson() => {'kind': kind, 'clientOpId': clientOpId, 'date': ?date};
 }
 
 class ActivityDraft extends LogDraft {
@@ -763,7 +875,7 @@ class ActivityDraft extends LogDraft {
     required this.type,
     required this.quantity,
     required this.unit,
-    super.localDate,
+    super.date,
   });
 
   final String type;
@@ -782,19 +894,19 @@ class MealDraft extends LogDraft {
     required super.clientOpId,
     required this.name,
     required this.kcal,
-    this.proteinG = 0,
-    this.carbsG = 0,
-    this.fatG = 0,
-    this.fiberG = 0,
-    super.localDate,
+    this.protein = 0,
+    this.carbs = 0,
+    this.fat = 0,
+    this.fiber = 0,
+    super.date,
   });
 
   final String name;
   final int kcal;
-  final num proteinG;
-  final num carbsG;
-  final num fatG;
-  final num fiberG;
+  final num protein;
+  final num carbs;
+  final num fat;
+  final num fiber;
 
   @override
   String get kind => 'meal';
@@ -804,90 +916,96 @@ class MealDraft extends LogDraft {
     ...super.toJson(),
     'name': name,
     'kcal': kcal,
-    'proteinG': proteinG,
-    'carbsG': carbsG,
-    'fatG': fatG,
-    'fiberG': fiberG,
+    'protein': protein,
+    'carbs': carbs,
+    'fat': fat,
+    'fiber': fiber,
   };
 }
 
 extension LogEntryDraft on LogEntry {
   /// The same entry as a new write, for undoing a delete. [clientOpId] must be fresh.
-  LogDraft toDraft(String clientOpId, {String? localDate}) => switch (this) {
+  LogDraft toDraft(String clientOpId, {String? date}) => switch (this) {
     final ActivityLog a => ActivityDraft(
       clientOpId: clientOpId,
       type: a.type,
       quantity: a.quantity,
       unit: a.unit,
-      localDate: localDate,
+      date: date,
     ),
     final MealLog m => MealDraft(
       clientOpId: clientOpId,
       name: m.name,
       kcal: m.kcal,
-      proteinG: m.proteinG,
-      carbsG: m.carbsG,
-      fatG: m.fatG,
-      fiberG: m.fiberG,
-      localDate: localDate,
+      protein: m.protein,
+      carbs: m.carbs,
+      fat: m.fat,
+      fiber: m.fiber,
+      date: date,
     ),
   };
 }
 
 /// The answer to POST /logs: the stored entry and the recomputed day.
 class LogResult {
-  const LogResult({required this.log, required this.day, required this.quests});
+  const LogResult({required this.log, required this.day});
 
   factory LogResult.fromJson(Json j) => LogResult(
     log: LogEntry.fromJson(j['log'] as Json),
-    day: DayScore.fromJson(j['day'] as Json),
-    quests: _list(j['quests'], Quest.fromJson),
+    day: DayDetail.fromJson(j['day'] as Json),
   );
 
   final LogEntry log;
-  final DayScore day;
-  final List<Quest> quests;
+  final DayDetail day;
 
-  Json toJson() => {
-    'log': log.toJson(),
-    'day': day.toJson(),
-    'quests': [for (final q in quests) q.toJson()],
-  };
+  Json toJson() => {'log': log.toJson(), 'day': day.toJson()};
+}
+
+/// The answer to DELETE /logs/{id}: the recomputed day.
+class LogDeleteResult {
+  const LogDeleteResult({required this.day});
+
+  factory LogDeleteResult.fromJson(Json j) =>
+      LogDeleteResult(day: DayDetail.fromJson(j['day'] as Json));
+
+  final DayDetail day;
+
+  Json toJson() => {'day': day.toJson()};
 }
 
 class RecentMeal {
   const RecentMeal({
     required this.name,
     required this.kcal,
-    required this.proteinG,
-    required this.carbsG,
-    required this.fatG,
-    required this.fiberG,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.fiber,
   });
 
   factory RecentMeal.fromJson(Json j) => RecentMeal(
     name: _str(j['name']),
     kcal: _int(j['kcal']),
-    proteinG: _num(j['proteinG']),
-    carbsG: _num(j['carbsG']),
-    fatG: _num(j['fatG']),
-    fiberG: _num(j['fiberG']),
+    protein: _num(j['protein']),
+    carbs: _num(j['carbs']),
+    fat: _num(j['fat']),
+    fiber: _num(j['fiber']),
   );
 
   final String name;
   final int kcal;
-  final num proteinG;
-  final num carbsG;
-  final num fatG;
-  final num fiberG;
+  final num protein;
+  final num carbs;
+  final num fat;
+  final num fiber;
 
   Json toJson() => {
     'name': name,
     'kcal': kcal,
-    'proteinG': proteinG,
-    'carbsG': carbsG,
-    'fatG': fatG,
-    'fiberG': fiberG,
+    'protein': protein,
+    'carbs': carbs,
+    'fat': fat,
+    'fiber': fiber,
   };
 }
 
@@ -918,34 +1036,14 @@ class HealthItem {
   };
 }
 
-/// A day the server rescored because of a health push.
-class RescoredDay {
-  const RescoredDay({required this.date, required this.day, required this.quests});
-
-  factory RescoredDay.fromJson(Json j) => RescoredDay(
-    date: _str(j['date']),
-    day: DayScore.fromJson(j['day'] as Json),
-    quests: _list(j['quests'], Quest.fromJson),
-  );
-
-  final String date;
-  final DayScore day;
-  final List<Quest> quests;
-
-  Json toJson() => {
-    'date': date,
-    'day': day.toJson(),
-    'quests': [for (final q in quests) q.toJson()],
-  };
-}
-
 class HealthDailyResult {
   const HealthDailyResult({required this.days});
 
   factory HealthDailyResult.fromJson(Json j) =>
-      HealthDailyResult(days: _list(j['days'], RescoredDay.fromJson));
+      HealthDailyResult(days: _list(j['days'], DayDetail.fromJson));
 
-  final List<RescoredDay> days;
+  /// One per affected date, oldest first.
+  final List<DayDetail> days;
 
   Json toJson() => {
     'days': [for (final d in days) d.toJson()],

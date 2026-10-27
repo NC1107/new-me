@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 final _whole = NumberFormat('#,##0', 'en_US');
@@ -36,3 +37,24 @@ String weekdayShort(String date) => DateFormat.E().format(parseLocalDate(date));
 
 /// "min" for "minutes", so a reading line stays short.
 String shortUnit(String unit) => unit == 'minutes' ? 'min' : unit;
+
+/// Shows a typed pairing code the way the server prints it: upper case in groups of four.
+class InviteCodeFormatter extends TextInputFormatter {
+  const InviteCodeFormatter();
+
+  static const _length = 16;
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final symbols = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final kept = symbols.length > _length ? symbols.substring(0, _length) : symbols;
+    final grouped = [
+      for (var i = 0; i < kept.length; i += 4)
+        kept.substring(i, i + 4 > kept.length ? kept.length : i + 4),
+    ].join('-');
+    return TextEditingValue(
+      text: grouped,
+      selection: TextSelection.collapsed(offset: grouped.length),
+    );
+  }
+}

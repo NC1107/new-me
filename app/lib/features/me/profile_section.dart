@@ -36,10 +36,9 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
   @override
   void didUpdateWidget(ProfileSection old) {
     super.didUpdateWidget(old);
-    if (!identical(old.me, widget.me)) {
-      _name.text = widget.me.user.name;
-      _color = widget.me.user.color;
-    }
+    // Only a changed field replaces what is typed, so saving another section keeps the edits.
+    if (old.me.user.name != widget.me.user.name) _name.text = widget.me.user.name;
+    if (old.me.user.color != widget.me.user.color) _color = widget.me.user.color;
   }
 
   @override
@@ -184,7 +183,10 @@ class TimezoneSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return OnyxCard(
       onTap: editable
-          ? () => showAppSheet<void>(context, builder: (_) => _TimezoneSheet(current: me.timezone))
+          ? () => showAppSheet<void>(
+              context,
+              builder: (_) => _TimezoneSheet(current: me.user.timezone),
+            )
           : null,
       child: Row(
         children: [
@@ -199,7 +201,7 @@ class TimezoneSection extends ConsumerWidget {
                   style: TextStyle(color: kFgPrimary, fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text(me.timezone, style: const TextStyle(color: kFgSecondary, fontSize: 13)),
+                Text(me.user.timezone, style: const TextStyle(color: kFgSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -287,7 +289,6 @@ class _TimezoneSheetState extends ConsumerState<_TimezoneSheet> {
                 for (final zone in zones)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    dense: true,
                     title: Text(zone, style: const TextStyle(color: kFgPrimary, fontSize: 15)),
                     subtitle: zone == _device
                         ? const Text('This phone', style: TextStyle(color: kFgMuted, fontSize: 12))

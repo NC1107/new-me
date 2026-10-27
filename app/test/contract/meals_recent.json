@@ -1,0 +1,26 @@
+{
+  "method": "GET",
+  "path": "/api/meals/recent?limit=20",
+  "status": 200,
+  "request": null,
+  "body": {
+    "meals": [
+      {
+        "name": "Oats",
+        "kcal": 300,
+        "protein": 10,
+        "carbs": 50,
+        "fat": 6,
+        "fiber": 8
+      },
+      {
+        "name": "Chicken bowl",
+        "kcal": 650,
+        "protein": 42.5,
+        "carbs": 60,
+        "fat": 18,
+        "fiber": 7
+      }
+    ]
+  }
+}

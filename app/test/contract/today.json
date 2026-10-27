@@ -1,0 +1,116 @@
+{
+  "method": "GET",
+  "path": "/api/today",
+  "status": 200,
+  "request": null,
+  "body": {
+    "date": "2026-10-26",
+    "localToday": "2026-10-26",
+    "backdateUntil": null,
+    "serverNow": "2026-10-27T01:32:16Z",
+    "quests": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "target": 8000,
+        "unit": "steps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 6200,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 78,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "pushups",
+        "title": "Pushups",
+        "target": 30,
+        "unit": "reps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 45,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 100,
+        "bonusPoints": 20,
+        "done": true
+      },
+      {
+        "key": "reading",
+        "title": "Reading",
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": 15,
+        "unitAlt": "pages",
+        "actual": 0,
+        "actualAlt": 12,
+        "points": 100,
+        "basePoints": 80,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "meals_logged",
+        "title": "Meals",
+        "target": 2,
+        "unit": "meals",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 1,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 25,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "protein",
+        "title": "Protein",
+        "target": 100,
+        "unit": "g",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 42,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 21,
+        "bonusPoints": 0,
+        "done": false
+      }
+    ],
+    "day": {
+      "basePoints": 304,
+      "bonusPoints": 20,
+      "points": 324,
+      "maxBase": 400,
+      "percent": 76,
+      "counted": true,
+      "streakLine": 70
+    },
+    "streak": {
+      "current": 1,
+      "restAvailable": true,
+      "restUsedOn": null
+    },
+    "food": {
+      "kcal": 650,
+      "protein": 42.5,
+      "carbs": 60,
+      "fat": 18,
+      "fiber": 7,
+      "burned": 410,
+      "targets": {
+        "kcal": 2200,
+        "protein": 150,
+        "carbs": 220,
+        "fat": 70
+      }
+    },
+    "health": {
+      "stepsEverSynced": true,
+      "syncedAt": "2026-10-27T01:32:16Z"
+    }
+  }
+}

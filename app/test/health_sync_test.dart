@@ -74,6 +74,18 @@ void main() {
     expect(h.container.read(healthSyncProvider).lastSyncedAt, h.now);
   });
 
+  test('connect right after the controller is built is not undone by the prefs restore', () async {
+    final h = _Harness();
+    h.container.listen(healthSyncProvider, (_, _) {});
+
+    expect(await h.sync.connect(), isTrue);
+    await h.sync.ready;
+
+    expect(h.container.read(healthSyncProvider).prompted, isTrue);
+    expect(h.puts, 1);
+    expect(h.container.read(healthSyncProvider).lastSyncedAt, h.now);
+  });
+
   test('start pushes today from local midnight to now, in the documented shape', () async {
     await prompted();
     final h = _Harness(start: DateTime(2026, 10, 26, 14, 5));
@@ -238,7 +250,13 @@ void main() {
           'days': [
             {
               'date': '2026-10-26',
-              'day': {'points': 220, 'maxPoints': 480, 'percent': 46, 'counted': false},
+              'basePoints': 220,
+              'bonusPoints': 0,
+              'points': 220,
+              'maxBase': 480,
+              'percent': 46,
+              'counted': false,
+              'streakLine': 70,
               'quests': todayJson()['quests'],
             },
           ],
@@ -249,5 +267,115 @@ void main() {
 
     expect(h.container.read(todayProvider).requireValue.data.day.points, 220);
     expect(h.adapter.to('GET /api/today'), hasLength(1));
+  });
+
+  test('a push brings the active energy burned to Today without another GET', () async {
+    await prompted();
+    final h = _Harness();
+    h.adapter
+      ..on('GET /api/today', StubResponse(200, todayJson()))
+      ..on(
+        'PUT /api/health/daily',
+        StubResponse(200, {
+          'days': [
+            {
+              'date': '2026-10-26',
+              'basePoints': 220,
+              'bonusPoints': 0,
+              'points': 220,
+              'maxBase': 480,
+              'percent': 46,
+              'counted': false,
+              'streakLine': 70,
+              'quests': todayJson()['quests'],
+            },
+          ],
+        }),
+      );
+    await h.container.read(todayProvider.future);
+    h.source.activeEnergyKcal = 287;
+    await h.boot();
+
+    expect(h.container.read(todayProvider).requireValue.data.food.burned, 287);
+    expect(h.adapter.to('GET /api/today'), hasLength(1));
+  });
+
+  test('a push that makes the day count reloads Today for the streak the server derives', () async {
+    await prompted();
+    final h = _Harness();
+    h.adapter.on('GET /api/today', StubResponse(200, todayJson()));
+    await h.container.read(todayProvider.future);
+    final counted = todayJson()..['streak'] = {'current': 4, 'restAvailable': true};
+    h.adapter
+      ..on('GET /api/today', StubResponse(200, counted))
+      ..on(
+        'PUT /api/health/daily',
+        StubResponse(200, {
+          'days': [
+            {
+              'date': '2026-10-26',
+              'basePoints': 400,
+              'bonusPoints': 0,
+              'points': 400,
+              'maxBase': 480,
+              'percent': 83,
+              'counted': true,
+              'streakLine': 70,
+              'quests': todayJson()['quests'],
+            },
+          ],
+        }),
+      );
+    await h.boot();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(h.container.read(todayProvider).requireValue.data.streak.current, 4);
+  });
+
+  test(
+    'Health answering with nothing is not a sync and is tried again on the next resume',
+    () async {
+      await prompted();
+      final h = _Harness();
+      h.source.unreadable = true;
+      await h.boot();
+
+      expect(h.puts, 0);
+      expect(h.container.read(healthSyncProvider).lastSyncedAt, isNull);
+      expect(await LocalPrefs.lastSyncedAt(), isNull);
+
+      h.source.unreadable = false;
+      h.now = h.now.add(const Duration(seconds: 30));
+      expect(await h.sync.sync(SyncTrigger.resume), isTrue, reason: 'no 5 minute throttle yet');
+      expect(h.puts, 1);
+    },
+  );
+
+  test('totals read for a session that ended are not pushed under the next one', () async {
+    await prompted();
+    final h = _Harness();
+    h.source.latency = const Duration(milliseconds: 20);
+    await h.boot();
+    h.source.steps++;
+
+    final flight = h.sync.sync(SyncTrigger.manual);
+    await h.container
+        .read(sessionProvider.notifier)
+        .signIn(
+          const Session(
+            baseUrl: 'https://me.invalid',
+            token: 'other',
+            userId: 9,
+            userName: 'Ana',
+            color: 'amber',
+          ),
+        );
+    expect(await flight, isFalse);
+    await h.sync.ready;
+
+    final puts = h.adapter.to('PUT /api/health/daily');
+    final stale = puts.where((r) => r.headers['Authorization'] == 'Bearer tok');
+    expect(stale, hasLength(1), reason: 'only the start sync, before the switch');
+    expect(puts.last.headers['Authorization'], 'Bearer other');
   });
 }

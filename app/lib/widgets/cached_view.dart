@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/cached_resource.dart';
+import '../state/session.dart';
 import '../theme/tokens.dart';
 import '../util/errors.dart';
 import 'offline_banner.dart';
 
 /// The one loading, error and offline rule set for a screen backed by a cached read.
-class CachedView<T> extends StatelessWidget {
+class CachedView<T> extends ConsumerWidget {
   const CachedView({
     super.key,
     required this.value,
@@ -26,8 +27,10 @@ class CachedView<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T data, bool offline) builder;
 
   @override
-  Widget build(BuildContext context) {
-    final cached = value.value;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(sessionProvider.select((s) => s.session?.userId));
+    final held = value.value;
+    final cached = held != null && held.userId == userId ? held : null;
     if (cached == null) {
       if (value.hasError) {
         return Center(

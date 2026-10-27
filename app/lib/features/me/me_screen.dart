@@ -46,7 +46,7 @@ class MeScreen extends ConsumerWidget {
               QuestsSection(me: me, editable: !offline),
               const SectionLabel('Health'),
               const HealthSection(),
-              if (me.isAdmin) ...[const SectionLabel('Pairing'), const AdminSection()],
+              if (me.user.isAdmin) ...[const SectionLabel('Pairing'), const AdminSection()],
               const SectionLabel('About'),
               const AboutSection(),
               const SizedBox(height: 20),

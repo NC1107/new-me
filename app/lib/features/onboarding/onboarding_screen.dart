@@ -6,6 +6,7 @@ import '../../api/models.dart';
 import '../../theme/accent.dart';
 import '../../theme/accent_picker.dart';
 import '../../theme/tokens.dart';
+import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import 'onboarding_controller.dart';
 
@@ -204,6 +205,7 @@ class _ServerField extends StatelessWidget {
       AppTextField(
         controller: controller,
         hint: 'new-me.example.com',
+        semanticLabel: 'Server',
         keyboardType: TextInputType.url,
       ),
       const SizedBox(height: 14),
@@ -314,10 +316,12 @@ class _CodeStepState extends State<_CodeStep> {
         const FieldLabel('Pairing code'),
         AppTextField(
           controller: widget.codeController,
-          hint: 'Code',
+          hint: 'XXXX-XXXX-XXXX-XXXX',
+          semanticLabel: 'Pairing code',
           errorText: state.error,
           onChanged: (_) => setState(() {}),
-          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          inputFormatters: const [InviteCodeFormatter()],
+          textCapitalization: TextCapitalization.characters,
         ),
         const SizedBox(height: 16),
         PrimaryButton(label: 'Continue', enabled: ready, busy: state.busy, onTap: widget.onSubmit),
@@ -350,7 +354,7 @@ class _ChooseStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final users = state.invite?.users ?? const <UserSummary>[];
-    final canJoin = state.info?.joinOpen ?? true;
+    final canJoin = state.invite?.canJoinNew ?? true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -481,6 +485,7 @@ class _ProfileStepState extends State<_ProfileStep> {
         AppTextField(
           controller: widget.nameController,
           hint: 'Your name',
+          semanticLabel: 'Name',
           errorText: state.error,
           onChanged: (_) => setState(() {}),
           inputFormatters: [LengthLimitingTextInputFormatter(_kMaxName)],

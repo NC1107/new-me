@@ -21,6 +21,7 @@ enum ProbeFailure { unreachable, wrongAddress, updateRequired }
 
 const _kUnreachableCopy = 'Cannot reach the server. Check your connection or the address.';
 const _kWrongAddressCopy = 'That address does not look like a New Me server.';
+const _kBadCodeCopy = 'That code did not work. Ask for a fresh one.';
 const _kUpdateCopy = 'This version of New Me is too old for the server. Update it from TestFlight.';
 
 extension ProbeFailureCopy on ProbeFailure {
@@ -179,6 +180,10 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(busy: true, clearError: true);
     try {
       final invite = await _client().checkInvite(code);
+      if (!invite.valid) {
+        state = state.copyWith(busy: false, error: _kBadCodeCopy);
+        return;
+      }
       state = state.copyWith(
         busy: false,
         code: code,
@@ -195,7 +200,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     ApiErrorKind.offline => _kUnreachableCopy,
     ApiErrorKind.updateRequired || ApiErrorKind.badAppKey => _kUpdateCopy,
     _ when e.statusCode == 429 => 'Too many tries. Wait a few minutes and try again.',
-    _ => 'That code did not work. Ask for a fresh one.',
+    _ => _kBadCodeCopy,
   };
 
   String _firstFree(Set<String> taken) => kAccentPresets
@@ -220,12 +225,12 @@ class OnboardingController extends Notifier<OnboardingState> {
   void setColor(String id) => state = state.copyWith(color: id);
 
   Future<void> repair(UserSummary user) async {
-    final timezone = await ref.read(deviceTimezoneProvider)();
-    await _join(JoinRequest.repair(code: state.code, userId: user.id, timezone: timezone));
+    await _join(JoinRequest.repair(code: state.code, userId: user.id));
   }
 
   Future<void> createProfile(String name) async {
-    final timezone = await ref.read(deviceTimezoneProvider)();
+    // The server needs a zone to place days; UTC until the device reports one the user can fix.
+    final timezone = await ref.read(deviceTimezoneProvider)() ?? 'UTC';
     final trimmed = name.trim();
     final request = (state.info?.initialized ?? true)
         ? JoinRequest.member(
@@ -243,7 +248,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     try {
       final result = await _client().join(request);
       // The gate must keep onboarding on screen for the Health step once the session exists.
-      state = state.copyWith(busy: false, step: OnboardingStep.health);
+      state = state.copyWith(busy: false, step: OnboardingStep.health, color: result.user.color);
       await ref
           .read(sessionProvider.notifier)
           .signIn(

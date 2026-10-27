@@ -30,7 +30,7 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
         baseUrl: session.baseUrl,
         at: ref.read(clockProvider)(),
       );
-      return Cached(value);
+      return Cached(value, userId: session.userId);
     } on ApiException catch (e) {
       if (e.kind != ApiErrorKind.offline) rethrow;
       final stored = await cache.read(userId: session.userId, baseUrl: session.baseUrl);
@@ -58,6 +58,6 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
         at: ref.read(clockProvider)(),
       );
     }
-    state = AsyncData(Cached(value));
+    state = AsyncData(Cached(value, userId: session?.userId));
   }
 }

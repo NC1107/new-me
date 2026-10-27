@@ -1,0 +1,116 @@
+{
+  "method": "GET",
+  "path": "/api/today",
+  "status": 200,
+  "request": null,
+  "body": {
+    "date": "2026-10-26",
+    "localToday": "2026-10-26",
+    "backdateUntil": null,
+    "serverNow": "2026-10-27T01:32:16Z",
+    "quests": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "target": 8000,
+        "unit": "steps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "pushups",
+        "title": "Pushups",
+        "target": 30,
+        "unit": "reps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "reading",
+        "title": "Reading",
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": 15,
+        "unitAlt": "pages",
+        "actual": 0,
+        "actualAlt": 0,
+        "points": 100,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "meals_logged",
+        "title": "Meals",
+        "target": 2,
+        "unit": "meals",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false
+      },
+      {
+        "key": "protein",
+        "title": "Protein",
+        "target": 100,
+        "unit": "g",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false
+      }
+    ],
+    "day": {
+      "basePoints": 0,
+      "bonusPoints": 0,
+      "points": 0,
+      "maxBase": 300,
+      "percent": 0,
+      "counted": false,
+      "streakLine": 70
+    },
+    "streak": {
+      "current": 0,
+      "restAvailable": false,
+      "restUsedOn": null
+    },
+    "food": {
+      "kcal": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "fiber": 0,
+      "burned": 0,
+      "targets": {
+        "kcal": null,
+        "protein": null,
+        "carbs": null,
+        "fat": null
+      }
+    },
+    "health": {
+      "stepsEverSynced": false,
+      "syncedAt": null
+    }
+  }
+}

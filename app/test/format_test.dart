@@ -3,6 +3,18 @@ import 'package:newme/util/client_op_id.dart';
 import 'package:newme/util/format.dart';
 
 void main() {
+  test('a typed pairing code is upper-cased and grouped in fours, capped at 16 symbols', () {
+    const formatter = InviteCodeFormatter();
+    String typed(String raw) =>
+        formatter.formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: raw)).text;
+
+    expect(typed('b3nb'), 'B3NB');
+    expect(typed('b3nb5'), 'B3NB-5');
+    expect(typed(' b3nb-51b6 hmy6-77rj '), 'B3NB-51B6-HMY6-77RJ');
+    expect(typed('B3NB51B6HMY677RJEXTRA'), 'B3NB-51B6-HMY6-77RJ');
+    expect(typed(''), '');
+  });
+
   test('numbers get thousands separators and no stray decimals', () {
     expect(1850.formatted, '1,850');
     expect(0.formatted, '0');

@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/api/join",
+  "status": 201,
+  "request": {
+    "name": "Nick",
+    "color": "green",
+    "timezone": "America/New_York"
+  },
+  "body": {
+    "token": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "user": {
+      "id": 1,
+      "name": "Nick",
+      "color": "green",
+      "timezone": "America/New_York",
+      "isAdmin": true
+    }
+  }
+}

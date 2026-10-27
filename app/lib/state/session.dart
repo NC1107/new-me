@@ -164,13 +164,21 @@ class SessionController extends Notifier<SessionState> {
 
 final sessionProvider = NotifierProvider<SessionController, SessionState>(SessionController.new);
 
+/// Rebuilt only when the credentials change, so a renamed profile does not reload every screen.
 final apiClientProvider = Provider<ApiClient?>((ref) {
-  final session = ref.watch(sessionProvider).session;
-  if (session == null) return null;
+  final credentials = ref.watch(
+    sessionProvider.select((s) => (baseUrl: s.session?.baseUrl, token: s.session?.token)),
+  );
+  final (:baseUrl, :token) = credentials;
+  if (baseUrl == null || token == null) return null;
   return ref.watch(apiClientFactoryProvider)(
-    baseUrl: session.baseUrl,
-    token: session.token,
-    onUnauthorized: () => unawaited(ref.read(sessionProvider.notifier).signOut(forced: true)),
+    baseUrl: baseUrl,
+    token: token,
+    // A late 401 for a token that has since been replaced must not end the new session.
+    onUnauthorized: () {
+      if (ref.read(sessionProvider).session?.token != token) return;
+      unawaited(ref.read(sessionProvider.notifier).signOut(forced: true));
+    },
     onUpdateRequired: () => ref.read(updateGateProvider.notifier).require(),
   );
 });

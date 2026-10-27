@@ -6,7 +6,7 @@ import 'fixtures.dart';
 import 'test_support.dart';
 
 StubAdapter _server() => fullServer()
-  ..on('GET /api/today', StubResponse(200, richTodayJson(hasSteps: true)))
+  ..on('GET /api/today', StubResponse(200, richTodayJson(stepsEverSynced: true)))
   ..on(
     'GET /api/board',
     StubResponse(
@@ -80,6 +80,7 @@ void main() {
 
   _layoutSuite(1);
   _layoutSuite(1.3);
+  _layoutSuite(2);
 
   testWidgets('the waiting placeholder, time zone and empty states fit at 390x844', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -102,5 +103,25 @@ void main() {
     await app.tap(find.text('Me'));
     await app.tap(find.text('Time zone'));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the bottom bar keeps its labels above the home indicator at large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewPadding = const FakeViewPadding(top: 47, bottom: 34);
+    tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final app = TestApp(tester, _server());
+    await app.pump(const HomeShell(), tall: false);
+
+    expect(tester.takeException(), isNull);
+    for (final label in ['Today', 'Board', 'Me']) {
+      expect(tester.getRect(find.text(label).last).bottom, lessThanOrEqualTo(844 - 34));
+    }
   });
 }

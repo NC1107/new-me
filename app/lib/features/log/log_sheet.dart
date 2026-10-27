@@ -60,7 +60,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
   }
 
   List<LogKind> _kinds() {
-    final quests = ref.watch(meProvider).value?.data.quests ?? const <QuestTemplate>[];
+    final quests = ref.watch(meProvider).value?.data.questTemplates ?? const <QuestTemplate>[];
     final yoga = quests.any((q) => q.key == 'yoga' && q.enabled);
     return [LogKind.pushups, LogKind.reading, LogKind.meal, if (yoga) LogKind.yoga];
   }

@@ -116,4 +116,37 @@ void main() {
     expect(adapter.to('DELETE /api/devices/me'), isEmpty);
     expect(storage.values, isEmpty);
   });
+
+  test('a late 401 for a replaced token does not sign out the new session', () async {
+    final adapter = StubAdapter()..on('GET /api/me', const StubResponse(401, {'error': 'revoked'}));
+    final container = testContainer(
+      overrides: [apiClientFactoryProvider.overrideWithValue(stubFactory(adapter))],
+    );
+    final controller = container.read(sessionProvider.notifier);
+    await controller.signIn(testSession);
+    final oldClient = container.read(apiClientProvider)!;
+    await controller.signIn(
+      const Session(
+        baseUrl: 'https://me.invalid',
+        token: 'new',
+        userId: 9,
+        userName: 'Ana',
+        color: 'amber',
+      ),
+    );
+
+    await oldClient.me().then((_) {}, onError: (_) {});
+    await Future<void>.delayed(Duration.zero);
+
+    expect(container.read(sessionProvider).session?.userId, 9);
+  });
+
+  test('a renamed profile keeps the same API client', () async {
+    final container = testContainer(
+      overrides: [sessionProvider.overrideWith(() => SessionController.seeded(testSession))],
+    );
+    final before = container.read(apiClientProvider);
+    await container.read(sessionProvider.notifier).updateProfile(name: 'Samantha', color: 'amber');
+    expect(container.read(apiClientProvider), same(before));
+  });
 }

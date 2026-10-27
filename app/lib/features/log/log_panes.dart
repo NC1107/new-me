@@ -99,7 +99,7 @@ class _QuantityPaneState extends State<QuantityPane> {
         type: widget.type,
         quantity: quantity,
         unit: _unit,
-        localDate: date,
+        date: date,
       ),
       added: 'Added $quantity${_unit == 'reps' ? '' : ' ${shortUnit(_unit)}'}',
       confirm: limit != null && quantity > limit
@@ -170,7 +170,7 @@ class _QuantityPaneState extends State<QuantityPane> {
   String get _hint => switch (_unit) {
     'reps' => 'Reps',
     'pages' => 'Pages read',
-    _ => 'Minutes',
+    _ => 'Minutes read',
   };
 }
 
@@ -236,11 +236,11 @@ class _MealPaneState extends State<MealPane> {
         clientOpId: id,
         name: meal.name,
         kcal: kcal,
-        proteinG: _scaleMacro(meal.proteinG),
-        carbsG: _scaleMacro(meal.carbsG),
-        fatG: _scaleMacro(meal.fatG),
-        fiberG: _scaleMacro(meal.fiberG),
-        localDate: date,
+        protein: _scaleMacro(meal.protein),
+        carbs: _scaleMacro(meal.carbs),
+        fat: _scaleMacro(meal.fat),
+        fiber: _scaleMacro(meal.fiber),
+        date: date,
       ),
       added: 'Added ${meal.name}',
       confirm: kcal > kConfirmKcal ? _confirmCopy(kcal) : null,
@@ -257,11 +257,11 @@ class _MealPaneState extends State<MealPane> {
         clientOpId: id,
         name: name,
         kcal: kcal,
-        proteinG: _scaleMacro(_grams(_protein)),
-        carbsG: _scaleMacro(_grams(_carbs)),
-        fatG: _scaleMacro(_grams(_fat)),
-        fiberG: _scaleMacro(_grams(_fiber)),
-        localDate: date,
+        protein: _scaleMacro(_grams(_protein)),
+        carbs: _scaleMacro(_grams(_carbs)),
+        fat: _scaleMacro(_grams(_fat)),
+        fiber: _scaleMacro(_grams(_fiber)),
+        date: date,
       ),
       added: 'Added $name',
       confirm: kcal > kConfirmKcal ? _confirmCopy(kcal) : null,
@@ -356,10 +356,23 @@ class _MealPaneState extends State<MealPane> {
         if (_more) ...[const SizedBox(height: 12), _gramsField('Fiber', _fiber)],
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: () => setState(() => _more = !_more),
-            style: TextButton.styleFrom(foregroundColor: kFgSecondary, padding: EdgeInsets.zero),
-            child: Text(_more ? 'Less' : 'More', style: const TextStyle(fontSize: 13)),
+          child: Semantics(
+            button: true,
+            child: GestureDetector(
+              onTap: () => setState(() => _more = !_more),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  _more ? 'Less' : 'More',
+                  style: const TextStyle(
+                    color: kFgSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
         if (_portion != 1 && _kcalValue > 0)

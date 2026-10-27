@@ -43,7 +43,7 @@ class MeNotifier extends CachedNotifier<Me> {
     if (device == null) return;
     final known = await LocalPrefs.deviceTimezone();
     await LocalPrefs.setDeviceTimezone(device);
-    if (known == null || known == device || me.timezone == device) return;
+    if (known == null || known == device || me.user.timezone == device) return;
     await save(MePatch(timezone: device));
   }
 }

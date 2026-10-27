@@ -119,43 +119,75 @@ ProviderContainer testContainer({List<Override> overrides = const []}) {
 }
 
 Map<String, dynamic> todayJson({int points = 120, String localToday = '2026-10-26'}) => {
+  'date': localToday,
   'localToday': localToday,
-  'serverNow': '2026-10-26T14:00:00Z',
   'backdateUntil': null,
-  'day': {'points': points, 'maxPoints': 480, 'percent': 25, 'counted': false, 'threshold': 70},
+  'serverNow': '2026-10-26T14:00:00Z',
   'quests': [
     {
       'key': 'steps',
       'title': 'Steps',
-      'unit': 'steps',
       'target': 8000,
+      'unit': 'steps',
+      'targetAlt': null,
+      'unitAlt': null,
       'actual': 2000,
+      'actualAlt': null,
       'points': 100,
-      'earned': 25,
-      'bonus': 0,
-      'completed': false,
+      'basePoints': 25,
+      'bonusPoints': 0,
+      'done': false,
     },
   ],
-  'streak': {'current': 3, 'restAvailable': true},
-  'food': {'kcal': 0, 'protein': 0, 'carbs': 0, 'fat': 0, 'burned': 0},
-  'health': {'hasSteps': true, 'syncedAt': '2026-10-26T13:00:00Z'},
+  'day': {
+    'basePoints': points,
+    'bonusPoints': 0,
+    'points': points,
+    'maxBase': 480,
+    'percent': 25,
+    'counted': false,
+    'streakLine': 70,
+  },
+  'streak': {'current': 3, 'restAvailable': true, 'restUsedOn': null},
+  'food': {
+    'kcal': 0,
+    'protein': 0,
+    'carbs': 0,
+    'fat': 0,
+    'fiber': 0,
+    'burned': 0,
+    'targets': {'kcal': null, 'protein': null, 'carbs': null, 'fat': null},
+  },
+  'health': {'stepsEverSynced': true, 'syncedAt': '2026-10-26T13:00:00Z'},
 };
 
 Map<String, dynamic> boardJson() => {
   'season': {'name': 'Season 0', 'startsOn': '2026-10-26', 'endsOn': '2026-12-31'},
+  'serverNow': '2026-10-26T14:00:00Z',
   'users': [
     {
       'id': 1,
       'name': 'Nick',
       'color': 'green',
       'today': {'points': 120, 'percent': 25, 'counted': false},
-      'week': 300,
-      'season': 300,
-      'streak': 3,
+      'week': {'points': 300},
+      'season': {'points': 300},
+      'streak': {'current': 3},
       'last7': [
-        {'date': '2026-10-25', 'percent': 80, 'rest': false},
+        {'date': '2026-10-25', 'percent': 80, 'counted': true, 'rest': false},
       ],
       'syncedAt': '2026-10-26T13:00:00Z',
     },
   ],
+};
+
+final _instant = RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$');
+
+/// Rewrites every RFC 3339 instant in decoded JSON to one spelling, so a model that re-encodes
+/// `...:00Z` as `...:00.000Z` still compares equal to what the server sent.
+Object? canonicalInstants(Object? json) => switch (json) {
+  final Map<String, dynamic> m => {for (final e in m.entries) e.key: canonicalInstants(e.value)},
+  final List<dynamic> l => [for (final v in l) canonicalInstants(v)],
+  final String s when _instant.hasMatch(s) => DateTime.parse(s).toUtc().toIso8601String(),
+  _ => json,
 };

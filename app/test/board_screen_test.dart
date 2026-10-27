@@ -34,6 +34,14 @@ void main() {
     expect(find.text('How they join'), findsWidgets);
   });
 
+  testWidgets('a zero streak reads as no streak yet instead of a 0-day streak', (tester) async {
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet', streak: 0)]));
+    await app.pump(const BoardScreen());
+
+    expect(find.text('No streak yet'), findsOneWidget);
+    expect(find.text('0-day streak'), findsNothing);
+  });
+
   testWidgets('two users show two columns, each in their own accent', (tester) async {
     final app = TestApp(
       tester,
@@ -110,5 +118,29 @@ void main() {
     adapter.on('GET /api/board', StubResponse(200, board([boardUser(2, 'Sam', 'violet')])));
     await app.tap(find.text('Try again'));
     expect(find.text('Sam'), findsOneWidget);
+  });
+
+  testWidgets('the 7 day strip follows the server counted flag, not a percent of its own', (
+    tester,
+  ) async {
+    final user = boardUser(
+      2,
+      'Sam',
+      'violet',
+      last7: [
+        {'date': '2026-10-24', 'percent': 95, 'counted': false, 'rest': false},
+        {'date': '2026-10-25', 'percent': 96, 'counted': false, 'rest': false},
+      ],
+    );
+    final app = TestApp(tester, _server([user]));
+    await app.pump(const BoardScreen());
+
+    final accent = accentById('violet').base;
+    final filled = tester
+        .widgetList<Container>(
+          find.byWidgetPredicate((w) => w is Container && w.constraints?.maxWidth == 14),
+        )
+        .where((c) => (c.decoration! as BoxDecoration).color == accent);
+    expect(filled, isEmpty);
   });
 }

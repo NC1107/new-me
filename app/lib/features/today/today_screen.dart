@@ -86,7 +86,7 @@ class _TodayBody extends ConsumerWidget {
             child: ScoreRing(
               points: today.day.points,
               percent: today.day.percent,
-              threshold: today.day.threshold,
+              threshold: today.day.streakLine,
               countUp: countUp.requireValue,
             ),
           ),
@@ -94,7 +94,7 @@ class _TodayBody extends ConsumerWidget {
           Center(child: _StreakLine(day: today.day)),
           const SizedBox(height: 12),
           Center(
-            child: _StreakRow(streak: today.streak, threshold: today.day.threshold),
+            child: _StreakRow(streak: today.streak, threshold: today.day.streakLine),
           ),
           if (_isEmpty(today)) ...[
             const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _TodayBody extends ConsumerWidget {
     );
 
     for (final q in today.quests) {
-      if (q.key == 'steps' && !today.health.hasSteps) {
+      if (q.key == 'steps' && !today.health.stepsEverSynced) {
         cards.add(connect());
         connectShown = true;
       } else {
@@ -150,7 +150,7 @@ class _TodayBody extends ConsumerWidget {
       }
       cards.add(const SizedBox(height: 10));
     }
-    if (!today.health.hasSteps && !connectShown) {
+    if (!today.health.stepsEverSynced && !connectShown) {
       cards.insert(0, const SizedBox(height: 10));
       cards.insert(0, connect());
     }
@@ -170,7 +170,7 @@ class _StreakLine extends StatelessWidget {
           style: TextStyle(color: context.accent, fontSize: 14, fontWeight: FontWeight.w700),
         )
       : Text(
-          'Streak line: ${day.threshold}% - you are at ${day.percent}%',
+          'Streak line: ${day.streakLine}% - you are at ${day.percent}%',
           style: const TextStyle(color: kFgSecondary, fontSize: 14, fontWeight: FontWeight.w600),
         );
 }
@@ -192,7 +192,6 @@ class _StreakRow extends StatelessWidget {
     final rest = _restLabel;
     return Wrap(
       spacing: 8,
-      runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
         _Pill(
@@ -249,23 +248,30 @@ class _Pill extends StatelessWidget {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(9999),
-          border: outlined ? Border.all(color: kBorder) : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(9999),
+            border: outlined ? Border.all(color: kBorder) : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -287,7 +293,7 @@ class _StreakSheet extends StatelessWidget {
         ? 'Rest day ready'
         : 'No rest day left this week';
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -316,12 +322,14 @@ class _StreakSheet extends StatelessWidget {
                 children: [
                   const Icon(Icons.bedtime_outlined, size: 18, color: kFgSecondary),
                   const SizedBox(width: 10),
-                  Text(
-                    status,
-                    style: const TextStyle(
-                      color: kFgPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      status,
+                      style: const TextStyle(
+                        color: kFgPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

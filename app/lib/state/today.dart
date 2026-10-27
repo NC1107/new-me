@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -21,28 +23,42 @@ class TodayNotifier extends CachedNotifier<Today> {
     final log = result.log;
     await replace(
       today.copyWith(
-        day: result.day,
-        quests: result.quests,
+        day: result.day.score,
+        quests: result.day.quests,
         food: log is MealLog ? today.food.plusMeal(log) : null,
       ),
     );
+    _reloadStreakIfDayFlipped(today, result.day.score);
   }
 
   /// Applies the day scores a health push returned, so no second GET /today is needed.
-  Future<void> applyRescored(HealthDailyResult result) async {
+  /// [burnedByDate] carries the active energy that was pushed, which the scores do not repeat.
+  Future<void> applyRescored(
+    HealthDailyResult result, {
+    Map<String, num> burnedByDate = const {},
+  }) async {
     final today = state.value?.data;
     if (today == null) return;
     for (final rescored in result.days) {
       if (rescored.date != today.localToday) continue;
+      final burned = burnedByDate[rescored.date];
       await replace(
         today.copyWith(
-          day: rescored.day,
+          day: rescored.score,
           quests: rescored.quests,
-          health: HealthStatus(hasSteps: true, syncedAt: ref.read(clockProvider)().toUtc()),
+          food: burned == null ? null : today.food.withBurned(burned),
+          health: HealthStatus(stepsEverSynced: true, syncedAt: ref.read(clockProvider)().toUtc()),
         ),
       );
+      _reloadStreakIfDayFlipped(today, rescored.score);
       return;
     }
+  }
+
+  /// The streak is the server's to derive, so a day that just started or stopped counting
+  /// fetches it instead of guessing.
+  void _reloadStreakIfDayFlipped(Today before, DayScore after) {
+    if (before.day.counted != after.counted) unawaited(refresh());
   }
 }
 

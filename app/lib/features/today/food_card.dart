@@ -14,15 +14,11 @@ class FoodCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onSetTargets;
 
-  bool get _missingTargets =>
-      food.kcalTarget == null ||
-      food.proteinTarget == null ||
-      food.carbsTarget == null ||
-      food.fatTarget == null;
+  bool get _missingTargets => !food.targets.complete;
 
   @override
   Widget build(BuildContext context) {
-    final kcalTarget = food.kcalTarget;
+    final kcalTarget = food.targets.kcal;
     return OnyxCard(
       onTap: onTap,
       child: Column(
@@ -60,32 +56,37 @@ class FoodCard extends StatelessWidget {
             ProgressBar(value: (food.kcal / kcalTarget).toDouble(), height: 4),
           ],
           const SizedBox(height: 12),
-          _MacroRow(label: 'Protein', eaten: food.protein, target: food.proteinTarget),
+          _MacroRow(label: 'Protein', eaten: food.protein, target: food.targets.protein),
           const SizedBox(height: 6),
-          _MacroRow(label: 'Carbs', eaten: food.carbs, target: food.carbsTarget),
+          _MacroRow(label: 'Carbs', eaten: food.carbs, target: food.targets.carbs),
           const SizedBox(height: 6),
-          _MacroRow(label: 'Fat', eaten: food.fat, target: food.fatTarget),
+          _MacroRow(label: 'Fat', eaten: food.fat, target: food.targets.fat),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Icon(Icons.local_fire_department_outlined, size: 14, color: kFgMuted),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'burned ${food.burned.formatted}',
-                  style: const TextStyle(
-                    color: kFgMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.local_fire_department_outlined, size: 14, color: kFgMuted),
+                  const SizedBox(width: 4),
+                  Text(
+                    'burned ${food.burned.formatted}',
+                    style: const TextStyle(
+                      color: kFgMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                ],
               ),
               if (_missingTargets)
                 GestureDetector(
                   onTap: onSetTargets,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Text(
                       'Set your targets',
                       style: TextStyle(

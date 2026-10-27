@@ -109,6 +109,11 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 	if err != nil {
 		return in, err
 	}
+	setReps, err := PushupSetReps(ctx, q, userID, date)
+	if err != nil {
+		return in, err
+	}
+	in.Pushups += setReps
 	if in.ListeningMinutes, err = ListeningMinutes(ctx, q, userID, date); err != nil {
 		return in, err
 	}

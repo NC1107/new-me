@@ -38,12 +38,19 @@ func ReadingByDay(ctx context.Context, q Querier, userID int64, from, to score.D
 		) r GROUP BY d`, userID, from, to)
 }
 
-// PushupsByDay is the logged push-up reps of each day.
+// PushupsByDay is the logged push-up reps of each day, from push-up logs and push-up sets.
 func PushupsByDay(ctx context.Context, q Querier, userID int64, from, to score.Date) (map[score.Date]float64, error) {
 	return dailySeries(ctx, q, `
-		SELECT local_date::text, sum(quantity)::float8 FROM activity_logs
-		WHERE user_id = $1 AND type = 'pushups' AND deleted_at IS NULL
-		  AND local_date BETWEEN $2::date AND $3::date GROUP BY local_date`, userID, from, to)
+		SELECT d, sum(n)::float8 FROM (
+			SELECT local_date::text AS d, quantity AS n FROM activity_logs
+			WHERE user_id = $1 AND type = 'pushups' AND deleted_at IS NULL
+			  AND local_date BETWEEN $2::date AND $3::date
+			UNION ALL
+			SELECT s.local_date::text, s.reps FROM exercise_sets s JOIN exercises e ON e.id = s.exercise_id
+			WHERE s.user_id = $1 AND s.deleted_at IS NULL AND s.reps IS NOT NULL
+			  AND e.key IN ('incline_push_up', 'push_up', 'decline_push_up')
+			  AND s.local_date BETWEEN $2::date AND $3::date
+		) p GROUP BY d`, userID, from, to)
 }
 
 // ProteinByDay is the grams of protein of each day that has a meal.

@@ -95,6 +95,8 @@ var preserved = map[string]bool{
 	"schema_migrations": true,
 	"seasons":           true,
 	"server_config":     true,
+	// The exercise catalog is migration data; Reset removes only custom exercises from it.
+	"exercises": true,
 }
 
 // Reset returns the database to a freshly migrated state. The table list comes from the catalog
@@ -126,6 +128,9 @@ func Reset(t testing.TB, database *db.DB) {
 			"TRUNCATE "+strings.Join(tables, ", ")+" RESTART IDENTITY CASCADE"); err != nil {
 			t.Fatalf("truncate: %v", err)
 		}
+	}
+	if _, err := database.Pool.Exec(ctx, `DELETE FROM exercises WHERE user_id IS NOT NULL`); err != nil {
+		t.Fatalf("remove custom exercises: %v", err)
 	}
 	if _, err := database.Pool.Exec(ctx,
 		`UPDATE server_config SET name = 'New Me', initialized = false WHERE id = 1`); err != nil {

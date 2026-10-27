@@ -9,9 +9,31 @@ The server runs as one Docker Compose project on Nick's home server.
 Traefik routes `new-me.npc-server.top` to the server container and issues the certificate through Cloudflare.
 Watchtower in label mode pulls a new `ghcr.io/nc1107/new-me:latest` after every release, so merging to `main` is a deploy.
 Migrations run when the server starts.
-Database dumps land in `./backups` daily and are kept for 7 days, 4 weeks and 12 months.
+Database dumps land in `./backups` daily and are kept for 7 days, 4 weeks and 6 months.
+The image `ghcr.io/nc1107/new-me` is a public GHCR package, so watchtower pulls it without credentials.
+Watchtower (`scw-watchtower`, label mode) polls every 300 seconds, so a release is live within about five minutes of the image push.
 
 Rollback: watchtower never rolls back, so set `NEWME_TAG` in `.env` to the previous `X.Y.Z` and run `docker compose up -d`.
+
+## Backups and the restore drill
+
+Take a backup on demand with `docker exec new-me-db-backup /backup.sh`; it writes `backups/last/newme-latest.sql.gz` and rotates the daily, weekly and monthly copies.
+
+Prove a backup restores with the drill script, run from this directory:
+
+```
+./restore-drill.sh
+```
+
+It loads the newest dump into a throwaway `postgres:16-alpine` container, prints live and restored row counts per table side by side, and exits 0 only when they match.
+Rows written after the dump was taken make the counts differ, so take a fresh backup right before the drill.
+The live database is only read, never written.
+
+Record each drill here.
+
+| Date | Dump | Result |
+| --- | --- | --- |
+| 2026-10-27 | local stack copy | identical row counts in all 12 tables |
 
 ## Letting CI read the health endpoint
 

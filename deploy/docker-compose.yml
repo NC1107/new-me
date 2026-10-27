@@ -90,6 +90,7 @@ services:
       NEWME_APNS_PRODUCTION: ${NEWME_APNS_PRODUCTION:-true}
       NEWME_ANTHROPIC_API_KEY: ${NEWME_ANTHROPIC_API_KEY:-}
       NEWME_ANTHROPIC_BASE_URL: ${NEWME_ANTHROPIC_BASE_URL:-}
+      NEWME_USDA_API_KEY: ${NEWME_USDA_API_KEY:-}
       TZ: ${TZ:-America/New_York}
     healthcheck:
       test: ["CMD", "/app/server", "-healthcheck"]

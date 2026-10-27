@@ -116,9 +116,11 @@ class WelcomeStep extends ConsumerWidget {
     final controller = ref.read(onboardingProvider.notifier);
     return StepLayout(
       footer: [
-        ChunkyButton(label: 'Get started', onPressed: controller.begin),
+        // Once someone has joined, everyone after them needs a code, so one button is honest.
         if (initialised)
-          ChunkyButton.secondary(label: 'I have an invite code', onPressed: controller.haveCode),
+          ChunkyButton(label: 'Join with a code', onPressed: controller.haveCode)
+        else
+          ChunkyButton(label: 'Get started', onPressed: controller.begin),
       ],
       children: [
         const SizedBox(height: 56),

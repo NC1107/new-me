@@ -225,8 +225,8 @@ void main() {
     final app = _App(tester, adapter);
     await app.launch();
 
-    expect(find.text('GET STARTED'), findsOneWidget);
-    await app.tapButton('I have an invite code');
+    expect(find.text('JOIN WITH A CODE'), findsOneWidget);
+    await app.tapButton('Join with a code');
     expect(find.text('Enter your invite code'), findsOneWidget);
     expect(find.text('You were signed out. Enter a code to come back.'), findsNothing);
     expect(app.enabled('Continue'), isFalse);
@@ -281,7 +281,7 @@ void main() {
     final app = _App(tester, adapter);
     await app.launch();
 
-    await app.tapButton('I have an invite code');
+    await app.tapButton('Join with a code');
     await app.enter(_code);
     await app.tapButton('Continue');
     await app.tapText('I have been here before');
@@ -317,7 +317,7 @@ void main() {
     final app = _App(tester, adapter);
     await app.launch();
 
-    await app.tapButton('I have an invite code');
+    await app.tapButton('Join with a code');
     await app.enter(_code);
     await app.tapButton('Continue');
 
@@ -339,7 +339,7 @@ void main() {
     final app = _App(tester, adapter);
     await app.launch();
 
-    await app.tapButton('I have an invite code');
+    await app.tapButton('Join with a code');
     await app.enter(_code);
     await app.tapButton('Continue');
 
@@ -364,7 +364,7 @@ void main() {
 
     up = true;
     await app.tapButton('Try again');
-    expect(find.text('GET STARTED'), findsOneWidget);
+    expect(find.text('JOIN WITH A CODE'), findsOneWidget);
   });
 
   testWidgets('holding the mascot for three seconds opens the server override', (tester) async {
@@ -389,7 +389,7 @@ void main() {
       adapter.to('GET /api/server-info').last.uri.toString(),
       'http://192.168.1.5:8080/api/server-info',
     );
-    expect(find.text('GET STARTED'), findsOneWidget);
+    expect(find.text('JOIN WITH A CODE'), findsOneWidget);
   });
 
   testWidgets('a server that wants a newer client says so', (tester) async {
@@ -468,7 +468,7 @@ void main() {
     unawaited(container.read(sessionProvider.notifier).signOut());
     await app.settle();
 
-    expect(find.text('GET STARTED'), findsOneWidget);
+    expect(find.text('JOIN WITH A CODE'), findsOneWidget);
     expect(find.text('Added Meal'), findsNothing);
   });
 

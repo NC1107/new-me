@@ -245,7 +245,7 @@ class _MascotPainter extends CustomPainter {
         );
       case MascotState.thinking:
         _eyes(canvas, dx: 2.2, dy: -2);
-        _brows(canvas, sad: false);
+        _curiousBrows(canvas);
         canvas.drawPath(
           Path()
             ..moveTo(_cx - 3, _cy + 14)
@@ -302,12 +302,26 @@ class _MascotPainter extends CustomPainter {
   void _brows(Canvas canvas, {required bool sad}) {
     for (final side in [-1.0, 1.0]) {
       final x = _cx + side * 13;
-      // Sad brows tilt up toward the middle; a curious one lifts on the right only.
-      final inner = sad ? -4.0 : (side > 0 ? -3.0 : 0.0);
-      final outer = sad ? 0.0 : (side > 0 ? -6.0 : 0.0);
+      // Sad brows tilt up toward the middle.
+      final inner = sad ? -4.0 : 0.0;
+      const outer = 0.0;
       canvas.drawLine(
         Offset(x - side * 5, _cy - 14 + inner),
         Offset(x + side * 5, _cy - 14 + outer),
+        _line..strokeWidth = 2.4,
+      );
+    }
+  }
+
+  /// Straight brows read as a frown at this size; soft raised arcs read as wondering.
+  void _curiousBrows(Canvas canvas) {
+    for (final side in [-1.0, 1.0]) {
+      final x = _cx + side * 13 + 2.2;
+      final y = _cy - 17 - (side > 0 ? 3.0 : 0.0);
+      canvas.drawPath(
+        Path()
+          ..moveTo(x - 5, y + 2)
+          ..quadraticBezierTo(x, y - 3, x + 5, y + 2),
         _line..strokeWidth = 2.4,
       );
     }

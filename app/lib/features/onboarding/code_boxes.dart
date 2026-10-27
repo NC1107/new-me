@@ -94,7 +94,7 @@ class _CodeBoxesState extends State<CodeBoxes> with SingleTickerProviderStateMix
                     ? symbols.substring(i * 4, math.min(symbols.length, i * 4 + 4))
                     : '',
                 maxLines: 1,
-                style: AppText.tabular(AppText.headline.copyWith(letterSpacing: 2.5)),
+                style: AppText.tabular(AppText.headline.copyWith(fontSize: 18, letterSpacing: 1.2)),
               ),
             ),
           ),

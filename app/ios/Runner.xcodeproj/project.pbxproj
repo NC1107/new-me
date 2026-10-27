@@ -16,6 +16,25 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		D51DD747CACFBA2C73C764F6 /* CompanionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1F11603FC08BC2EE728BA3 /* CompanionBridge.swift */; };
+		CC36098DC4DF8EC88D810794 /* CompanionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */; };
+		0890B72A2D0B75DEF9A83036 /* CompanionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B199DD9BED65056AA5953C6E /* CompanionAPI.swift */; };
+		2E2CC972CFC59A2FA2E70545 /* NewMeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 182ACAFE165AD3597D4CE0FB /* NewMeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		835A4BAD3887AE70926360FE /* NewMeWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 63516B8733C1675AA1C0026B /* NewMeWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		37B8490A3212C9CB8A0D6888 /* NewMeWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A84712F7B40976C545D67181 /* NewMeWidgets.swift */; };
+		786B2123464680F91DF4FFA8 /* CompanionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */; };
+		CEA3B231200A3664AFD81CFA /* CompanionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B199DD9BED65056AA5953C6E /* CompanionAPI.swift */; };
+		7F5D424801F5B6623CEF69BE /* CompanionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 800FA2DC3599E6066403C047 /* CompanionStyle.swift */; };
+		F5727E003E04E89A19A30D4F /* NewMeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8CECD6ADB679B5C1439DE45 /* NewMeWatchApp.swift */; };
+		3B6C7B4763F593FE667A22A0 /* WatchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731CAC1F197A8AE97313B61C /* WatchModel.swift */; };
+		366F5488151C347F788EB251 /* CompanionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */; };
+		39055D8C734A544E44D4CEBA /* CompanionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B199DD9BED65056AA5953C6E /* CompanionAPI.swift */; };
+		DFA727ADF993FADA621BB020 /* CompanionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 800FA2DC3599E6066403C047 /* CompanionStyle.swift */; };
+		024C29AECFCE626B84C718F0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7FFC046720DCEDE9106A6C9F /* Assets.xcassets */; };
+		40AEAE37E96789C90E7B4582 /* NewMeComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DBCCF39D70E5CD62DEFA5DC /* NewMeComplication.swift */; };
+		6FACC994BC625FDBCD465DE5 /* CompanionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */; };
+		ED89B378734E78C50B5CAE45 /* CompanionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B199DD9BED65056AA5953C6E /* CompanionAPI.swift */; };
+		D46512DCC348A9C62FB5D378 /* CompanionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 800FA2DC3599E6066403C047 /* CompanionStyle.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,6 +44,27 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		301FAE96F74FDC3202F1333F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 852BDEB2AC88B76DEEC3B5F4;
+			remoteInfo = NewMeComplication;
+		};
+		55E495F196CE286C2CB7DE92 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 040F3FB49E75CA78BE9E70B0;
+			remoteInfo = NewMeWidgets;
+		};
+		41663CD27E9945645FCBC006 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5F994092DB089B8E9BB2785;
+			remoteInfo = NewMeWatch;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -37,6 +77,28 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D4AA5AEB388273710B5C84B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2E2CC972CFC59A2FA2E70545 /* NewMeWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EECE4CE4AB684ACC11A38235 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				835A4BAD3887AE70926360FE /* NewMeWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -60,6 +122,25 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97C1470A1CF9000F007C117D /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSnapshot.swift; sourceTree = "<group>"; };
+		B199DD9BED65056AA5953C6E /* CompanionAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionAPI.swift; sourceTree = "<group>"; };
+		800FA2DC3599E6066403C047 /* CompanionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionStyle.swift; sourceTree = "<group>"; };
+		0A1F11603FC08BC2EE728BA3 /* CompanionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionBridge.swift; sourceTree = "<group>"; };
+		069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Companion.xcconfig; path = Flutter/Companion.xcconfig; sourceTree = "<group>"; };
+		A84712F7B40976C545D67181 /* NewMeWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewMeWidgets.swift; sourceTree = "<group>"; };
+		0742FE94D0F0106DE8C2C0BC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9E47DD70C6D5702C26CB1B64 /* NewMeWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewMeWidgets.entitlements; sourceTree = "<group>"; };
+		B8CECD6ADB679B5C1439DE45 /* NewMeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewMeWatchApp.swift; sourceTree = "<group>"; };
+		731CAC1F197A8AE97313B61C /* WatchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchModel.swift; sourceTree = "<group>"; };
+		7FFC046720DCEDE9106A6C9F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E27C59EC08350A885DDE91DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E1EFF911D309AA9EFC98A6FE /* NewMeWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewMeWatch.entitlements; sourceTree = "<group>"; };
+		2DBCCF39D70E5CD62DEFA5DC /* NewMeComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewMeComplication.swift; sourceTree = "<group>"; };
+		8BE7AEE9E0D04578EDB151A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		181B14222B0CB8EC6F984297 /* NewMeComplication.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewMeComplication.entitlements; sourceTree = "<group>"; };
+		182ACAFE165AD3597D4CE0FB /* NewMeWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NewMeWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		63516B8733C1675AA1C0026B /* NewMeWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NewMeWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		613FA4E7D9A80DAAB6EF7F9B /* NewMeComplication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NewMeComplication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +149,30 @@
 			buildActionMask = 2147483647;
 			files = (
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2B5361528A531CEFD51FFCB0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B4E67063D504820389265F17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FEC549664F8B9DF6C63D76C7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +195,7 @@
 				9740EEB21CF90195004384FC /* Debug.xcconfig */,
 				7AFA3C8E1D35360C0083082E /* Release.xcconfig */,
 				9740EEB31CF90195004384FC /* Generated.xcconfig */,
+				069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */,
 			);
 			name = Flutter;
 			sourceTree = "<group>";
@@ -101,6 +207,10 @@
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
+				75EAB4D7F4D3773D9C2D007B /* Shared */,
+				0CFD42D9883BDC4E67D31013 /* NewMeWidgets */,
+				17B913D5A9A451E3E7F09030 /* NewMeWatch */,
+				1657AA9D6FE157D731DD6DCA /* NewMeComplication */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,6 +219,9 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				182ACAFE165AD3597D4CE0FB /* NewMeWidgets.appex */,
+				63516B8733C1675AA1C0026B /* NewMeWatch.app */,
+				613FA4E7D9A80DAAB6EF7F9B /* NewMeComplication.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -124,10 +237,53 @@
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
+				0A1F11603FC08BC2EE728BA3 /* CompanionBridge.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		0CFD42D9883BDC4E67D31013 /* NewMeWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A84712F7B40976C545D67181 /* NewMeWidgets.swift */,
+				0742FE94D0F0106DE8C2C0BC /* Info.plist */,
+				9E47DD70C6D5702C26CB1B64 /* NewMeWidgets.entitlements */,
+			);
+			path = NewMeWidgets;
+			sourceTree = "<group>";
+		};
+		17B913D5A9A451E3E7F09030 /* NewMeWatch */ = {
+			isa = PBXGroup;
+			children = (
+				B8CECD6ADB679B5C1439DE45 /* NewMeWatchApp.swift */,
+				731CAC1F197A8AE97313B61C /* WatchModel.swift */,
+				7FFC046720DCEDE9106A6C9F /* Assets.xcassets */,
+				E27C59EC08350A885DDE91DC /* Info.plist */,
+				E1EFF911D309AA9EFC98A6FE /* NewMeWatch.entitlements */,
+			);
+			path = NewMeWatch;
+			sourceTree = "<group>";
+		};
+		1657AA9D6FE157D731DD6DCA /* NewMeComplication */ = {
+			isa = PBXGroup;
+			children = (
+				2DBCCF39D70E5CD62DEFA5DC /* NewMeComplication.swift */,
+				8BE7AEE9E0D04578EDB151A7 /* Info.plist */,
+				181B14222B0CB8EC6F984297 /* NewMeComplication.entitlements */,
+			);
+			path = NewMeComplication;
+			sourceTree = "<group>";
+		};
+		75EAB4D7F4D3773D9C2D007B /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */,
+				B199DD9BED65056AA5953C6E /* CompanionAPI.swift */,
+				800FA2DC3599E6066403C047 /* CompanionStyle.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -159,11 +315,15 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				7D4AA5AEB388273710B5C84B /* Embed Foundation Extensions */,
+				EECE4CE4AB684ACC11A38235 /* Embed Watch Content */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3EAC973085CFD1CF01B9CB6C /* PBXTargetDependency */,
+				834324F676F9B6547EAA206C /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -172,6 +332,58 @@
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		040F3FB49E75CA78BE9E70B0 /* NewMeWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D1F946F857F5A29588B9171B /* Build configuration list for PBXNativeTarget "NewMeWidgets" */;
+			buildPhases = (
+				C8A6D46B1A8D02CE2198F04A /* Sources */,
+				2B5361528A531CEFD51FFCB0 /* Frameworks */,
+				34CA901E7BD64B682489CECB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NewMeWidgets;
+			productName = NewMeWidgets;
+			productReference = 182ACAFE165AD3597D4CE0FB /* NewMeWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A5F994092DB089B8E9BB2785 /* NewMeWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42725B5447BAF12DE9B5A36A /* Build configuration list for PBXNativeTarget "NewMeWatch" */;
+			buildPhases = (
+				1327221B482D9F4B3AB8423B /* Sources */,
+				B4E67063D504820389265F17 /* Frameworks */,
+				FA410A0100875D701D8EA5E0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3DAB14935BE9A6B1AEB36B67 /* PBXTargetDependency */,
+			);
+			name = NewMeWatch;
+			productName = NewMeWatch;
+			productReference = 63516B8733C1675AA1C0026B /* NewMeWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		852BDEB2AC88B76DEEC3B5F4 /* NewMeComplication */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B32018C1FE55A25BE4F2AE1 /* Build configuration list for PBXNativeTarget "NewMeComplication" */;
+			buildPhases = (
+				0D9DA291A10E10562F8179B3 /* Sources */,
+				FEC549664F8B9DF6C63D76C7 /* Frameworks */,
+				0634E46C432C003F84AC6451 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NewMeComplication;
+			productName = NewMeComplication;
+			productReference = 613FA4E7D9A80DAAB6EF7F9B /* NewMeComplication.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -186,6 +398,15 @@
 					331C8080294A63A400263BE5 = {
 						CreatedOnToolsVersion = 14.0;
 						TestTargetID = 97C146ED1CF9000F007C117D;
+					};
+					040F3FB49E75CA78BE9E70B0 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					A5F994092DB089B8E9BB2785 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					852BDEB2AC88B76DEEC3B5F4 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
@@ -219,6 +440,9 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				040F3FB49E75CA78BE9E70B0 /* NewMeWidgets */,
+				A5F994092DB089B8E9BB2785 /* NewMeWatch */,
+				852BDEB2AC88B76DEEC3B5F4 /* NewMeComplication */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +463,30 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		34CA901E7BD64B682489CECB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA410A0100875D701D8EA5E0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				024C29AECFCE626B84C718F0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0634E46C432C003F84AC6451 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,6 +542,43 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				D51DD747CACFBA2C73C764F6 /* CompanionBridge.swift in Sources */,
+				CC36098DC4DF8EC88D810794 /* CompanionSnapshot.swift in Sources */,
+				0890B72A2D0B75DEF9A83036 /* CompanionAPI.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C8A6D46B1A8D02CE2198F04A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37B8490A3212C9CB8A0D6888 /* NewMeWidgets.swift in Sources */,
+				786B2123464680F91DF4FFA8 /* CompanionSnapshot.swift in Sources */,
+				CEA3B231200A3664AFD81CFA /* CompanionAPI.swift in Sources */,
+				7F5D424801F5B6623CEF69BE /* CompanionStyle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1327221B482D9F4B3AB8423B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5727E003E04E89A19A30D4F /* NewMeWatchApp.swift in Sources */,
+				3B6C7B4763F593FE667A22A0 /* WatchModel.swift in Sources */,
+				366F5488151C347F788EB251 /* CompanionSnapshot.swift in Sources */,
+				39055D8C734A544E44D4CEBA /* CompanionAPI.swift in Sources */,
+				DFA727ADF993FADA621BB020 /* CompanionStyle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0D9DA291A10E10562F8179B3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40AEAE37E96789C90E7B4582 /* NewMeComplication.swift in Sources */,
+				6FACC994BC625FDBCD465DE5 /* CompanionSnapshot.swift in Sources */,
+				ED89B378734E78C50B5CAE45 /* CompanionAPI.swift in Sources */,
+				D46512DCC348A9C62FB5D378 /* CompanionStyle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,6 +589,21 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		3DAB14935BE9A6B1AEB36B67 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 852BDEB2AC88B76DEEC3B5F4 /* NewMeComplication */;
+			targetProxy = 301FAE96F74FDC3202F1333F /* PBXContainerItemProxy */;
+		};
+		3EAC973085CFD1CF01B9CB6C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 040F3FB49E75CA78BE9E70B0 /* NewMeWidgets */;
+			targetProxy = 55E495F196CE286C2CB7DE92 /* PBXContainerItemProxy */;
+		};
+		834324F676F9B6547EAA206C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5F994092DB089B8E9BB2785 /* NewMeWatch */;
+			targetProxy = 41663CD27E9945645FCBC006 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -611,6 +911,269 @@
 			};
 			name = Release;
 		};
+		5DCAC82273B97F7CAEB63DF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWidgets/NewMeWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		93D8FCB18107BD03497F1EA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWidgets/NewMeWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "New Me Widgets App Store";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		9F5C5A591B8DE5D000884AB8 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWidgets/NewMeWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Profile;
+		};
+		83B224F2BA4548997EA68B59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWatch/NewMeWatch.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		4EE43AD19D93553C138B03D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWatch/NewMeWatch.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "New Me Watch App Store";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		349B5B12B49A10327AB2AC2F /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeWatch/NewMeWatch.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Profile;
+		};
+		39D04C3C10DE8AAC7E77C49F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeComplication/NewMeComplication.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		AF56B2AB369BF154566B9344 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_ENTITLEMENTS = NewMeComplication/NewMeComplication.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		82011C19E9288376F9B7BC29 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 069EA0DBFE3D4F15E289FF82 /* Companion.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NewMeComplication/NewMeComplication.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 76S78SUWVM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NewMeComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -640,6 +1203,36 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D1F946F857F5A29588B9171B /* Build configuration list for PBXNativeTarget "NewMeWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DCAC82273B97F7CAEB63DF2 /* Debug */,
+				93D8FCB18107BD03497F1EA0 /* Release */,
+				9F5C5A591B8DE5D000884AB8 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42725B5447BAF12DE9B5A36A /* Build configuration list for PBXNativeTarget "NewMeWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83B224F2BA4548997EA68B59 /* Debug */,
+				4EE43AD19D93553C138B03D7 /* Release */,
+				349B5B12B49A10327AB2AC2F /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0B32018C1FE55A25BE4F2AE1 /* Build configuration list for PBXNativeTarget "NewMeComplication" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				39D04C3C10DE8AAC7E77C49F /* Debug */,
+				AF56B2AB369BF154566B9344 /* Release */,
+				82011C19E9288376F9B7BC29 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

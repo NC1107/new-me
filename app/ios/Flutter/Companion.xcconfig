@@ -1,0 +1,6 @@
+// The widget, Watch and complication targets. App Store Connect rejects an app whose embedded
+// bundles carry a different version or build number, so they take the app's from Flutter.
+#include "Generated.xcconfig"
+
+MARKETING_VERSION = $(FLUTTER_BUILD_NAME)
+CURRENT_PROJECT_VERSION = $(FLUTTER_BUILD_NUMBER)

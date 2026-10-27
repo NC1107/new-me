@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -12,6 +14,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/targets"
 )
 
 type targetsJSON struct {
@@ -288,6 +291,16 @@ type patchMeRequest struct {
 	QuestTemplates []templatePatch     `json:"questTemplates"`
 	Notifications  *notificationsPatch `json:"notifications"`
 	Schedule       *schedulePatch      `json:"schedule"`
+	HeightCm       nullable[float64]   `json:"heightCm"`
+	Sex            nullable[string]    `json:"sex"`
+	Goal           *goalPatch          `json:"goal"`
+}
+
+// goalPatch sets the weight goal. The pace is kg a week: 0.25 or 0.5 to lose, a multiple of 0.05
+// to gain, and 0 (or absent) to maintain.
+type goalPatch struct {
+	Kind          *string  `json:"kind"`
+	PaceKgPerWeek *float64 `json:"paceKgPerWeek"`
 }
 
 // Bounds of the profile targets, mirroring the users table checks.
@@ -333,7 +346,31 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err := s.commitPatch(ctx, c, user, zone, req)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	fresh, err := db.GetUser(ctx, s.db.Pool, user.ID)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	me, err := s.buildMe(ctx, s.db.Pool, fresh)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, me)
+}
+
+// commitPatch writes the validated profile and template changes in one transaction. Every
+// still-open day is scored first, which freezes its snapshot, so the change applies from the next
+// day, except on the join day (see resnapshotJoinDay). zone is the staged time zone, if any, and
+// after runs inside the same transaction.
+func (s *Server) commitPatch(ctx context.Context, c caller, user db.User, zone string, req patchMeRequest,
+	after ...func(tx pgx.Tx) error) error {
+	return s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		for _, date := range s.openDates(c.user, c.loc) {
 			if _, err := engine.RecomputeDayAt(ctx, tx, user.ID, date, c.loc, s.now()); err != nil {
 				return err
@@ -352,23 +389,16 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		if err := applyTemplatePatches(ctx, tx, user.ID, req.QuestTemplates); err != nil {
 			return err
 		}
-		return s.resnapshotJoinDay(ctx, tx, c, user, req)
+		if err := s.resnapshotJoinDay(ctx, tx, c, user, req); err != nil {
+			return err
+		}
+		for _, fn := range after {
+			if err := fn(tx); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
-	if err != nil {
-		fail(w, r, err)
-		return
-	}
-	fresh, err := db.GetUser(ctx, s.db.Pool, user.ID)
-	if err != nil {
-		fail(w, r, err)
-		return
-	}
-	me, err := s.buildMe(ctx, s.db.Pool, fresh)
-	if err != nil {
-		fail(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, me)
 }
 
 // resnapshotJoinDay lets a brand-new person's first day follow the quests and targets they
@@ -428,6 +458,9 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 	if err := applySchedulePatch(u, req.Schedule); err != nil {
 		return err
 	}
+	if err := applyBody(u, req); err != nil {
+		return err
+	}
 	if t := req.Targets; t != nil {
 		for _, step := range []*httpError{
 			applyTarget(&u.KcalTarget, t.Kcal, maxKcalTarget, "kcal"),
@@ -440,6 +473,68 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			}
 		}
 	}
+	return nil
+}
+
+// Bounds of the height, mirroring the users table check.
+const (
+	minHeightCm = 100
+	maxHeightCm = 250
+)
+
+// applyBody sets or clears the height and sex and sets the goal.
+func applyBody(u *db.User, req patchMeRequest) *httpError {
+	if req.HeightCm.Set {
+		if h := req.HeightCm.Value; h == nil {
+			u.HeightCm = nil
+		} else {
+			if math.IsNaN(*h) || *h < minHeightCm || *h > maxHeightCm {
+				return invalid(fmt.Sprintf("heightCm must be between %d and %d", minHeightCm, maxHeightCm))
+			}
+			rounded := math.Round(*h*10) / 10
+			u.HeightCm = &rounded
+		}
+	}
+	if req.Sex.Set {
+		if v := req.Sex.Value; v != nil && *v != string(targets.Male) && *v != string(targets.Female) {
+			return invalid("sex must be male, female or null")
+		}
+		u.Sex = req.Sex.Value
+	}
+	return applyGoal(u, req.Goal)
+}
+
+// applyGoal validates a goal: lose at 0.25 or 0.5 kg a week, gain at a multiple of 0.05 up to 1
+// kg (the 0.5% of body weight cap is applied against the weight when the target is computed),
+// maintain at 0.
+func applyGoal(u *db.User, g *goalPatch) *httpError {
+	if g == nil {
+		return nil
+	}
+	if g.Kind == nil {
+		return invalid("goal kind is required")
+	}
+	pace := 0.0
+	if g.PaceKgPerWeek != nil {
+		pace = math.Round(*g.PaceKgPerWeek*100) / 100
+	}
+	switch *g.Kind {
+	case targets.Maintain:
+		if pace != 0 {
+			return invalid("a maintain goal has no pace")
+		}
+	case targets.Lose:
+		if !slices.Contains(targets.LosePaces, pace) {
+			return invalid("lose pace must be 0.25 or 0.5 kg a week")
+		}
+	case targets.Gain:
+		if pace <= 0 || pace > 1 || math.Abs(pace/targets.PaceStepKg-math.Round(pace/targets.PaceStepKg)) > 1e-9 {
+			return invalid("gain pace must be a multiple of 0.05 kg a week, up to 1")
+		}
+	default:
+		return invalid("goal kind must be lose, maintain or gain")
+	}
+	u.GoalKind, u.GoalPaceKg = *g.Kind, pace
 	return nil
 }
 

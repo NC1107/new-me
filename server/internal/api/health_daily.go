@@ -45,6 +45,7 @@ var healthLimits = map[string]healthBounds{
 	"weight_kg":           {20, 400},
 	"body_fat_pct":        {1, 80},
 	"lean_mass_kg":        {10, 300},
+	"height_cm":           {100, 250},
 }
 
 type healthItem struct {

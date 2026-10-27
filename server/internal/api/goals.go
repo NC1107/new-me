@@ -1,8 +1,12 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -11,6 +15,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/goals"
 	"github.com/nc1107/new-me/server/internal/insights"
+	"github.com/nc1107/new-me/server/internal/plan"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -27,7 +32,11 @@ type proposalJSON struct {
 }
 
 // proposalKeys are the quests that get proposals, in display order.
-var proposalKeys = []string{db.QuestSteps, db.QuestSleep, db.QuestExercise, db.QuestProtein}
+var proposalKeys = []string{db.QuestSteps, db.QuestSleep, db.QuestExercise, db.QuestProtein, proposalCalories}
+
+// proposalCalories is the proposal key of the calorie target, which lives on the profile and has
+// no quest template.
+const proposalCalories = "calories"
 
 // handleGoalProposals lists this week's pending target proposals. A proposal is frozen the
 // first time it is shown and, once accepted or dismissed, does not come back until next week.
@@ -59,6 +68,9 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 	out := []proposalJSON{}
 	for _, key := range proposalKeys {
 		tmpl, ok := byKey[key]
+		if key == proposalCalories {
+			tmpl, ok = db.QuestTemplate{Key: key, Unit: "kcal"}, true
+		}
 		prior, hasPrior := storedByKey[key]
 		if !ok || (hasPrior && prior.State != db.ProposalPending) {
 			continue
@@ -112,6 +124,11 @@ func (s *Server) proposalBasis(r *http.Request, c caller, key string, tmpl db.Qu
 		}
 		protein, err := proteinFor(r.Context(), s.db.Pool, c.user, today, tmpl.Target)
 		return goals.KindTarget, protein.Effective, true, err
+	case proposalCalories:
+		if c.user.KcalTarget == nil {
+			return "", 0, false, nil
+		}
+		return goals.KindTarget, *c.user.KcalTarget, true, nil
 	}
 	return "", 0, false, nil
 }
@@ -151,18 +168,96 @@ func (s *Server) freshProposal(r *http.Request, c caller, key, kind string, curr
 			}
 		}
 		return goals.Sleep(tmpl.Target, asleep), nil
-	case db.QuestProtein:
-		latest, err := db.LatestHealth(ctx, s.db.Pool, c.user.ID, today, []string{db.MetricWeight})
-		if err != nil {
-			return nil, err
-		}
-		w, ok := latest[db.MetricWeight]
-		if !ok {
-			return nil, nil
-		}
-		return goals.Protein(current, w.Value), nil
+	case db.QuestProtein, proposalCalories:
+		return s.formulaProposal(ctx, c, key, current, today)
 	}
 	return nil, nil
+}
+
+// formulaProposal proposes the v8 formula value of calories or protein. Protein also follows the
+// 20% rule against the formula. Either is offered when the formula value moved more than 5%
+// (100 kcal for calories) from its baseline; the baseline is set the first time the formula can
+// be computed, so nothing is proposed before an input has changed.
+func (s *Server) formulaProposal(ctx context.Context, c caller, key string, current int, today score.Date) (*goals.Proposal, error) {
+	d, err := s.loadTargetData(ctx, s.db.Pool, c.user, c.loc)
+	if err != nil {
+		return nil, err
+	}
+	computed := computeTargets(d)
+	t, ok := computed.find(key)
+	if !ok || t.Value == nil {
+		return nil, nil
+	}
+	value := *t.Value
+	if key == db.QuestProtein && d.WeightKg != nil {
+		perKg := round1(float64(value) / *d.WeightKg)
+		if t.Details != nil {
+			if k, ok := t.Details["perKg"].(float64); ok && t.Details["capped"] != true {
+				perKg = k
+			}
+		}
+		if p := goals.Protein(current, *d.WeightKg, value, perKg); p != nil {
+			return p, nil
+		}
+	}
+	base, err := db.GetTargetBaseline(ctx, s.db.Pool, c.user.ID, key)
+	if errors.Is(err, db.ErrNotFound) {
+		return nil, db.SetTargetBaseline(ctx, s.db.Pool, c.user.ID, key, float64(value), d.baselineInputs(), today)
+	}
+	if err != nil {
+		return nil, err
+	}
+	changed := changedInputs(base.Inputs, d.baselineInputs())
+	if len(changed) == 0 || value == current || !goals.FormulaMoved(key, base.Value, float64(value)) {
+		return nil, nil
+	}
+	unit := "g"
+	if key == proposalCalories {
+		unit = "kcal"
+	}
+	return &goals.Proposal{Key: key, Kind: goals.KindTarget, Current: current, Proposed: value, Reason: fmt.Sprintf(
+		"Your %s changed, so the formula now gives %s %s, not %s. %s",
+		strings.Join(changed, " and "), plan.Thousands(value), unit, plan.Thousands(int(math.Round(base.Value))), t.Formula)}, nil
+}
+
+// inputNames are the readable names of the baseline inputs, in the order they are listed.
+var inputNames = []struct{ key, name string }{
+	{inWeight, "weight"}, {inHeight, "height"}, {inAge, "age"}, {inSex, "sex"},
+	{"goal", "goal"}, {"paceKgPerWeek", "goal pace"}, {"palBand", "step count band"},
+}
+
+// changedInputs names the inputs whose value differs between two baseline snapshots.
+func changedInputs(before, now map[string]any) []string {
+	var out []string
+	goalChanged := false
+	for _, in := range inputNames {
+		if fmt.Sprint(before[in.key]) == fmt.Sprint(now[in.key]) {
+			continue
+		}
+		goalChanged = goalChanged || in.key == "goal"
+		// A new goal kind carries its own pace, which is not a second change.
+		if in.key == "paceKgPerWeek" && goalChanged {
+			continue
+		}
+		out = append(out, in.name)
+	}
+	return out
+}
+
+// refreshBaseline records the current formula value of calories or protein as the baseline, so
+// the next proposal is measured from what the person just accepted or dismissed.
+func (s *Server) refreshBaseline(ctx context.Context, q db.Querier, c caller, key string) error {
+	if key != db.QuestProtein && key != proposalCalories {
+		return nil
+	}
+	d, err := s.loadTargetData(ctx, q, c.user, c.loc)
+	if err != nil {
+		return err
+	}
+	if t, ok := computeTargets(d).find(key); ok && t.Value != nil {
+		return db.SetTargetBaseline(ctx, q, c.user.ID, key, float64(*t.Value), d.baselineInputs(), d.Today)
+	}
+	return nil
 }
 
 var errNoProposal = newErr(http.StatusNotFound, codeNotFound, "there is no pending proposal for that goal this week")
@@ -203,12 +298,19 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		}
-		if key == db.QuestProtein {
-			// The protein target lives on the profile, not on the template.
+		if key == db.QuestProtein || key == proposalCalories {
+			// These targets live on the profile, not on a template.
 			user := c.user
-			user.ProteinTarget = &p.Proposed
+			if key == proposalCalories {
+				user.KcalTarget = &p.Proposed
+			} else {
+				user.ProteinTarget = &p.Proposed
+			}
 			if err := db.UpdateUser(ctx, tx, user); err != nil {
 				return mapUpdateUserErr(err)
+			}
+			if err := s.refreshBaseline(ctx, tx, c, key); err != nil {
+				return err
 			}
 			return s.resnapshotJoinDay(ctx, tx, c, user, patchMeRequest{Targets: &targetsPatch{}})
 		}
@@ -254,6 +356,10 @@ func (s *Server) handleDismissProposal(w http.ResponseWriter, r *http.Request) {
 			fail(w, r, errNoProposal)
 			return
 		}
+		fail(w, r, err)
+		return
+	}
+	if err := s.refreshBaseline(r.Context(), s.db.Pool, c, key); err != nil {
 		fail(w, r, err)
 		return
 	}

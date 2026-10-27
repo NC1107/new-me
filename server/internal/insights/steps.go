@@ -202,3 +202,7 @@ func median(v []float64) float64 {
 	}
 	return (s[len(s)/2-1] + s[len(s)/2]) / 2
 }
+
+// AgeOn is the age by calendar year on the date, or nil when the birth year is unknown or in
+// the future.
+func AgeOn(today score.Date, birthYear *int) *int { return ageOn(today, birthYear) }

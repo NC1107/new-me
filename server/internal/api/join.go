@@ -21,10 +21,21 @@ type userJSON struct {
 	IsAdmin  bool   `json:"isAdmin"`
 	// BirthYear is null until the person shares it.
 	BirthYear *int `json:"birthYear"`
+	// HeightCm, Sex and Goal are the v8 inputs of the research-backed targets.
+	HeightCm *float64 `json:"heightCm"`
+	Sex      *string  `json:"sex"`
+	Goal     goalJSON `json:"goal"`
+}
+
+// goalJSON is the person's weight goal; the pace is kg a week and 0 for maintain.
+type goalJSON struct {
+	Kind          string  `json:"kind"`
+	PaceKgPerWeek float64 `json:"paceKgPerWeek"`
 }
 
 func toUserJSON(u db.User) userJSON {
-	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin, BirthYear: u.BirthYear}
+	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin, BirthYear: u.BirthYear,
+		HeightCm: u.HeightCm, Sex: u.Sex, Goal: goalJSON{Kind: u.GoalKind, PaceKgPerWeek: u.GoalPaceKg}}
 }
 
 type joinRequest struct {

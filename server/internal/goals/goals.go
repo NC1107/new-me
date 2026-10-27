@@ -7,7 +7,9 @@
 //	       a raise also needs the goal met on at least 10 of those 14 days, lowering is always allowed
 //	exercise, sleep  a quest that is off is offered once, with its default target, unless the person
 //	       dismissed the offer in the last four weeks
-//	protein  when the current target is 20% or more away from 1.6 g/kg of the latest weight
+//	protein  when the current target is 20% or more away from the v8 formula (g/kg by goal)
+//	calories, protein  when the v8 formula value moved by more than 5% (100 kcal for calories)
+//	       from its baseline because an input changed
 //	sleep  when the 14-night average is 45 minutes or more under the target (and at least 5 nights
 //	       are recorded), the target moves halfway toward the average, rounded to 15 minutes and
 //	       never below 5 h
@@ -117,13 +119,29 @@ func Enable(key string, target int) *Proposal {
 	return &Proposal{Key: key, Kind: KindEnable, Current: target, Proposed: target, Reason: reason}
 }
 
-// Protein proposes the per-kilogram target when the current one is 20% or more away from it.
-func Protein(current int, weightKg float64) *Proposal {
-	suggested := score.ProteinTarget(weightKg)
+// Protein proposes the formula's protein target when the current one is 20% or more away from it.
+func Protein(current int, weightKg float64, suggested int, perKg float64) *Proposal {
 	if current <= 0 || suggested <= 0 || !score.ProteinOff(current, suggested) {
 		return nil
 	}
 	return &Proposal{Key: "protein", Kind: KindTarget, Current: current, Proposed: suggested, Reason: fmt.Sprintf(
 		"At %.1f kg, %.1f g per kilogram is %d g of protein a day. Your target is %d g.",
-		weightKg, score.ProteinPerKg, suggested, current)}
+		weightKg, perKg, suggested, current)}
+}
+
+// Formula-change thresholds: a target is proposed when its formula value moved by more than 5%
+// since the last baseline, or by more than 100 kcal for calories.
+const (
+	CaloriesChangeKcal    = 100
+	FormulaChangeFraction = 0.05
+)
+
+// FormulaMoved reports whether a target's formula value changed enough from its baseline to be
+// worth a proposal.
+func FormulaMoved(key string, baseline, now float64) bool {
+	diff := math.Abs(now - baseline)
+	if key == "calories" {
+		return diff > CaloriesChangeKcal
+	}
+	return baseline != 0 && diff/baseline > FormulaChangeFraction
 }

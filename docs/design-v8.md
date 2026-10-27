@@ -85,6 +85,96 @@ Missing inputs are listed on the Targets page with a one-tap way to add them; no
 - `PATCH /api/me` gains `heightCm`, `sex` and `goal {kind, paceKgPerWeek}`; `POST /api/targets/apply` with the keys to apply; `POST /api/pushups/max` records a max test.
 - Pure functions with table tests reproducing worked examples from the cited sources where they give them.
 
+## Server decisions
+
+Implemented in `server/` (migrations 0011 and 0012, package `internal/targets`); endpoint shapes are in `docs/design.md` (Endpoints, v8 additions).
+Where this document left a choice open, the server does the following.
+
+### Inputs
+
+- Weight is the v7 smoothed trend (rounded to 0.1 kg), so one heavy morning does not move a target.
+- Height is the profile value, else the newest Health `height_cm` on or before today; the input says which one it used.
+- Age is the calendar year minus the birth year, as in v4.
+- The activity band needs at least 5 days with steps in the 14 complete days before today (today is unfinished); fewer is a missing input.
+- Nothing is guessed: with an input missing the dependent targets have a null value, a `missing` list and a formula sentence that says what is needed.
+  Maintenance therefore needs steps, and every food target needs maintenance.
+- The goal defaults to maintain.
+  Lose is 0.25 or 0.5 kg a week; gain is a multiple of 0.05 up to 1 at the API, and the 0.5% of body weight cap (rounded to 0.05) is applied when the target is computed, because the weight changes after the goal is chosen.
+  A lose pace is likewise limited to 1% of body weight.
+  A capped pace is named in the formula sentence.
+
+### Labels
+
+- `guideline`: resting energy, protein, fat, saturated fat, carbohydrate, fiber, sleep, activity and steps, which rest directly on a cited formula, ratio or guideline.
+- `convention`: maintenance, because the PAL value inside each FAO/WHO/UNU range is ours; the formula sentence says "our convention".
+- `derivation`: calories (maintenance moved by a published energy density, so it inherits the convention), the estimate from logs, and push-ups.
+- The BMI 30 protein cap is called expert practice in its sentence, as in the text above.
+- Water has no target and is not in the response.
+- The citations are worded as in this document and carry no DOIs, which still have to be checked before the app shows them.
+
+### Energy and macros
+
+- Calories are rounded to the nearest 50 kcal.
+  The floor is the larger of resting energy and 1,200 (women) or 1,500 (men), rounded up to 50 so the rounded floor is never below resting energy.
+- The estimate from logs looks at weigh-ins and logged days in the 28 days up to today.
+  It needs a span of at least 14 days between the first and last weigh-in, 8 weigh-ins, and 10 days with logged intake between them (today excluded).
+  The body-energy change is the v7 smoothed weight at the last weigh-in minus the one at the first, times 7,700 kcal per kg, over the span in days.
+  Average intake is over the days with logged intake.
+  It is shown beside maintenance and never replaces it.
+- Protein per kg is applied to the smoothed weight and rounded to 5 g.
+  The BMI 30 cap needs a height; without one no cap is applied and `details.capNote` says so.
+  The per-meal tip is 0.4 g/kg rounded to a gram.
+- Fat is 28% of the calorie target.
+  When carbohydrate would fall under 130 g, fat is lowered to leave 130 g, but never under 20%; if carbohydrate is still under 130 g it is set to the floor and the macros add up to a little more than the calories (the sentence says so).
+  Fat is rounded to a gram and carbohydrate is the rounded remainder, so the macros add up to the calorie target within 3 kcal whenever the floor does not apply.
+- Saturated fat is a maximum of 10% of calories, in grams.
+- Fiber is 14 g per 1,000 kcal of the calorie target, rounded to a gram, with the age and sex adequate intake in `details` and the sentence (none under 19).
+
+### Sleep
+
+- The recommended value is always the 7 h 30 default (450 minutes); `current` is the person's quest target and `details.rangeMin` and `rangeMax` are 420 and 540.
+- Bedtime is the schedule's wake time minus the target minus 15 minutes, for workdays and days off, modulo midnight.
+- The 7-night shortfall is the net total: nights with sleep in the last 7 days, target times that count minus the minutes slept, never below 0.
+  It is information only and has no recovery advice.
+- The Sleep Regularity Index follows Phillips 2017: the share of minutes that are in the same state (asleep or awake) 24 hours apart, scaled to -100..100, so a perfectly regular schedule is 100.
+  `sleep_nights` holds one sleep episode per night and the app defines a night as 18:00 the day before to 12:00, so only those 1,080 minutes of two consecutive recorded nights are compared; the afternoon is not observed and is not assumed awake.
+  Asleep means between `bed_at` and `wake_at`, at minute resolution, compared by wall-clock time so a daylight saving change does not shift one night against the next.
+  It uses the last 14 days and needs 5 nights with sleep and at least one pair of consecutive nights; otherwise the score is null and `missing` says what is lacking.
+
+### Activity and steps
+
+- Activity reports the v7 WHO 2020 week against 150 to 300 minutes and 2 strength days; the value is the 150 minute minimum.
+  It cannot be applied: turning a weekly total into a daily exercise quest would need a conversion the sources do not give.
+- Steps are 7,000 unless the 14-day median is above 7,000 (and at least 5 days exist), in which case the v4 age band suggestion is the target.
+  Increases are offered in steps of 1,000, as in v4.
+
+### Push-ups
+
+- The daily target is 3 sets, and the quest target (total reps) is 3 times the reps per set.
+- Reps per set are 75% of the latest max, the middle of the 70 to 80% range, rounded, at least 1; the range is in `details.rangePerSet`.
+  The latest max is the test on the newest date.
+- Each push-up log entry is a set, as before.
+  A day is complete when at least 3 entries have at least the current reps per set, where the current reps per set are the quest target divided by 3.
+  The "1 to 2 reps to spare" condition cannot be observed from a log of reps and is not checked.
+- Progression looks at the 7 complete days before today.
+  With 5 or more complete days, reps per set rise by 5% (at least 1), and the target is never lower than the value from the max.
+- Null until a max exists.
+
+### Applying
+
+- `POST /api/targets/apply` is all or nothing.
+  Calories, protein, fat and carbs go to the profile targets, steps, sleep and push-ups to the quest templates; it does not change whether a quest is enabled.
+  It is the `PATCH /api/me` code path, so open days are scored first and the change applies from tomorrow, except on the join day.
+- Applying calories or protein also records the baseline described next.
+
+### Monday proposals
+
+- Calories (a profile target, offered only when the person has one) and protein get a formula baseline: the formula value and the inputs behind it, stored when the target is applied through `/api/targets/apply`, when a proposal is accepted or dismissed, and otherwise the first time the proposals are listed.
+  Nothing is proposed before an input has moved.
+- A proposal appears when the value moved by more than 5% (more than 100 kcal for calories) since the baseline, the target in force differs, and at least one input differs; the reason names the inputs that changed and carries the formula sentence.
+- The protein rule of v7 (the target is 20% or more away from the formula) stays, now measured against the goal-aware protein formula.
+- Dismissing a proposal makes the current formula value the new baseline, so it is not offered again until the value moves another 5%.
+
 ## Meal estimate and the food library
 
 Nick's complaint: "an apple, a chomp meat stick, and a hotpocket" came back as one blended meal with numbers the model made up.

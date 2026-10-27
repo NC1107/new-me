@@ -91,11 +91,12 @@ Season and scoring model
 | sleep | HealthKit, `health_daily` metric `sleep_minutes` | `floor(value)` |
 | active_energy | HealthKit, `health_daily` metric `active_energy` | not scored; shown on Today as "burned N" |
 
-`health_daily` holds 17 metrics, each with a per-day bound enforced by a CHECK and by `PUT /health/daily`.
+`health_daily` holds 18 metrics, each with a per-day bound enforced by a CHECK and by `PUT /health/daily`.
 Steps, active_energy, basal_energy, distance_m and water_ml are 0 to 200000, 20000, 20000, 200000 and 20000.
 exercise_minutes, workout_minutes, sleep_minutes and mindful_minutes are 0 to 1440.
 flights is 0 to 1000, workouts 0 to 50, hrv_ms 0 to 500 and vo2max 0 to 100.
 resting_hr is 20 to 250, weight_kg 20 to 400, body_fat_pct 1 to 80 and lean_mass_kg 10 to 300.
+v8 adds an 18th metric, `height_cm` (100 to 250), a point-in-time reading that is only used when the profile has no height.
 Only steps, exercise_minutes, sleep_minutes and active_energy feed scoring or the Today screen; the rest are served through `GET /today` `health` and `GET /health/trends`.
 
 ### Quest templates
@@ -352,7 +353,7 @@ POST   /join
   first install (initialized = false), no code:   {name, color, timezone}
   new member:                                     {code, name, color, timezone}
   re-pair:                                        {code, userId}, no other field
-  201 {user: {id, name, color, timezone, isAdmin, birthYear}, token}
+  201 {user: {id, name, color, timezone, isAdmin, birthYear, heightCm, sex, goal}, token}
 
 DELETE /devices/me                                  204, revokes the calling device
 
@@ -360,7 +361,7 @@ POST   /invites                                     admin
   201 {code, expiresAt}
 
 GET    /me
-  200 {user: {id, name, color, timezone, isAdmin, birthYear},
+  200 {user: {id, name, color, timezone, isAdmin, birthYear, heightCm, sex, goal {kind, paceKgPerWeek}},
        targets: {kcal, protein, carbs, fat},          integers or null
        questTemplates: [{key, title, enabled, target, unit, targetAlt, unitAlt, points, position}],
        localToday, backdateUntil, serverNow,
@@ -379,6 +380,7 @@ DELETE /me/audiobookshelf
 PATCH  /me
   req any of {name, color, timezone,
               birthYear: 1900..current year in the person's zone, or null to clear (absent leaves it alone),
+              heightCm: 100..250 or null, sex: male|female|null, goal: {kind, paceKgPerWeek},
               targets: {kcal, protein, carbs, fat},      null clears a target
               questTemplates: [{key, enabled, target, targetAlt}]}
   200 same body as GET /me
@@ -433,7 +435,7 @@ GET    /meals/recent?limit=20
   distinct across both users, newest first
 
 PUT    /health/daily
-  req {items: [{date, metric: one of the 17 keys, value, source, measuredAt}]}
+  req {items: [{date, metric: one of the 18 keys, value, source, measuredAt}]}
   200 {days: [DayDetail]}                                every affected date, oldest first, so the app skips GET /today
   422 {code, error, items: [{index, code, error}]}       code is date_closed when every bad item is, else invalid_request
 
@@ -712,6 +714,20 @@ All additive.
 - `GET /milestones`: the caller's and the couple's milestones, newest first.
 - `challenge` on `/board` gains `people [{userId, name, color, target, progress, done}]`; `target` is the sum of the shares and `progress` adds each person's progress capped at their own share. It completes when every person reached their own share.
 
+### Endpoints, v8 additions
+
+All additive; the formulas, labels and citations are in `docs/design-v8.md`.
+
+- `GET /me`, `PATCH /me` and the `user` object of `POST /join` gain `heightCm` (100 to 250, one decimal, or null), `sex` (`male`, `female` or null) and `goal {kind: lose|maintain|gain, paceKgPerWeek}`. A patch sends `heightCm` and `sex` (null clears) and `goal: {kind, paceKgPerWeek}`. Lose is 0.25 or 0.5, gain a multiple of 0.05 up to 1 (limited to 0.5% of body weight when the target is computed), maintain 0; anything else is 422.
+- `PUT /health/daily` accepts the metric `height_cm` (100 to 250).
+- `GET /targets`: `{asOf, disclaimer, inputs, targets, sources}`.
+  - `inputs[] {key: weightKg|heightCm|age|sex|goal|steps14, value, unit, source: profile|health|missing, note}`; weight is the v7 smoothed trend, height is the profile value or else Health's, steps14 is the average of the days with steps in the 14 complete days before today (at least 5 days).
+  - `targets[] {key, value, unit, current, formula, sources, label: guideline|convention|derivation, missing, applicable, details}` for `restingEnergy`, `maintenance`, `estimatedFromLogs`, `calories`, `protein`, `fat`, `saturatedFatMax`, `carbs`, `fiber`, `sleep`, `activity`, `steps` and `pushups`. `value` is null when an input is missing and `missing` says which; `formula` is one plain sentence with the numbers plugged in; `current` is the setting in force; `details` carries the extras (pace options, bedtime, 7-night shortfall, Sleep Regularity Index, WHO week, push-up sets).
+  - `sources` maps every source key a target cites to its citation.
+- `POST /targets/apply {keys}`: sets `calories`, `protein`, `fat` and `carbs` on the profile targets and `steps`, `sleep` and `pushups` on the quest templates, through the same path as `PATCH /me` (open days are scored first, so a change starts tomorrow, except on the join day). All or nothing: an unknown or non-applicable key, or one with no value yet, is 422. 200 is the `GET /me` body plus `applied`.
+- `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
+- `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
+
 
 ### Schema
 
@@ -953,6 +969,13 @@ Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
 - `plan_polish` (primary key user + `local_date`, `facts_key`, `text` nullable, `attempted_at`): the row is the claim on the day's single Claude call and `text` the cached wording.
 - `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
 - The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
+
+#### Migrations 0011 and 0012 (v8)
+
+- `users`: `height_cm`, `sex`, `goal_kind` (default maintain) and `goal_pace_kg`; `health_daily` accepts the metric `height_cm`.
+- `pushup_max_tests` (primary key user + `local_date`, `reps`).
+- `target_baselines` (primary key user + `key` calories|protein, `value`, `inputs` JSONB, `set_on`): the formula value and inputs when a target was last applied, accepted, dismissed or first seen.
+- `goal_proposals` accepts the key `calories` and reasons up to 600 characters.
 
 #### Migration 0009 (v7)
 

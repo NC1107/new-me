@@ -1,0 +1,28 @@
+{
+  "method": "GET",
+  "path": "/api/goals/proposals",
+  "status": 200,
+  "request": null,
+  "body": {
+    "week": "2026-W44",
+    "weekStart": "2026-10-26",
+    "proposals": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "unit": "steps",
+        "current": 8000,
+        "proposed": 9000,
+        "reason": "You hit 8,000 on 11 of the last 14 days"
+      },
+      {
+        "key": "sleep",
+        "title": "Sleep",
+        "unit": "minutes",
+        "current": 480,
+        "proposed": 450,
+        "reason": "You average 7 h 10 over the last 14 nights"
+      }
+    ]
+  }
+}

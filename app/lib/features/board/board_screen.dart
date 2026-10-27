@@ -20,6 +20,8 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
+import '../recap/recap_cards.dart';
+import '../recap/recap_screen.dart';
 import '../together/cheer_sheet.dart';
 import '../together/together_section.dart';
 import 'person_card.dart';
@@ -76,8 +78,8 @@ class _UsBody extends ConsumerWidget {
         Semantics(header: true, child: const Text('Us', style: AppText.display)),
         Text(
           ends == null
-              ? board.season.name
-              : '${board.season.name} - ends ${DateFormat.MMMd().format(parseLocalDate(ends))}',
+              ? seasonLabel(board.season.name)
+              : '${seasonLabel(board.season.name)} - ends ${DateFormat.MMMd().format(parseLocalDate(ends))}',
           style: AppText.caption,
         ),
         const SizedBox(height: 16),
@@ -105,6 +107,8 @@ class _UsBody extends ConsumerWidget {
         if (paired) ...[
           const SizedBox(height: kCardGap),
           _Together(users: users),
+          const SizedBox(height: kCardGap),
+          RecapEntryCard(onTap: () => pushPage(context, const RecapScreen())),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),

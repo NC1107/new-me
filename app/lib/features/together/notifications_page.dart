@@ -18,9 +18,21 @@ import '../../widgets/pressable.dart';
 import '../me/reminders_page.dart';
 import '../me/settings_row.dart';
 
-/// How many of the four push switches are on, for the Me row's subtitle.
-int notificationsOn(NotificationPrefs p) =>
-    [p.partnerDone, p.cheers, p.challenge, p.reward].where((on) => on).length;
+/// How many push switches the page has.
+const kNotificationSwitches = 9;
+
+/// How many of the push switches are on, for the Me row's subtitle.
+int notificationsOn(NotificationPrefs p) => [
+  p.partnerDone,
+  p.cheers,
+  p.challenge,
+  p.reward,
+  p.behindPace,
+  p.closeToDone,
+  p.windDown,
+  p.morningPlan,
+  p.weeklyRecap,
+].where((on) => on).length;
 
 /// Which events may notify this phone, plus a way into the evening reminder.
 class NotificationsPage extends ConsumerWidget {
@@ -44,6 +56,48 @@ class NotificationsPage extends ConsumerWidget {
       meProvider.select((m) => m.value?.data.notifications ?? const NotificationPrefs()),
     );
     final reminders = ref.watch(remindersProvider);
+    final nudges = [
+      (
+        icon: Icons.directions_walk_rounded,
+        palette: accentById('sky'),
+        title: 'Steps to go',
+        subtitle: 'A nudge when a walk would close your steps',
+        on: prefs.behindPace,
+        patch: (bool v) => NotificationPatch(behindPace: v),
+      ),
+      (
+        icon: Icons.flag_circle_rounded,
+        palette: accentById('green'),
+        title: 'Close to done',
+        subtitle: 'When one quest is all that is left to count your day',
+        on: prefs.closeToDone,
+        patch: (bool v) => NotificationPatch(closeToDone: v),
+      ),
+      (
+        icon: Icons.bedtime_rounded,
+        palette: accentById('violet'),
+        title: 'Wind down',
+        subtitle: 'A heads up before the bedtime your sleep goal needs',
+        on: prefs.windDown,
+        patch: (bool v) => NotificationPatch(windDown: v),
+      ),
+      (
+        icon: Icons.wb_sunny_rounded,
+        palette: accentById('amber'),
+        title: 'Morning plan',
+        subtitle: 'How ready you are and what today holds',
+        on: prefs.morningPlan,
+        patch: (bool v) => NotificationPatch(morningPlan: v),
+      ),
+      (
+        icon: Icons.insights_rounded,
+        palette: accentById('teal'),
+        title: 'Weekly recap',
+        subtitle: 'Sunday evening, your week against the last',
+        on: prefs.weeklyRecap,
+        patch: (bool v) => NotificationPatch(weeklyRecap: v),
+      ),
+    ];
     final rows = [
       (
         icon: Icons.check_circle_rounded,
@@ -98,6 +152,32 @@ class NotificationsPage extends ConsumerWidget {
           child: Column(
             children: [
               for (final (i, row) in rows.indexed) ...[
+                if (i > 0) const Divider(height: 2, thickness: 2, color: kBorder),
+                _SwitchRow(
+                  icon: row.icon,
+                  palette: row.palette,
+                  title: row.title,
+                  subtitle: row.subtitle,
+                  on: row.on,
+                  onChanged: (v) => _set(context, ref, row.patch(v)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Semantics(header: true, child: const Text('Nudges and plan', style: AppText.headline)),
+        const SizedBox(height: 4),
+        Text(
+          'At most two of these a day, and none late at night.',
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final (i, row) in nudges.indexed) ...[
                 if (i > 0) const Divider(height: 2, thickness: 2, color: kBorder),
                 _SwitchRow(
                   icon: row.icon,

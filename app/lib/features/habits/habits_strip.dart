@@ -84,7 +84,7 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
       final all = ref.watch(habitsProvider).value?.data.habits;
       if (all == null || all.isNotEmpty) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(top: 16),
         child: _EmptyCard(onTap: () => pushPage(context, const HabitEditorPage())),
       );
     }
@@ -93,7 +93,7 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
     final items = stripItems(today.habits, nowMinutes: now.hour * 60 + now.minute);
     final done = items.where((i) => i.done).length;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(top: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

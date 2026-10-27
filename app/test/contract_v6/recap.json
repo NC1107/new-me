@@ -1,0 +1,101 @@
+{
+  "method": "GET",
+  "path": "/api/recap",
+  "status": 200,
+  "request": null,
+  "body": {
+    "week": "2026-W44",
+    "from": "2026-10-26",
+    "to": "2026-11-01",
+    "complete": false,
+    "people": [
+      {
+        "userId": 1,
+        "name": "Nick",
+        "color": "green",
+        "this": {
+          "points": 170,
+          "countedDays": 0,
+          "steps": 13221,
+          "sleepAvgMin": 409,
+          "sleepNights": 2,
+          "workouts": 2,
+          "readingMinutes": 0
+        },
+        "previous": {
+          "points": 0,
+          "countedDays": 0,
+          "steps": 56600,
+          "sleepAvgMin": 415,
+          "sleepNights": 7,
+          "workouts": 6,
+          "readingMinutes": 0
+        },
+        "bestDay": {
+          "date": "2026-10-27",
+          "points": 170
+        },
+        "suggestion": "The week is still running. Keep going to make it a good one."
+      },
+      {
+        "userId": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "this": {
+          "points": 30,
+          "countedDays": 0,
+          "steps": 9200,
+          "sleepAvgMin": 462,
+          "sleepNights": 2,
+          "workouts": 1,
+          "readingMinutes": 0
+        },
+        "previous": {
+          "points": 0,
+          "countedDays": 0,
+          "steps": 45800,
+          "sleepAvgMin": 462,
+          "sleepNights": 7,
+          "workouts": 2,
+          "readingMinutes": 0
+        },
+        "bestDay": {
+          "date": "2026-10-27",
+          "points": 30
+        },
+        "suggestion": "The week is still running. Keep going to make it a good one."
+      }
+    ],
+    "pair": {
+      "this": {
+        "points": 200,
+        "countedDays": 0,
+        "steps": 22421,
+        "sleepAvgMin": 436,
+        "sleepNights": 4,
+        "workouts": 3,
+        "readingMinutes": 0
+      },
+      "previous": {
+        "points": 0,
+        "countedDays": 0,
+        "steps": 102400,
+        "sleepAvgMin": 439,
+        "sleepNights": 14,
+        "workouts": 8,
+        "readingMinutes": 0
+      },
+      "bestDay": {
+        "date": "2026-10-27",
+        "points": 200
+      }
+    },
+    "challenge": {
+      "kind": "steps",
+      "title": "Walk 115,000 steps together",
+      "target": 115000,
+      "progress": 22421,
+      "completed": false
+    }
+  }
+}

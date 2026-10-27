@@ -7,9 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/board.dart';
 import '../../state/habit_reminders.dart';
 import '../../state/health_sync.dart';
+import '../../state/listening_sync.dart';
 import '../../state/me.dart';
 import '../../state/push.dart';
 import '../../state/reminders.dart';
+import '../../state/right_now.dart';
+import '../../state/together_seen.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
@@ -39,6 +42,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.read(habitRemindersProvider);
     ref.read(pushProvider);
     unawaited(_followDeviceTimezone());
+    unawaited(ref.read(listeningSyncProvider).syncThenRefreshToday(onlyIfSynced: true));
     _lifecycle = AppLifecycleListener(onResume: _onResume);
   }
 
@@ -64,8 +68,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// A phone left locked overnight would otherwise open on yesterday's score.
   void _onResume() {
     unawaited(ref.read(remindersProvider.notifier).refreshPermission());
-    unawaited(ref.read(todayProvider.notifier).refresh());
+    unawaited(ref.read(listeningSyncProvider).syncThenRefreshToday());
     unawaited(ref.read(boardProvider.notifier).refresh());
+    // A phone left open over midnight may now be on a Monday, or past Sunday 19:00.
+    ref.invalidate(goalProposalsProvider);
+    ref.invalidate(recapProvider);
     if (ref.read(meProvider).value?.offline != null) {
       unawaited(ref.read(meProvider.notifier).refresh());
     }
@@ -88,6 +95,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(homeTabProvider);
+    final usBadge = ref.watch(usBadgeProvider);
     ref.listen(homeTabProvider, (_, _) => _refreshOffline());
     return Scaffold(
       body: IndexedStack(
@@ -119,6 +127,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                           icon: _tabs[i].icon,
                           label: _tabs[i].label,
                           selected: tab.index == i,
+                          badge: _tabs[i].label == 'Us' && usBadge,
                           onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
                         ),
                       ),
@@ -142,12 +151,16 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badge = false,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+
+  /// A dot on the icon: something new is waiting behind this tab.
+  final bool badge;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +170,7 @@ class _NavItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
+      label: badge ? '$label, something new' : label,
       excludeSemantics: true,
       onTap: onTap,
       child: Pressable(
@@ -184,7 +197,27 @@ class _NavItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: kBottomNavIconSize, color: color),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(icon, size: kBottomNavIconSize, color: color),
+                    if (badge)
+                      Positioned(
+                        right: -3,
+                        top: -2,
+                        child: Container(
+                          key: const Key('nav-badge'),
+                          width: 11,
+                          height: 11,
+                          decoration: BoxDecoration(
+                            color: kDanger,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: kSurface, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: kBottomNavIconLabelGap),
                 Text(label, style: kBottomNavLabelStyle.copyWith(color: color)),
               ],

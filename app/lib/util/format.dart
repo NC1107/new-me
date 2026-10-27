@@ -18,6 +18,18 @@ String relativeTime(DateTime then, DateTime now) {
   return '${elapsed.inDays}d ago';
 }
 
+/// The server numbers the first, unscored stretch "Season 0"; people see it as the warm-up it is.
+String seasonLabel(String name) => name == 'Season 0' ? 'Preseason' : name;
+
+/// "just now", "3 min ago", "2 h ago" or "2 d ago", for lines that have room to spell it out.
+String agoLabel(DateTime then, DateTime now) {
+  final elapsed = now.difference(then);
+  if (elapsed.inMinutes < 1) return 'just now';
+  if (elapsed.inHours < 1) return '${elapsed.inMinutes} min ago';
+  if (elapsed.inDays < 1) return '${elapsed.inHours} h ago';
+  return '${elapsed.inDays} d ago';
+}
+
 /// Parses the server's 'YYYY-MM-DD' into a calendar date with no time zone attached.
 DateTime parseLocalDate(String date) {
   final parts = date.split('-').map(int.parse).toList();

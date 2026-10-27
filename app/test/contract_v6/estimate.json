@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/api/meals/estimate",
+  "status": 200,
+  "request": {
+    "text": "chicken burrito bowl, no rice"
+  },
+  "body": {
+    "name": "Chicken burrito bowl",
+    "kcal": 640,
+    "protein": 42,
+    "carbs": 58,
+    "fat": 24,
+    "fiber": 9,
+    "confidence": "medium",
+    "notes": "Portion looked like about 350 g."
+  }
+}

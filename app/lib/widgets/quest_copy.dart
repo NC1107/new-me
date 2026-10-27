@@ -58,6 +58,21 @@ String questProgress(Quest q) {
   return '${q.actual.formatted} of ${q.target.formatted} ${_unitWord(q, q.target)}';
 }
 
+String _workoutName(String type) => switch (type) {
+  'strength' => 'Strength',
+  'hiit' => 'HIIT',
+  'yoga' => 'Yoga',
+  '' => 'Health',
+  _ => '${type[0].toUpperCase()}${type.substring(1)}',
+};
+
+/// "Done by your Strength workout, 42 min": what Health data finished the quest for the person.
+String doneByLabel(DoneBy by) => 'Done by your ${_workoutName(by.type)} workout, ${by.minutes} min';
+
+/// "Listening synced 3 min ago".
+String listeningSyncedLabel(DateTime syncedAt, DateTime now) =>
+    'Listening synced ${agoLabel(syncedAt, now)}';
+
 /// How much of the quest's bar is filled.
 double questFraction(Quest q) {
   if (q.done) return 1;

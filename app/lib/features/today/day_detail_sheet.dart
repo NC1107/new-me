@@ -3,7 +3,6 @@ import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
@@ -17,6 +16,7 @@ import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/skeletons.dart';
+import '../../util/time_format.dart';
 
 Future<void> showDayDetailSheet(BuildContext context, {required String date}) =>
     showAppSheet<void>(context, builder: (_) => DayDetailSheet(date: date));
@@ -180,7 +180,7 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final (key, title, quantity, detail) = _describe(entry);
     final palette = questPalette(key);
-    final time = DateFormat.Hm().format(entry.loggedAt.toLocal());
+    final time = formatClock(entry.loggedAt.toLocal());
     return Container(
       color: kSurface,
       constraints: const BoxConstraints(minHeight: 56),

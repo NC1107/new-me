@@ -9,6 +9,7 @@ import '../../state/clock.dart';
 import '../../state/me.dart';
 import '../../state/together.dart';
 import '../../state/together_prefs.dart';
+import '../../state/together_seen.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -56,7 +57,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
       if (!await _settled()) return;
       final ch = board.challenge;
       if (ch != null && ch.done && await TogetherPrefs.celebratedChallenge() != ch.endsOn) {
-        await TogetherPrefs.setCelebratedChallenge(ch.endsOn);
+        await ref.read(togetherSeenProvider.notifier).markChallenge(ch.endsOn);
         if (!mounted) return;
         await showCelebrationSheet(
           context,
@@ -68,7 +69,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
       }
       final r = board.reward;
       if (r != null && r.reached && !r.claimed && await TogetherPrefs.celebratedReward() != r.id) {
-        await TogetherPrefs.setCelebratedReward(r.id);
+        await ref.read(togetherSeenProvider.notifier).markReward(r.id);
         if (!mounted) return;
         await showCelebrationSheet(
           context,

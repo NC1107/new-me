@@ -155,7 +155,7 @@ class _MeBody extends ConsumerWidget {
               icon: Icons.notifications_active_rounded,
               palette: accentById('rose'),
               title: 'Notifications',
-              subtitle: '${notificationsOn(me.notifications)} of 4 on',
+              subtitle: '${notificationsOn(me.notifications)} of $kNotificationSwitches on',
               onTap: () => pushPage(context, const NotificationsPage()),
             ),
             if (me.audiobookshelf case final link?)
@@ -177,7 +177,7 @@ class _MeBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        const _LeaveButton(),
+        const _SignOutButton(),
         const SizedBox(height: 20),
         const Center(child: Text('New Me $kClientVersion', style: AppText.caption)),
       ],
@@ -228,7 +228,9 @@ class _Header extends ConsumerWidget {
                       _Stat(
                         icon: Icons.local_fire_department_rounded,
                         color: kFlame,
-                        text: mine.streak < 1 ? 'No streak yet' : '${mine.streak} day streak',
+                        text: mine.streak < 1
+                            ? 'Start a streak today'
+                            : '${mine.streak} day streak',
                       ),
                       _Stat(
                         icon: Icons.diamond_rounded,
@@ -267,8 +269,8 @@ class _Stat extends StatelessWidget {
   );
 }
 
-class _LeaveButton extends ConsumerWidget {
-  const _LeaveButton();
+class _SignOutButton extends ConsumerWidget {
+  const _SignOutButton();
 
   static final _danger = AccentPalette.of('danger', 'Danger', 0xFFD9534F, 0xFFB23C38, 0xFFFCE9E7);
 
@@ -276,18 +278,18 @@ class _LeaveButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(meProvider.select((m) => m.value?.data.user.isAdmin)) ?? false;
     return ChunkyButton.secondary(
-      label: 'Leave this phone',
+      label: 'Sign out of this phone',
       palette: _danger,
       onPressed: () async {
         final confirmed = await confirmDialog(
           context,
-          title: 'Leave this phone?',
+          title: 'Sign out of this phone?',
           message: isAdmin
               ? 'This phone is signed out. You are the admin, so a new pairing code can only come '
                     'from the server itself.'
               : 'This phone is signed out. Your scores stay on the server and a new pairing '
                     'code brings you back.',
-          confirmLabel: 'Leave',
+          confirmLabel: 'Sign out',
           destructive: true,
         );
         if (!confirmed) return;

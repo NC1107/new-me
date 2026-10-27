@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "path": "/api/me/audiobookshelf/sync",
+  "status": 200,
+  "request": null,
+  "body": {
+    "linked": true,
+    "username": "nick",
+    "syncedAt": "2026-10-27T15:19:00Z",
+    "lastError": null,
+    "minutesToday": 12
+  }
+}

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../state/cached_resource.dart';
 import '../theme/tokens.dart';
+import '../util/time_format.dart';
 
 /// The slim strip above a screen that is drawn from its last good response.
 class OfflineBanner extends StatelessWidget {
@@ -12,7 +12,7 @@ class OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat.Hm().format(info.updatedAt.toLocal());
+    final time = formatClock(info.updatedAt.toLocal());
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

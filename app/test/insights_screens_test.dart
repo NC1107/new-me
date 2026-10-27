@@ -436,44 +436,24 @@ void main() {
   });
 
   group('entry points', () {
-    testWidgets('Today: the Body card has Workouts and a sleep stage bar, and an Insights entry', (
-      tester,
-    ) async {
+    testWidgets('Today: the Body row carries the week and opens Insights', (tester) async {
       final app = TestApp(tester, _server());
       await app.pump(const HomeShell());
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -4000));
       await app.settle();
 
-      expect(find.text('Workouts'), findsOneWidget);
-      expect(find.text('2 h 7 min'), findsOneWidget);
-      expect(find.byType(StageBar), findsOneWidget);
-
-      await app.tap(find.text('Insights'));
+      expect(find.textContaining('3 workouts this week'), findsOneWidget);
+      await app.tap(find.text('Body'));
       expect(find.byType(InsightsScreen), findsOneWidget);
     });
 
-    testWidgets('Today: tapping the Sleep and Workouts tiles opens their screens', (tester) async {
-      final app = TestApp(tester, _server());
-      await app.pump(const HomeShell());
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -4000));
-      await app.settle();
-
-      await app.tap(find.text('Workouts'));
-      expect(find.byType(WorkoutsScreen), findsOneWidget);
-      await app.closeSheet();
-      await app.tap(find.text('Sleep'));
-      expect(find.byType(SleepInsightScreen), findsOneWidget);
-    });
-
-    testWidgets('Today: no workouts tile when there are none and Health has not sent any', (
-      tester,
-    ) async {
+    testWidgets('Today: with no workouts the Body row says what Insights holds', (tester) async {
       final app = TestApp(tester, _server(insights: _insights(noWorkouts: true)));
       await app.pump(const HomeShell());
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -4000));
       await app.settle();
-      expect(find.text('Workouts'), findsNothing);
-      expect(find.text('Insights'), findsOneWidget);
+      expect(find.textContaining('workouts this week'), findsNothing);
+      expect(find.text('Body'), findsOneWidget);
     });
 
     testWidgets('Me: an Insights row opens the hub', (tester) async {

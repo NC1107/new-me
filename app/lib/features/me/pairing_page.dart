@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
@@ -17,6 +16,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/pop_in.dart';
 import '../../widgets/pressable.dart';
 import 'me_support.dart';
+import '../../util/time_format.dart';
 
 /// Admin only: mint a one-time code for the person you are inviting.
 class PairingPage extends ConsumerStatefulWidget {
@@ -133,7 +133,7 @@ class _PairingPageState extends ConsumerState<PairingPage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Expires at ${DateFormat.Hm().format(invite.expiresAt.toLocal())}',
+                      'Expires at ${formatClock(invite.expiresAt.toLocal())}',
                       style: AppText.caption,
                     ),
                   ),

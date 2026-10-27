@@ -83,7 +83,7 @@ void main() {
       expect(find.text('America/New_York'), findsOneWidget);
       expect(find.text('Not connected'), findsOneWidget);
       expect(find.text('Pairing code'), findsNothing);
-      expect(find.text('LEAVE THIS PHONE'), findsOneWidget);
+      expect(find.text('SIGN OUT OF THIS PHONE'), findsOneWidget);
       expect(find.textContaining('New Me 0.'), findsOneWidget);
     });
 
@@ -518,19 +518,19 @@ void main() {
     });
   });
 
-  group('leave this phone', () {
+  group('sign out of this phone', () {
     testWidgets('asks first, revokes the device and signs out', (tester) async {
       final adapter = _server()..on('DELETE /api/devices/me', const StubResponse(204));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
 
-      await app.tap(find.text('LEAVE THIS PHONE'));
-      expect(find.text('Leave this phone?'), findsOneWidget);
+      await app.tap(find.text('SIGN OUT OF THIS PHONE'));
+      expect(find.text('Sign out of this phone?'), findsOneWidget);
       await app.tap(find.text('Cancel'));
       expect(app.container.read(sessionProvider).session, isNotNull);
 
-      await app.tap(find.text('LEAVE THIS PHONE'));
-      await app.tap(find.text('Leave'));
+      await app.tap(find.text('SIGN OUT OF THIS PHONE'));
+      await app.tap(find.text('Sign out'));
       expect(app.container.read(sessionProvider).session, isNull);
       expect(adapter.to('DELETE /api/devices/me'), hasLength(1));
     });
@@ -539,7 +539,7 @@ void main() {
       final app = _app(tester, _server(admin: true));
       await app.pump(const MeScreen());
 
-      await app.tap(find.text('LEAVE THIS PHONE'));
+      await app.tap(find.text('SIGN OUT OF THIS PHONE'));
       expect(find.textContaining('You are the admin'), findsOneWidget);
     });
   });

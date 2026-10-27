@@ -245,7 +245,31 @@ final _failingCalls = <String, _Call>{
   'reward_claim_early': (c, x) => c.claimReward(int.parse(x.uri.pathSegments[2])),
 };
 
-Object? _normalized(Object? json) => canonicalInstants(json);
+/// The v6 fields the recordings predate. contract_v6_test.dart checks them against hand-checked
+/// exchanges, so this file compares everything else exactly.
+const _v6Keys = {
+  'doneBy',
+  'readiness',
+  'plan',
+  'features',
+  'behindPace',
+  'closeToDone',
+  'windDown',
+  'morningPlan',
+  'weeklyRecap',
+};
+
+Object? _withoutV6(Object? json) => switch (json) {
+  final Map<String, dynamic> m => {
+    for (final e in m.entries)
+      if (!_v6Keys.contains(e.key) && !(e.key == 'syncedAt' && m.containsKey('minutes')))
+        e.key: _withoutV6(e.value),
+  },
+  final List<dynamic> l => [for (final v in l) _withoutV6(v)],
+  _ => json,
+};
+
+Object? _normalized(Object? json) => canonicalInstants(_withoutV6(json));
 
 void main() {
   final names = Directory('test/contract')

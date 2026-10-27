@@ -5,6 +5,7 @@ import '../../api/models.dart';
 import '../../state/clock.dart';
 import '../../state/health_sync.dart';
 import '../../state/insights.dart';
+import '../../state/listening_sync.dart';
 import '../../state/local_prefs.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
@@ -13,24 +14,21 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
-import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
+import '../../widgets/quest_copy.dart';
 import '../habits/habits_strip.dart';
-import '../health/health_screen.dart';
 import '../insights/insights_screen.dart';
-import '../insights/sleep_insight_screen.dart';
-import '../insights/workouts_screen.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../shell/home_tab.dart';
-import '../together/challenge_card.dart';
-import '../together/cheer_chip.dart';
 import 'body_card.dart';
 import 'connect_health_card.dart';
 import 'day_card.dart';
 import 'day_counted_sheet.dart';
 import 'day_detail_sheet.dart';
 import 'food_card.dart';
+import 'plan_sheet.dart';
+import 'right_now.dart';
 import 'streak_sheet.dart';
 import 'today_header.dart';
 import 'today_providers.dart';
@@ -74,7 +72,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
 
   Future<void> _refresh() async {
     await ref.read(healthSyncProvider.notifier).sync(SyncTrigger.manual);
-    await ref.read(todayProvider.notifier).refresh();
+    await ref.read(listeningSyncProvider).syncThenRefreshToday();
     if (ref.exists(insightsProvider)) await ref.read(insightsProvider.notifier).refresh();
   }
 
@@ -104,8 +102,10 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
 
   void _openEntries() => showDayDetailSheet(context, date: today.localToday);
 
-  void _openHealth() =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const HealthScreen()));
+  void _openPlan() {
+    final plan = today.plan;
+    if (plan != null) showPlanSheet(context, plan: plan, readiness: today.readiness);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +119,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final now = ref.watch(clockProvider)();
     final partner = ref.watch(partnerProvider);
     final mine = ref.watch(ownBoardUserProvider);
-    final weight = ref.watch(weightTrendProvider).value;
     final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
-    final tiles = bodyTiles(
-      today.health,
-      today.localToday,
-      weight,
-      insights: insights,
-      onSleep: () => pushPage(context, const SleepInsightScreen()),
-      onWorkouts: () => pushPage(context, const WorkoutsScreen()),
-    );
 
     return RefreshIndicator(
       color: context.accent,
@@ -151,25 +142,30 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
                 showStreakSheet(context, streak: today.streak, line: today.day.streakLine),
           ),
           const SizedBox(height: 12),
-          TodayHeader(today: today, name: name, now: now),
-          CheerChip(cheers: today.cheers, date: today.localToday),
+          TodayHeader(
+            today: today,
+            name: name,
+            now: now,
+            onPlan: today.plan == null ? null : _openPlan,
+          ),
           const SizedBox(height: 16),
+          DayCard(
+            day: today.day,
+            streak: today.streak,
+            quests: today.quests,
+            onEntries: _openEntries,
+          ),
+          RightNowSlot(today: today),
           HabitsStrip(today: today),
-          DayCard(day: today.day, streak: today.streak, onEntries: _openEntries),
-          ..._questCards(prompted),
+          ..._questCards(prompted, now),
           const SizedBox(height: kCardGap),
           FoodCard(
             food: today.food,
             onTap: () => showLogSheet(context, kind: LogKind.meal),
             onSetTargets: () => tabs.select(HomeTab.me),
           ),
-          if (tiles.isNotEmpty) ...[
-            const SizedBox(height: kCardGap),
-            BodyCard(tiles: tiles, onTap: _openHealth),
-          ],
           const SizedBox(height: kCardGap),
-          TodayChallengeCard(today: today.localToday),
-          InsightsEntry(onTap: () => openInsights(context)),
+          BodyRow(summary: bodySummary(today.health, insights), onTap: () => openInsights(context)),
           if (mine != null && mine.last7.isNotEmpty) ...[
             const SizedBox(height: kCardGap),
             WeekCard(days: mine.last7, today: today.localToday, todayCounted: today.day.counted),
@@ -185,7 +181,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     );
   }
 
-  List<Widget> _questCards(bool prompted) {
+  List<Widget> _questCards(bool prompted, DateTime now) {
     final cards = <Widget>[];
     var connectShown = false;
     Widget connect() => ConnectHealthCard(
@@ -207,6 +203,9 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             onTap: _openEntries,
             onAdd: kind == null ? null : () => showLogSheet(context, kind: kind),
             listeningMinutes: q.key == 'reading' ? today.listeningMinutes : 0,
+            listeningNote: q.key == 'reading' && today.listeningSyncedAt != null
+                ? listeningSyncedLabel(today.listeningSyncedAt!, now)
+                : null,
           ),
         );
       }

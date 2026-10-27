@@ -185,6 +185,11 @@ class NotificationPrefs {
     this.cheers = true,
     this.challenge = true,
     this.reward = true,
+    this.behindPace = false,
+    this.closeToDone = true,
+    this.windDown = false,
+    this.morningPlan = true,
+    this.weeklyRecap = true,
   });
 
   /// Servers older than v5 send nothing, which reads as everything on.
@@ -196,6 +201,11 @@ class NotificationPrefs {
       cheers: j['cheers'] as bool? ?? true,
       challenge: j['challenge'] as bool? ?? true,
       reward: j['reward'] as bool? ?? true,
+      behindPace: j['behindPace'] as bool? ?? false,
+      closeToDone: j['closeToDone'] as bool? ?? true,
+      windDown: j['windDown'] as bool? ?? false,
+      morningPlan: j['morningPlan'] as bool? ?? true,
+      weeklyRecap: j['weeklyRecap'] as bool? ?? true,
     );
   }
 
@@ -204,27 +214,59 @@ class NotificationPrefs {
   final bool challenge;
   final bool reward;
 
+  /// The v6 nudges and the Sunday recap. The server defaults Steps to go and Wind down to off.
+  final bool behindPace;
+  final bool closeToDone;
+  final bool windDown;
+  final bool morningPlan;
+  final bool weeklyRecap;
+
   Map<String, dynamic> toJson() => {
     'partnerDone': partnerDone,
     'cheers': cheers,
     'challenge': challenge,
     'reward': reward,
+    'behindPace': behindPace,
+    'closeToDone': closeToDone,
+    'windDown': windDown,
+    'morningPlan': morningPlan,
+    'weeklyRecap': weeklyRecap,
   };
 }
 
 /// A partial change to [NotificationPrefs]; null switches are left out of the PATCH body.
 class NotificationPatch {
-  const NotificationPatch({this.partnerDone, this.cheers, this.challenge, this.reward});
+  const NotificationPatch({
+    this.partnerDone,
+    this.cheers,
+    this.challenge,
+    this.reward,
+    this.behindPace,
+    this.closeToDone,
+    this.windDown,
+    this.morningPlan,
+    this.weeklyRecap,
+  });
 
   final bool? partnerDone;
   final bool? cheers;
   final bool? challenge;
   final bool? reward;
+  final bool? behindPace;
+  final bool? closeToDone;
+  final bool? windDown;
+  final bool? morningPlan;
+  final bool? weeklyRecap;
 
   Map<String, dynamic> toJson() => {
     'partnerDone': ?partnerDone,
     'cheers': ?cheers,
     'challenge': ?challenge,
     'reward': ?reward,
+    'behindPace': ?behindPace,
+    'closeToDone': ?closeToDone,
+    'windDown': ?windDown,
+    'morningPlan': ?morningPlan,
+    'weeklyRecap': ?weeklyRecap,
   };
 }

@@ -10,24 +10,45 @@ import '../../widgets/app_card.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/thick_progress_bar.dart';
 
+/// True when finishing any one open quest would be enough to count the day.
+bool oneQuestAway(DayScore day, List<Quest> quests) {
+  if (day.counted || day.maxBase == 0) return false;
+  final needed = (day.streakLine * day.maxBase / 100).ceil() - day.basePoints;
+  if (needed <= 0) return false;
+  return quests.any((q) => !q.done && q.points - q.basePoints >= needed);
+}
+
+/// The one plain sentence under the bar. It starts a streak instead of threatening one, since a
+/// fresh morning at 0% is not a test already failed.
+String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
+  if (day.counted) {
+    return 'You are past the ${day.streakLine}% line. Anything extra still earns points.';
+  }
+  if (oneQuestAway(day, quests)) return 'One more and you count today.';
+  if (streak.current < 1) return 'Hit ${day.streakLine}% today to start your streak.';
+  final base = 'Reach ${day.streakLine}% to keep your streak going.';
+  return streak.restAvailable && streak.restUsedOn == null
+      ? '$base A rest day is ready if you need it.'
+      : base;
+}
+
 /// Progress towards the streak line: a thick bar with a flag at the line, the points, and one
 /// plain sentence about what keeps the streak.
 class DayCard extends StatelessWidget {
-  const DayCard({super.key, required this.day, required this.streak, required this.onEntries});
+  const DayCard({
+    super.key,
+    required this.day,
+    required this.streak,
+    required this.onEntries,
+    this.quests = const [],
+  });
 
   final DayScore day;
+  final List<Quest> quests;
   final Streak streak;
   final VoidCallback onEntries;
 
-  String get _sentence {
-    if (day.counted) {
-      return 'You are past the ${day.streakLine}% line. Anything extra still earns points.';
-    }
-    final base = 'Reach ${day.streakLine}% to keep your streak going.';
-    return streak.restAvailable && streak.restUsedOn == null
-        ? '$base A rest day is ready if you need it.'
-        : base;
-  }
+  String get _sentence => dayCardSentence(day, streak, quests);
 
   @override
   Widget build(BuildContext context) {

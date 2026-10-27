@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "path": "/api/meals/estimate",
+  "status": 429,
+  "request": {
+    "text": "oats"
+  },
+  "body": {
+    "code": "rate_limited",
+    "error": "Too many estimates, try again later"
+  }
+}

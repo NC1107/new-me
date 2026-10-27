@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
-import '../../state/board.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
@@ -10,7 +8,6 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../board/person_card.dart' show kSuccessText;
-import '../shell/home_tab.dart';
 import 'together_bar.dart';
 
 /// Points each person gets when the week's challenge completes (the server's rule).
@@ -154,105 +151,4 @@ class _IconBubble extends StatelessWidget {
     decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
     child: Icon(icon, size: 24, color: palette.lip),
   );
-}
-
-/// The challenge as one slim card on Today. Tapping it opens Us.
-class ChallengeMiniCard extends StatelessWidget {
-  const ChallengeMiniCard({
-    super.key,
-    required this.challenge,
-    required this.today,
-    required this.people,
-    required this.onTap,
-  });
-
-  final Challenge challenge;
-  final String today;
-  final List<AccentPalette> people;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = challenge;
-    final palette = challengePalette(c.kind);
-    final from = people.isNotEmpty ? people.first.fill : palette.fill;
-    final to = people.length > 1 ? people[1].fill : from;
-    final left = c.done ? null : challengeDaysLeft(c, today);
-    return AppCard(
-      onTap: onTap,
-      semanticLabel: 'Weekly challenge: ${c.title}',
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-            child: Icon(
-              c.done ? Icons.emoji_events_rounded : challengeIcon(c.kind),
-              size: 22,
-              color: palette.lip,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.label.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                if (c.done)
-                  Text(
-                    'Done! +$kChallengeBonus points each',
-                    style: AppText.caption.copyWith(
-                      color: kSuccessText,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
-                else ...[
-                  TogetherBar(value: c.fraction, from: from, to: to),
-                  const SizedBox(height: 4),
-                  Text(
-                    left == null ? challengeProgressText(c) : '${challengeProgressText(c)} - $left',
-                    maxLines: 2,
-                    style: AppText.caption,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded, color: kInkMuted),
-        ],
-      ),
-    );
-  }
-}
-
-/// [ChallengeMiniCard] wired to the board, for Today; nothing until the board has a challenge.
-class TodayChallengeCard extends ConsumerWidget {
-  const TodayChallengeCard({super.key, required this.today});
-
-  final String today;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final board = ref.watch(boardProvider).value?.data;
-    final challenge = board?.challenge;
-    if (board == null || challenge == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kCardGap),
-      child: ChallengeMiniCard(
-        challenge: challenge,
-        today: today,
-        people: [for (final u in board.users) accentById(u.color)],
-        onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.board),
-      ),
-    );
-  }
 }

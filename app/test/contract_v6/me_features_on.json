@@ -1,0 +1,136 @@
+{
+  "method": "GET",
+  "path": "/api/me",
+  "status": 200,
+  "request": null,
+  "body": {
+    "user": {
+      "id": 1,
+      "name": "Nick",
+      "color": "green",
+      "timezone": "America/New_York",
+      "isAdmin": true,
+      "birthYear": null
+    },
+    "targets": {
+      "kcal": null,
+      "protein": null,
+      "carbs": null,
+      "fat": null
+    },
+    "questTemplates": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "enabled": true,
+        "target": 9500,
+        "unit": "steps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 0
+      },
+      {
+        "key": "pushups",
+        "title": "Push-ups",
+        "enabled": true,
+        "target": 30,
+        "unit": "reps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 1
+      },
+      {
+        "key": "reading",
+        "title": "Reading",
+        "enabled": true,
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": 15,
+        "unitAlt": "pages",
+        "points": 100,
+        "position": 2
+      },
+      {
+        "key": "meals_logged",
+        "title": "Meals",
+        "enabled": true,
+        "target": 2,
+        "unit": "meals",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 3
+      },
+      {
+        "key": "protein",
+        "title": "Protein",
+        "enabled": true,
+        "target": 100,
+        "unit": "g",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 4
+      },
+      {
+        "key": "yoga",
+        "title": "Yoga",
+        "enabled": false,
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 5
+      },
+      {
+        "key": "exercise",
+        "title": "Exercise",
+        "enabled": false,
+        "target": 30,
+        "unit": "min",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 6
+      },
+      {
+        "key": "sleep",
+        "title": "Sleep",
+        "enabled": false,
+        "target": 420,
+        "unit": "min",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 7
+      }
+    ],
+    "localToday": "2026-10-27",
+    "backdateUntil": null,
+    "serverNow": "2026-10-27T16:58:17Z",
+    "audiobookshelf": {
+      "linked": true,
+      "username": "nick",
+      "syncedAt": "2026-10-27T15:19:00Z",
+      "lastError": null
+    },
+    "notifications": {
+      "partnerDone": true,
+      "cheers": true,
+      "challenge": true,
+      "reward": true,
+      "behindPace": true,
+      "closeToDone": true,
+      "windDown": false,
+      "morningPlan": true,
+      "weeklyRecap": true
+    },
+    "features": {
+      "mealEstimate": true,
+      "planPolish": true
+    }
+  }
+}

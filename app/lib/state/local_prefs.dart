@@ -10,6 +10,7 @@ const _kDeviceTimezone = 'deviceTimezone';
 const _kRemindersEnabled = 'remindersEnabled';
 const _kReminderMinutes = 'reminderMinutes';
 const _kMutedHabitSlots = 'mutedHabitSlots';
+const _kRightNowDismissed = 'rightNowDismissed';
 
 /// Non-secret, per-install values. The Keychain blob in session.dart holds everything secret.
 class LocalPrefs {
@@ -83,6 +84,7 @@ class LocalPrefs {
     await prefs.remove(_kRemindersEnabled);
     await prefs.remove(_kReminderMinutes);
     await prefs.remove(_kMutedHabitSlots);
+    await prefs.remove(_kRightNowDismissed);
     await TogetherPrefs.clear(prefs);
   }
 }

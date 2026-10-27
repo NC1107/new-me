@@ -72,7 +72,7 @@ class PersonCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        user.streak < 1 ? 'No streak yet' : '${user.streak}-day streak',
+                        user.streak < 1 ? 'Start a streak today' : '${user.streak}-day streak',
                         style: AppText.label.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ),

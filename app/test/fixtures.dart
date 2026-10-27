@@ -271,6 +271,8 @@ class TestApp {
     Key? key,
     Session session = testSession,
     bool tall = true,
+    DateTime? now,
+    DateTime Function()? clock,
   }) async {
     if (tall) tallSurface();
     await tester.pumpWidget(
@@ -280,7 +282,7 @@ class TestApp {
         overrides: [
           sessionProvider.overrideWith(() => SessionController.seeded(session)),
           apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
-          clockProvider.overrideWithValue(() => testNow),
+          clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
           healthSourceProvider.overrideWithValue(health),
           deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
           ...overrides,

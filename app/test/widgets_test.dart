@@ -1,3 +1,4 @@
+import 'package:newme/util/time_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/shell/update_required_screen.dart';
@@ -46,6 +47,15 @@ void main() {
   });
 
   testWidgets('the offline banner shows when the screen was last updated', (tester) async {
+    await tester.pumpWidget(
+      _host(OfflineBanner(info: OfflineInfo(updatedAt: DateTime(2026, 10, 26, 14, 2)))),
+    );
+    expect(find.text('Offline - updated 2:02 PM'), findsOneWidget);
+  });
+
+  testWidgets('the offline banner follows a 24-hour phone', (tester) async {
+    use24HourClock = true;
+    addTearDown(() => use24HourClock = false);
     await tester.pumpWidget(
       _host(OfflineBanner(info: OfflineInfo(updatedAt: DateTime(2026, 10, 26, 14, 2)))),
     );

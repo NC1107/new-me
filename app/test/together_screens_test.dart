@@ -186,7 +186,7 @@ void main() {
     testWidgets('no cheers means no chip', (tester) async {
       final app = TestApp(tester, _server());
       await app.pump(const TodayScreen());
-      expect(find.byType(CheerChip), findsOneWidget);
+      expect(find.byType(CheerChip), findsNothing);
       expect(find.textContaining('cheered your day'), findsNothing);
     });
   });
@@ -228,21 +228,12 @@ void main() {
       expect(find.byType(CelebrationSheet), findsNothing);
     });
 
-    testWidgets('Today shows the compact card, and tapping it opens Us', (tester) async {
+    testWidgets('Today no longer carries the challenge; it lives on Us', (tester) async {
       final app = TestApp(tester, _server(challenge: _challenge()));
       await app.pump(const TodayScreen());
-      app.container.read(homeTabProvider);
 
-      expect(find.byType(ChallengeMiniCard), findsOneWidget);
-      expect(find.textContaining('21,000 of 70,000 steps'), findsOneWidget);
-      await app.tap(find.text('Walk 70,000 steps together'));
-      expect(app.container.read(homeTabProvider), HomeTab.board);
-    });
-
-    testWidgets('Today has no card without a challenge', (tester) async {
-      final app = TestApp(tester, _server());
-      await app.pump(const TodayScreen());
-      expect(find.byType(ChallengeMiniCard), findsNothing);
+      expect(find.text('Walk 70,000 steps together'), findsNothing);
+      expect(find.textContaining('21,000 of 70,000 steps'), findsNothing);
     });
 
     test('days left counts today and names the last day', () {
@@ -425,7 +416,7 @@ void main() {
         prefs: {'partnerDone': false, 'cheers': true, 'challenge': true, 'reward': false},
       );
       final handle = tester.ensureSemantics();
-      expect(find.bySemanticsLabel('Notifications, 2 of 4 on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Notifications, 5 of 9 on'), findsOneWidget);
       await app.tap(find.text('Notifications'));
       expect(find.byType(NotificationsPage), findsOneWidget);
       handle.dispose();
@@ -435,14 +426,14 @@ void main() {
       final (app, _) = await open(tester);
       await app.tap(find.text('Notifications'));
 
-      expect(tester.widgetList<Switch>(find.byType(Switch)).every((s) => s.value), isTrue);
+      expect(tester.widgetList<Switch>(find.byType(Switch)).take(4).every((s) => s.value), isTrue);
       await app.tap(find.text('Cheers'));
 
       expect(app.body('PATCH /api/me'), {
         'notifications': {'cheers': false},
       });
       final values = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value).toList();
-      expect(values, [true, false, true, true]);
+      expect(values.take(4), [true, false, true, true]);
     });
 
     testWidgets('a failed save puts the switch back and says so', (tester) async {
@@ -452,7 +443,7 @@ void main() {
       await app.tap(find.text('Cheers'));
 
       expect(find.text('nope'), findsOneWidget);
-      expect(tester.widgetList<Switch>(find.byType(Switch)).every((s) => s.value), isTrue);
+      expect(tester.widgetList<Switch>(find.byType(Switch)).take(4).every((s) => s.value), isTrue);
     });
 
     testWidgets('it links on to the evening reminder', (tester) async {
@@ -533,9 +524,7 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('Today chip and mini card, and the notifications page fit at $scale', (
-        tester,
-      ) async {
+      testWidgets('Today with a cheer, and the notifications page fit at $scale', (tester) async {
         configure(tester, scale);
         final server = _server(challenge: _challenge(), cheers: [_cheer('fire'), _cheer('flex')]);
         final app = TestApp(tester, server);

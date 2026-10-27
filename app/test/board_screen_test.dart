@@ -51,11 +51,11 @@ void main() {
     expect(find.byType(PairingPage), findsOneWidget);
   });
 
-  testWidgets('a zero streak reads as no streak yet instead of a 0-day streak', (tester) async {
+  testWidgets('a zero streak invites a start instead of a 0-day streak', (tester) async {
     final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet', streak: 0)]));
     await app.pump(const BoardScreen());
 
-    expect(find.text('No streak yet'), findsOneWidget);
+    expect(find.text('Start a streak today'), findsOneWidget);
     expect(find.text('0-day streak'), findsNothing);
   });
 
@@ -81,7 +81,7 @@ void main() {
     expect(find.text('8,000'), findsOneWidget);
     expect(find.text('4-day streak'), findsNWidgets(2));
     expect(find.text('synced 3h ago'), findsNWidgets(2));
-    expect(find.text('Season 0 - ends Dec 31'), findsOneWidget);
+    expect(find.text('Preseason - ends Dec 31'), findsOneWidget);
     expect(find.text('Together: 1,500 points this week'), findsOneWidget);
     expect(find.textContaining('Nobody has moved yet'), findsNothing);
     expect(find.textContaining(RegExp('win|lead|behind|rank', caseSensitive: false)), findsNothing);

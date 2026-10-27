@@ -10,6 +10,7 @@ import '../../widgets/accent_text.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/skeletons.dart';
 import 'big_number_stepper.dart';
+import 'meal_estimate.dart';
 import 'log_chip.dart';
 
 /// Builds the write for one attempt; the sheet supplies the idempotency key and the date.
@@ -209,7 +210,11 @@ class MealPane extends StatefulWidget {
     required this.busy,
     required this.failed,
     required this.onLog,
+    this.canEstimate = false,
   });
+
+  /// Shows "Snap it" and "Describe it"; the server switches them on with its Claude key.
+  final bool canEstimate;
 
   final Future<List<RecentMeal>> recent;
   final bool busy;
@@ -229,6 +234,8 @@ class _MealPaneState extends State<MealPane> {
   final _fiber = TextEditingController();
   double _portion = 1;
   bool _more = false;
+  bool _estimating = false;
+  MealEstimate? _estimate;
 
   @override
   void dispose() {
@@ -253,9 +260,27 @@ class _MealPaneState extends State<MealPane> {
       _scaleMacro(_grams(c)) > kMaxMacroGrams ? 'Too large' : null;
 
   bool get _valid =>
+      !_estimating &&
       _kcalValue > 0 &&
       _kcalError == null &&
       [_protein, _carbs, _fat, _fiber].every((c) => _gramsError(c) == null);
+
+  static String _gramsText(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
+
+  /// Fills the form from an estimate. Nothing is logged: the person checks and saves.
+  void _applyEstimate(MealEstimate e) {
+    setState(() {
+      _estimate = e;
+      _name.text = e.name;
+      _kcal.text = '${e.kcal}';
+      _protein.text = _gramsText(e.protein);
+      _carbs.text = _gramsText(e.carbs);
+      _fat.text = _gramsText(e.fat);
+      _fiber.text = _gramsText(e.fiber);
+      _more = _more || e.fiber > 0;
+      _portion = 1;
+    });
+  }
 
   void _logRecent(RecentMeal meal) {
     final kcal = _scaleKcal(meal.kcal);
@@ -301,6 +326,17 @@ class _MealPaneState extends State<MealPane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.canEstimate) ...[
+          MealEstimateBar(
+            onEstimate: _applyEstimate,
+            onBusyChanged: (busy) => setState(() => _estimating = busy),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (_estimate case final estimate?) ...[
+          EstimateNote(estimate: estimate),
+          const SizedBox(height: 16),
+        ],
         FutureBuilder<List<RecentMeal>>(
           future: widget.recent,
           builder: (context, snapshot) {

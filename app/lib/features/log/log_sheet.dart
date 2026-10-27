@@ -17,6 +17,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../util/time_format.dart';
 import '../../widgets/dialogs.dart';
 import 'log_kind.dart';
 import 'log_panes.dart';
@@ -206,6 +207,9 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.meal => MealPane(
                   key: const ValueKey(LogKind.meal),
                   recent: _loadRecent(),
+                  canEstimate: ref.watch(
+                    meProvider.select((m) => m.value?.data.features.mealEstimate ?? false),
+                  ),
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
@@ -238,8 +242,7 @@ class _BackdateToggle extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Add to yesterday - open until '
-                '${hour.hour.toString().padLeft(2, '0')}:${hour.minute.toString().padLeft(2, '0')}',
+                'Add to yesterday - open until ${formatClock(hour)}',
                 style: AppText.label.copyWith(color: kInkSecondary),
               ),
             ),

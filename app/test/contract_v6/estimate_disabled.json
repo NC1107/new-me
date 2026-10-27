@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "path": "/api/meals/estimate",
+  "status": 404,
+  "request": {
+    "text": "oats"
+  },
+  "body": {
+    "code": "estimate_disabled",
+    "error": "Meal estimates are not set up on this server"
+  }
+}

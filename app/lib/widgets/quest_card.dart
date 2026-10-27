@@ -28,6 +28,7 @@ class QuestCard extends StatefulWidget {
     required this.onTap,
     this.onAdd,
     this.listeningMinutes = 0,
+    this.listeningNote,
   });
 
   final Quest quest;
@@ -38,6 +39,9 @@ class QuestCard extends StatefulWidget {
 
   /// Audiobook minutes already counted in this quest; shown under the progress when above zero.
   final int listeningMinutes;
+
+  /// "Listening synced 3 min ago"; only passed on the reading quest of a linked person.
+  final String? listeningNote;
 
   @override
   State<QuestCard> createState() => _QuestCardState();
@@ -176,22 +180,20 @@ class _QuestCardState extends State<QuestCard> {
                       _BonusChip(bonus: q.bonusPoints),
                   ],
                 ),
-                if (widget.listeningMinutes > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: [
-                        Icon(Icons.headphones_rounded, size: 14, color: category.lip),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            '${widget.listeningMinutes} min listened',
-                            style: AppText.caption.copyWith(color: kInkSecondary),
-                          ),
-                        ),
-                      ],
-                    ),
+                if (q.doneBy case final by?)
+                  _NoteLine(
+                    icon: Icons.fitness_center_rounded,
+                    color: category.lip,
+                    text: doneByLabel(by),
                   ),
+                if (widget.listeningMinutes > 0)
+                  _NoteLine(
+                    icon: Icons.headphones_rounded,
+                    color: category.lip,
+                    text: '${widget.listeningMinutes} min listened',
+                  ),
+                if (widget.listeningNote case final note?)
+                  _NoteLine(icon: Icons.sync_rounded, color: category.lip, text: note),
                 const SizedBox(height: 8),
                 ThickProgressBar(
                   value: questFraction(q),
@@ -204,6 +206,33 @@ class _QuestCardState extends State<QuestCard> {
       ),
     );
   }
+}
+
+/// One small line under a quest's progress: an icon and what is worth knowing.
+class _NoteLine extends StatelessWidget {
+  const _NoteLine({required this.icon, required this.color, required this.text});
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 2),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 14, color: color),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(text, style: AppText.caption.copyWith(color: kInkSecondary)),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Marks a quest that Apple Health fills in. Its label stays at a size that fits beside a title.

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "path": "/api/me/audiobookshelf/sync",
+  "status": 404,
+  "request": null,
+  "body": {
+    "code": "abs_not_linked",
+    "error": "Audiobookshelf is not linked"
+  }
+}

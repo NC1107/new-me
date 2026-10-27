@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "path": "/api/goals/proposals",
+  "status": 200,
+  "request": null,
+  "body": {
+    "proposals": [],
+    "week": "2026-W44",
+    "weekStart": "2026-10-26"
+  }
+}

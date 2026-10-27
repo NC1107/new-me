@@ -4,6 +4,7 @@ import '../../api/models.dart';
 import '../../util/format.dart';
 import '../../widgets/quest_copy.dart';
 import '../health/health_metrics.dart';
+import '../../util/time_format.dart';
 
 /// "23:10" as minutes after midnight, or null when it is not a clock time.
 int? clockMinutes(String? hhmm) {
@@ -15,14 +16,14 @@ int? clockMinutes(String? hhmm) {
   return h * 60 + min;
 }
 
-/// "23:10" as "11:10 PM".
+/// "23:10" as "11:10 PM", or unchanged on a 24-hour phone.
 String clockLabel(String? hhmm) {
   final minutes = clockMinutes(hhmm);
   if (minutes == null) return '-';
-  return DateFormat('h:mm a').format(DateTime(2000, 1, 1, minutes ~/ 60, minutes % 60));
+  return formatMinutesOfDay(minutes);
 }
 
-String timeLabel(DateTime t) => DateFormat('h:mm a').format(t);
+String timeLabel(DateTime t) => formatClock(t);
 
 /// Bedtimes between midnight and noon are "late"; the evening ones are not.
 const _lateBedtimeCutoff = 12 * 60;

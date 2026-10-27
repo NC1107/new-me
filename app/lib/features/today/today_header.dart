@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import '../../api/models.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
+import '../../widgets/accent_text.dart';
 import '../../widgets/mascot.dart';
+import '../../widgets/pressable.dart';
 import '../../widgets/speech_bubble.dart';
 
 String greetingFor(DateTime now, String name) {
@@ -31,20 +33,40 @@ String mascotLine(Today t) {
 
 MascotState mascotStateFor(Today t) => t.day.counted ? MascotState.happy : MascotState.idle;
 
-/// The greeting, the date, and the mascot with what it has to say about the day.
+/// What the mascot says: the plan's sentence when there is one, else a line about the day.
+String bubbleLine(Today t) {
+  final summary = t.plan?.summary.trim() ?? '';
+  return summary.isEmpty ? mascotLine(t) : summary;
+}
+
+/// The greeting, the date, and the mascot whose bubble carries the plan's sentence. With a plan
+/// the bubble is a button that opens it.
 class TodayHeader extends StatelessWidget {
-  const TodayHeader({super.key, required this.today, required this.name, required this.now});
+  const TodayHeader({
+    super.key,
+    required this.today,
+    required this.name,
+    required this.now,
+    this.onPlan,
+  });
 
   final Today today;
   final String name;
   final DateTime now;
+
+  /// Opens the plan; null leaves the bubble as plain text.
+  final VoidCallback? onPlan;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(header: true, child: Text(greetingFor(now, name), style: AppText.title)),
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(greetingFor(now, name), style: AppText.title),
+        ),
         const SizedBox(height: 2),
         Text(
           DateFormat('EEEE, MMM d').format(parseLocalDate(today.localToday)),
@@ -56,10 +78,43 @@ class TodayHeader extends StatelessWidget {
           children: [
             SizedBox(width: 84, height: 84, child: Mascot(size: 84, state: mascotStateFor(today))),
             const SizedBox(width: 2),
-            Expanded(child: SpeechBubble(text: mascotLine(today))),
+            Expanded(child: _bubble(context)),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _bubble(BuildContext context) {
+    final open = onPlan;
+    final bubble = SpeechBubble(
+      text: bubbleLine(today),
+      footer: open == null
+          ? null
+          : ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      "See today's plan",
+                      style: AppText.label.copyWith(color: context.accentText),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, size: 20, color: context.accentText),
+                ],
+              ),
+            ),
+    );
+    if (open == null) return bubble;
+    return Semantics(
+      container: true,
+      button: true,
+      label: "${bubbleLine(today)} Open today's plan",
+      excludeSemantics: true,
+      onTap: open,
+      child: Pressable(onTap: open, scale: 0.99, child: bubble),
     );
   }
 }

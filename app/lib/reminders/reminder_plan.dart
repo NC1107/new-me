@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../api/models.dart';
+import '../util/time_format.dart';
 
 /// Fixed ids, so scheduling again replaces the pending notification instead of stacking.
 const kTonightReminderId = 4101;
@@ -99,10 +100,5 @@ Map<int, Reminder?> planReminders({required DateTime now, required int minutes, 
   };
 }
 
-/// "8:00 PM" for minutes since midnight.
-String formatReminderTime(int minutes) {
-  final h = minutes ~/ 60;
-  final m = minutes % 60;
-  final hour12 = h % 12 == 0 ? 12 : h % 12;
-  return '$hour12:${m.toString().padLeft(2, '0')} ${h < 12 ? 'AM' : 'PM'}';
-}
+/// "8:00 PM" or "20:00" for minutes since midnight, the way the phone writes times.
+String formatReminderTime(int minutes) => formatMinutesOfDay(minutes);

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:newme/api/models.dart';
 import 'package:newme/features/log/big_number_stepper.dart';
-import 'package:newme/features/today/body_card.dart';
 import 'package:newme/theme/accent.dart';
 import 'package:newme/theme/tokens.dart';
 import 'package:newme/widgets/accent_text.dart';
@@ -42,29 +40,6 @@ void main() {
       expect(_contrast(ink, kSurface), greaterThanOrEqualTo(4.5), reason: p.name);
       expect(_contrast(ink, p.tint), greaterThanOrEqualTo(4.5), reason: p.name);
     }
-  });
-
-  group('weightTrend', () {
-    HealthTrend trend(List<num> values) => HealthTrend(
-      metric: 'weight_kg',
-      points: [
-        for (var i = 0; i < values.length; i++)
-          HealthTrendPoint(date: '2026-10-${20 + i}', value: values[i]),
-      ],
-    );
-
-    test('points the arrow at the direction of the move', () {
-      expect(weightTrend(trend([82.8, 82.4]))?.trend, BodyTrend.down);
-      expect(weightTrend(trend([82.8, 82.4]))?.delta, '-0.4');
-      expect(weightTrend(trend([80, 80.6]))?.trend, BodyTrend.up);
-      expect(weightTrend(trend([80, 80.6]))?.delta, '+0.6');
-    });
-
-    test('has no arrow without two weigh-ins or without a real change', () {
-      expect(weightTrend(null), isNull);
-      expect(weightTrend(trend([82])), isNull);
-      expect(weightTrend(trend([82, 82.02])), isNull);
-    });
   });
 
   testWidgets('the chunky icon button is a 44pt target even when its disc is smaller', (

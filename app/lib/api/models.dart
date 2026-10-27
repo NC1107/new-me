@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'habit_models.dart';
 
 import 'together_models.dart';
+import 'v6_models.dart';
 
 export 'together_models.dart';
+export 'v6_models.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -293,6 +295,7 @@ class Me {
     this.backdateUntil,
     this.audiobookshelf,
     this.notifications = const NotificationPrefs(),
+    this.features = const Features(),
   });
 
   factory Me.fromJson(Json j) => Me(
@@ -306,6 +309,7 @@ class Me {
         ? AudiobookshelfLink.fromJson((j['audiobookshelf'] as Map).cast<String, dynamic>())
         : null,
     notifications: NotificationPrefs.fromJson(j['notifications']),
+    features: Features.fromJson(j['features']),
   );
 
   final AccountUser user;
@@ -323,6 +327,9 @@ class Me {
   /// Push switches; everything on for servers that predate them.
   final NotificationPrefs notifications;
 
+  /// Optional server features; all off for servers that predate v6.
+  final Features features;
+
   Me copyWith({NotificationPrefs? notifications}) => Me(
     user: user,
     targets: targets,
@@ -332,6 +339,7 @@ class Me {
     backdateUntil: backdateUntil,
     audiobookshelf: audiobookshelf,
     notifications: notifications ?? this.notifications,
+    features: features,
   );
 
   Json toJson() => {
@@ -343,6 +351,7 @@ class Me {
     'backdateUntil': _timeJson(backdateUntil),
     if (audiobookshelf != null) 'audiobookshelf': audiobookshelf!.toJson(),
     'notifications': notifications.toJson(),
+    'features': features.toJson(),
   };
 }
 
@@ -440,6 +449,7 @@ class Quest {
     this.unitAlt,
     this.targetAlt,
     this.actualAlt,
+    this.doneBy,
   });
 
   factory Quest.fromJson(Json j) => Quest(
@@ -455,6 +465,7 @@ class Quest {
     unitAlt: j['unitAlt'] as String?,
     targetAlt: j['targetAlt'] as num?,
     actualAlt: j['actualAlt'] as num?,
+    doneBy: DoneBy.tryParse(j['doneBy']),
   );
 
   final String key;
@@ -476,6 +487,9 @@ class Quest {
   final num? targetAlt;
   final num? actualAlt;
 
+  /// The Health workout that completed the quest, when logged entries alone did not.
+  final DoneBy? doneBy;
+
   Json toJson() => {
     'key': key,
     'title': title,
@@ -489,6 +503,7 @@ class Quest {
     'unitAlt': unitAlt,
     'targetAlt': targetAlt,
     'actualAlt': actualAlt,
+    if (doneBy != null) 'doneBy': doneBy!.toJson(),
   };
 }
 
@@ -715,8 +730,11 @@ class Today {
     required this.health,
     this.backdateUntil,
     this.listening,
+    this.listeningSyncedAt,
     this.cheers = const [],
     this.habits = const [],
+    this.readiness,
+    this.plan,
   });
 
   factory Today.fromJson(Json j) => Today(
@@ -730,8 +748,11 @@ class Today {
     food: Food.fromJson(j['food'] as Json),
     health: HealthStatus.fromJson(j['health'] as Json),
     listening: j['listening'] is Map ? _int((j['listening'] as Map)['minutes']) : null,
+    listeningSyncedAt: j['listening'] is Map ? _time((j['listening'] as Map)['syncedAt']) : null,
     cheers: parseCheers(j['cheers']),
     habits: parseHabitStates(j['habits']),
+    readiness: Readiness.tryParse(j['readiness']),
+    plan: Plan.tryParse(j['plan']),
   );
 
   /// The day shown; always [localToday] unless the request named an earlier one.
@@ -749,11 +770,20 @@ class Today {
   /// feature.
   final int? listening;
 
+  /// When Audiobookshelf was last read; null while the person is not linked.
+  final DateTime? listeningSyncedAt;
+
   /// Cheers the partner sent on this local day, oldest first.
   final List<Cheer> cheers;
 
   /// The habits due today with what is done, in the person's order.
   final List<HabitState> habits;
+
+  /// How ready the day looks; null without enough data or on any day but today.
+  final Readiness? readiness;
+
+  /// The day's plan; null on any day but today.
+  final Plan? plan;
 
   int get listeningMinutes => listening ?? 0;
 
@@ -774,8 +804,11 @@ class Today {
     food: food ?? this.food,
     health: health ?? this.health,
     listening: listening,
+    listeningSyncedAt: listeningSyncedAt,
     cheers: cheers,
     habits: habits ?? this.habits,
+    readiness: readiness,
+    plan: plan,
   );
 
   Json toJson() => {
@@ -788,9 +821,15 @@ class Today {
     'streak': streak.toJson(),
     'food': food.toJson(),
     'health': health.toJson(),
-    if (listening != null) 'listening': {'minutes': listening},
+    if (listening != null)
+      'listening': {
+        'minutes': listening,
+        if (listeningSyncedAt != null) 'syncedAt': _timeJson(listeningSyncedAt),
+      },
     'cheers': [for (final c in cheers) c.toJson()],
     'habits': [for (final h in habits) h.toJson()],
+    if (readiness != null) 'readiness': readiness!.toJson(),
+    if (plan != null) 'plan': plan!.toJson(),
   };
 }
 

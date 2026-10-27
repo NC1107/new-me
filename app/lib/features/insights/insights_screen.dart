@@ -140,37 +140,3 @@ class _HubCard extends StatelessWidget {
     );
   }
 }
-
-/// The row below Body on Today that opens the hub.
-class InsightsEntry extends StatelessWidget {
-  const InsightsEntry({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = questPalette('steps');
-    return AppCard(
-      onTap: onTap,
-      semanticLabel: 'Insights, steps, sleep and workouts',
-      child: ExcludeSemantics(
-        child: Row(
-          children: [
-            IconDisc(icon: Icons.insights_rounded, palette: palette),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Insights', style: AppText.headline),
-                  Text('Steps, sleep and workouts', style: AppText.caption),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: palette.lip),
-          ],
-        ),
-      ),
-    );
-  }
-}

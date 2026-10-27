@@ -15,6 +15,7 @@ import 'state/session.dart';
 import 'state/update_gate.dart';
 import 'theme/accent.dart';
 import 'theme/tokens.dart';
+import 'util/time_format.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -65,20 +66,24 @@ class NewMeApp extends ConsumerWidget {
       scaffoldMessengerKey: _messengerKey,
       navigatorKey: rootNavigatorKey,
       theme: themeFor(accentById(session?.color)),
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
-        child: ColoredBox(
-          color: kCanvas,
-          // Only the web test build is ever wider than a phone.
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-              child: child,
+      builder: (context, child) {
+        // The time formatters have no BuildContext, so the device's clock setting is copied here.
+        use24HourClock = MediaQuery.alwaysUse24HourFormatOf(context);
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+          child: ColoredBox(
+            color: kCanvas,
+            // Only the web test build is ever wider than a phone.
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+                child: child,
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
       home: home,
     );
   }

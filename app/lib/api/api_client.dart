@@ -215,6 +215,13 @@ class ApiClient {
   Future<void> unlinkAudiobookshelf() =>
       _send(() => _dio.delete<dynamic>('/api/me/audiobookshelf'), (_) {});
 
+  /// Reads Audiobookshelf for the caller now. The server answers at most once a minute with fresh
+  /// data and otherwise with the stored state. Throws codes `abs_disabled` and `abs_not_linked`.
+  Future<ListeningSync> syncAudiobookshelf() => _send(
+    () => _dio.post<dynamic>('/api/me/audiobookshelf/sync'),
+    (data) => ListeningSync.fromJson(data as Json),
+  );
+
   Future<Today> today({String? date}) => _send(
     () => _dio.get<dynamic>('/api/today', queryParameters: {'date': ?date}),
     (data) => Today.fromJson(data as Json),
@@ -282,6 +289,39 @@ class ApiClient {
     () => _dio.get<dynamic>('/api/meals/recent', queryParameters: {'limit': limit}),
     (data) => [for (final j in (data as Json)['meals'] as List) RecentMeal.fromJson(j as Json)],
   );
+
+  /// Works a meal out from a sentence. Nothing is stored or logged. Throws codes
+  /// `estimate_disabled`, `rate_limited` and `estimate_unavailable`.
+  Future<MealEstimate> estimateMeal({required String text}) => _send(
+    () => _dio.post<dynamic>(
+      '/api/meals/estimate',
+      data: {'text': text},
+      options: Options(
+        sendTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    ),
+    (data) => MealEstimate.fromJson(data as Json),
+  );
+
+  Future<Recap> recap({String? week}) => _send(
+    () => _dio.get<dynamic>('/api/recap', queryParameters: {'week': ?week}),
+    (data) => Recap.fromJson(data as Json),
+  );
+
+  Future<GoalProposals> goalProposals() => _send(
+    () => _dio.get<dynamic>('/api/goals/proposals'),
+    (data) => GoalProposals.fromJson(data as Json),
+  );
+
+  /// Applies the proposal like a goal edit and answers with the refreshed profile.
+  Future<Me> acceptGoalProposal(String key) => _send(
+    () => _dio.post<dynamic>('/api/goals/proposals/$key/accept'),
+    (data) => Me.fromJson(data as Json),
+  );
+
+  Future<void> dismissGoalProposal(String key) =>
+      _send(() => _dio.post<dynamic>('/api/goals/proposals/$key/dismiss'), (_) {});
 
   Future<HealthDailyResult> putHealthDaily(List<HealthItem> items) => _send(
     () => _dio.put<dynamic>(

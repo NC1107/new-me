@@ -7,9 +7,12 @@ enum BubbleTail { left, top }
 
 /// A white bubble with a 2px border and a tail, one short line from the mascot.
 class SpeechBubble extends StatelessWidget {
-  const SpeechBubble({super.key, required this.text, this.tail = BubbleTail.left});
+  const SpeechBubble({super.key, required this.text, this.tail = BubbleTail.left, this.footer});
 
   final String text;
+
+  /// A small line under the text, such as the way into the plan.
+  final Widget? footer;
 
   /// Where the tail points: left for a mascot beside the bubble, top for one above it.
   final BubbleTail tail;
@@ -25,7 +28,18 @@ class SpeechBubble extends StatelessWidget {
       painter: _BubblePainter(tail),
       child: Padding(
         padding: inset,
-        child: Text(text, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              maxLines: 8,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+            ),
+            ?footer,
+          ],
+        ),
       ),
     );
   }

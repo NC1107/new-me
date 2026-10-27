@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:newme/features/health/health_screen.dart';
+import 'package:newme/features/insights/insights_screen.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
 import 'package:newme/features/today/today_screen.dart';
@@ -184,7 +184,7 @@ void main() {
     expect(find.byIcon(Icons.bedtime_rounded), findsOneWidget);
   });
 
-  testWidgets('the Body card lists only metrics with data, with a weight trend arrow', (
+  testWidgets('the Body row summarises sleep and opens Insights; weight stays off Today', (
     tester,
   ) async {
     final adapter = _serverWithBody(
@@ -195,64 +195,23 @@ void main() {
         },
       },
     );
-    await _app(tester, adapter).pump(const TodayScreen());
-
-    expect(find.text('Body'), findsOneWidget);
-    expect(find.text('7 h 12 min'), findsOneWidget);
-    expect(find.text('58'), findsOneWidget);
-    expect(find.text('82.4'), findsOneWidget);
-    expect(find.text('47'), findsOneWidget);
-    expect(find.text('Exercise'), findsNothing);
-    expect(find.text('VO2 max'), findsNothing);
-    expect(find.byIcon(Icons.trending_down_rounded), findsOneWidget);
-    expect(find.text('-0.4'), findsOneWidget);
-    expect(adapter.to('GET /api/health/trends').single.queryParameters, {
-      'metric': 'weight_kg',
-      'days': 7,
-    });
-  });
-
-  testWidgets(
-    'without weight trend data the arrow is left out and without metrics there is no card',
-    (tester) async {
-      final adapter = fullServer()
-        ..on(
-          'GET /api/today',
-          StubResponse(
-            200,
-            (richTodayJson(stepsEverSynced: true)
-              ..['health'] = {
-                'stepsEverSynced': true,
-                'syncedAt': '2026-10-26T11:00:00Z',
-                'latest': {
-                  'weight_kg': {'value': 82.4, 'date': '2026-10-20'},
-                },
-              }),
-          ),
-        );
-      await _app(tester, adapter).pump(const TodayScreen());
-      expect(find.text('82.4'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_down_rounded), findsNothing);
-      expect(find.byIcon(Icons.trending_up_rounded), findsNothing);
-      expect(find.textContaining('Oct 20'), findsOneWidget);
-    },
-  );
-
-  testWidgets('no health metrics means no Body card', (tester) async {
-    await _app(tester, fullServer()).pump(const TodayScreen());
-    expect(find.text('Body'), findsNothing);
-  });
-
-  testWidgets('tapping the Body card opens the Health screen', (tester) async {
-    final adapter = _serverWithBody(
-      health: {
-        'metrics': {'resting_hr': 58},
-      },
-    );
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
+
+    expect(find.text('Body'), findsOneWidget);
+    expect(find.textContaining('Slept 7 h 12 min'), findsOneWidget);
+    expect(find.text('82.4'), findsNothing);
+    expect(find.text('58'), findsNothing);
+    expect(adapter.to('GET /api/health/trends'), isEmpty);
+
     await app.tap(find.text('Body'));
-    expect(find.byType(HealthScreen), findsOneWidget);
+    expect(find.byType(InsightsScreen), findsOneWidget);
+  });
+
+  testWidgets('without health metrics the Body row still points at Insights', (tester) async {
+    await _app(tester, fullServer()).pump(const TodayScreen());
+    expect(find.text('Body'), findsOneWidget);
+    expect(find.text('Steps, sleep and workouts'), findsOneWidget);
   });
 
   testWidgets('after the Health prompt a missing steps row shows the hint, not a button', (

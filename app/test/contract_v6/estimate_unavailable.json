@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "path": "/api/meals/estimate",
+  "status": 502,
+  "request": {
+    "text": "oats"
+  },
+  "body": {
+    "code": "estimate_unavailable",
+    "error": "Could not estimate that meal"
+  }
+}

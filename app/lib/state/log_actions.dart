@@ -37,6 +37,9 @@ class LogActions {
 
   Future<List<RecentMeal>> recentMeals() => _client.recentMeals();
 
+  /// Works a meal out from a sentence. Nothing is logged by this call.
+  Future<MealEstimate> estimateMeal(String text) => _client.estimateMeal(text: text);
+
   void _refreshBoard() {
     if (_ref.exists(boardProvider)) unawaited(_ref.read(boardProvider.notifier).refresh());
   }

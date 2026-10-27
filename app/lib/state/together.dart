@@ -149,6 +149,11 @@ Future<void> setNotificationPref(WidgetRef ref, NotificationPatch patch) async {
         cheers: patch.cheers ?? p.cheers,
         challenge: patch.challenge ?? p.challenge,
         reward: patch.reward ?? p.reward,
+        behindPace: patch.behindPace ?? p.behindPace,
+        closeToDone: patch.closeToDone ?? p.closeToDone,
+        windDown: patch.windDown ?? p.windDown,
+        morningPlan: patch.morningPlan ?? p.morningPlan,
+        weeklyRecap: patch.weeklyRecap ?? p.weeklyRecap,
       ),
     ),
   );

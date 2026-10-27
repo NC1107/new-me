@@ -38,7 +38,24 @@ type Config struct {
 	// ABSURL is the base URL of the Audiobookshelf server whose listening time counts toward
 	// reading. Empty turns the feature off.
 	ABSURL string
+	// APNS configures push notifications; the zero value turns them off.
+	APNS APNS
 }
+
+// APNS is the Apple Push Notification service credentials.
+type APNS struct {
+	// Key is the .p8 file contents, base64 encoded so it fits one environment variable.
+	Key    string
+	KeyID  string
+	TeamID string
+	Topic  string
+	// Production selects api.push.apple.com, which TestFlight and App Store builds need; false
+	// selects the sandbox host for development builds.
+	Production bool
+}
+
+// Enabled is true when push is configured.
+func (a APNS) Enabled() bool { return a.Key != "" }
 
 // Load reads configuration from the environment.
 func Load() (Config, error) {
@@ -61,6 +78,9 @@ func Load() (Config, error) {
 	}
 	cfg.DevCORS = devCORS
 	if cfg.ABSURL, err = getBaseURL("NEWME_ABS_URL"); err != nil {
+		return cfg, err
+	}
+	if cfg.APNS, err = loadAPNS(); err != nil {
 		return cfg, err
 	}
 	if cfg.DatabaseURL == "" {
@@ -117,4 +137,33 @@ func getBaseURL(key string) (string, error) {
 		return "", fmt.Errorf("%s must be an http or https URL, got %q", key, v)
 	}
 	return v, nil
+}
+
+// loadAPNS reads the push settings. All four credentials are set together or not at all, so a
+// half-configured server fails at boot instead of silently never notifying.
+func loadAPNS() (APNS, error) {
+	a := APNS{
+		Key:        strings.TrimSpace(os.Getenv("NEWME_APNS_KEY")),
+		KeyID:      strings.TrimSpace(os.Getenv("NEWME_APNS_KEY_ID")),
+		TeamID:     strings.TrimSpace(os.Getenv("NEWME_APNS_TEAM_ID")),
+		Topic:      strings.TrimSpace(os.Getenv("NEWME_APNS_TOPIC")),
+		Production: true,
+	}
+	if v := os.Getenv("NEWME_APNS_PRODUCTION"); v != "" {
+		production, err := strconv.ParseBool(v)
+		if err != nil {
+			return a, fmt.Errorf("NEWME_APNS_PRODUCTION must be a boolean: %w", err)
+		}
+		a.Production = production
+	}
+	set := 0
+	for _, v := range []string{a.Key, a.KeyID, a.TeamID, a.Topic} {
+		if v != "" {
+			set++
+		}
+	}
+	if set != 0 && set != 4 {
+		return a, fmt.Errorf("NEWME_APNS_KEY, NEWME_APNS_KEY_ID, NEWME_APNS_TEAM_ID and NEWME_APNS_TOPIC must all be set to enable push")
+	}
+	return a, nil
 }

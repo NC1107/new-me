@@ -38,15 +38,17 @@ type dayMarkJSON struct {
 }
 
 type boardUserJSON struct {
-	ID       int64           `json:"id"`
-	Name     string          `json:"name"`
-	Color    string          `json:"color"`
-	Today    boardDayJSON    `json:"today"`
-	Week     pointsJSON      `json:"week"`
-	Season   pointsJSON      `json:"season"`
-	Streak   streakCountJSON `json:"streak"`
-	Last7    []dayMarkJSON   `json:"last7"`
-	SyncedAt *string         `json:"syncedAt"`
+	ID     int64           `json:"id"`
+	Name   string          `json:"name"`
+	Color  string          `json:"color"`
+	Today  boardDayJSON    `json:"today"`
+	Week   pointsJSON      `json:"week"`
+	Season pointsJSON      `json:"season"`
+	Streak streakCountJSON `json:"streak"`
+	// WorkoutsThisWeek counts workouts since Monday of the member's own local week.
+	WorkoutsThisWeek int           `json:"workoutsThisWeek"`
+	Last7            []dayMarkJSON `json:"last7"`
+	SyncedAt         *string       `json:"syncedAt"`
 	// Highlights are today's Health readings, each omitted when the member has none.
 	Highlights highlightsJSON `json:"highlights"`
 }
@@ -111,10 +113,25 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 		}
 		entries = append(entries, entry)
 	}
+	// Settling first makes the challenge exist, and completes it or the reward if this read is
+	// the first to see them done.
+	s.together.SettleQuietly(ctx)
+	challenge, err := s.challengeFor(ctx, c)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	reward, err := s.boardReward(ctx)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"season":    seasonJSON{Name: header.Name, StartsOn: header.StartsOn, EndsOn: header.EndsOn},
 		"serverNow": wireTime(s.now()),
 		"users":     entries,
+		"challenge": challenge,
+		"reward":    reward,
 	})
 }
 
@@ -154,6 +171,10 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	if err != nil {
 		return boardUserJSON{}, err
 	}
+	workouts, err := db.CountWorkouts(ctx, s.db.Pool, u.ID, score.WeekStart(today), today)
+	if err != nil {
+		return boardUserJSON{}, err
+	}
 	syncedAt, err := db.LastHealthSync(ctx, s.db.Pool, u.ID)
 	if err != nil {
 		return boardUserJSON{}, err
@@ -171,12 +192,13 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	todayRow := byDate[today]
 	return boardUserJSON{
 		ID: u.ID, Name: u.Name, Color: u.Color,
-		Today:    boardDayJSON{Points: todayRow.Points(), Percent: todayRow.Percent, Counted: todayRow.Counted},
-		Week:     pointsJSON{Points: week},
-		Season:   pointsJSON{Points: total},
-		Streak:   streakCountJSON{Current: streak.Count},
-		Last7:    last7,
-		SyncedAt: wireTimePtr(syncedAt),
+		Today:            boardDayJSON{Points: todayRow.Points(), Percent: todayRow.Percent, Counted: todayRow.Counted},
+		Week:             pointsJSON{Points: week},
+		Season:           pointsJSON{Points: total},
+		Streak:           streakCountJSON{Current: streak.Count},
+		WorkoutsThisWeek: workouts,
+		Last7:            last7,
+		SyncedAt:         wireTimePtr(syncedAt),
 		Highlights: highlightsJSON{
 			Steps: pick(db.MetricSteps), ExerciseMinutes: pick(db.MetricExercise), SleepMinutes: pick(db.MetricSleep),
 		},

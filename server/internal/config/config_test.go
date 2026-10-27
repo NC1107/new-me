@@ -97,3 +97,33 @@ func TestLoadAudiobookshelfURL(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadAPNS(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil || cfg.APNS.Enabled() {
+		t.Fatalf("unset: %+v, %v", cfg.APNS, err)
+	}
+
+	t.Setenv("NEWME_APNS_KEY", "a2V5")
+	if _, err := Load(); err == nil {
+		t.Fatal("a key without the other settings was accepted")
+	}
+
+	t.Setenv("NEWME_APNS_KEY_ID", "ABC123DEFG")
+	t.Setenv("NEWME_APNS_TEAM_ID", "76S78SUWVM")
+	t.Setenv("NEWME_APNS_TOPIC", "top.npcserver.newme")
+	cfg, err = Load()
+	if err != nil || !cfg.APNS.Enabled() || !cfg.APNS.Production || cfg.APNS.Topic != "top.npcserver.newme" {
+		t.Fatalf("configured: %+v, %v", cfg.APNS, err)
+	}
+
+	t.Setenv("NEWME_APNS_PRODUCTION", "false")
+	if cfg, err = Load(); err != nil || cfg.APNS.Production {
+		t.Fatalf("sandbox: %+v, %v", cfg.APNS, err)
+	}
+	t.Setenv("NEWME_APNS_PRODUCTION", "sometimes")
+	if _, err = Load(); err == nil {
+		t.Fatal("a bad NEWME_APNS_PRODUCTION was accepted")
+	}
+}

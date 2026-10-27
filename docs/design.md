@@ -261,8 +261,15 @@ server/
 | `NEWME_MAX_USERS` | `2` | live user cap |
 | `NEWME_MIN_CLIENT_VERSION` | `0.0.0` | lowest accepted app version |
 | `NEWME_ABS_URL` | empty | Audiobookshelf base URL; empty turns listening sync off |
+| `NEWME_APNS_KEY` | empty | contents of the APNs `.p8` key, base64; with the three below, turns push on |
+| `NEWME_APNS_KEY_ID` | empty | the key's 10-character id |
+| `NEWME_APNS_TEAM_ID` | empty | Apple team id (`76S78SUWVM`) |
+| `NEWME_APNS_TOPIC` | empty | app bundle id (`top.npcserver.newme`) |
+| `NEWME_APNS_PRODUCTION` | `true` | `true` uses `api.push.apple.com` (TestFlight, App Store), `false` the sandbox host |
 | `NEWME_DEV_CORS` | `false` | local web review only, never set in production |
 
+The four `NEWME_APNS_*` credentials are all set or all unset; a partial set stops the server at boot.
+Unset leaves push off and everything else works.
 There is no bootstrap code and no season-start variable; the Season 0 start is the migration date.
 
 ### Access model
@@ -300,7 +307,7 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 - **Rate limits**, using check-in's `ratelimit.go` with trusted-proxy client IP (not RealIP):
   - `POST /join` and `POST /invites/check`: 5 per minute per IP, one shared bucket.
   - Authenticated routes: 120 per minute per device, applied immediately after token auth resolves the device.
-  - `PUT /health/daily`: an additional 30 per minute per device.
+  - `PUT /health/daily`, `PUT /health/workouts` and `PUT /health/sleep`: an additional 30 per minute per device, one shared bucket.
   - Exceeded limits return 429 with `Retry-After` and `{"code": "rate_limited"}`.
 - Other headers: nosniff, frame deny, no referrer, `default-src 'none'`.
 - Dev CORS: with `NEWME_DEV_CORS=true`, localhost origins are allowed with the headers `X-App-Key`, `Authorization`, `X-Client-Version` and `Content-Type`.
@@ -353,7 +360,7 @@ POST   /join
   first install (initialized = false), no code:   {name, color, timezone}
   new member:                                     {code, name, color, timezone}
   re-pair:                                        {code, userId}, no other field
-  201 {user: {id, name, color, timezone, isAdmin}, token}
+  201 {user: {id, name, color, timezone, isAdmin, birthYear}, token}
 
 DELETE /devices/me                                  204, revokes the calling device
 
@@ -361,7 +368,7 @@ POST   /invites                                     admin
   201 {code, expiresAt}
 
 GET    /me
-  200 {user: {id, name, color, timezone, isAdmin},
+  200 {user: {id, name, color, timezone, isAdmin, birthYear},
        targets: {kcal, protein, carbs, fat},          integers or null
        questTemplates: [{key, title, enabled, target, unit, targetAlt, unitAlt, points, position}],
        localToday, backdateUntil, serverNow,
@@ -379,6 +386,7 @@ DELETE /me/audiobookshelf
 
 PATCH  /me
   req any of {name, color, timezone,
+              birthYear: 1900..current year in the person's zone, or null to clear (absent leaves it alone),
               targets: {kcal, protein, carbs, fat},      null clears a target
               questTemplates: [{key, enabled, target, targetAlt}]}
   200 same body as GET /me
@@ -407,10 +415,12 @@ GET    /board
                 today: {points, percent, counted},
                 week: {points}, season: {points}, streak: {current},
                 last7: [{date, percent, counted, rest}],
+                workoutsThisWeek,
                 syncedAt,
                 highlights: {steps, exercise_minutes, sleep_minutes}}]}
                                                          the caller first, each person on their own local today
                                                          highlights are that person's local-today readings, each key omitted when there is no row
+                                                         workoutsThisWeek counts workouts since Monday of that person's own local week (integer, 0 when none)
 
 POST   /logs                                            201 first time, 200 with the same body on replay
   req {clientOpId, kind: "activity", type: "pushups"|"reading"|"yoga",
@@ -437,7 +447,101 @@ PUT    /health/daily
 GET    /health/trends?metric=<key>&days=<1..365>
   200 {metric, points: [{date, value}]}                  the caller's own readings, ascending, the last N local days ending today; days with no reading are absent
   422 invalid_request                                    unknown metric, or days missing, not an integer or outside 1 to 365
+
+PUT    /health/workouts
+  req {items: [{id, type, startedAt, endedAt, durationMin, kcal, distanceM, avgHr, source}]}
+  200 {saved: n}                                         1 to 100 items, upserted by (user, id) in one transaction
+  422 {code: "invalid_request", error, items: [{index, code, error}]}   every bad item is listed and none is stored
+
+GET    /workouts?days=<1..365>
+  200 {workouts: [{id, type, date, startedAt, endedAt, durationMin, kcal, distanceM, avgHr}],
+       week: {count, minutes}}                           the caller's own, newest first, local dates of the last N days ending today
+                                                         week is the ISO week (Monday to today) of the caller's local today, whatever days is
+  422 invalid_request                                    days missing, not an integer or outside 1 to 365
+
+PUT    /health/sleep
+  req {nights: [{date, bedAt, wakeAt, asleepMin, deepMin, remMin, coreMin, awakeMin, source}]}
+  200 {saved: n}                                         1 to 31 nights, upserted by (user, date) in one transaction
+  422 {code: "invalid_request", error, items: [{index, code, error}]}
+
+GET    /insights
+  200 {steps: {avg7, avg30, median14, trend, best, daysAtGoal30, goal, suggestion},
+       sleep: {avg7Min, avg30Min, targetMin, avgBedtime, avgWake, bedtimeSpreadMin, stages7, lastNight, nights},
+       workouts: {week: {count, minutes}, last30: {count, minutes, byType: [{type, count, minutes}]}}}
+                                                         the caller's own, computed by the pure functions in internal/insights
+
+-- v5 (docs/design-v5.md) --------------------------------------------------------------
+
+GET    /habits
+  200 {habits: [{id, name, icon, kind, weekdays, slots: [{label, time}], target, position, paused}]}
+                                                         the caller's live habits in order, paused ones included
+                                                         kind check|count; weekdays are ISO numbers 1 (Mon) to 7 (Sun); time is "HH:MM" or null
+                                                         a count habit has slots [] and a target; a check habit has target null
+
+POST   /habits
+  req {name, icon, kind, weekdays?, slots?, target?}     weekdays defaults to every day; appended after the last habit
+  201 {habit}
+  422 invalid_request                                    name 1 to 40 chars without control characters; icon outside the list below;
+                                                         check needs 1 to 8 slots (label 1 to 24 chars, optional time HH:MM) and no target;
+                                                         count needs target 1 to 50 and no slots; weekdays empty or outside 1..7; more than 30 habits
+
+PATCH  /habits/{id}
+  req any of {name, icon, weekdays, slots, target, paused}   kind cannot change; the merged habit is validated as a whole
+  200 {habit}                                            open days are rescored (today, and yesterday inside the grace)
+  404 not_found                                          not the caller's, or deleted
+
+DELETE /habits/{id}
+  204                                                    soft delete; marks are kept; open days are rescored
+
+PUT    /habits/order
+  req {ids: [id, ...]}                                   every live habit of the caller exactly once
+  200 {habits}
+
+PUT    /habits/{id}/marks/{date}
+  req {slot, done}                                       check habit: set one slot done or undone
+  req {count}                                            count habit: set the day's count, 0 clears it (cap 1000)
+  200 {date, habits: [<today habit state>], day: <day with quests>}   idempotent
+  404 not_found                                          not the caller's habit
+  422 date_closed                                        outside today / yesterday-before-10:00 / after joined_on, same as logs
+  422 invalid_request                                    slot out of range, wrong field set for the kind, habit paused, habit not scheduled that weekday
+
+POST   /cheers
+  req {to: userId, kind: "clap" | "fire" | "flex" | "heart"}
+  201 {cheer: {from, fromName, kind, at}, to}            first of that kind to that person on the sender's local day; pushes "<name> cheered your day"
+  200 same body                                          a repeat: the stored cheer, nothing sent
+  404 not_found                                          no such person
+  422 invalid_request                                    unknown kind, or cheering yourself
+
+GET    /rewards
+  200 {reward: <reward> | null, history: [<reward>]}     reward is the one being earned; history is the reached ones, newest first
+
+POST   /rewards
+  req {name (1..40), target (1..100000)}
+  201 {reward}                                           progress counts combined points earned from this moment
+  409 reward_active                                      one is still being earned
+
+POST   /rewards/{id}/claim
+  200 {reward}                                           marks a reached reward as enjoyed; repeating keeps the first claimedAt
+  404 not_found
+  409 reward_not_reached
+
+PUT    /devices/me/push
+  req {token}                                            hex APNs device token, 32 to 200 characters
+  204                                                    repeating is fine; a token seen on another install moves to this one
+DELETE /devices/me/push
+  204
 ```
+
+v5 additions to existing responses:
+
+- `GET /today` gains `habits: [{id, name, icon, kind, slots: [{index, label, time, done}], target, count}]` (the requested day's due, unpaused habits in the person's order) and `cheers: [{from, fromName, kind, at}]` (received on the caller's local today, newest first).
+- `GET /board` gains `challenge: {kind, title, target, progress, done, endsOn}` and `reward: <reward> | null`.
+  `<reward>` is `{id, name, target, progress, startedAt, reachedAt, claimedAt, createdBy}`.
+  On the board it is the reward being earned, or else the newest reached one that nobody has claimed yet, or null.
+- `GET /me` and `PATCH /me` gain `notifications: {partnerDone, cheers, challenge, reward}`, all default true; a PATCH may send any subset.
+- `day.bonusPoints` and `day.points` include habit points and the challenge award; `maxBase` never does.
+
+Habit icon keys (Material rounded names): `check_circle`, `brush`, `clean_hands`, `bathtub`, `medication`, `vaccines`, `water_drop`, `local_cafe`, `restaurant`, `lunch_dining`, `fitness_center`, `directions_walk`, `directions_run`, `directions_bike`, `sports_gymnastics`, `self_improvement`, `spa`, `bedtime`, `wb_sunny`, `menu_book`, `edit_note`, `favorite`, `bolt`, `eco`, `star`, `pets`.
 
 Wire types:
 
@@ -462,6 +566,18 @@ Behaviour rules:
   Each item is validated for window, whitelist, finiteness and range (each metric against its own bounds, listed under Metrics in v1).
   Any invalid item fails the whole request with per-item errors.
 - The upsert is `ON CONFLICT (user_id, local_date, metric) DO UPDATE SET value = EXCLUDED.value, measured_at = EXCLUDED.measured_at, ... WHERE health_daily.measured_at <= EXCLUDED.measured_at`, so a stale retry or a second device cannot lower a count.
+- `PUT /health/workouts` and `PUT /health/sleep` are history, not day entries: the day window does not apply and nothing is rescored.
+  Workouts do not change scoring.
+- Workout item rules: `id` 1 to 100 characters, `type` one of `walking, running, cycling, strength, hiit, yoga, swimming, hiking, dance, climbing, other`, `source` 1 to 32 characters, none with control characters.
+  `startedAt` is within the last 400 days and not more than 5 minutes ahead of the server, `endedAt` is after `startedAt` and not in the future.
+  `durationMin` is above 0 (after rounding to a tenth) and at most 1440, `kcal` 0 to 20000, `distanceM` 0 to 1000000, `avgHr` 20 to 250; the last three may be null or absent.
+  Stored values keep one decimal.
+  `date` is the local date of `startedAt` in the caller's zone.
+  The upsert replaces every field, so a re-sent or edited sample never duplicates.
+- Sleep night rules: `date` is today or a past day within the last 400 days in the caller's zone; `bedAt` and `wakeAt` are instants with `wakeAt` after `bedAt`, at most 24 hours later and not in the future; the five minute fields are numbers from 0 to 1440, rounded to whole minutes; `source` as above.
+  The upsert replaces the whole night.
+  The server does not check that `date` matches the local date of `wakeAt`, or that the stage minutes add up.
+- `GET /insights` rules are in `docs/design-v4.md` and are implemented in `server/internal/insights`.
 - API changes inside a release are additive.
   Removals wait one release.
 - `/api/health` returns `{status, version}`.
@@ -644,6 +760,46 @@ CREATE TABLE listening_daily (
     synced_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, local_date)
 );
+
+-- migration 0006
+CREATE TABLE workouts (
+    id           BIGSERIAL PRIMARY KEY,
+    user_id      BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    health_id    TEXT NOT NULL CHECK (char_length(health_id) BETWEEN 1 AND 100),
+    type         TEXT NOT NULL CHECK (type IN ('walking', 'running', 'cycling', 'strength', 'hiit',
+                     'yoga', 'swimming', 'hiking', 'dance', 'climbing', 'other')),
+    local_date   DATE NOT NULL,
+    started_at   TIMESTAMPTZ NOT NULL,
+    ended_at     TIMESTAMPTZ NOT NULL,
+    duration_min NUMERIC(6,1) NOT NULL CHECK (duration_min > 0 AND duration_min <= 1440),
+    kcal         NUMERIC(7,1) CHECK (kcal BETWEEN 0 AND 20000),
+    distance_m   NUMERIC(9,1) CHECK (distance_m BETWEEN 0 AND 1000000),
+    avg_hr       NUMERIC(4,1) CHECK (avg_hr BETWEEN 20 AND 250),
+    source       TEXT NOT NULL CHECK (char_length(source) BETWEEN 1 AND 32),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, health_id),
+    CHECK (ended_at > started_at)
+);
+CREATE INDEX workouts_user_day ON workouts (user_id, local_date DESC);
+
+CREATE TABLE sleep_nights (
+    user_id    BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    local_date DATE NOT NULL,
+    bed_at     TIMESTAMPTZ NOT NULL,
+    wake_at    TIMESTAMPTZ NOT NULL,
+    asleep_min INTEGER NOT NULL CHECK (asleep_min BETWEEN 0 AND 1440),
+    deep_min   INTEGER NOT NULL CHECK (deep_min BETWEEN 0 AND 1440),
+    rem_min    INTEGER NOT NULL CHECK (rem_min BETWEEN 0 AND 1440),
+    core_min   INTEGER NOT NULL CHECK (core_min BETWEEN 0 AND 1440),
+    awake_min  INTEGER NOT NULL CHECK (awake_min BETWEEN 0 AND 1440),
+    source     TEXT NOT NULL CHECK (char_length(source) BETWEEN 1 AND 32),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, local_date),
+    CHECK (wake_at > bed_at AND wake_at - bed_at <= interval '24 hours')
+);
+
+ALTER TABLE users ADD COLUMN birth_year INTEGER CHECK (birth_year BETWEEN 1900 AND 2100);
+-- the API narrows the upper bound to the current year
 ```
 
 Notes:
@@ -652,6 +808,15 @@ Notes:
 - Join creates the user, the six templates (yoga disabled), the device, and snapshots every writable date, in one transaction.
 - `first_local_date` is `localToday`, or `localToday - 1` when the join happens before 10:00 local.
 - Template targets and `points` are copied into `day_quests`, so later template edits never change an existing day.
+
+Migration 0007 `v5_habits_together_push.sql` adds the v5 tables (see `docs/design-v5.md`):
+
+- `habits` (user, name, icon, kind check|count, `weekdays` bitmask with bit 0 = Monday, `slots` JSONB array of `{label, time}`, `target`, `position`, `paused`, `deleted_at`) with CHECKs tying slots and target to the kind.
+- `habit_marks` (habit, local_date, slot, count; primary key on the first three): one row per done check slot, or one row at slot 0 holding a count habit's total.
+- `cheers` (from, to, kind, sender-local `local_date`, `created_at`; unique per sender, recipient, kind and day).
+- `challenges` (one per `week_start`, kind, title, frozen target, `completed_at`) and `challenge_awards` (primary key challenge + user, `local_date`, points): scoring reads the awards as a per-day bonus input.
+- `rewards` (name, target, `baseline` combined points at the start, `reached_at`, `claimed_at`); a partial unique index allows one row with `reached_at IS NULL`.
+- `push_tokens` (one per device, token unique), `notice_log` (event dedupe, primary key kind + user + date), and four `users.notify_*` booleans defaulting to true.
 
 ### Scheduler
 
@@ -668,6 +833,11 @@ Only a changed value writes and rescores the day, in one transaction under the d
 A rejected sign-in records `last_error = auth_failed` and keeps the link, a network or server failure records `unreachable`, and the next good poll clears it.
 Linking runs one poll straight away.
 A session spanning midnight counts wholly toward the day it started; Audiobookshelf's own `TZ` is irrelevant.
+
+Each scheduler pass then calls the shared settle step (`internal/together`): it makes sure the week's challenge exists, completes a challenge or reward that has been earned (writes the awards in one transaction and rescoring both people's day), and announces a partner whose day just counted.
+The same step runs after every write that can change progress (`POST /logs`, `DELETE /logs/{id}`, the Health `PUT`s, habit marks) and on board and reward reads, so the scheduler only catches what no request saw, such as a listening poll.
+Every effect happens once: the challenge completes through `UPDATE ... WHERE completed_at IS NULL`, awards are keyed by challenge and user, a reward through `reached_at IS NULL`, and the partner push through `notice_log`.
+Push messages go through a bounded queue (64) with two workers, so APNs being slow, down or misconfigured never delays or fails a request; failures are logged, and a 410 or `BadDeviceToken` removes the token.
 
 ### Deployment (compose)
 

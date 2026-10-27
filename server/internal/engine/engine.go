@@ -5,6 +5,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"time"
 
@@ -126,6 +127,10 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 	}
 
 	day := score.ScoreDay(QuestResults(quests, inputs))
+	day, err = withExtraBonus(ctx, tx, userID, date, day)
+	if err != nil {
+		return Scored{}, err
+	}
 	detail, err := json.Marshal(day.Quests)
 	if err != nil {
 		return Scored{}, err
@@ -145,6 +150,29 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 		return Scored{}, err
 	}
 	return Scored{Row: row, Quests: quests, Inputs: inputs, Score: day}, nil
+}
+
+// withExtraBonus adds the bonus that does not come from quests: habit points and the weekly
+// challenge award. A finalized day keeps the bonus it was finalized with, so editing or
+// deleting a habit later can never change history.
+func withExtraBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, day score.DayScore) (score.DayScore, error) {
+	stored, err := db.GetDayScore(ctx, tx, userID, date)
+	switch {
+	case err == nil && stored.FinalizedAt != nil:
+		day.BonusPoints = stored.BonusPoints
+		return day, nil
+	case err != nil && !errors.Is(err, db.ErrNotFound):
+		return day, err
+	}
+	states, err := db.DueHabits(ctx, tx, userID, date)
+	if err != nil {
+		return day, err
+	}
+	award, err := db.ChallengeBonus(ctx, tx, userID, date)
+	if err != nil {
+		return day, err
+	}
+	return day.WithBonus(score.HabitBonus(db.HabitDays(states)) + award), nil
 }
 
 // StreakFor derives the user's current streak from their stored days. A day with no stored

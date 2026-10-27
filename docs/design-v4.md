@@ -98,3 +98,36 @@ Rules:
   - Workouts: this week summary, list of recent workouts with type icon, duration, kcal, distance and average heart rate, and a by-type breakdown for 30 days; a workout detail sheet.
 - Us: each person's card shows workouts this week.
 - All charts are `CustomPainter`, follow the v2 visual language, have accessible summaries, and survive text scale 2.0.
+
+## Implementation decisions (server)
+
+Where this document left room, the server does the following.
+`docs/design.md` has the exact endpoint, schema and error text.
+
+- Averages, the median, the trend and the suggestion use the complete days before today (yesterday back), so a morning with few steps never drags them down.
+  `best` and `daysAtGoal30` include today.
+  `avg7`, `avg30` and `median14` count only days with steps above 0; the "5 days of the last 14" test uses the same days.
+  `trend` is flat unless both weeks have data.
+- `avg30`, `avg7`, `median14` are whole numbers; the median of an even count is the mean of the middle two, rounded.
+  `best` is the most recent day among ties.
+- `goal` is the steps quest target whether or not the quest is enabled.
+  `targetMin` is the sleep quest target only while that quest is enabled, else 420.
+- Suggestion target: below the band it is the median plus 1,000 rounded up to 500 and capped at the band's low end; inside the band (low end included, high end excluded) it is the median plus 1,000 rounded to the nearest 500 (halves up) and capped at the high end; at or above the high end it is the median rounded down to 500.
+  The 3,000 floor applies last.
+  Age is the local today's year minus `birthYear`; a birth year in the future counts as unknown.
+- Sleep: only nights with `asleepMin` above 0 count.
+  `avg7Min` and `avg30Min` cover the morning dates of the last 7 and 30 days ending today.
+  `nights`, `avgBedtime`, `avgWake`, `bedtimeSpreadMin` and `lastNight` use the last 14 days of nights, `nights` oldest first, `lastNight` the newest of them, so a night older than two weeks is never shown as last night.
+  Times of day are read in the person's current zone and averaged as angles on a 24 hour circle, so 23:00 and 01:00 average to 00:00.
+  The spread is the population standard deviation of bedtimes around that circular mean, each distance taken the short way round the clock, rounded to minutes; one night gives 0.
+  `stages7` is the per-night average of each stage over the nights with data in the last 7 days, and null with none.
+  A night that straddles a daylight saving change keeps its wall-clock times, so its minutes can differ from the elapsed time.
+- Workouts: `week` runs from Monday of the person's local week through today; `last30` is the 30 local dates ending today; `byType` is sorted by minutes, then count, then type.
+  `GET /workouts` fills `week` from the same ISO week whatever `days` is.
+  Minutes are rounded to whole numbers in summaries; `durationMin` in lists keeps one decimal.
+- Request limits the document left open: workouts 1 to 100 per request, sleep 1 to 31 nights per request, history no older than 400 days, `source` 1 to 32 characters, workout `id` 1 to 100 characters.
+  Bad items return 422 `invalid_request` with the per-item list used by `PUT /health/daily`, and nothing from that request is stored.
+- Sleep minutes are accepted as any JSON number (a client may send `420.0`) and rounded to whole minutes before the 0 to 1440 check.
+  Timestamps must be RFC 3339 with an offset or `Z`.
+- Both PUT endpoints are outside the day window and never rescore a day, and they share the `PUT /health/daily` rate limit bucket.
+- `birthYear` allows 1900 up to the current year in the person's zone; the table check is 1900 to 2100 because a CHECK cannot read the clock.

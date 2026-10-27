@@ -83,6 +83,11 @@ services:
       NEWME_SERVER_NAME: ${NEWME_SERVER_NAME:-New Me}
       NEWME_TRUSTED_PROXY_HOPS: ${NEWME_TRUSTED_PROXY_HOPS:-1}
       NEWME_ABS_URL: ${NEWME_ABS_URL:-}
+      NEWME_APNS_KEY: ${NEWME_APNS_KEY:-}
+      NEWME_APNS_KEY_ID: ${NEWME_APNS_KEY_ID:-}
+      NEWME_APNS_TEAM_ID: ${NEWME_APNS_TEAM_ID:-}
+      NEWME_APNS_TOPIC: ${NEWME_APNS_TOPIC:-}
+      NEWME_APNS_PRODUCTION: ${NEWME_APNS_PRODUCTION:-true}
       TZ: ${TZ:-America/New_York}
     healthcheck:
       test: ["CMD", "/app/server", "-healthcheck"]

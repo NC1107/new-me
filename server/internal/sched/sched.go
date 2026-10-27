@@ -15,6 +15,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 const (
@@ -33,6 +34,9 @@ type Scheduler struct {
 	Now func() time.Time
 	// Listening is nil while the Audiobookshelf feature is off.
 	Listening *listening.Syncer
+	// Together creates each week's challenge and completes challenges and rewards that no
+	// request was around to notice, such as one finished by a listening poll. Nil skips it.
+	Together *together.Service
 }
 
 // New builds a scheduler on the wall clock.
@@ -47,7 +51,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 	if s.Listening != nil {
 		go s.runListening(ctx)
 	}
-	s.runGuarded(ctx, s.FinalizeDue)
+	s.runGuarded(ctx, s.pass)
 	ticker := time.NewTicker(Interval)
 	defer ticker.Stop()
 	for {
@@ -55,7 +59,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			s.runGuarded(ctx, s.FinalizeDue)
+			s.runGuarded(ctx, s.pass)
 		}
 	}
 }
@@ -72,6 +76,15 @@ func (s *Scheduler) runListening(ctx context.Context) {
 			s.runGuarded(ctx, s.PollListening)
 		}
 	}
+}
+
+// pass finalizes due days, then settles what the pair shares.
+func (s *Scheduler) pass(ctx context.Context) error {
+	err := s.FinalizeDue(ctx)
+	if s.Together == nil {
+		return err
+	}
+	return errors.Join(err, s.Together.Settle(ctx))
 }
 
 // PollListening reads every linked Audiobookshelf account once.

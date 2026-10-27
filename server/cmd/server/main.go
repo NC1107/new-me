@@ -22,7 +22,9 @@ import (
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/sched"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 // version is stamped at build time with -ldflags "-X main.version=1.2.3".
@@ -61,15 +63,18 @@ func main() {
 		log.Printf("seed server name: %v", err)
 	}
 
+	notifier := startPush(ctx, cfg, database)
+
 	scheduler := sched.New(database)
 	if cfg.ABSURL != "" {
 		scheduler.Listening = listening.New(database, cfg.ABSURL)
 	}
+	scheduler.Together = &together.Service{DB: database, Now: time.Now, Notifier: notifier}
 	go scheduler.Run(ctx)
 
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           api.New(cfg, database).WithVersion(version).Router(),
+		Handler:           api.New(cfg, database).WithVersion(version).WithNotifier(notifier).Router(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -88,6 +93,28 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(shutdownCtx)
+}
+
+// startPush builds the APNs dispatcher, or returns nil when push is not configured. A bad key
+// is logged and leaves push off, since the rest of the app does not depend on it.
+func startPush(ctx context.Context, cfg config.Config, database *db.DB) together.Notifier {
+	if !cfg.APNS.Enabled() {
+		log.Println("[NEWME] push is off: NEWME_APNS_* is not set")
+		return nil
+	}
+	key, err := push.ParseKey(cfg.APNS.Key)
+	if err != nil {
+		log.Printf("[NEWME] push is off: %v", err)
+		return nil
+	}
+	client, err := push.NewClient(push.Config{Key: key, KeyID: cfg.APNS.KeyID, TeamID: cfg.APNS.TeamID,
+		Topic: cfg.APNS.Topic, Sandbox: !cfg.APNS.Production})
+	if err != nil {
+		log.Printf("[NEWME] push is off: %v", err)
+		return nil
+	}
+	log.Printf("[NEWME] push is on (production=%v)", cfg.APNS.Production)
+	return push.NewDispatcher(ctx, client, push.DBStore{DB: database})
 }
 
 // healthcheck does one GET against the local health endpoint and returns the exit code.

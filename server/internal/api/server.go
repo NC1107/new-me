@@ -15,6 +15,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/ratelimit"
 	"github.com/nc1107/new-me/server/internal/semver"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 // defaultMaxUsers applies to a hand-built Config, which leaves the cap at zero.
@@ -26,7 +27,7 @@ type limits struct {
 	join *ratelimit.Limiter
 	// device covers every authenticated route, per device.
 	device *ratelimit.Limiter
-	// healthPut is the extra budget of PUT /health/daily, per device.
+	// healthPut is the extra budget of the PUT /health/* routes, per device.
 	healthPut *ratelimit.Limiter
 	// absLink caps sign-in attempts, per device, so the endpoint cannot be used to guess
 	// Audiobookshelf passwords.
@@ -53,6 +54,8 @@ type Server struct {
 	health    healthCache
 	// listen is nil while NEWME_ABS_URL is unset, which is how the feature is off.
 	listen *listening.Syncer
+	// together is the shared challenge, reward and push logic.
+	together *together.Service
 }
 
 // New builds a Server on the wall clock.
@@ -69,7 +72,7 @@ func New(cfg config.Config, database *db.DB) *Server {
 	if cfg.ABSURL != "" {
 		syncer = listening.New(database, cfg.ABSURL)
 	}
-	return &Server{
+	srv := &Server{
 		listen:    syncer,
 		cfg:       cfg,
 		db:        database,
@@ -78,6 +81,15 @@ func New(cfg config.Config, database *db.DB) *Server {
 		limits:    newLimits(),
 		minClient: minClient,
 	}
+	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
+	return srv
+}
+
+// WithNotifier turns push on by giving the server somewhere to queue notifications. Without
+// one, every push event is skipped and the rest of the app behaves the same.
+func (s *Server) WithNotifier(n together.Notifier) *Server {
+	s.together.Notifier = n
+	return s
 }
 
 // WithVersion sets the build version reported by /api/health.
@@ -138,14 +150,32 @@ func (s *Server) Router() http.Handler {
 		r.Patch("/api/me", s.handlePatchMe)
 		r.Get("/api/today", s.handleToday)
 		r.Get("/api/board", s.handleBoard)
-		r.Post("/api/logs", s.handleCreateLog)
+		r.With(s.settleAfter).Post("/api/logs", s.handleCreateLog)
 		r.Get("/api/logs", s.handleListLogs)
-		r.Delete("/api/logs/{id}", s.handleDeleteLog)
+		r.With(s.settleAfter).Delete("/api/logs/{id}", s.handleDeleteLog)
 		r.Get("/api/meals/recent", s.handleRecentMeals)
-		r.With(limit(s.limits.healthPut, byDevice)).Put("/api/health/daily", s.handlePutHealthDaily)
+		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/daily", s.handlePutHealthDaily)
 		r.Get("/api/health/trends", s.handleHealthTrends)
+		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/workouts", s.handlePutWorkouts)
+		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/sleep", s.handlePutSleep)
+		r.Get("/api/workouts", s.handleListWorkouts)
+		r.Get("/api/insights", s.handleInsights)
 		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
+
+		r.Get("/api/habits", s.handleListHabits)
+		r.Post("/api/habits", s.handleCreateHabit)
+		r.Put("/api/habits/order", s.handleOrderHabits)
+		r.Patch("/api/habits/{id}", s.handlePatchHabit)
+		r.Delete("/api/habits/{id}", s.handleDeleteHabit)
+		r.With(s.settleAfter).Put("/api/habits/{id}/marks/{date}", s.handlePutHabitMark)
+
+		r.Post("/api/cheers", s.handleCreateCheer)
+		r.Get("/api/rewards", s.handleListRewards)
+		r.Post("/api/rewards", s.handleCreateReward)
+		r.Post("/api/rewards/{id}/claim", s.handleClaimReward)
+		r.Put("/api/devices/me/push", s.handlePutPushToken)
+		r.Delete("/api/devices/me/push", s.handleDeletePushToken)
 
 		r.Group(func(r chi.Router) {
 			r.Use(requireAdmin)

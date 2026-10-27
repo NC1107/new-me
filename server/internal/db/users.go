@@ -22,6 +22,8 @@ var (
 	ErrColorTaken = errors.New("color already taken")
 	// ErrAdminExists means a live admin is already present.
 	ErrAdminExists = errors.New("an admin already exists")
+	// ErrRewardActive means a reward is still being earned, and only one may be at a time.
+	ErrRewardActive = errors.New("a reward is already active")
 )
 
 // joinLockKey serializes joins; the one-argument advisory lock space is separate from the
@@ -45,6 +47,18 @@ type User struct {
 	// zone every date is computed in until it does.
 	PendingTimezone *string
 	PendingFrom     *score.Date
+	// BirthYear is optional and only picks the age band of the step suggestion.
+	BirthYear *int
+	// Notify holds the push events the person wants.
+	Notify Notifications
+}
+
+// Notifications are the per-person switches of the push events.
+type Notifications struct {
+	PartnerDone bool
+	Cheers      bool
+	Challenge   bool
+	Reward      bool
 }
 
 // ChosenTimezone is the zone the user last picked, which is what their profile shows.
@@ -70,13 +84,15 @@ func (u User) Location() (*time.Location, error) {
 }
 
 const userColumns = `u.id, u.name, u.color, u.timezone, u.is_admin, u.kcal_target, u.protein_target,
-	u.carbs_target, u.fat_target, u.joined_on::text, u.created_at, u.pending_timezone, u.pending_from::text`
+	u.carbs_target, u.fat_target, u.joined_on::text, u.created_at, u.pending_timezone, u.pending_from::text,
+	u.birth_year, u.notify_partner_done, u.notify_cheers, u.notify_challenge, u.notify_reward`
 
 // scanUser reads userColumns, after any leading columns the query selected first.
 func scanUser(row pgx.Row, leading ...any) (User, error) {
 	var u User
 	dest := append(leading, &u.ID, &u.Name, &u.Color, &u.Timezone, &u.IsAdmin, &u.KcalTarget, &u.ProteinTarget,
-		&u.CarbsTarget, &u.FatTarget, &u.JoinedOn, &u.CreatedAt, &u.PendingTimezone, &u.PendingFrom)
+		&u.CarbsTarget, &u.FatTarget, &u.JoinedOn, &u.CreatedAt, &u.PendingTimezone, &u.PendingFrom, &u.BirthYear,
+		&u.Notify.PartnerDone, &u.Notify.Cheers, &u.Notify.Challenge, &u.Notify.Reward)
 	return u, row.Scan(dest...)
 }
 
@@ -169,14 +185,17 @@ func CountUsers(ctx context.Context, q Querier) (int, error) {
 	return n, err
 }
 
-// UpdateUser writes back the editable profile fields: name, color and targets. The time zone
+// UpdateUser writes back the editable profile fields: name, color, targets, birth year and notification switches. The time zone
 // has its own functions, because it changes on a schedule rather than at the moment of the edit.
 func UpdateUser(ctx context.Context, q Querier, u User) error {
 	tag, err := q.Exec(ctx, `
 		UPDATE users SET name = $2, color = $3,
-			kcal_target = $4, protein_target = $5, carbs_target = $6, fat_target = $7
+			kcal_target = $4, protein_target = $5, carbs_target = $6, fat_target = $7,
+			birth_year = $8, notify_partner_done = $9, notify_cheers = $10, notify_challenge = $11,
+			notify_reward = $12
 		WHERE id = $1 AND deleted_at IS NULL`,
-		u.ID, u.Name, u.Color, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget)
+		u.ID, u.Name, u.Color, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget, u.BirthYear,
+		u.Notify.PartnerDone, u.Notify.Cheers, u.Notify.Challenge, u.Notify.Reward)
 	if err != nil {
 		switch violatedConstraint(err) {
 		case "users_name_live":

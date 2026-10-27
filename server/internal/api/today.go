@@ -53,6 +53,10 @@ type todayJSON struct {
 	Food          foodJSON         `json:"food"`
 	Health        healthStatusJSON `json:"health"`
 	Listening     listeningJSON    `json:"listening"`
+	// Habits are the day's due, unpaused habits with their state, in the person's order.
+	Habits []habitStateJSON `json:"habits"`
+	// Cheers are what the partner sent on the caller's local day.
+	Cheers []cheerJSON `json:"cheers"`
 }
 
 // listeningJSON is the day's Audiobookshelf listening, already counted in the reading quest.
@@ -109,6 +113,17 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 		latest[key] = latestJSON{Value: m.Value, Date: m.Date}
 	}
 
+	habits, err := db.DueHabits(ctx, s.db.Pool, c.user.ID, date)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	cheers, err := s.cheersToday(ctx, c, localToday)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+
 	in := scored.Inputs
 	writeJSON(w, http.StatusOK, todayJSON{
 		Date:          date,
@@ -127,6 +142,8 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 			Metrics: in.Metrics, Latest: latest,
 		},
 		Listening: listeningJSON{Minutes: in.ListeningMinutes},
+		Habits:    toHabitStatesJSON(habits),
+		Cheers:    cheers,
 	})
 }
 

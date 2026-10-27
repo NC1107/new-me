@@ -176,3 +176,51 @@ func questsByKey(r *response) map[string]questView {
 }
 
 func itoa(i int) string { return strconv.Itoa(i) }
+
+func TestBirthYearIsOptionalEditableAndClearable(t *testing.T) {
+	h := newHarness(t)
+	nick := h.joinAdmin("Nick", "green")
+	if got := h.get("/api/me", nick.Token).expect(http.StatusOK); !got.isNull("user.birthYear") {
+		t.Fatalf("birthYear should start unset: %s", got.Body)
+	}
+
+	got := h.patch("/api/me", nick.Token, obj{"birthYear": 1990}).expect(http.StatusOK)
+	if got.num("user.birthYear") != 1990 {
+		t.Fatalf("patch answer = %s", got.Body)
+	}
+	if h.get("/api/me", nick.Token).expect(http.StatusOK).num("user.birthYear") != 1990 {
+		t.Fatal("birthYear did not persist")
+	}
+
+	// An unrelated patch leaves it alone.
+	if h.patch("/api/me", nick.Token, obj{"name": "Nicholas"}).expect(http.StatusOK).num("user.birthYear") != 1990 {
+		t.Fatal("an absent birthYear must not clear it")
+	}
+	if !h.patch("/api/me", nick.Token, obj{"birthYear": nil}).expect(http.StatusOK).isNull("user.birthYear") {
+		t.Fatal("null must clear birthYear")
+	}
+}
+
+func TestBirthYearBounds(t *testing.T) {
+	h := newHarness(t)
+	nick := h.joinAdmin("Nick", "green")
+	for _, year := range []int{1899, 2027, 0, -5} {
+		h.patch("/api/me", nick.Token, obj{"birthYear": year}).expect(http.StatusUnprocessableEntity).code("invalid_request")
+	}
+	h.patch("/api/me", nick.Token, obj{"birthYear": "1990"}).expect(http.StatusBadRequest).code("invalid_json")
+	for _, year := range []int{1900, 2026} {
+		h.patch("/api/me", nick.Token, obj{"birthYear": year}).expect(http.StatusOK)
+	}
+	if h.get("/api/me", nick.Token).expect(http.StatusOK).num("user.birthYear") != 2026 {
+		t.Fatal("the last valid year should stick")
+	}
+}
+
+func TestBirthYearIsPerPerson(t *testing.T) {
+	h := newHarness(t)
+	nick, nadia := h.pair()
+	h.patch("/api/me", nick.Token, obj{"birthYear": 1980}).expect(http.StatusOK)
+	if !h.get("/api/me", nadia.Token).expect(http.StatusOK).isNull("user.birthYear") {
+		t.Fatal("Nadia must not inherit Nick's birth year")
+	}
+}

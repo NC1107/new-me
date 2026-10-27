@@ -19,10 +19,12 @@ type userJSON struct {
 	Color    string `json:"color"`
 	Timezone string `json:"timezone"`
 	IsAdmin  bool   `json:"isAdmin"`
+	// BirthYear is null until the person shares it.
+	BirthYear *int `json:"birthYear"`
 }
 
 func toUserJSON(u db.User) userJSON {
-	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin}
+	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin, BirthYear: u.BirthYear}
 }
 
 type joinRequest struct {

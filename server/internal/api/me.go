@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -37,13 +38,28 @@ type templateJSON struct {
 }
 
 type meJSON struct {
-	User           userJSON       `json:"user"`
-	Targets        targetsJSON    `json:"targets"`
-	QuestTemplates []templateJSON `json:"questTemplates"`
-	LocalToday     score.Date     `json:"localToday"`
-	BackdateUntil  *string        `json:"backdateUntil"`
-	ServerNow      string         `json:"serverNow"`
-	Audiobookshelf *absJSON       `json:"audiobookshelf"`
+	User           userJSON          `json:"user"`
+	Targets        targetsJSON       `json:"targets"`
+	QuestTemplates []templateJSON    `json:"questTemplates"`
+	LocalToday     score.Date        `json:"localToday"`
+	BackdateUntil  *string           `json:"backdateUntil"`
+	ServerNow      string            `json:"serverNow"`
+	Audiobookshelf *absJSON          `json:"audiobookshelf"`
+	Notifications  notificationsJSON `json:"notifications"`
+}
+
+type notificationsJSON struct {
+	PartnerDone bool `json:"partnerDone"`
+	Cheers      bool `json:"cheers"`
+	Challenge   bool `json:"challenge"`
+	Reward      bool `json:"reward"`
+}
+
+type notificationsPatch struct {
+	PartnerDone *bool `json:"partnerDone"`
+	Cheers      *bool `json:"cheers"`
+	Challenge   *bool `json:"challenge"`
+	Reward      *bool `json:"reward"`
 }
 
 func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, error) {
@@ -75,6 +91,8 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		BackdateUntil:  s.backdateUntil(u, loc),
 		ServerNow:      wireTime(now),
 		Audiobookshelf: abs,
+		Notifications: notificationsJSON{PartnerDone: u.Notify.PartnerDone, Cheers: u.Notify.Cheers,
+			Challenge: u.Notify.Challenge, Reward: u.Notify.Reward},
 	}, nil
 }
 
@@ -102,11 +120,13 @@ type templatePatch struct {
 }
 
 type patchMeRequest struct {
-	Name           *string         `json:"name"`
-	Color          *string         `json:"color"`
-	Timezone       *string         `json:"timezone"`
-	Targets        *targetsPatch   `json:"targets"`
-	QuestTemplates []templatePatch `json:"questTemplates"`
+	Name           *string             `json:"name"`
+	Color          *string             `json:"color"`
+	Timezone       *string             `json:"timezone"`
+	Targets        *targetsPatch       `json:"targets"`
+	BirthYear      nullable[int]       `json:"birthYear"`
+	QuestTemplates []templatePatch     `json:"questTemplates"`
+	Notifications  *notificationsPatch `json:"notifications"`
 }
 
 // Bounds of the profile targets, mirroring the users table checks.
@@ -224,6 +244,22 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 		}
 		u.Color = *req.Color
 	}
+	if req.BirthYear.Set {
+		if err := s.applyBirthYear(u, req.BirthYear.Value); err != nil {
+			return err
+		}
+	}
+	if n := req.Notifications; n != nil {
+		for _, sw := range []struct {
+			field *bool
+			patch *bool
+		}{{&u.Notify.PartnerDone, n.PartnerDone}, {&u.Notify.Cheers, n.Cheers},
+			{&u.Notify.Challenge, n.Challenge}, {&u.Notify.Reward, n.Reward}} {
+			if sw.patch != nil {
+				*sw.field = *sw.patch
+			}
+		}
+	}
 	if t := req.Targets; t != nil {
 		for _, step := range []*httpError{
 			applyTarget(&u.KcalTarget, t.Kcal, maxKcalTarget, "kcal"),
@@ -236,6 +272,27 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			}
 		}
 	}
+	return nil
+}
+
+// minBirthYear mirrors the users table check.
+const minBirthYear = 1900
+
+// applyBirthYear sets or clears the birth year. The newest allowed year is the current one in
+// the person's own zone, so someone ahead of UTC is never refused a valid year.
+func (s *Server) applyBirthYear(u *db.User, year *int) *httpError {
+	if year == nil {
+		u.BirthYear = nil
+		return nil
+	}
+	loc, err := u.Location()
+	if err != nil {
+		return invalid("birthYear cannot be checked")
+	}
+	if thisYear := s.now().In(loc).Year(); *year < minBirthYear || *year > thisYear {
+		return invalid(fmt.Sprintf("birthYear must be between %d and %d", minBirthYear, thisYear))
+	}
+	u.BirthYear = year
 	return nil
 }
 

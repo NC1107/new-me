@@ -111,6 +111,8 @@ class ApiException implements Exception {
   String toString() => 'ApiException($kind, $statusCode): $message';
 }
 
+int _int(Object? v) => (v as num?)?.toInt() ?? 0;
+
 class ApiClient {
   ApiClient({
     required String baseUrl,
@@ -249,6 +251,35 @@ class ApiClient {
     ),
     (data) => HealthDailyResult.fromJson(data as Json),
   );
+
+  /// At most 100 items per request; the caller chunks.
+  Future<int> putHealthWorkouts(List<WorkoutUpload> items) => _send(
+    () => _dio.put<dynamic>(
+      '/api/health/workouts',
+      data: {
+        'items': [for (final i in items) i.toJson()],
+      },
+    ),
+    (data) => _int((data as Json)['saved']),
+  );
+
+  Future<WorkoutList> workouts({int days = 30}) => _send(
+    () => _dio.get<dynamic>('/api/workouts', queryParameters: {'days': days}),
+    (data) => WorkoutList.fromJson(data as Json),
+  );
+
+  Future<int> putHealthSleep(List<SleepNightUpload> nights) => _send(
+    () => _dio.put<dynamic>(
+      '/api/health/sleep',
+      data: {
+        'nights': [for (final n in nights) n.toJson()],
+      },
+    ),
+    (data) => _int((data as Json)['saved']),
+  );
+
+  Future<Insights> insights() =>
+      _send(() => _dio.get<dynamic>('/api/insights'), (data) => Insights.fromJson(data as Json));
 
   Future<HealthTrend> healthTrends(String metric, int days) => _send(
     () =>

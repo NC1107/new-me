@@ -9,6 +9,7 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/avatar.dart';
+import '../insights/insights_logic.dart';
 
 const _kRingSize = 104.0;
 
@@ -71,6 +72,15 @@ class PersonCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _Stat(label: 'Week', value: user.week),
+              if (user.workoutsThisWeek case final n?) ...[
+                const SizedBox(height: 4),
+                Semantics(
+                  container: true,
+                  label: '${workoutCountLabel(n)} this week',
+                  excludeSemantics: true,
+                  child: _Stat(label: 'Workouts', value: n),
+                ),
+              ],
               const SizedBox(height: 4),
               _Stat(label: 'Season', value: user.season),
               const SizedBox(height: 10),

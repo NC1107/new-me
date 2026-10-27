@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 typedef Json = Map<String, dynamic>;
 
 int _int(Object? v, [int fallback = 0]) => (v as num?)?.toInt() ?? fallback;
@@ -37,6 +39,7 @@ class AccountUser {
     required this.color,
     required this.timezone,
     required this.isAdmin,
+    this.birthYear,
   });
 
   factory AccountUser.fromJson(Json j) => AccountUser(
@@ -45,6 +48,7 @@ class AccountUser {
     color: _str(j['color']),
     timezone: _str(j['timezone']),
     isAdmin: j['isAdmin'] as bool? ?? false,
+    birthYear: _intOrNull(j['birthYear']),
   );
 
   final int id;
@@ -53,12 +57,16 @@ class AccountUser {
   final String timezone;
   final bool isAdmin;
 
+  /// Null until the person shares it, and on servers older than v4.
+  final int? birthYear;
+
   Json toJson() => {
     'id': id,
     'name': name,
     'color': color,
     'timezone': timezone,
     'isAdmin': isAdmin,
+    'birthYear': ?birthYear,
   };
 }
 
@@ -327,6 +335,8 @@ class MePatch {
     this.fatTarget,
     this.questTemplates,
     this.clearTargets = const {},
+    this.birthYear,
+    this.clearBirthYear = false,
   });
 
   /// Builds a targets-only patch where a null value clears that target on the server.
@@ -353,6 +363,12 @@ class MePatch {
   /// Target keys (kcal, protein, carbs, fat) sent as null so the server clears them.
   final Set<String> clearTargets;
 
+  /// 1900..current year.
+  final int? birthYear;
+
+  /// Sends `birthYear: null` so the server forgets it.
+  final bool clearBirthYear;
+
   Json toJson() {
     final targets = <String, int?>{
       for (final key in clearTargets) key: null,
@@ -366,6 +382,7 @@ class MePatch {
       'color': ?color,
       'timezone': ?timezone,
       if (targets.isNotEmpty) 'targets': targets,
+      if (clearBirthYear) 'birthYear': null else 'birthYear': ?birthYear,
       if (questTemplates != null) 'questTemplates': [for (final q in questTemplates!) q.toJson()],
     };
   }
@@ -801,6 +818,7 @@ class BoardUser {
     required this.last7,
     this.syncedAt,
     this.highlights = const BoardHighlights(),
+    this.workoutsThisWeek,
   });
 
   factory BoardUser.fromJson(Json j) => BoardUser(
@@ -816,6 +834,7 @@ class BoardUser {
     highlights: j['highlights'] is Map
         ? BoardHighlights.fromJson((j['highlights'] as Map).cast<String, dynamic>())
         : const BoardHighlights(),
+    workoutsThisWeek: _intOrNull(j['workoutsThisWeek']),
   );
 
   final int id;
@@ -837,6 +856,9 @@ class BoardUser {
   /// Today's health numbers worth showing next to a member; empty before v2 servers.
   final BoardHighlights highlights;
 
+  /// Workouts in the current week; null on servers older than v4.
+  final int? workoutsThisWeek;
+
   Json toJson() => {
     'id': id,
     'name': name,
@@ -848,6 +870,7 @@ class BoardUser {
     'last7': [for (final d in last7) d.toJson()],
     'syncedAt': _timeJson(syncedAt),
     'highlights': highlights.toJson(),
+    'workoutsThisWeek': ?workoutsThisWeek,
   };
 }
 
@@ -1217,5 +1240,501 @@ class HealthTrend {
   Json toJson() => {
     'metric': metric,
     'points': [for (final p in points) p.toJson()],
+  };
+}
+
+/// One workout of PUT /health/workouts. [type] is one of `WorkoutType.all`.
+class WorkoutUpload {
+  const WorkoutUpload({
+    required this.id,
+    required this.type,
+    required this.startedAt,
+    required this.endedAt,
+    required this.durationMin,
+    required this.source,
+    this.kcal,
+    this.distanceM,
+    this.avgHr,
+  });
+
+  /// The HealthKit sample UUID; the server upserts on it.
+  final String id;
+  final String type;
+  final DateTime startedAt;
+  final DateTime endedAt;
+  final int durationMin;
+  final int? kcal;
+  final int? distanceM;
+  final int? avgHr;
+  final String source;
+
+  Json toJson() => {
+    'id': id,
+    'type': type,
+    'startedAt': _timeJson(startedAt),
+    'endedAt': _timeJson(endedAt),
+    'durationMin': durationMin,
+    'kcal': kcal,
+    'distanceM': distanceM,
+    'avgHr': avgHr,
+    'source': source,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is WorkoutUpload && jsonEncode(other.toJson()) == jsonEncode(toJson());
+
+  @override
+  int get hashCode => jsonEncode(toJson()).hashCode;
+}
+
+/// The workout types the server accepts.
+abstract final class WorkoutType {
+  static const walking = 'walking';
+  static const running = 'running';
+  static const cycling = 'cycling';
+  static const strength = 'strength';
+  static const hiit = 'hiit';
+  static const yoga = 'yoga';
+  static const swimming = 'swimming';
+  static const hiking = 'hiking';
+  static const dance = 'dance';
+  static const climbing = 'climbing';
+  static const other = 'other';
+
+  static const all = [
+    walking,
+    running,
+    cycling,
+    strength,
+    hiit,
+    yoga,
+    swimming,
+    hiking,
+    dance,
+    climbing,
+    other,
+  ];
+}
+
+/// One night of PUT /health/sleep.
+class SleepNightUpload {
+  const SleepNightUpload({
+    required this.date,
+    required this.bedAt,
+    required this.wakeAt,
+    required this.asleepMin,
+    required this.source,
+    this.deepMin = 0,
+    this.remMin = 0,
+    this.coreMin = 0,
+    this.awakeMin = 0,
+  });
+
+  /// The morning the night ends, as a local date.
+  final String date;
+  final DateTime bedAt;
+  final DateTime wakeAt;
+  final int asleepMin;
+  final int deepMin;
+  final int remMin;
+  final int coreMin;
+  final int awakeMin;
+  final String source;
+
+  Json toJson() => {
+    'date': date,
+    'bedAt': _timeJson(bedAt),
+    'wakeAt': _timeJson(wakeAt),
+    'asleepMin': asleepMin,
+    'deepMin': deepMin,
+    'remMin': remMin,
+    'coreMin': coreMin,
+    'awakeMin': awakeMin,
+    'source': source,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is SleepNightUpload && jsonEncode(other.toJson()) == jsonEncode(toJson());
+
+  @override
+  int get hashCode => jsonEncode(toJson()).hashCode;
+}
+
+/// A workout of GET /workouts.
+class Workout {
+  const Workout({
+    required this.id,
+    required this.type,
+    required this.date,
+    required this.startedAt,
+    required this.endedAt,
+    required this.durationMin,
+    this.kcal,
+    this.distanceM,
+    this.avgHr,
+  });
+
+  factory Workout.fromJson(Json j) => Workout(
+    id: _str(j['id']),
+    type: _str(j['type'], WorkoutType.other),
+    date: _str(j['date']),
+    startedAt: _time(j['startedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    endedAt: _time(j['endedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    // The server keeps one decimal; truncating would show 34.9 minutes as 34.
+    durationMin: ((j['durationMin'] as num?) ?? 0).round(),
+    kcal: _intOrNull(j['kcal']),
+    distanceM: _intOrNull(j['distanceM']),
+    avgHr: _intOrNull(j['avgHr']),
+  );
+
+  final String id;
+  final String type;
+
+  /// The local date of [startedAt] in the person's zone.
+  final String date;
+  final DateTime startedAt;
+  final DateTime endedAt;
+  final int durationMin;
+  final int? kcal;
+  final int? distanceM;
+  final int? avgHr;
+
+  Json toJson() => {
+    'id': id,
+    'type': type,
+    'date': date,
+    'startedAt': _timeJson(startedAt),
+    'endedAt': _timeJson(endedAt),
+    'durationMin': durationMin,
+    'kcal': kcal,
+    'distanceM': distanceM,
+    'avgHr': avgHr,
+  };
+}
+
+/// A count and total minutes of workouts.
+class WorkoutTotals {
+  const WorkoutTotals({this.count = 0, this.minutes = 0});
+
+  factory WorkoutTotals.fromJson(Object? j) => j is Map
+      ? WorkoutTotals(count: _int(j['count']), minutes: _int(j['minutes']))
+      : const WorkoutTotals();
+
+  final int count;
+  final int minutes;
+
+  Json toJson() => {'count': count, 'minutes': minutes};
+}
+
+/// GET /workouts: newest first, plus this week's totals.
+class WorkoutList {
+  const WorkoutList({required this.workouts, this.week = const WorkoutTotals()});
+
+  factory WorkoutList.fromJson(Json j) => WorkoutList(
+    workouts: _list(j['workouts'], Workout.fromJson),
+    week: WorkoutTotals.fromJson(j['week']),
+  );
+
+  final List<Workout> workouts;
+  final WorkoutTotals week;
+
+  Json toJson() => {
+    'workouts': [for (final w in workouts) w.toJson()],
+    'week': week.toJson(),
+  };
+}
+
+class StepBest {
+  const StepBest({required this.date, required this.value});
+
+  factory StepBest.fromJson(Json j) => StepBest(date: _str(j['date']), value: _num(j['value']));
+
+  final String date;
+  final num value;
+
+  Json toJson() => {'date': date, 'value': value};
+}
+
+class StepSuggestion {
+  const StepSuggestion({
+    required this.target,
+    required this.median14,
+    required this.bandLow,
+    required this.bandHigh,
+    required this.ageKnown,
+  });
+
+  factory StepSuggestion.fromJson(Json j) => StepSuggestion(
+    target: _int(j['target']),
+    median14: _num(j['median14']),
+    bandLow: _int(j['bandLow']),
+    bandHigh: _int(j['bandHigh']),
+    ageKnown: j['ageKnown'] as bool? ?? false,
+  );
+
+  final int target;
+  final num median14;
+  final int bandLow;
+  final int bandHigh;
+  final bool ageKnown;
+
+  Json toJson() => {
+    'target': target,
+    'median14': median14,
+    'bandLow': bandLow,
+    'bandHigh': bandHigh,
+    'ageKnown': ageKnown,
+  };
+}
+
+class StepInsights {
+  const StepInsights({
+    this.avg7,
+    this.avg30,
+    this.median14,
+    this.trend = 'flat',
+    this.best,
+    this.daysAtGoal30 = 0,
+    this.goal = 0,
+    this.suggestion,
+  });
+
+  factory StepInsights.fromJson(Object? raw) {
+    if (raw is! Map) return const StepInsights();
+    final j = raw.cast<String, dynamic>();
+    return StepInsights(
+      avg7: j['avg7'] as num?,
+      avg30: j['avg30'] as num?,
+      median14: j['median14'] as num?,
+      trend: _str(j['trend'], 'flat'),
+      best: j['best'] is Map ? StepBest.fromJson((j['best'] as Map).cast<String, dynamic>()) : null,
+      daysAtGoal30: _int(j['daysAtGoal30']),
+      goal: _int(j['goal']),
+      suggestion: j['suggestion'] is Map
+          ? StepSuggestion.fromJson((j['suggestion'] as Map).cast<String, dynamic>())
+          : null,
+    );
+  }
+
+  final num? avg7;
+  final num? avg30;
+  final num? median14;
+
+  /// `up`, `flat` or `down`.
+  final String trend;
+  final StepBest? best;
+  final int daysAtGoal30;
+  final int goal;
+
+  /// Null when fewer than five of the last 14 days have steps.
+  final StepSuggestion? suggestion;
+
+  Json toJson() => {
+    'avg7': avg7,
+    'avg30': avg30,
+    'median14': median14,
+    'trend': trend,
+    'best': best?.toJson(),
+    'daysAtGoal30': daysAtGoal30,
+    'goal': goal,
+    'suggestion': suggestion?.toJson(),
+  };
+}
+
+class SleepStages {
+  const SleepStages({this.deepMin = 0, this.remMin = 0, this.coreMin = 0, this.awakeMin = 0});
+
+  factory SleepStages.fromJson(Json j) => SleepStages(
+    deepMin: _int(j['deepMin']),
+    remMin: _int(j['remMin']),
+    coreMin: _int(j['coreMin']),
+    awakeMin: _int(j['awakeMin']),
+  );
+
+  final int deepMin;
+  final int remMin;
+  final int coreMin;
+  final int awakeMin;
+
+  Json toJson() => {'deepMin': deepMin, 'remMin': remMin, 'coreMin': coreMin, 'awakeMin': awakeMin};
+}
+
+class SleepNight {
+  const SleepNight({
+    required this.date,
+    required this.bedAt,
+    required this.wakeAt,
+    required this.asleepMin,
+    this.stages = const SleepStages(),
+  });
+
+  factory SleepNight.fromJson(Json j) => SleepNight(
+    date: _str(j['date']),
+    bedAt: _time(j['bedAt']),
+    wakeAt: _time(j['wakeAt']),
+    asleepMin: _int(j['asleepMin']),
+    stages: SleepStages.fromJson(j),
+  );
+
+  final String date;
+  final DateTime? bedAt;
+  final DateTime? wakeAt;
+  final int asleepMin;
+  final SleepStages stages;
+
+  Json toJson() => {
+    'date': date,
+    'bedAt': _timeJson(bedAt),
+    'wakeAt': _timeJson(wakeAt),
+    'asleepMin': asleepMin,
+    ...stages.toJson(),
+  };
+}
+
+class SleepNightPoint {
+  const SleepNightPoint({required this.date, required this.asleepMin});
+
+  factory SleepNightPoint.fromJson(Json j) =>
+      SleepNightPoint(date: _str(j['date']), asleepMin: _int(j['asleepMin']));
+
+  final String date;
+  final int asleepMin;
+
+  Json toJson() => {'date': date, 'asleepMin': asleepMin};
+}
+
+class SleepInsights {
+  const SleepInsights({
+    this.avg7Min,
+    this.avg30Min,
+    this.targetMin = 420,
+    this.avgBedtime,
+    this.avgWake,
+    this.bedtimeSpreadMin,
+    this.stages7,
+    this.lastNight,
+    this.nights = const [],
+  });
+
+  factory SleepInsights.fromJson(Object? raw) {
+    if (raw is! Map) return const SleepInsights();
+    final j = raw.cast<String, dynamic>();
+    return SleepInsights(
+      avg7Min: j['avg7Min'] as num?,
+      avg30Min: j['avg30Min'] as num?,
+      targetMin: _int(j['targetMin'], 420),
+      avgBedtime: j['avgBedtime'] as String?,
+      avgWake: j['avgWake'] as String?,
+      bedtimeSpreadMin: j['bedtimeSpreadMin'] as num?,
+      stages7: j['stages7'] is Map
+          ? SleepStages.fromJson((j['stages7'] as Map).cast<String, dynamic>())
+          : null,
+      lastNight: j['lastNight'] is Map
+          ? SleepNight.fromJson((j['lastNight'] as Map).cast<String, dynamic>())
+          : null,
+      nights: _list(j['nights'], SleepNightPoint.fromJson),
+    );
+  }
+
+  final num? avg7Min;
+  final num? avg30Min;
+  final int targetMin;
+
+  /// Local clock times as `HH:mm`.
+  final String? avgBedtime;
+  final String? avgWake;
+  final num? bedtimeSpreadMin;
+  final SleepStages? stages7;
+  final SleepNight? lastNight;
+
+  /// The last 14 nights with data, oldest first.
+  final List<SleepNightPoint> nights;
+
+  Json toJson() => {
+    'avg7Min': avg7Min,
+    'avg30Min': avg30Min,
+    'targetMin': targetMin,
+    'avgBedtime': avgBedtime,
+    'avgWake': avgWake,
+    'bedtimeSpreadMin': bedtimeSpreadMin,
+    'stages7': stages7?.toJson(),
+    'lastNight': lastNight?.toJson(),
+    'nights': [for (final n in nights) n.toJson()],
+  };
+}
+
+class WorkoutTypeTotals {
+  const WorkoutTypeTotals({required this.type, required this.count, required this.minutes});
+
+  factory WorkoutTypeTotals.fromJson(Json j) => WorkoutTypeTotals(
+    type: _str(j['type'], WorkoutType.other),
+    count: _int(j['count']),
+    minutes: _int(j['minutes']),
+  );
+
+  final String type;
+  final int count;
+  final int minutes;
+
+  Json toJson() => {'type': type, 'count': count, 'minutes': minutes};
+}
+
+class WorkoutInsights {
+  const WorkoutInsights({
+    this.week = const WorkoutTotals(),
+    this.last30 = const WorkoutTotals(),
+    this.byType = const [],
+  });
+
+  factory WorkoutInsights.fromJson(Object? raw) {
+    if (raw is! Map) return const WorkoutInsights();
+    final j = raw.cast<String, dynamic>();
+    final last30 = j['last30'] is Map ? (j['last30'] as Map).cast<String, dynamic>() : null;
+    return WorkoutInsights(
+      week: WorkoutTotals.fromJson(j['week']),
+      last30: WorkoutTotals.fromJson(last30),
+      byType: _list(last30?['byType'], WorkoutTypeTotals.fromJson),
+    );
+  }
+
+  final WorkoutTotals week;
+  final WorkoutTotals last30;
+
+  /// The 30 day breakdown, flattened from `last30.byType`.
+  final List<WorkoutTypeTotals> byType;
+
+  Json toJson() => {
+    'week': week.toJson(),
+    'last30': {
+      ...last30.toJson(),
+      'byType': [for (final t in byType) t.toJson()],
+    },
+  };
+}
+
+/// GET /insights; every part tolerates being absent so an older server still parses.
+class Insights {
+  const Insights({
+    this.steps = const StepInsights(),
+    this.sleep = const SleepInsights(),
+    this.workouts = const WorkoutInsights(),
+  });
+
+  factory Insights.fromJson(Json j) => Insights(
+    steps: StepInsights.fromJson(j['steps']),
+    sleep: SleepInsights.fromJson(j['sleep']),
+    workouts: WorkoutInsights.fromJson(j['workouts']),
+  );
+
+  final StepInsights steps;
+  final SleepInsights sleep;
+  final WorkoutInsights workouts;
+
+  Json toJson() => {
+    'steps': steps.toJson(),
+    'sleep': sleep.toJson(),
+    'workouts': workouts.toJson(),
   };
 }

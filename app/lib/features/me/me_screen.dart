@@ -22,6 +22,7 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
+import '../insights/insights_screen.dart';
 import 'apple_health_page.dart';
 import 'audiobookshelf_page.dart';
 import 'daily_goals_page.dart';
@@ -88,6 +89,13 @@ class _MeBody extends ConsumerWidget {
               title: 'Daily goals',
               subtitle: '$enabled of ${me.questTemplates.length} on',
               onTap: () => pushPage(context, const DailyGoalsPage()),
+            ),
+            SettingsRow(
+              icon: Icons.insights_rounded,
+              palette: accentById('sky'),
+              title: 'Insights',
+              subtitle: 'Steps, sleep and workouts',
+              onTap: () => openInsights(context),
             ),
             SettingsRow(
               icon: Icons.restaurant_rounded,

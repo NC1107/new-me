@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/models.dart';
 import '../health/background_health_bridge.dart';
+import '../health/health_records.dart';
 import '../health/health_source.dart';
 import '../health/health_source_factory.dart';
 import 'clock.dart';
+import 'insights.dart';
 import 'local_prefs.dart';
 import 'session.dart';
 import 'today.dart';
@@ -28,6 +32,12 @@ const kResumeSyncInterval = Duration(minutes: 5);
 
 /// Before this local hour, yesterday is still open on the server and gets its final totals.
 const kYesterdayGraceHour = 10;
+
+/// Workouts and sleep nights are re-read for this many days on every sync.
+const kWorkoutSyncDays = 14;
+
+/// The server accepts at most this many workouts per request.
+const kWorkoutChunk = 100;
 
 class HealthSyncState {
   const HealthSyncState({this.syncing = false, this.prompted = false, this.lastSyncedAt});
@@ -49,6 +59,10 @@ class HealthSyncState {
 class HealthSyncController extends Notifier<HealthSyncState> {
   final Map<String, double> _pushed = {};
   final Set<String> _closedDates = {};
+
+  /// What the server already has this session: workout id and night date to the JSON sent.
+  final Map<String, String> _sentWorkouts = {};
+  final Map<String, String> _sentNights = {};
   Future<bool>? _inFlight;
   DateTime? _lastRun;
   Future<void> _ready = Future.value();
@@ -71,6 +85,8 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     ref.onDispose(() => _disposed = true);
     _pushed.clear();
     _closedDates.clear();
+    _sentWorkouts.clear();
+    _sentNights.clear();
     _lastRun = null;
     _inFlight = null;
     final listener = AppLifecycleListener(onResume: () => unawaited(sync(SyncTrigger.resume)));
@@ -148,6 +164,7 @@ class HealthSyncController extends Notifier<HealthSyncState> {
       // The session changed while Health was being read; these totals belong to the old one.
       if (!identical(ref.read(apiClientProvider), client)) return false;
       await _push(client, items);
+      await _pushExtras(client, now);
       _lastRun = now;
       await LocalPrefs.setLastSyncedAt(now);
       if (!_disposed) state = state.copyWith(lastSyncedAt: now);
@@ -161,6 +178,72 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     } finally {
       if (!_disposed) state = state.copyWith(syncing: false);
     }
+  }
+
+  /// Workouts and sleep nights ride along with the daily push, but a failure here never fails it.
+  Future<void> _pushExtras(ApiClient client, DateTime now) async {
+    final source = ref.read(healthSourceProvider);
+    final today = DateTime(now.year, now.month, now.day);
+    final first = DateTime(today.year, today.month, today.day - (kWorkoutSyncDays - 1));
+    var sentWorkouts = false;
+    var sentNights = false;
+    try {
+      final workouts = await source.workouts(first, now);
+      if (workouts != null && identical(ref.read(apiClientProvider), client)) {
+        sentWorkouts = await _sendChanged<WorkoutUpload>(
+          workouts,
+          _sentWorkouts,
+          (w) => w.id,
+          (w) => jsonEncode(w.toJson()),
+          client.putHealthWorkouts,
+        );
+      }
+    } on Object catch (e) {
+      debugPrint('[NEWME] workout sync failed: $e');
+    }
+    try {
+      final nights = await source.sleepNights(first, today);
+      if (nights != null && identical(ref.read(apiClientProvider), client)) {
+        sentNights = await _sendChanged<SleepNightUpload>(
+          nights,
+          _sentNights,
+          (n) => n.date,
+          (n) => jsonEncode(n.toJson()),
+          client.putHealthSleep,
+        );
+      }
+    } on Object catch (e) {
+      debugPrint('[NEWME] sleep sync failed: $e');
+    }
+    if (_disposed) return;
+    // Screens built on these providers would otherwise show the numbers from before this sync.
+    if (sentWorkouts || sentNights) ref.invalidate(insightsProvider);
+    if (sentWorkouts) ref.invalidate(workoutsProvider);
+  }
+
+  /// Sends the items whose content differs from what this session sent, in chunks, and records
+  /// each chunk only once the server has accepted it.
+  Future<bool> _sendChanged<T>(
+    List<T> items,
+    Map<String, String> sent,
+    String Function(T) keyOf,
+    String Function(T) fingerprintOf,
+    Future<int> Function(List<T>) put,
+  ) async {
+    var any = false;
+    final changed = [
+      for (final item in items)
+        if (sent[keyOf(item)] != fingerprintOf(item)) item,
+    ];
+    for (var i = 0; i < changed.length; i += kWorkoutChunk) {
+      final chunk = changed.sublist(i, min(i + kWorkoutChunk, changed.length));
+      await put(chunk);
+      any = true;
+      for (final item in chunk) {
+        sent[keyOf(item)] = fingerprintOf(item);
+      }
+    }
+    return any;
   }
 
   Future<List<HealthItem>> _readItems(DateTime now) async {
@@ -255,9 +338,7 @@ class HealthSyncController extends Notifier<HealthSyncState> {
   }
 }
 
-String formatLocalDate(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
+String formatLocalDate(DateTime d) => formatDate(d);
 
 final healthSyncProvider = NotifierProvider<HealthSyncController, HealthSyncState>(
   HealthSyncController.new,

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../api/models.dart';
+
 /// The metric keys shared with the server; see docs/design-v2.md.
 abstract final class HealthMetric {
   static const steps = 'steps';
@@ -71,4 +73,11 @@ abstract interface class HealthSource {
   /// Metrics for the local day that starts at [start], read up to [end]; null when Health
   /// cannot be read at all.
   Future<HealthTotals?> totals(DateTime start, DateTime end);
+
+  /// Workouts that started in [start, end); null when Health cannot be read at all.
+  Future<List<WorkoutUpload>?> workouts(DateTime start, DateTime end);
+
+  /// One record per night ending on a local date from [first] to [last] inclusive. Nights with no
+  /// asleep data are left out; null when Health cannot be read at all.
+  Future<List<SleepNightUpload>?> sleepNights(DateTime first, DateTime last);
 }

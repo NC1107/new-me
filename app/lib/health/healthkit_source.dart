@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:health/health.dart';
 
+import '../api/models.dart';
 import 'fake_health_source.dart';
 import 'health_math.dart';
+import 'health_records.dart';
 import 'health_source.dart';
 
 HealthSource createPlatformHealthSource() =>
@@ -45,13 +47,18 @@ class HealthKitSource implements HealthSource {
     HealthDataType.SLEEP_REM,
   ];
 
+  /// Read for nights only; the daily sleep total leaves them out on purpose.
+  static const _stageTypes = [HealthDataType.SLEEP_AWAKE, HealthDataType.SLEEP_IN_BED];
+
   static final _types = <HealthDataType>[
     HealthDataType.STEPS,
     for (final c in _cumulative.values) c.type,
     ..._pointInTime.values,
     ..._asleep,
+    ..._stageTypes,
     HealthDataType.MINDFULNESS,
     HealthDataType.WORKOUT,
+    HealthDataType.HEART_RATE,
   ];
 
   /// health 13.3.2 has no VO2 max type, so a small bridge in AppDelegate.swift reads it.
@@ -117,6 +124,105 @@ class HealthKitSource implements HealthSource {
       },
     }, onError: (key, e) => debugPrint('[NEWME] health $key unreadable: $e'));
     return HealthTotals(metrics);
+  }
+
+  @override
+  Future<List<WorkoutUpload>?> workouts(DateTime start, DateTime end) async {
+    final health = await _plugin();
+    final List<HealthDataPoint> raw;
+    try {
+      raw = await health.getHealthDataFromTypes(
+        types: [HealthDataType.WORKOUT],
+        startTime: start,
+        endTime: end,
+      );
+    } on Object catch (e) {
+      debugPrint('[NEWME] workouts unreadable: $e');
+      return null;
+    }
+    final out = <WorkoutUpload>[];
+    for (final p in raw) {
+      final value = p.value;
+      if (value is! WorkoutHealthValue || p.dateFrom.isBefore(start) || !p.dateFrom.isBefore(end)) {
+        continue;
+      }
+      final workout = buildWorkout(
+        id: p.uuid,
+        activityName: value.workoutActivityType.name,
+        start: p.dateFrom,
+        end: p.dateTo,
+        source: p.sourceName,
+        kcal: value.totalEnergyBurned,
+        distanceM: value.totalDistance,
+        avgHr: await _meanHeartRate(health, p.dateFrom, p.dateTo),
+      );
+      if (workout != null) out.add(workout);
+    }
+    return out;
+  }
+
+  /// A separate read per workout; a failure only costs that workout its heart rate.
+  Future<int?> _meanHeartRate(Health health, DateTime start, DateTime end) async {
+    try {
+      final samples = await _numeric(health, HealthDataType.HEART_RATE, start, end);
+      return meanHeartRate(samples, start, end);
+    } on Object catch (e) {
+      debugPrint('[NEWME] heart rate unreadable: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<SleepNightUpload>?> sleepNights(DateTime first, DateTime last) async {
+    final health = await _plugin();
+    final from = nightWindow(first).from;
+    final to = nightWindow(last).to;
+    final byType = <HealthDataType, List<HealthDataPoint>>{};
+    var readable = false;
+    for (final type in [..._asleep, ..._stageTypes]) {
+      try {
+        byType[type] = await health.getHealthDataFromTypes(
+          types: [type],
+          startTime: from,
+          endTime: to,
+        );
+        readable = true;
+      } on Object catch (e) {
+        debugPrint('[NEWME] sleep $type unreadable: $e');
+      }
+    }
+    if (!readable) return null;
+
+    List<Span> spans(HealthDataType type) => [
+      for (final p in byType[type] ?? const <HealthDataPoint>[]) (start: p.dateFrom, end: p.dateTo),
+    ];
+    final asleep = spans(HealthDataType.SLEEP_ASLEEP);
+    final core = spans(HealthDataType.SLEEP_LIGHT);
+    final deep = spans(HealthDataType.SLEEP_DEEP);
+    final rem = spans(HealthDataType.SLEEP_REM);
+    final awake = spans(HealthDataType.SLEEP_AWAKE);
+    final inBed = spans(HealthDataType.SLEEP_IN_BED);
+    final sourceName = [for (final t in _asleep) ...?byType[t]]
+        .map((p) => p.sourceName)
+        .firstOrNull;
+
+    final nights = <SleepNightUpload>[];
+    for (var day = first; !day.isAfter(last); day = DateTime(day.year, day.month, day.day + 1)) {
+      final night = buildNight(
+        day: day,
+        source: sourceName ?? 'healthkit',
+        samples: NightSamples(
+          asleep: spansInNight(asleep, day),
+          core: spansInNight(core, day),
+          deep: spansInNight(deep, day),
+          rem: spansInNight(rem, day),
+          awake: spansInNight(awake, day),
+          inBed: spansInNight(inBed, day),
+        ),
+      );
+      if (night != null) nights.add(night);
+    }
+    return nights;
   }
 
   double? _workoutCount(List<({DateTime start, DateTime end})> workouts) =>

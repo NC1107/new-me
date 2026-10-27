@@ -8,7 +8,10 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/pressable.dart';
 import '../../widgets/quest_copy.dart';
+import '../insights/insight_charts.dart';
+import '../insights/insights_logic.dart';
 
 enum BodyTrend { up, down }
 
@@ -22,6 +25,10 @@ class BodyTile {
     this.unit = '',
     this.trend,
     this.delta,
+    this.detail,
+    this.stages,
+    this.onTap,
+    this.hint,
   });
 
   final IconData icon;
@@ -34,6 +41,18 @@ class BodyTile {
 
   /// Signed change over the trend window, e.g. "-0.4".
   final String? delta;
+
+  /// A line under the value, e.g. the minutes behind a workout count.
+  final String? detail;
+
+  /// Last night's minutes per stage, drawn as a bar under the value.
+  final Map<SleepStage, int>? stages;
+
+  /// Opens the insight behind this tile; null leaves the tap to the card.
+  final VoidCallback? onTap;
+
+  /// Names what [onTap] opens for screen readers.
+  final String? hint;
 }
 
 /// The weight move over the window, or null when there are fewer than two weigh-ins or the move is
@@ -51,7 +70,14 @@ class BodyTile {
 }
 
 /// Only metrics that have data, in a fixed order.
-List<BodyTile> bodyTiles(HealthStatus health, String localToday, HealthTrend? weight) {
+List<BodyTile> bodyTiles(
+  HealthStatus health,
+  String localToday,
+  HealthTrend? weight, {
+  Insights? insights,
+  VoidCallback? onSleep,
+  VoidCallback? onWorkouts,
+}) {
   final m = health.metrics;
   num? latest(String key) => health.latest[key]?.value ?? m[key];
   String? asOf(String key) {
@@ -66,13 +92,35 @@ List<BodyTile> bodyTiles(HealthStatus health, String localToday, HealthTrend? we
   }
 
   final move = weightTrend(weight);
+  final night = insights?.sleep.lastNight;
+  final stages = night != null && stageTotal(night.stages) > 0 ? stageMap(night.stages) : null;
+  final week = insights?.workouts.week ?? const WorkoutTotals();
+  final hasWorkouts = insights != null && (week.count > 0 || insights.workouts.last30.count > 0);
   return [
     if (m['sleep_minutes'] case final v?)
-      tile('sleep', Icons.bedtime_rounded, 'Sleep', durationLabel(v)),
+      _with(
+        tile('sleep', Icons.bedtime_rounded, 'Sleep', durationLabel(v)),
+        stages: stages,
+        onTap: onSleep,
+        hint: 'open sleep insights',
+      ),
     if (m['resting_hr'] case final v?)
       tile('exercise', Icons.favorite_rounded, 'Resting HR', v.formatted, unit: 'bpm'),
     if (m['exercise_minutes'] case final v?)
       tile('exercise', Icons.local_fire_department_rounded, 'Exercise', v.formatted, unit: 'min'),
+    if (hasWorkouts)
+      _with(
+        tile(
+          'exercise',
+          Icons.fitness_center_rounded,
+          'Workouts',
+          '${week.count}',
+          unit: 'this week',
+        ),
+        detail: week.count == 0 ? 'None yet' : durationLabel(week.minutes),
+        onTap: onWorkouts,
+        hint: 'open workouts',
+      ),
     if (latest('weight_kg') case final v?)
       BodyTile(
         icon: Icons.monitor_weight_rounded,
@@ -97,6 +145,27 @@ List<BodyTile> bodyTiles(HealthStatus health, String localToday, HealthTrend? we
   ];
 }
 
+BodyTile _with(
+  BodyTile t, {
+  String? detail,
+  Map<SleepStage, int>? stages,
+  VoidCallback? onTap,
+  String? hint,
+}) => BodyTile(
+  icon: t.icon,
+  tint: t.tint,
+  ink: t.ink,
+  label: t.label,
+  value: t.value,
+  unit: t.unit,
+  trend: t.trend,
+  delta: t.delta,
+  detail: detail,
+  stages: stages,
+  onTap: onTap,
+  hint: hint,
+);
+
 /// Two-column tiles for the metrics Apple Health has delivered; tapping opens the Health screen.
 class BodyCard extends StatelessWidget {
   const BodyCard({super.key, required this.tiles, required this.onTap});
@@ -120,23 +189,21 @@ class BodyCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, box) {
-              const gap = 10.0;
-              final width = (box.maxWidth - gap) / 2;
-              return Wrap(
-                spacing: gap,
-                runSpacing: gap,
+          for (var i = 0; i < tiles.length; i += 2) ...[
+            if (i > 0) const SizedBox(height: 10),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final t in tiles)
-                    SizedBox(
-                      width: width,
-                      child: _Tile(tile: t),
-                    ),
+                  Expanded(child: _Tile(tile: tiles[i])),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: i + 1 < tiles.length ? _Tile(tile: tiles[i + 1]) : const SizedBox(),
+                  ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -156,11 +223,15 @@ class _Tile extends StatelessWidget {
       null => null,
     };
     final trendWord = tile.trend == BodyTrend.up ? 'up' : 'down';
-    return Semantics(
+    final body = Semantics(
       container: true,
+      button: tile.onTap != null,
+      onTap: tile.onTap,
       label:
           '${tile.label} ${tile.value} ${tile.unit}'
-          '${tile.delta == null ? '' : ', $trendWord ${tile.delta!.substring(1)} over 7 days'}',
+          '${tile.detail == null ? '' : ', ${tile.detail}'}'
+          '${tile.delta == null ? '' : ', $trendWord ${tile.delta!.substring(1)} over 7 days'}'
+          '${tile.hint == null ? '' : ', ${tile.hint}'}',
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -218,9 +289,17 @@ class _Tile extends StatelessWidget {
                 ],
               ),
             ),
+            if (tile.detail != null)
+              Text(tile.detail!, style: AppText.caption.copyWith(color: kInkSecondary)),
+            if (tile.stages != null) ...[
+              const SizedBox(height: 8),
+              StageBar(minutes: tile.stages!, height: 10),
+            ],
           ],
         ),
       ),
     );
+    if (tile.onTap == null) return body;
+    return Pressable(scale: 0.97, onTap: tile.onTap, child: body);
   }
 }

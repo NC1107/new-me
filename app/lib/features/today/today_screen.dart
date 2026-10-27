@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
 import '../../state/health_sync.dart';
+import '../../state/insights.dart';
 import '../../state/local_prefs.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
@@ -12,8 +13,12 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
+import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
 import '../health/health_screen.dart';
+import '../insights/insights_screen.dart';
+import '../insights/sleep_insight_screen.dart';
+import '../insights/workouts_screen.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../shell/home_tab.dart';
@@ -67,6 +72,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
   Future<void> _refresh() async {
     await ref.read(healthSyncProvider.notifier).sync(SyncTrigger.manual);
     await ref.read(todayProvider.notifier).refresh();
+    if (ref.exists(insightsProvider)) await ref.read(insightsProvider.notifier).refresh();
   }
 
   /// Plays the day-counted sheet once per date. It waits for the Today tab and for any sheet that
@@ -112,7 +118,15 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final mine = ref.watch(ownBoardUserProvider);
     final weight = ref.watch(weightTrendProvider).value;
     final tabs = ref.read(homeTabProvider.notifier);
-    final tiles = bodyTiles(today.health, today.localToday, weight);
+    final insights = ref.watch(insightsProvider).value?.data;
+    final tiles = bodyTiles(
+      today.health,
+      today.localToday,
+      weight,
+      insights: insights,
+      onSleep: () => pushPage(context, const SleepInsightScreen()),
+      onWorkouts: () => pushPage(context, const WorkoutsScreen()),
+    );
 
     return RefreshIndicator(
       color: context.accent,
@@ -148,6 +162,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             const SizedBox(height: kCardGap),
             BodyCard(tiles: tiles, onTap: _openHealth),
           ],
+          const SizedBox(height: kCardGap),
+          InsightsEntry(onTap: () => openInsights(context)),
           if (mine != null && mine.last7.isNotEmpty) ...[
             const SizedBox(height: kCardGap),
             WeekCard(days: mine.last7, today: today.localToday, todayCounted: today.day.counted),

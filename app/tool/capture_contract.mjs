@@ -92,7 +92,7 @@ ok(
   200,
 );
 
-const op = (n) => `00000000-0000-4000-8000-00000000000${n}`;
+const op = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 ok(
   await call('log_pushups', 'POST', '/api/logs', {
     token,
@@ -104,6 +104,15 @@ ok(
   await call('log_reading', 'POST', '/api/logs', {
     token,
     body: { clientOpId: op(2), kind: 'activity', type: 'reading', unit: 'pages', quantity: 12 },
+  }),
+  201,
+);
+// Yoga is switched on by the join-day PATCH above, and logging it carries the day past the
+// streak line so the counted path is recorded too.
+ok(
+  await call('log_yoga', 'POST', '/api/logs', {
+    token,
+    body: { clientOpId: op(20), kind: 'activity', type: 'yoga', unit: 'minutes', quantity: 15 },
   }),
   201,
 );
@@ -154,6 +163,12 @@ ok(
       items: [
         { date: today, metric: 'steps', value: 6200, source: 'healthkit', measuredAt: now },
         { date: today, metric: 'active_energy', value: 410, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'exercise_minutes', value: 24, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'sleep_minutes', value: 432, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'resting_hr', value: 58, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'weight_kg', value: 82.4, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'body_fat_pct', value: 18.2, source: 'healthkit', measuredAt: now },
+        { date: today, metric: 'vo2max', value: 41.5, source: 'healthkit', measuredAt: now },
       ],
     },
   }),
@@ -166,6 +181,7 @@ ok(
   }),
   422,
 );
+ok(await call('health_trends', 'GET', '/api/health/trends?metric=weight_kg&days=30', { token }), 200);
 ok(await call('today', 'GET', '/api/today', { token }), 200);
 ok(await call('board', 'GET', '/api/board', { token }), 200);
 

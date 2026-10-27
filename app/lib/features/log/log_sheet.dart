@@ -7,38 +7,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
-import '../../state/local_prefs.dart';
 import '../../state/log_actions.dart';
 import '../../state/me.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
+import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../widgets/dialogs.dart';
-import '../../widgets/segmented.dart';
 import 'log_kind.dart';
 import 'log_panes.dart';
 
-/// Opens the log sheet on [kind], or on the kind logged last.
-Future<void> showLogSheet(BuildContext context, {LogKind? kind}) async {
-  final initial = kind ?? LogKind.fromName(await LocalPrefs.lastLogKind());
-  if (!context.mounted) return;
-  await showAppSheet<void>(context, builder: (_) => LogSheet(initialKind: initial));
-}
+/// Opens the log sheet for [kind], from a quest card's + or the food card.
+Future<void> showLogSheet(BuildContext context, {required LogKind kind}) =>
+    showAppSheet<void>(context, builder: (_) => LogSheet(kind: kind));
 
 class LogSheet extends ConsumerStatefulWidget {
-  const LogSheet({super.key, this.initialKind = LogKind.pushups});
+  const LogSheet({super.key, required this.kind});
 
-  final LogKind initialKind;
+  final LogKind kind;
 
   @override
   ConsumerState<LogSheet> createState() => _LogSheetState();
 }
 
 class _LogSheetState extends ConsumerState<LogSheet> {
-  late LogKind _kind = widget.initialKind;
   String _clientOpId = newClientOpId();
   String? _attempted;
   bool _busy = false;
@@ -58,17 +54,6 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     if (!ref.read(clockProvider)().isBefore(until)) return null;
     return (localToday: localToday, until: until);
   }
-
-  List<LogKind> _kinds() {
-    final quests = ref.watch(meProvider).value?.data.questTemplates ?? const <QuestTemplate>[];
-    final yoga = quests.any((q) => q.key == 'yoga' && q.enabled);
-    return [LogKind.pushups, LogKind.reading, LogKind.meal, if (yoga) LogKind.yoga];
-  }
-
-  void _pick(LogKind kind) => setState(() {
-    _kind = kind;
-    _error = null;
-  });
 
   Future<void> _submit(DraftBuilder build, {required String added, String? confirm}) async {
     if (_busy) return;
@@ -108,8 +93,6 @@ class _LogSheetState extends ConsumerState<LogSheet> {
       }
       return;
     }
-    await LocalPrefs.setLastLogKind(_kind.name);
-    HapticFeedback.mediumImpact();
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
@@ -134,8 +117,8 @@ class _LogSheetState extends ConsumerState<LogSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final kinds = _kinds();
-    final kind = kinds.contains(_kind) ? _kind : LogKind.pushups;
+    final kind = widget.kind;
+    final palette = questPalette(kind.questKey);
     final window = _backdateWindow(
       ref.watch(todayProvider).value?.data,
       ref.watch(meProvider).value?.data,
@@ -145,14 +128,23 @@ class _LogSheetState extends ConsumerState<LogSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Segmented<LogKind>(
-                options: [for (final k in kinds) (k, k.label)],
-                selected: kind,
-                onChanged: _pick,
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+                    child: Icon(questIcon(kind.questKey), size: 24, color: palette.lip),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Semantics(header: true, child: Text(kind.title, style: AppText.title)),
+                  ),
+                ],
               ),
               if (window != null)
                 _BackdateToggle(
@@ -160,13 +152,20 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   until: window.until,
                   onChanged: (v) => setState(() => _yesterday = v),
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               switch (kind) {
                 LogKind.pushups => QuantityPane(
                   key: const ValueKey(LogKind.pushups),
                   type: 'pushups',
-                  units: const [('reps', 'reps')],
-                  quickValues: const [10, 15, 20, 25],
+                  units: const [
+                    UnitSpec(
+                      unit: 'reps',
+                      label: 'push-ups',
+                      start: 10,
+                      step: 1,
+                      chips: [5, 10, 20],
+                    ),
+                  ],
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
@@ -174,7 +173,16 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.reading => QuantityPane(
                   key: const ValueKey(LogKind.reading),
                   type: 'reading',
-                  units: const [('minutes', 'Minutes'), ('pages', 'Pages')],
+                  units: const [
+                    UnitSpec(
+                      unit: 'minutes',
+                      label: 'Minutes',
+                      start: 15,
+                      step: 5,
+                      chips: [5, 10, 15],
+                    ),
+                    UnitSpec(unit: 'pages', label: 'Pages', start: 10, step: 5, chips: [5, 10, 20]),
+                  ],
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
@@ -182,7 +190,15 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.yoga => QuantityPane(
                   key: const ValueKey(LogKind.yoga),
                   type: 'yoga',
-                  units: const [('minutes', 'minutes')],
+                  units: const [
+                    UnitSpec(
+                      unit: 'minutes',
+                      label: 'Minutes',
+                      start: 15,
+                      step: 5,
+                      chips: [5, 10, 15],
+                    ),
+                  ],
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
@@ -216,29 +232,28 @@ class _BackdateToggle extends StatelessWidget {
     final hour = until.toLocal();
     return Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Add to yesterday - open until '
-              '${hour.hour.toString().padLeft(2, '0')}:${hour.minute.toString().padLeft(2, '0')}',
-              style: const TextStyle(
-                color: kFgSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Add to yesterday - open until '
+                '${hour.hour.toString().padLeft(2, '0')}:${hour.minute.toString().padLeft(2, '0')}',
+                style: AppText.label.copyWith(color: kInkSecondary),
               ),
             ),
-          ),
-          Switch(
-            value: value,
-            onChanged: (v) {
-              HapticFeedback.selectionClick();
-              onChanged(v);
-            },
-            activeThumbColor: context.onAccent,
-            activeTrackColor: context.accent,
-          ),
-        ],
+            Switch(
+              value: value,
+              onChanged: (v) {
+                HapticFeedback.selectionClick();
+                onChanged(v);
+              },
+              activeThumbColor: context.onAccent,
+              activeTrackColor: context.accent,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -253,10 +268,13 @@ class _ErrorLine extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Icon(Icons.error_outline, size: 16, color: kDanger),
+      const Icon(Icons.error_outline_rounded, size: 18, color: kDangerText),
       const SizedBox(width: 6),
       Expanded(
-        child: Text(message, style: const TextStyle(color: kDanger, fontSize: 13, height: 1.35)),
+        child: Text(
+          message,
+          style: AppText.label.copyWith(color: kDangerText, fontWeight: FontWeight.w700),
+        ),
       ),
     ],
   );

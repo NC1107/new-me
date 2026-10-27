@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/shell/home_shell.dart';
+import 'package:newme/features/shell/home_tab.dart';
+import 'package:newme/features/today/day_counted_sheet.dart';
+import 'package:newme/widgets/chunky_button.dart';
+import 'package:newme/widgets/mascot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fixtures.dart';
@@ -13,8 +17,15 @@ StubAdapter _server() => fullServer()
   ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
   ..on('PATCH /api/me', StubResponse(200, meJson()));
 
+Finder _save() => find.byWidgetPredicate((w) => w is ChunkyButton && w.label == 'Save');
+
+Finder _logPushups() => find.bySemanticsLabel('Add entry for Do 30 push-ups');
+
 void main() {
-  setUp(FakeStorage().install);
+  setUp(() {
+    FakeStorage().install();
+    Mascot.idleMotion = false;
+  });
 
   testWidgets('a quick add moves the ring and the board, and reloads Today only for the streak', (
     tester,
@@ -29,18 +40,29 @@ void main() {
       200,
       logged ? richTodayJson(points: 170, percent: 70, counted: true, streak: 4) : richTodayJson(),
     );
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
     final loads = adapter.to('GET /api/today').length;
     final boardLoads = adapter.to('GET /api/board').length;
 
-    await app.tap(find.byIcon(Icons.add));
-    await app.tap(find.text('20'));
+    await app.tap(_logPushups());
+    await app.tap(_save());
+    await app.settle(30);
 
     expect(find.text('170'), findsOneWidget);
     expect(find.text('70%'), findsOneWidget);
-    expect(find.text('Streak day counted'), findsOneWidget);
-    expect(find.text('Day 4'), findsOneWidget, reason: 'the pill follows the counted day');
+    expect(find.text('Streak saved for today!'), findsOneWidget);
+    expect(find.text('4'), findsWidgets, reason: 'the flame follows the counted day');
+    expect(
+      find.byType(DayCountedSheet),
+      findsOneWidget,
+      reason: 'the celebration waits for the log sheet to close, then plays',
+    );
+    expect(
+      find.text('Log push-ups'),
+      findsNothing,
+      reason: 'the log sheet closed, not the new one',
+    );
     expect(adapter.to('GET /api/today'), hasLength(loads + 1));
     expect(adapter.to('GET /api/board').length, greaterThan(boardLoads));
   });
@@ -60,12 +82,12 @@ void main() {
         },
       }),
     );
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
     final loads = adapter.to('GET /api/today').length;
 
-    await app.tap(find.byIcon(Icons.add));
-    await app.tap(find.text('20'));
+    await app.tap(_logPushups());
+    await app.tap(_save());
 
     expect(find.text('160'), findsOneWidget);
     expect(find.text('66%'), findsOneWidget);
@@ -81,15 +103,14 @@ void main() {
           'day': {'date': '2026-10-26', ...dayJson(), 'quests': richTodayJson()['quests']},
         }),
       );
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
-    expect(find.text('1,850 / 2,200 kcal'), findsOneWidget);
+    expect(find.text('1,850 of 2,200 kcal'), findsOneWidget);
 
-    await app.tap(find.byIcon(Icons.add));
-    await app.tap(find.text('Meal'));
+    await app.tap(find.text('Food'));
     await app.tap(find.text('Chicken bowl'));
 
-    expect(find.text('2,450 / 2,200 kcal'), findsOneWidget);
+    expect(find.text('2,450 of 2,200 kcal'), findsOneWidget);
     expect(find.text('122 / 150 g'), findsOneWidget);
   });
 
@@ -97,10 +118,10 @@ void main() {
     tester,
   ) async {
     final adapter = _server();
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('Food'));
+    await app.tap(find.text('What I logged today'));
     expect(find.text("Today's entries"), findsOneWidget);
     expect(find.text('20 reps'), findsOneWidget);
     expect(find.text('600 kcal'), findsOneWidget);
@@ -129,15 +150,15 @@ void main() {
   testWidgets('an entry can be deleted without a swipe through its Delete action', (tester) async {
     final handle = tester.ensureSemantics();
     final adapter = _server();
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
-    await app.tap(find.text('Food'));
+    await app.tap(find.text('What I logged today'));
 
     final row = find.ancestor(of: find.text('20 reps'), matching: find.byType(Semantics)).first;
     final node = tester.getSemantics(row);
     final deleteId = node.getSemanticsData().customSemanticsActionIds!.single;
     tester.semantics.performAction(
-      find.semantics.byLabel(RegExp(r'^Pushups')),
+      find.semantics.byLabel(RegExp(r'^Push-ups')),
       SemanticsAction.customAction,
       args: deleteId,
     );
@@ -150,10 +171,10 @@ void main() {
 
   testWidgets('a failed delete puts the entry back', (tester) async {
     final adapter = _server()..on('DELETE /api/logs/77', const StubResponse.unreachable());
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('Food'));
+    await app.tap(find.text('What I logged today'));
     await tester.drag(find.text('20 reps'), const Offset(-500, 0));
     await app.settle(20);
     expect(find.text('20 reps'), findsOneWidget);
@@ -161,18 +182,18 @@ void main() {
   });
 
   testWidgets('Set your targets sends you to Me', (tester) async {
-    final app = TestApp(tester, _server());
+    final app = TestApp(tester, _server(), surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
     await app.tap(find.text('Set your targets'));
-    expect(find.text('Takes effect tomorrow'), findsOneWidget);
+    expect(app.container.read(homeTabProvider), HomeTab.me);
   });
 
   testWidgets('a phone that moved time zones tells the server, a first run does not', (
     tester,
   ) async {
     final adapter = _server();
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
     expect(adapter.to('PATCH /api/me'), isEmpty);
     expect((await SharedPreferences.getInstance()).getString('deviceTimezone'), 'America/New_York');
@@ -182,7 +203,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'deviceTimezone': 'Europe/London'});
     final adapter = _server()
       ..on('GET /api/me', StubResponse(200, meJson(timezone: 'Europe/London')));
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
     expect(app.body('PATCH /api/me'), {'timezone': 'America/New_York'});
   });
@@ -190,7 +211,7 @@ void main() {
   testWidgets('a zone picked by hand is not overwritten by the device zone', (tester) async {
     SharedPreferences.setMockInitialValues({'deviceTimezone': 'America/New_York'});
     final adapter = _server()..on('GET /api/me', StubResponse(200, meJson(timezone: 'Asia/Tokyo')));
-    final app = TestApp(tester, adapter);
+    final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
     expect(adapter.to('PATCH /api/me'), isEmpty);
   });

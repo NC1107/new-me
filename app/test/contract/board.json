@@ -9,33 +9,27 @@
       "startsOn": "2026-10-27",
       "endsOn": "2026-12-31"
     },
-    "serverNow": "2026-10-27T01:32:16Z",
+    "serverNow": "2026-10-27T12:47:53Z",
     "users": [
       {
         "id": 1,
         "name": "Nick",
         "color": "green",
         "today": {
-          "points": 324,
-          "percent": 76,
+          "points": 377,
+          "percent": 77,
           "counted": true
         },
         "week": {
-          "points": 0
+          "points": 377
         },
         "season": {
-          "points": 0
+          "points": 377
         },
         "streak": {
           "current": 1
         },
         "last7": [
-          {
-            "date": "2026-10-20",
-            "percent": 0,
-            "counted": false,
-            "rest": false
-          },
           {
             "date": "2026-10-21",
             "percent": 0,
@@ -68,12 +62,23 @@
           },
           {
             "date": "2026-10-26",
-            "percent": 76,
+            "percent": 0,
+            "counted": false,
+            "rest": false
+          },
+          {
+            "date": "2026-10-27",
+            "percent": 77,
             "counted": true,
             "rest": false
           }
         ],
-        "syncedAt": "2026-10-27T01:32:16Z"
+        "syncedAt": "2026-10-27T12:47:53Z",
+        "highlights": {
+          "steps": 6200,
+          "exercise_minutes": 24,
+          "sleep_minutes": 432
+        }
       },
       {
         "id": 2,
@@ -95,12 +100,6 @@
         },
         "last7": [
           {
-            "date": "2026-10-20",
-            "percent": 0,
-            "counted": false,
-            "rest": false
-          },
-          {
             "date": "2026-10-21",
             "percent": 0,
             "counted": false,
@@ -135,9 +134,16 @@
             "percent": 0,
             "counted": false,
             "rest": false
+          },
+          {
+            "date": "2026-10-27",
+            "percent": 0,
+            "counted": false,
+            "rest": false
           }
         ],
-        "syncedAt": null
+        "syncedAt": null,
+        "highlights": {}
       }
     ]
   }

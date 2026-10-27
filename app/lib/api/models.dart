@@ -287,7 +287,20 @@ class MePatch {
     this.carbsTarget,
     this.fatTarget,
     this.questTemplates,
+    this.clearTargets = const {},
   });
+
+  /// Builds a targets-only patch where a null value clears that target on the server.
+  factory MePatch.targets(Map<String, int?> targets) => MePatch(
+    kcalTarget: targets['kcal'],
+    proteinTarget: targets['protein'],
+    carbsTarget: targets['carbs'],
+    fatTarget: targets['fat'],
+    clearTargets: {
+      for (final e in targets.entries)
+        if (e.value == null) e.key,
+    },
+  );
 
   final String? name;
   final String? color;
@@ -298,8 +311,12 @@ class MePatch {
   final int? fatTarget;
   final List<QuestEdit>? questTemplates;
 
+  /// Target keys (kcal, protein, carbs, fat) sent as null so the server clears them.
+  final Set<String> clearTargets;
+
   Json toJson() {
-    final targets = {
+    final targets = <String, int?>{
+      for (final key in clearTargets) key: null,
       'kcal': ?kcalTarget,
       'protein': ?proteinTarget,
       'carbs': ?carbsTarget,
@@ -598,8 +615,8 @@ class HealthStatus {
   Json toJson() => {
     'stepsEverSynced': stepsEverSynced,
     'syncedAt': _timeJson(syncedAt),
-    if (metrics.isNotEmpty) 'metrics': metrics,
-    if (latest.isNotEmpty) 'latest': {for (final e in latest.entries) e.key: e.value.toJson()},
+    'metrics': metrics,
+    'latest': {for (final e in latest.entries) e.key: e.value.toJson()},
   };
 }
 
@@ -781,7 +798,7 @@ class BoardUser {
     'streak': {'current': streak},
     'last7': [for (final d in last7) d.toJson()],
     'syncedAt': _timeJson(syncedAt),
-    if (highlights.toJson().isNotEmpty) 'highlights': highlights.toJson(),
+    'highlights': highlights.toJson(),
   };
 }
 

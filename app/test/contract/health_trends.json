@@ -1,0 +1,15 @@
+{
+  "method": "GET",
+  "path": "/api/health/trends?metric=weight_kg&days=30",
+  "status": 200,
+  "request": null,
+  "body": {
+    "metric": "weight_kg",
+    "points": [
+      {
+        "date": "2026-10-27",
+        "value": 82.4
+      }
+    ]
+  }
+}

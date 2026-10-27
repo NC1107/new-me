@@ -4,10 +4,10 @@
   "status": 200,
   "request": null,
   "body": {
-    "date": "2026-10-26",
-    "localToday": "2026-10-26",
+    "date": "2026-10-27",
+    "localToday": "2026-10-27",
     "backdateUntil": null,
-    "serverNow": "2026-10-27T01:32:16Z",
+    "serverNow": "2026-10-27T12:47:53Z",
     "quests": [
       {
         "key": "steps",
@@ -25,8 +25,8 @@
       },
       {
         "key": "pushups",
-        "title": "Pushups",
-        "target": 30,
+        "title": "Push-ups",
+        "target": 40,
         "unit": "reps",
         "targetAlt": null,
         "unitAlt": null,
@@ -68,24 +68,38 @@
       {
         "key": "protein",
         "title": "Protein",
-        "target": 100,
+        "target": 150,
         "unit": "g",
         "targetAlt": null,
         "unitAlt": null,
         "actual": 42,
         "actualAlt": null,
         "points": 50,
-        "basePoints": 21,
+        "basePoints": 14,
         "bonusPoints": 0,
         "done": false
+      },
+      {
+        "key": "yoga",
+        "title": "Yoga",
+        "target": 15,
+        "unit": "minutes",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 15,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 50,
+        "bonusPoints": 10,
+        "done": true
       }
     ],
     "day": {
-      "basePoints": 304,
-      "bonusPoints": 20,
-      "points": 324,
-      "maxBase": 400,
-      "percent": 76,
+      "basePoints": 347,
+      "bonusPoints": 30,
+      "points": 377,
+      "maxBase": 450,
+      "percent": 77,
       "counted": true,
       "streakLine": 70
     },
@@ -110,7 +124,31 @@
     },
     "health": {
       "stepsEverSynced": true,
-      "syncedAt": "2026-10-27T01:32:16Z"
+      "syncedAt": "2026-10-27T12:47:53Z",
+      "metrics": {
+        "active_energy": 410,
+        "body_fat_pct": 18.2,
+        "exercise_minutes": 24,
+        "resting_hr": 58,
+        "sleep_minutes": 432,
+        "steps": 6200,
+        "vo2max": 41.5,
+        "weight_kg": 82.4
+      },
+      "latest": {
+        "body_fat_pct": {
+          "value": 18.2,
+          "date": "2026-10-27"
+        },
+        "vo2max": {
+          "value": 41.5,
+          "date": "2026-10-27"
+        },
+        "weight_kg": {
+          "value": 82.4,
+          "date": "2026-10-27"
+        }
+      }
     }
   }
 }

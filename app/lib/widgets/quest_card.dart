@@ -1,164 +1,217 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/models.dart';
 import '../theme/accent.dart';
+import '../theme/quest_style.dart';
 import '../theme/tokens.dart';
-import '../util/format.dart';
-import 'app_widgets.dart';
+import '../theme/typography.dart';
+import 'accent_text.dart';
+import 'app_card.dart';
+import 'chunky_icon_button.dart';
+import 'confetti.dart';
+import 'pop_in.dart';
+import 'quest_copy.dart';
+import 'thick_progress_bar.dart';
 
-const _kCheckMotion = Duration(milliseconds: 220);
+const _kBurstLifetime = Duration(milliseconds: 1400);
 
-/// "2,000 / 8,000 steps", or "12 min + 5 pages" for the two-part reading quest.
-String questProgressLabel(Quest q) {
-  final alt = q.unitAlt;
-  if (alt != null) {
-    return '${q.actual.formatted} ${shortUnit(q.unit)} + ${(q.actualAlt ?? 0).formatted} '
-        '${shortUnit(alt)}';
-  }
-  return '${q.actual.formatted} / ${q.target.formatted} ${shortUnit(q.unit)}';
-}
-
-String _goalLabel(Quest q) =>
-    'Goal: ${q.target.formatted} ${shortUnit(q.unit)} or ${(q.targetAlt ?? 0).formatted} '
-    '${shortUnit(q.unitAlt ?? '')}';
-
-double questFraction(Quest q) {
-  if (q.done) return 1;
-  return q.points == 0 ? 0 : q.basePoints / q.points;
-}
-
-/// One quest: title, progress, and a "+" that opens the log sheet on its metric.
+/// One quest: category icon, plain title, progress, a thick bar, and on the right a chunky + for
+/// quests logged by hand or an Apple Health chip for automatic ones. Completing it pops a check
+/// badge, throws confetti from the badge and gives a medium haptic.
 class QuestCard extends StatefulWidget {
   const QuestCard({super.key, required this.quest, required this.onTap, this.onAdd});
 
   final Quest quest;
   final VoidCallback onTap;
 
-  /// Null for quests the app cannot log by hand, such as steps.
+  /// Null for quests the app cannot log by hand.
   final VoidCallback? onAdd;
 
   @override
   State<QuestCard> createState() => _QuestCardState();
 }
 
-class _QuestCardState extends State<QuestCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _check = AnimationController(
-    vsync: this,
-    duration: _kCheckMotion,
-    value: widget.quest.done ? 1 : 0,
-  );
-
-  late final Animation<double> _checkCurve = CurvedAnimation(parent: _check, curve: Curves.easeOut);
+class _QuestCardState extends State<QuestCard> {
+  final _iconKey = GlobalKey();
+  bool _justDone = false;
 
   @override
   void didUpdateWidget(QuestCard old) {
     super.didUpdateWidget(old);
     final done = widget.quest.done;
     if (done == old.quest.done) return;
-    if (!done) {
-      _check.value = 0;
-      return;
-    }
+    setState(() => _justDone = done);
+    if (!done) return;
     HapticFeedback.mediumImpact();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _check.value = 1;
-    } else {
-      _check.forward(from: 0);
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _burst());
     }
   }
 
-  @override
-  void dispose() {
-    _check.dispose();
-    super.dispose();
+  /// The burst lives in the root overlay so the cards below cannot paint over it.
+  void _burst() {
+    if (!mounted) return;
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    final overlayBox = overlay?.context.findRenderObject() as RenderBox?;
+    final iconBox = _iconKey.currentContext?.findRenderObject() as RenderBox?;
+    if (overlay == null || overlayBox == null || iconBox == null || !iconBox.attached) return;
+    final centre = iconBox.localToGlobal(iconBox.size.center(Offset.zero), ancestor: overlayBox);
+    final size = overlayBox.size;
+    final person = context.accentPalette;
+    final category = questPalette(widget.quest.key);
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned.fill(
+        child: Confetti(
+          origin: Alignment(centre.dx / size.width * 2 - 1, centre.dy / size.height * 2 - 1),
+          colors: [person.fill, category.fill, kFlame, person.tint, category.tint],
+          particles: 38,
+          spread: 0.5,
+          duration: const Duration(milliseconds: 1200),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    Timer(_kBurstLifetime, entry.remove);
   }
 
   @override
   Widget build(BuildContext context) {
     final q = widget.quest;
-    return OnyxCard(
+    final person = context.accentPalette;
+    final category = questPalette(q.key);
+    final automatic = isAutomaticQuest(q.key);
+
+    final badge = Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: person.fill,
+        shape: BoxShape.circle,
+        border: Border.all(color: kSurface, width: 2),
+      ),
+      child: Semantics(
+        label: 'Done',
+        child: Icon(Icons.check_rounded, size: 14, color: person.onFill),
+      ),
+    );
+
+    return AppCard(
       onTap: widget.onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(14),
+      // A full-strength coloured border read as an error state; a soft mix reads as done.
+      borderColor: q.done ? Color.lerp(kBorder, person.fill, 0.45)! : kBorder,
+      child: Row(
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Row(
+          Stack(
+            key: _iconKey,
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: category.tint, shape: BoxShape.circle),
+                child: Icon(questIcon(q.key), size: 26, color: category.lip),
+              ),
+              if (q.done)
+                Positioned(right: -4, bottom: -4, child: _justDone ? PopIn(child: badge) : badge),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                AnimatedBuilder(
-                  animation: _check,
-                  builder: (context, _) => _check.value == 0
-                      ? const SizedBox.shrink()
-                      : SizeTransition(
-                          axis: Axis.horizontal,
-                          alignment: Alignment.centerLeft,
-                          sizeFactor: _checkCurve,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ScaleTransition(
-                              scale: _checkCurve,
-                              child: Icon(
-                                Icons.check_circle_rounded,
-                                size: 18,
-                                color: context.accent,
-                              ),
-                            ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          questTitle(q),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.headline.copyWith(fontSize: 17),
+                        ),
+                      ),
+                      if (automatic) ...[
+                        if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
+                      ] else if (widget.onAdd != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: ChunkyIconButton(
+                            icon: Icons.add_rounded,
+                            semanticLabel: 'Add entry for ${questTitle(q)}',
+                            onPressed: widget.onAdd,
                           ),
                         ),
-                ),
-                Expanded(
-                  child: Text(
-                    q.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: kFgPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    ],
                   ),
                 ),
-                if (q.bonusPoints > 0) ...[
-                  const SizedBox(width: 8),
-                  _BonusChip(bonus: q.bonusPoints),
-                ],
-                if (widget.onAdd != null) ...[
-                  const SizedBox(width: 8),
-                  _AddButton(label: 'Log ${q.title}', onTap: widget.onAdd!),
-                ],
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        questProgress(q),
+                        style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+                      ),
+                    ),
+                    if (automatic)
+                      const Padding(padding: EdgeInsets.only(left: 8), child: HealthChip())
+                    else if (q.bonusPoints > 0)
+                      _BonusChip(bonus: q.bonusPoints),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ThickProgressBar(
+                  value: questFraction(q),
+                  color: q.done ? person.fill : category.fill,
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          ProgressBar(value: questFraction(q)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  questProgressLabel(q),
-                  style: const TextStyle(
-                    color: kFgSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                '${q.basePoints} / ${q.points} pts',
-                style: const TextStyle(color: kFgMuted, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          if (q.unitAlt != null) ...[
-            const SizedBox(height: 4),
-            Text(_goalLabel(q), style: const TextStyle(color: kFgMuted, fontSize: 12)),
-          ],
         ],
       ),
     );
   }
+}
+
+/// Marks a quest that Apple Health fills in. Its label stays at a size that fits beside a title.
+class HealthChip extends StatelessWidget {
+  const HealthChip({super.key});
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
+    maxScaleFactor: 1.2,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: kSunken,
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: kBorder, width: kBorderWidth),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.favorite_rounded, size: 13, color: kDanger),
+          const SizedBox(width: 4),
+          Text(
+            'Apple Health',
+            style: AppText.caption.copyWith(
+              color: kInkSecondary,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _BonusChip extends StatelessWidget {
@@ -167,108 +220,22 @@ class _BonusChip extends StatelessWidget {
   final int bonus;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: context.accentLight,
-      borderRadius: BorderRadius.circular(9999),
-    ),
-    child: Text(
-      '+$bonus',
-      style: TextStyle(color: context.accent, fontSize: 12, fontWeight: FontWeight.w800),
-    ),
-  );
-}
-
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: label,
-    excludeSemantics: true,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: context.accent),
-            ),
-            child: Icon(Icons.add_rounded, size: 18, color: context.accent),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The steps card before Health has ever delivered a row: it replaces the quest card.
-class ConnectHealthCard extends StatelessWidget {
-  const ConnectHealthCard({super.key, required this.prompted, required this.onConnect});
-
-  final bool prompted;
-  final VoidCallback onConnect;
-
-  @override
   Widget build(BuildContext context) {
-    return OnyxCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final person = context.accentPalette;
+    final ink = context.accentText;
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: person.tint, borderRadius: BorderRadius.circular(9999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.favorite_outline_rounded, size: 18, color: kFgSecondary),
-              SizedBox(width: 8),
-              Text(
-                'Steps',
-                style: TextStyle(color: kFgPrimary, fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ],
+          Icon(Icons.diamond_rounded, size: 12, color: ink),
+          const SizedBox(width: 3),
+          Text(
+            '+$bonus',
+            style: AppText.caption.copyWith(color: ink, fontWeight: FontWeight.w800, fontSize: 12),
           ),
-          const SizedBox(height: 8),
-          if (prompted)
-            const Text(
-              'No steps yet. Open Health > Sharing > Apps > New Me and allow Steps.',
-              style: TextStyle(color: kFgSecondary, fontSize: 13, height: 1.4),
-            )
-          else ...[
-            const Text(
-              'Connect Health to count your steps. They are left out of today until the first '
-              'sync.',
-              style: TextStyle(color: kFgSecondary, fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  onConnect();
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: context.accent,
-                  side: BorderSide(color: context.accent),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Connect Health', style: TextStyle(fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ],
         ],
       ),
     );

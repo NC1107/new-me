@@ -24,6 +24,14 @@ Future<ApiException> _failure(Future<void> Function() call) async {
 }
 
 void main() {
+  test('a targets patch sends null for a cleared target and keeps the rest', () {
+    final json = MePatch.targets({'kcal': 2200, 'protein': null}).toJson();
+    expect(json, {
+      'targets': {'protein': null, 'kcal': 2200},
+    });
+    expect(const MePatch(name: 'Nick').toJson(), {'name': 'Nick'});
+  });
+
   const info = {'name': 'Us', 'initialized': true, 'joinOpen': true, 'minClientVersion': '0.1.0'};
 
   test('requests carry the app key and client version, and a token when signed in', () async {

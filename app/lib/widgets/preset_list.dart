@@ -56,7 +56,7 @@ class PresetList<T> extends StatelessWidget {
                   onTap: () => onChanged(preset.value),
                   child: AnimatedContainer(
                     duration: reduce ? Duration.zero : kMotionDuration,
-                    height: 64,
+                    constraints: const BoxConstraints(minHeight: 64),
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
                       color: on ? person.tint : kSurface,
@@ -68,12 +68,20 @@ class PresetList<T> extends StatelessWidget {
                         Expanded(
                           child: Text(preset.name, style: AppText.headline.copyWith(fontSize: 18)),
                         ),
-                        Text(
-                          preset.valueLabel,
-                          style: AppText.tabular(
-                            AppText.body.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: on ? person.lip : kInkSecondary,
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              preset.valueLabel,
+                              maxLines: 1,
+                              style: AppText.tabular(
+                                AppText.body.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: on ? person.lip : kInkSecondary,
+                                ),
+                              ),
                             ),
                           ),
                         ),

@@ -4,10 +4,10 @@
   "status": 200,
   "request": null,
   "body": {
-    "date": "2026-10-26",
-    "localToday": "2026-10-26",
+    "date": "2026-10-27",
+    "localToday": "2026-10-27",
     "backdateUntil": null,
-    "serverNow": "2026-10-27T01:32:16Z",
+    "serverNow": "2026-10-27T12:47:53Z",
     "quests": [
       {
         "key": "steps",
@@ -25,7 +25,7 @@
       },
       {
         "key": "pushups",
-        "title": "Pushups",
+        "title": "Push-ups",
         "target": 30,
         "unit": "reps",
         "targetAlt": null,
@@ -110,7 +110,9 @@
     },
     "health": {
       "stepsEverSynced": false,
-      "syncedAt": null
+      "syncedAt": null,
+      "metrics": {},
+      "latest": {}
     }
   }
 }

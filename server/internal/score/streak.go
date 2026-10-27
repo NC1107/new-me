@@ -77,7 +77,15 @@ func StreakNow(days []DayFlag, now time.Time, loc *time.Location) StreakResult {
 			}
 		}
 		if !yesterdayCounted {
-			today = yesterday
+			// Yesterday is pending: it neither breaks nor extends the streak, but a today
+			// that already counted still adds its day.
+			result := Streak(days, yesterday)
+			for _, d := range days {
+				if d.Date == today && d.Counted {
+					result.Count++
+				}
+			}
+			return result
 		}
 	}
 	return Streak(days, today)

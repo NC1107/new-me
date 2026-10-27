@@ -10,8 +10,9 @@ import '../../state/me.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/accent_text.dart';
+import '../../widgets/pressable.dart';
 import '../board/board_screen.dart';
-import '../log/log_sheet.dart';
 import '../me/me_screen.dart';
 import '../today/today_screen.dart';
 import 'home_tab.dart';
@@ -72,9 +73,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   static const _tabs = [
-    (icon: Icons.today_outlined, activeIcon: Icons.today_rounded, label: 'Today'),
-    (icon: Icons.leaderboard_outlined, activeIcon: Icons.leaderboard_rounded, label: 'Board'),
-    (icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Me'),
+    (icon: Icons.home_rounded, label: 'Today'),
+    (icon: Icons.groups_rounded, label: 'Us'),
+    (icon: Icons.person_rounded, label: 'Me'),
   ];
 
   @override
@@ -86,102 +87,101 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         index: tab.index,
         children: const [TodayScreen(), BoardScreen(), MeScreen()],
       ),
-      floatingActionButton: SizedBox(
-        height: 58,
-        width: 58,
-        child: FloatingActionButton(
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            showLogSheet(context);
-          },
-          backgroundColor: context.accent,
-          foregroundColor: context.onAccent,
-          elevation: 4,
-          tooltip: 'Log',
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, size: 28),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        color: kBgMain,
-        elevation: 0,
-        height: 64,
-        padding: EdgeInsets.zero,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 9,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: kBorder)),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: kSurface,
+          border: Border(
+            top: BorderSide(color: kBorder, width: kBorderWidth),
           ),
+        ),
+        child: SafeArea(
+          top: false,
           // The bar has a fixed height, so a large Dynamic Type size would overflow its labels.
           child: MediaQuery.withClampedTextScaling(
             maxScaleFactor: kBottomNavMaxTextScale,
-            child: Row(
-              children: [
-                Expanded(child: Row(children: [_item(0, tab), _item(1, tab)])),
-                // Keeps the notch clear of the centered FAB.
-                const SizedBox(width: 64),
-                Expanded(child: Row(children: [_item(2, tab)])),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: SizedBox(
+                height: 64,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < _tabs.length; i++)
+                      Expanded(
+                        child: _NavItem(
+                          key: Key('nav-${_tabs[i].label.toLowerCase()}'),
+                          icon: _tabs[i].icon,
+                          label: _tabs[i].label,
+                          selected: tab.index == i,
+                          onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  Widget _item(int i, HomeTab tab) => _NavItem(
-    icon: _tabs[i].icon,
-    activeIcon: _tabs[i].activeIcon,
-    label: _tabs[i].label,
-    selected: tab.index == i,
-    onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
-  );
 }
 
+/// A tab: icon over label. Selected, it sits in a rounded square tinted and bordered in the
+/// person's colour.
 class _NavItem extends StatelessWidget {
   const _NavItem({
+    super.key,
     required this.icon,
-    required this.activeIcon,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
-  final IconData activeIcon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? context.accent : kFgMuted;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: label,
-        excludeSemantics: true,
-        onTap: onTap,
-        child: InkResponse(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap();
-          },
-          radius: 42,
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          focusColor: Colors.transparent,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(selected ? activeIcon : icon, size: kBottomNavIconSize, color: color),
-              const SizedBox(height: kBottomNavIconLabelGap),
-              Text(label, style: kBottomNavLabelStyle.copyWith(color: color)),
-            ],
+    final person = context.accentPalette;
+    final color = selected ? context.accentText : kInkMuted;
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Pressable(
+        haptic: false,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Center(
+          child: AnimatedContainer(
+            duration: reduce ? Duration.zero : kMotionDuration,
+            curve: Curves.easeOut,
+            constraints: const BoxConstraints(minWidth: 84, minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: selected ? person.tint : Colors.transparent,
+              borderRadius: BorderRadius.circular(kRadiusButton),
+              border: Border.all(
+                color: selected ? person.fill : Colors.transparent,
+                width: kBorderWidth,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: kBottomNavIconSize, color: color),
+                const SizedBox(height: kBottomNavIconLabelGap),
+                Text(label, style: kBottomNavLabelStyle.copyWith(color: color)),
+              ],
+            ),
           ),
         ),
       ),

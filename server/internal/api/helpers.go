@@ -199,7 +199,7 @@ func loadZone(name string) (*time.Location, *httpError) {
 // titles are the display names of the quests.
 var titles = map[string]string{
 	db.QuestSteps:       "Steps",
-	db.QuestPushups:     "Pushups",
+	db.QuestPushups:     "Push-ups",
 	db.QuestReading:     "Reading",
 	db.QuestMealsLogged: "Meals",
 	db.QuestProtein:     "Protein",

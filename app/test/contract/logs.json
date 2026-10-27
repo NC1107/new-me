@@ -1,16 +1,16 @@
 {
   "method": "GET",
-  "path": "/api/logs?date=2026-10-26",
+  "path": "/api/logs?date=2026-10-27",
   "status": 200,
   "request": null,
   "body": {
-    "date": "2026-10-26",
+    "date": "2026-10-27",
     "logs": [
       {
         "id": 1,
         "kind": "activity",
-        "localDate": "2026-10-26",
-        "loggedAt": "2026-10-27T01:32:16Z",
+        "localDate": "2026-10-27",
+        "loggedAt": "2026-10-27T12:47:53Z",
         "type": "pushups",
         "quantity": 45,
         "unit": "reps"
@@ -18,17 +18,26 @@
       {
         "id": 2,
         "kind": "activity",
-        "localDate": "2026-10-26",
-        "loggedAt": "2026-10-27T01:32:16Z",
+        "localDate": "2026-10-27",
+        "loggedAt": "2026-10-27T12:47:53Z",
         "type": "reading",
         "quantity": 12,
         "unit": "pages"
       },
       {
         "id": 3,
+        "kind": "activity",
+        "localDate": "2026-10-27",
+        "loggedAt": "2026-10-27T12:47:53Z",
+        "type": "yoga",
+        "quantity": 15,
+        "unit": "minutes"
+      },
+      {
+        "id": 4,
         "kind": "meal",
-        "localDate": "2026-10-26",
-        "loggedAt": "2026-10-27T01:32:16Z",
+        "localDate": "2026-10-27",
+        "loggedAt": "2026-10-27T12:47:53Z",
         "name": "Chicken bowl",
         "kcal": 650,
         "protein": 42.5,
@@ -37,10 +46,10 @@
         "fiber": 7
       },
       {
-        "id": 6,
+        "id": 7,
         "kind": "meal",
-        "localDate": "2026-10-26",
-        "loggedAt": "2026-10-27T01:32:16Z",
+        "localDate": "2026-10-27",
+        "loggedAt": "2026-10-27T12:47:53Z",
         "name": "Oats",
         "kcal": 300,
         "protein": 10,

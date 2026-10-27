@@ -1,37 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/board/person_card.dart';
+import 'package:newme/features/me/pairing_page.dart';
 import 'package:newme/theme/accent.dart';
+import 'package:newme/widgets/avatar.dart';
+import 'package:newme/widgets/mascot.dart';
 
 import 'fixtures.dart';
 import 'test_support.dart';
 
-StubAdapter _server(List<Map<String, dynamic>> users) =>
-    fullServer()..on('GET /api/board', StubResponse(200, board(users)));
+StubAdapter _server(List<Map<String, dynamic>> users, {bool admin = false}) => fullServer()
+  ..on('GET /api/board', StubResponse(200, board(users)))
+  ..on('GET /api/me', StubResponse(200, meJson(admin: admin)));
 
-Color? _avatarColor(WidgetTester tester, String name) {
-  final column = find.ancestor(of: find.text(name), matching: find.byType(Row)).first;
-  final avatar = find.descendant(of: column, matching: find.byType(CircleAvatar));
-  return tester.widget<CircleAvatar>(avatar.first).backgroundColor;
-}
+Map<String, dynamic> _withHighlights(
+  Map<String, dynamic> user, {
+  num? steps,
+  num? exercise,
+  num? sleep,
+}) => {
+  ...user,
+  'highlights': {'steps': ?steps, 'exercise_minutes': ?exercise, 'sleep_minutes': ?sleep},
+};
 
 void main() {
-  setUp(FakeStorage().install);
+  setUp(() {
+    FakeStorage().install();
+    Mascot.idleMotion = false;
+  });
 
-  testWidgets('with one user the other column is a dashed placeholder with a how-to sheet', (
+  testWidgets('with one person the second card waits, with a how-to for a non admin', (
     tester,
   ) async {
     final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet')]));
     await app.pump(const BoardScreen());
 
-    expect(find.text('Sam'), findsOneWidget);
+    expect(find.text('Sam'), findsWidgets);
     expect(find.text('Waiting for your partner'), findsOneWidget);
-    expect(find.text('How they join'), findsOneWidget);
+    expect(find.byType(Mascot), findsOneWidget);
+    expect(find.textContaining('pairing code from whoever set up New Me'), findsOneWidget);
+    expect(find.text('CREATE PAIRING CODE'), findsNothing);
+  });
 
-    await app.tap(find.text('Waiting for your partner'));
-    expect(find.text('Send them the TestFlight invite for New Me.'), findsOneWidget);
-    expect(find.textContaining('Create a pairing code in Me'), findsOneWidget);
-    expect(find.text('How they join'), findsWidgets);
+  testWidgets('the admin can go straight to the pairing page from the empty state', (tester) async {
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet')], admin: true));
+    await app.pump(const BoardScreen());
+
+    await app.tap(find.text('CREATE PAIRING CODE'));
+    expect(find.byType(PairingPage), findsOneWidget);
   });
 
   testWidgets('a zero streak reads as no streak yet instead of a 0-day streak', (tester) async {
@@ -42,7 +59,9 @@ void main() {
     expect(find.text('0-day streak'), findsNothing);
   });
 
-  testWidgets('two users show two columns, each in their own accent', (tester) async {
+  testWidgets('two people show two cards, each in their own colour, with no winner wording', (
+    tester,
+  ) async {
     final app = TestApp(
       tester,
       _server([
@@ -53,8 +72,7 @@ void main() {
     await app.pump(const BoardScreen());
 
     expect(find.text('Waiting for your partner'), findsNothing);
-    expect(find.text('Sam'), findsOneWidget);
-    expect(find.text('Ana'), findsOneWidget);
+    expect(find.byType(PersonCard), findsNWidgets(2));
     expect(find.text('120'), findsOneWidget);
     expect(find.text('2,400'), findsOneWidget);
     expect(find.text('30%'), findsOneWidget);
@@ -62,32 +80,64 @@ void main() {
     expect(find.text('1,200'), findsOneWidget);
     expect(find.text('8,000'), findsOneWidget);
     expect(find.text('4-day streak'), findsNWidgets(2));
-    expect(find.text('1 rest day'), findsNWidgets(2));
     expect(find.text('synced 3h ago'), findsNWidgets(2));
     expect(find.text('Season 0 - ends Dec 31'), findsOneWidget);
-    expect(find.text('Nobody has moved yet.'), findsNothing);
+    expect(find.text('Together: 1,500 points this week'), findsOneWidget);
+    expect(find.textContaining('Nobody has moved yet'), findsNothing);
+    expect(find.textContaining(RegExp('win|lead|behind|rank', caseSensitive: false)), findsNothing);
 
-    expect(_avatarColor(tester, 'Sam'), accentById('violet').base);
-    expect(_avatarColor(tester, 'Ana'), accentById('amber').base);
+    final avatars = tester.widgetList<Avatar>(find.byType(Avatar)).map((a) => a.palette.id);
+    expect(avatars, containsAll(['violet', 'amber']));
+    expect(accentById('violet').fill, isNot(accentById('amber').fill));
   });
 
-  testWidgets('the 7 day strip marks counted, rest and missed days differently', (tester) async {
-    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet')]));
+  testWidgets('this week groups one bar per person per day under a summary label', (tester) async {
+    final handle = tester.ensureSemantics();
+    final app = TestApp(
+      tester,
+      _server([boardUser(2, 'Sam', 'violet'), boardUser(1, 'Ana', 'amber')]),
+    );
     await app.pump(const BoardScreen());
 
-    final dots = tester
-        .widgetList<Container>(
-          find.byWidgetPredicate((w) => w is Container && w.constraints?.maxWidth == 14),
-        )
-        .map((c) => c.decoration! as BoxDecoration)
-        .toList();
-    expect(dots, hasLength(7));
-    final accent = accentById('violet').base;
-    final filled = dots.where((d) => d.color == accent).length;
-    final hollow = dots.where((d) => d.color == null && d.border != null).length;
-    expect(filled, 4);
-    expect(hollow, 1);
-    expect(dots.length - filled - hollow, 2);
+    expect(find.text('This week'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Last 7 days. Sam counted 4 of 7 days. Ana counted 4 of 7 days'),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
+
+  testWidgets('a rest day shows a moon under its letter', (tester) async {
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet')]));
+    await app.pump(const BoardScreen());
+    expect(find.byIcon(Icons.bedtime_rounded), findsNWidgets(1 + 1));
+  });
+
+  testWidgets(
+    "today's highlights show steps, exercise and sleep for both, with a dash when missing",
+    (tester) async {
+      final app = TestApp(
+        tester,
+        _server([
+          _withHighlights(boardUser(2, 'Sam', 'violet'), steps: 4321, exercise: 23, sleep: 432),
+          _withHighlights(boardUser(1, 'Ana', 'amber'), steps: 10234),
+        ]),
+      );
+      await app.pump(const BoardScreen());
+
+      expect(find.text("Today's highlights"), findsOneWidget);
+      expect(find.text('4,321 steps'), findsOneWidget);
+      expect(find.text('10,234 steps'), findsOneWidget);
+      expect(find.text('23 min'), findsOneWidget);
+      expect(find.text('7 h 12 min'), findsOneWidget);
+      expect(find.text('-'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets('highlights from an older server are all dashes, not an error', (tester) async {
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet')]));
+    await app.pump(const BoardScreen());
+    expect(find.text('-'), findsNWidgets(3));
   });
 
   testWidgets('a user with no sync yet says so', (tester) async {
@@ -97,7 +147,7 @@ void main() {
     expect(find.text('Health not synced'), findsOneWidget);
   });
 
-  testWidgets('day one reads as empty, not broken', (tester) async {
+  testWidgets('day one reads as a fresh start, not broken', (tester) async {
     final app = TestApp(
       tester,
       _server([
@@ -105,42 +155,31 @@ void main() {
       ]),
     );
     await app.pump(const BoardScreen());
-    expect(find.text('Nobody has moved yet.'), findsOneWidget);
-    expect(find.text('Waiting for your partner'), findsOneWidget);
+    expect(find.textContaining('Nobody has moved yet'), findsOneWidget);
+    expect(find.text('Bars appear after your first day.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('loading shows a skeleton, failure shows Try again', (tester) async {
     final adapter = fullServer()..on('GET /api/board', const StubResponse.unreachable());
     final app = TestApp(tester, adapter);
     await app.pump(const BoardScreen());
-    expect(find.text('Could not load the board'), findsOneWidget);
+    expect(find.text('Could not load Us'), findsOneWidget);
 
     adapter.on('GET /api/board', StubResponse(200, board([boardUser(2, 'Sam', 'violet')])));
     await app.tap(find.text('Try again'));
-    expect(find.text('Sam'), findsOneWidget);
+    expect(find.text('Sam'), findsWidgets);
   });
 
-  testWidgets('the 7 day strip follows the server counted flag, not a percent of its own', (
-    tester,
-  ) async {
-    final user = boardUser(
-      2,
-      'Sam',
-      'violet',
-      last7: [
-        {'date': '2026-10-24', 'percent': 95, 'counted': false, 'rest': false},
-        {'date': '2026-10-25', 'percent': 96, 'counted': false, 'rest': false},
-      ],
+  testWidgets('with reduced motion the ring shows its value at once', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
     );
-    final app = TestApp(tester, _server([user]));
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet', percent: 64)]));
     await app.pump(const BoardScreen());
-
-    final accent = accentById('violet').base;
-    final filled = tester
-        .widgetList<Container>(
-          find.byWidgetPredicate((w) => w is Container && w.constraints?.maxWidth == 14),
-        )
-        .where((c) => (c.decoration! as BoxDecoration).color == accent);
-    expect(filled, isEmpty);
+    await tester.pump();
+    expect(find.text('64%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

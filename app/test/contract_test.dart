@@ -48,6 +48,7 @@ Object? _tojson(Object? model) => switch (model) {
   final LogResult m => m.toJson(),
   final LogDeleteResult m => m.toJson(),
   final HealthDailyResult m => m.toJson(),
+  final HealthTrend m => m.toJson(),
   _ => throw ArgumentError('no JSON for $model'),
 };
 
@@ -144,6 +145,7 @@ final _calls = <String, _Call>{
   'board': (c, x) => c.board(),
   'log_pushups': (c, x) => c.createLog(_draftOf(_request(x))),
   'log_reading': (c, x) => c.createLog(_draftOf(_request(x))),
+  'log_yoga': (c, x) => c.createLog(_draftOf(_request(x))),
   'log_meal': (c, x) => c.createLog(_draftOf(_request(x))),
   'log_meal_replay': (c, x) => c.createLog(_draftOf(_request(x))),
   'logs': (c, x) async => _logsAsJson(await c.logs(date: x.uri.queryParameters['date']!), x),
@@ -162,6 +164,8 @@ final _calls = <String, _Call>{
     ),
   ),
   'health_daily': (c, x) => c.putHealthDaily(_healthItemsOf(_request(x))),
+  'health_trends': (c, x) =>
+      c.healthTrends(x.uri.queryParameters['metric']!, int.parse(x.uri.queryParameters['days']!)),
 };
 
 /// Recordings of failures, with what the app must make of each.
@@ -307,9 +311,9 @@ void main() {
       expect(today.date, today.localToday);
       expect(
         (today.day.basePoints, today.day.bonusPoints, today.day.points, today.day.maxBase),
-        (304, 20, 324, 400),
+        (347, 30, 377, 450),
       );
-      expect((today.day.percent, today.day.counted, today.day.streakLine), (76, true, 70));
+      expect((today.day.percent, today.day.counted, today.day.streakLine), (77, true, 70));
       final pushups = today.quests.firstWhere((q) => q.key == 'pushups');
       expect(
         (pushups.points, pushups.basePoints, pushups.bonusPoints, pushups.done, pushups.actual),
@@ -338,7 +342,7 @@ void main() {
       final nick = board.users.first;
       expect(
         (nick.today.points, nick.today.percent, nick.today.counted, nick.streak),
-        (324, 76, true, 1),
+        (377, 77, true, 1),
       );
       expect(nick.last7, hasLength(7));
       expect(nick.syncedAt, isNotNull);
@@ -364,7 +368,7 @@ void main() {
       expect((activity.type, activity.unit, activity.quantity), ('pushups', 'reps', 45));
       expect(
         (pushups.day.date, pushups.day.score.points, pushups.day.score.maxBase),
-        (activity.localDate, 120, 300),
+        (activity.localDate, 120, 350),
       );
       expect(pushups.day.quests.map((q) => q.key), contains('pushups'));
 
@@ -385,7 +389,7 @@ void main() {
       final logs = [
         for (final j in (_load('logs').body['logs'] as List).cast<Json>()) LogEntry.fromJson(j),
       ];
-      expect(logs.map((l) => l.kind), ['activity', 'activity', 'meal', 'meal']);
+      expect(logs.map((l) => l.kind), ['activity', 'activity', 'activity', 'meal', 'meal']);
 
       final meals = [
         for (final j in (_load('meals_recent').body['meals'] as List).cast<Json>())
@@ -394,7 +398,7 @@ void main() {
       expect((meals.first.name, meals.first.protein, meals.first.fiber), ('Oats', 10, 8));
 
       final deleted = LogDeleteResult.fromJson(_load('log_deleted').body);
-      expect((deleted.day.score.points, deleted.day.score.percent), (246, 75));
+      expect((deleted.day.score.points, deleted.day.score.percent), (299, 76));
       expect(deleted.day.quests.firstWhere((q) => q.key == 'meals_logged').actual, 1);
     });
 
@@ -403,7 +407,7 @@ void main() {
       final day = result.days.single;
       expect(
         (day.score.points, day.quests.firstWhere((q) => q.key == 'steps').actual),
-        (324, 6200),
+        (377, 6200),
       );
     });
 

@@ -49,7 +49,7 @@
       },
       {
         "key": "pushups",
-        "title": "Pushups",
+        "title": "Push-ups",
         "enabled": true,
         "target": 40,
         "unit": "reps",
@@ -101,10 +101,32 @@
         "unitAlt": null,
         "points": 50,
         "position": 5
+      },
+      {
+        "key": "exercise",
+        "title": "Exercise",
+        "enabled": false,
+        "target": 30,
+        "unit": "min",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 100,
+        "position": 6
+      },
+      {
+        "key": "sleep",
+        "title": "Sleep",
+        "enabled": false,
+        "target": 420,
+        "unit": "min",
+        "targetAlt": null,
+        "unitAlt": null,
+        "points": 50,
+        "position": 7
       }
     ],
-    "localToday": "2026-10-26",
+    "localToday": "2026-10-27",
     "backdateUntil": null,
-    "serverNow": "2026-10-27T01:32:16Z"
+    "serverNow": "2026-10-27T12:47:53Z"
   }
 }

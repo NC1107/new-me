@@ -14,12 +14,12 @@
   },
   "body": {
     "day": {
-      "date": "2026-10-26",
-      "basePoints": 226,
-      "bonusPoints": 20,
-      "points": 246,
-      "maxBase": 300,
-      "percent": 75,
+      "date": "2026-10-27",
+      "basePoints": 269,
+      "bonusPoints": 30,
+      "points": 299,
+      "maxBase": 350,
+      "percent": 76,
       "counted": true,
       "streakLine": 70,
       "quests": [
@@ -39,8 +39,8 @@
         },
         {
           "key": "pushups",
-          "title": "Pushups",
-          "target": 30,
+          "title": "Push-ups",
+          "target": 40,
           "unit": "reps",
           "targetAlt": null,
           "unitAlt": null,
@@ -82,24 +82,38 @@
         {
           "key": "protein",
           "title": "Protein",
-          "target": 100,
+          "target": 150,
           "unit": "g",
           "targetAlt": null,
           "unitAlt": null,
           "actual": 42,
           "actualAlt": null,
           "points": 50,
-          "basePoints": 21,
+          "basePoints": 14,
           "bonusPoints": 0,
           "done": false
+        },
+        {
+          "key": "yoga",
+          "title": "Yoga",
+          "target": 15,
+          "unit": "minutes",
+          "targetAlt": null,
+          "unitAlt": null,
+          "actual": 15,
+          "actualAlt": null,
+          "points": 50,
+          "basePoints": 50,
+          "bonusPoints": 10,
+          "done": true
         }
       ]
     },
     "log": {
-      "id": 3,
+      "id": 4,
       "kind": "meal",
-      "localDate": "2026-10-26",
-      "loggedAt": "2026-10-27T01:32:16Z",
+      "localDate": "2026-10-27",
+      "loggedAt": "2026-10-27T12:47:53Z",
       "name": "Chicken bowl",
       "kcal": 650,
       "protein": 42.5,

@@ -133,6 +133,24 @@ func TestStreakNowCountsYesterdayOnceFilled(t *testing.T) {
 	}
 }
 
+func TestStreakNowCountsTodayWhileYesterdayIsPending(t *testing.T) {
+	loc := mustLoc(t, "America/New_York")
+	start := MustDate("2026-10-26")
+	morning := time.Date(2026, 10, 30, 9, 0, 0, 0, loc)
+
+	// Join day: only today exists and it already counted.
+	joined := pattern(MustDate("2026-10-30"), "x")
+	if got := StreakNow(joined, morning, loc); got.Count != 1 || len(got.RestDays) != 0 {
+		t.Fatalf("join day counted before the grace hour: %+v, want count 1", got)
+	}
+
+	// Three counted days, yesterday still open, today counted.
+	days := pattern(start, "xxx.x")
+	if got := StreakNow(days, morning, loc); got.Count != 4 || len(got.RestDays) != 0 {
+		t.Fatalf("pending yesterday with today counted: %+v, want count 4 and no rest spent", got)
+	}
+}
+
 func mustLoc(t *testing.T, name string) *time.Location {
 	t.Helper()
 	loc, err := time.LoadLocation(name)

@@ -1,69 +1,71 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/shell/home_tab.dart';
-import 'package:newme/health/fake_health_source.dart';
-import 'package:newme/health/health_source_factory.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/theme/accent.dart';
+import 'package:newme/widgets/mascot.dart';
 
 import 'fixtures.dart';
 import 'test_support.dart';
 
 void main() {
-  setUp(FakeStorage().install);
-
-  testWidgets('renders three tabs and tapping switches the visible body', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        retry: (_, _) => null,
-        overrides: [
-          sessionProvider.overrideWith(() => SessionController.seeded(testSession)),
-          apiClientFactoryProvider.overrideWithValue(stubFactory(StubAdapter())),
-          healthSourceProvider.overrideWithValue(FakeHealthSource()),
-        ],
-        child: MaterialApp(theme: themeFor(kAccentPresets.first), home: const HomeShell()),
-      ),
-    );
-
-    await tester.pump(const Duration(milliseconds: 300));
-    for (final label in ['Today', 'Board', 'Me']) {
-      expect(find.text(label), findsWidgets);
-    }
-    expect(find.byIcon(Icons.add), findsOneWidget);
-    expect(find.byIcon(Icons.today_rounded), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(InkResponse, 'Board'));
-    await tester.pump();
-    expect(find.byIcon(Icons.leaderboard_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.today_rounded), findsNothing);
-
-    await tester.tap(find.widgetWithText(InkResponse, 'Me'));
-    await tester.pump();
-    expect(find.byIcon(Icons.person_rounded), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 300));
+  setUp(() {
+    FakeStorage().install();
+    Mascot.idleMotion = false;
   });
 
-  testWidgets('the center button opens the log sheet', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        retry: (_, _) => null,
-        overrides: [
-          sessionProvider.overrideWith(() => SessionController.seeded(testSession)),
-          apiClientFactoryProvider.overrideWithValue(stubFactory(StubAdapter())),
-          healthSourceProvider.overrideWithValue(FakeHealthSource()),
-        ],
-        child: MaterialApp(theme: themeFor(kAccentPresets.first), home: const HomeShell()),
-      ),
-    );
+  testWidgets('renders three tabs, no centre button, and tapping switches the visible body', (
+    tester,
+  ) async {
+    final app = TestApp(tester, fullServer());
+    await app.pump(const HomeShell());
 
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    expect(find.text('Pushups'), findsOneWidget);
-    expect(find.text('Meal'), findsOneWidget);
+    for (final tab in ['today', 'us', 'me']) {
+      expect(find.byKey(Key('nav-$tab')), findsOneWidget);
+    }
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(app.container.read(homeTabProvider), HomeTab.today);
+
+    await app.tap(find.byKey(const Key('nav-us')));
+    expect(app.container.read(homeTabProvider), HomeTab.board);
+    await app.tap(find.byKey(const Key('nav-me')));
+    expect(app.container.read(homeTabProvider), HomeTab.me);
+  });
+
+  testWidgets('the selected tab sits in a tinted square bordered in the person colour', (
+    tester,
+  ) async {
+    final app = TestApp(tester, fullServer());
+    await app.pump(const HomeShell());
+    final person = accentById(app.accent);
+
+    BoxDecoration decorationOf(String tab) {
+      final box = tester.widget<AnimatedContainer>(
+        find.descendant(of: find.byKey(Key('nav-$tab')), matching: find.byType(AnimatedContainer)),
+      );
+      return box.decoration! as BoxDecoration;
+    }
+
+    final selected = decorationOf('today');
+    expect(selected.color, person.tint);
+    expect((selected.border! as Border).top.color, person.fill);
+    expect((selected.border! as Border).top.width, 2);
+    expect(decorationOf('us').color, Colors.transparent);
+
+    await app.tap(find.byKey(const Key('nav-us')));
+    expect(decorationOf('us').color, person.tint);
+    expect(decorationOf('today').color, Colors.transparent);
+  });
+
+  testWidgets('each tab is at least 44pt tall', (tester) async {
+    final app = TestApp(tester, fullServer());
+    await app.pump(const HomeShell());
+    for (final tab in ['today', 'us', 'me']) {
+      expect(tester.getSize(find.byKey(Key('nav-$tab'))).height, greaterThanOrEqualTo(44));
+    }
   });
 
   testWidgets('a tab left under the offline banner reloads when it is opened again', (
@@ -75,12 +77,12 @@ void main() {
 
     adapter.on('GET /api/me', const StubResponse.unreachable());
     await app.pump(const HomeShell(), key: UniqueKey());
-    await app.tap(find.widgetWithText(InkResponse, 'Me'));
+    await app.tap(find.byKey(const Key('nav-me')));
     expect(find.textContaining('Offline - updated'), findsOneWidget);
 
     adapter.on('GET /api/me', StubResponse(200, meJson()));
-    await app.tap(find.widgetWithText(InkResponse, 'Board'));
-    await app.tap(find.widgetWithText(InkResponse, 'Me'));
+    await app.tap(find.byKey(const Key('nav-us')));
+    await app.tap(find.byKey(const Key('nav-me')));
 
     expect(find.textContaining('Offline - updated'), findsNothing);
   });
@@ -88,7 +90,7 @@ void main() {
   testWidgets('a new session starts on Today instead of the tab the last one left', (tester) async {
     final app = TestApp(tester, fullServer());
     await app.pump(const HomeShell());
-    await app.tap(find.widgetWithText(InkResponse, 'Me'));
+    await app.tap(find.byKey(const Key('nav-me')));
     expect(app.container.read(homeTabProvider), HomeTab.me);
 
     await app.container.read(sessionProvider.notifier).signIn(testSession);

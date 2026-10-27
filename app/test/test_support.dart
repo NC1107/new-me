@@ -158,7 +158,12 @@ Map<String, dynamic> todayJson({int points = 120, String localToday = '2026-10-2
     'burned': 0,
     'targets': {'kcal': null, 'protein': null, 'carbs': null, 'fat': null},
   },
-  'health': {'stepsEverSynced': true, 'syncedAt': '2026-10-26T13:00:00Z'},
+  'health': {
+    'stepsEverSynced': true,
+    'syncedAt': '2026-10-26T13:00:00Z',
+    'metrics': <String, dynamic>{},
+    'latest': <String, dynamic>{},
+  },
 };
 
 Map<String, dynamic> boardJson() => {
@@ -177,6 +182,7 @@ Map<String, dynamic> boardJson() => {
         {'date': '2026-10-25', 'percent': 80, 'counted': true, 'rest': false},
       ],
       'syncedAt': '2026-10-26T13:00:00Z',
+      'highlights': <String, dynamic>{},
     },
   ],
 };

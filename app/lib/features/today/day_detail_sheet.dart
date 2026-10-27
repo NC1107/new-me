@@ -8,7 +8,9 @@ import 'package:intl/intl.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
+import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
@@ -92,19 +94,15 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: kGutter),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      "Today's entries",
-                      style: TextStyle(
-                        color: kFgPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Semantics(
+                      header: true,
+                      child: const Text("Today's entries", style: AppText.title),
                     ),
                   ),
                   Expanded(child: _content(ScaffoldMessenger.of(context))),
@@ -134,21 +132,21 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
       }
       return const Column(
         children: [
-          SkeletonBlock(height: 52, radius: 12),
+          SkeletonBlock(height: 56, radius: kRadiusField),
           SizedBox(height: 8),
-          SkeletonBlock(height: 52, radius: 12),
+          SkeletonBlock(height: 56, radius: kRadiusField),
         ],
       );
     }
     if (entries.isEmpty) {
-      return const Align(
+      return Align(
         alignment: Alignment.topLeft,
-        child: Text('Nothing logged yet.', style: TextStyle(color: kFgSecondary, fontSize: 14)),
+        child: Text('Nothing logged yet.', style: AppText.body.copyWith(color: kInkSecondary)),
       );
     }
     return ListView.separated(
       itemCount: entries.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, color: kBorder),
+      separatorBuilder: (_, _) => const Divider(height: 2, thickness: 2, color: kSunken),
       itemBuilder: (context, i) {
         final entry = entries[i];
         return Dismissible(
@@ -158,8 +156,8 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 18),
-            color: kDanger.withValues(alpha: 0.2),
-            child: const Icon(Icons.delete_outline_rounded, color: kDanger),
+            color: kDanger.withValues(alpha: 0.15),
+            child: const Icon(Icons.delete_rounded, color: kDangerText),
           ),
           child: Semantics(
             customSemanticsActions: {
@@ -180,14 +178,21 @@ class _EntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (icon, title, quantity, detail) = _describe(entry);
+    final (key, title, quantity, detail) = _describe(entry);
+    final palette = questPalette(key);
     final time = DateFormat.Hm().format(entry.loggedAt.toLocal());
     return Container(
-      color: kBgSurface,
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      color: kSurface,
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: kFgSecondary),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+            child: Icon(questIcon(key), size: 22, color: palette.lip),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -197,43 +202,36 @@ class _EntryRow extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: kFgPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppText.label.copyWith(fontSize: 16),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  detail == null ? time : '$time - $detail',
-                  style: const TextStyle(color: kFgMuted, fontSize: 12),
-                ),
+                Text(detail == null ? time : '$time - $detail', style: AppText.caption),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            quantity,
-            style: const TextStyle(color: kFgPrimary, fontSize: 14, fontWeight: FontWeight.w700),
-          ),
+          Text(quantity, style: AppText.tabular(AppText.label.copyWith(fontSize: 15))),
         ],
       ),
     );
   }
 
-  (IconData, String, String, String?) _describe(LogEntry entry) => switch (entry) {
+  (String, String, String, String?) _describe(LogEntry entry) => switch (entry) {
     final ActivityLog a => (
       switch (a.type) {
-        'pushups' => Icons.fitness_center_outlined,
-        'reading' => Icons.menu_book_outlined,
-        _ => Icons.self_improvement_outlined,
+        'pushups' => 'pushups',
+        'reading' => 'reading',
+        _ => 'yoga',
       },
-      '${a.type[0].toUpperCase()}${a.type.substring(1)}',
+      switch (a.type) {
+        'pushups' => 'Push-ups',
+        'reading' => 'Reading',
+        _ => 'Yoga',
+      },
       '${a.quantity.formatted} ${shortUnit(a.unit)}',
       null,
     ),
     final MealLog m => (
-      Icons.restaurant_outlined,
+      'meals_logged',
       m.name,
       '${m.kcal.formatted} kcal',
       'P ${m.protein.formatted} C ${m.carbs.formatted} F ${m.fat.formatted}',

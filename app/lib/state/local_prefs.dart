@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kHealthPrompted = 'healthPrompted';
 const _kLastSyncedAt = 'lastSyncedAt';
 const _kLastLogKind = 'lastLogKind';
-const _kCountUpDate = 'countUpDate';
+const _kCelebratedDate = 'celebratedDate';
 const _kDeviceTimezone = 'deviceTimezone';
 
 /// Non-secret, per-install values. The Keychain blob in session.dart holds everything secret.
@@ -30,12 +30,12 @@ class LocalPrefs {
   static Future<void> setLastLogKind(String kind) async =>
       (await SharedPreferences.getInstance()).setString(_kLastLogKind, kind);
 
-  /// The local date the score ring last counted up on, so it only does that once a day.
-  static Future<String?> countUpDate() async =>
-      (await SharedPreferences.getInstance()).getString(_kCountUpDate);
+  /// The local date the day-counted celebration last played on, so it plays once a day.
+  static Future<String?> celebratedDate() async =>
+      (await SharedPreferences.getInstance()).getString(_kCelebratedDate);
 
-  static Future<void> setCountUpDate(String date) async =>
-      (await SharedPreferences.getInstance()).setString(_kCountUpDate, date);
+  static Future<void> setCelebratedDate(String date) async =>
+      (await SharedPreferences.getInstance()).setString(_kCelebratedDate, date);
 
   /// The device zone last sent to the server, to tell a moved phone from a zone picked by hand.
   static Future<String?> deviceTimezone() async =>
@@ -48,7 +48,7 @@ class LocalPrefs {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kLastSyncedAt);
     await prefs.remove(_kLastLogKind);
-    await prefs.remove(_kCountUpDate);
+    await prefs.remove(_kCelebratedDate);
     await prefs.remove(_kDeviceTimezone);
   }
 }

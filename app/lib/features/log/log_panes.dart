@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 
 import '../../api/models.dart';
 import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
-import '../../widgets/segmented.dart';
+import '../../widgets/accent_text.dart';
+import '../../widgets/chunky_button.dart';
 import '../../widgets/skeletons.dart';
+import 'big_number_stepper.dart';
+import 'log_chip.dart';
 
 /// Builds the write for one attempt; the sheet supplies the idempotency key and the date.
 typedef DraftBuilder = LogDraft Function(String clientOpId, String? localDate);
@@ -42,10 +46,30 @@ int? _confirmAbove(String unit) => switch (unit) {
 };
 
 String _noun(String unit, int n) => switch (unit) {
-  'reps' => n == 1 ? 'pushup' : 'pushups',
+  'reps' => n == 1 ? 'push-up' : 'push-ups',
   'pages' => n == 1 ? 'page' : 'pages',
   _ => n == 1 ? 'minute' : 'minutes',
 };
+
+/// How one unit of a quantity form behaves: where the number starts, how far - and + move it, and
+/// which quick chips add to it.
+class UnitSpec {
+  const UnitSpec({
+    required this.unit,
+    required this.label,
+    required this.start,
+    required this.step,
+    required this.chips,
+  });
+
+  final String unit;
+
+  /// What the number counts, shown under it and on the toggle.
+  final String label;
+  final int start;
+  final int step;
+  final List<int> chips;
+}
 
 /// Pushups, reading and yoga: one whole number, in one of a few units.
 class QuantityPane extends StatefulWidget {
@@ -56,12 +80,10 @@ class QuantityPane extends StatefulWidget {
     required this.busy,
     required this.failed,
     required this.onLog,
-    this.quickValues = const [],
   });
 
   final String type;
-  final List<(String unit, String label)> units;
-  final List<int> quickValues;
+  final List<UnitSpec> units;
   final bool busy;
   final bool failed;
   final LogCallback onLog;
@@ -71,14 +93,16 @@ class QuantityPane extends StatefulWidget {
 }
 
 class _QuantityPaneState extends State<QuantityPane> {
-  final _field = TextEditingController();
-  late String _unit = widget.units.first.$1;
+  late UnitSpec _spec = widget.units.first;
+  late final _field = TextEditingController(text: '${_spec.start}');
 
   @override
   void dispose() {
     _field.dispose();
     super.dispose();
   }
+
+  String get _unit => _spec.unit;
 
   int? get _quantity => int.tryParse(_field.text);
 
@@ -91,6 +115,19 @@ class _QuantityPaneState extends State<QuantityPane> {
 
   bool get _valid => _quantity != null && _quantity! > 0 && _fieldError == null;
 
+  void _set(int value) {
+    final next = value.clamp(0, _capFor(_unit));
+    setState(() => _field.text = '$next');
+  }
+
+  void _pickUnit(UnitSpec spec) {
+    if (spec.unit == _unit) return;
+    setState(() {
+      _spec = spec;
+      _field.text = '${spec.start}';
+    });
+  }
+
   void _log(int quantity) {
     final limit = _confirmAbove(_unit);
     widget.onLog(
@@ -101,7 +138,9 @@ class _QuantityPaneState extends State<QuantityPane> {
         unit: _unit,
         date: date,
       ),
-      added: 'Added $quantity${_unit == 'reps' ? '' : ' ${shortUnit(_unit)}'}',
+      added: _unit == 'reps'
+          ? 'Added $quantity ${_noun(_unit, quantity)}'
+          : 'Added $quantity ${shortUnit(_unit)}',
       confirm: limit != null && quantity > limit
           ? 'That is ${quantity.formatted} ${_noun(_unit, quantity)} in one go. Log it?'
           : null,
@@ -110,68 +149,57 @@ class _QuantityPaneState extends State<QuantityPane> {
 
   @override
   Widget build(BuildContext context) {
+    final q = _quantity ?? 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.units.length > 1) ...[
-          Segmented<String>(
-            options: [for (final (unit, label) in widget.units) (unit, label)],
-            selected: _unit,
-            onChanged: (v) => setState(() => _unit = v),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (widget.quickValues.isNotEmpty) ...[
-          const FieldLabel('Quick add'),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              for (final v in widget.quickValues) ...[
-                Expanded(
-                  child: ChipButton(
-                    label: '$v',
-                    enabled: !widget.busy,
-                    fill: true,
-                    onTap: () => _log(v),
-                  ),
+              for (final spec in widget.units)
+                LogChip(
+                  label: spec.label,
+                  selected: spec.unit == _unit,
+                  onTap: () => _pickUnit(spec),
                 ),
-                if (v != widget.quickValues.last) const SizedBox(width: 8),
-              ],
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
         ],
-        FieldLabel(widget.quickValues.isEmpty ? _label : 'Custom'),
-        AppTextField(
+        BigNumberStepper(
           controller: _field,
-          hint: _hint,
-          keyboardType: TextInputType.number,
+          unitLabel: widget.units.length > 1 ? _spec.label.toLowerCase() : _spec.label,
           errorText: _fieldError,
           onChanged: (_) => setState(() {}),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(5),
+          onMinus: q > 0 && !widget.busy ? () => _set(q - _spec.step) : null,
+          onPlus: q < _capFor(_unit) && !widget.busy ? () => _set(q + _spec.step) : null,
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final v in _spec.chips)
+              LogChip(
+                label: '+$v',
+                enabled: !widget.busy && q < _capFor(_unit),
+                onTap: () => _set(q + v),
+              ),
           ],
         ),
-        const SizedBox(height: 16),
-        PrimaryButton(
+        const SizedBox(height: 24),
+        ChunkyButton(
           label: widget.failed ? 'Try again' : 'Save',
-          enabled: _valid && !widget.busy,
           busy: widget.busy,
-          onTap: () => _log(_quantity!),
+          onPressed: _valid && !widget.busy ? () => _log(_quantity!) : null,
         ),
       ],
     );
   }
-
-  String get _label => widget.units.length > 1 ? _unitLabel : 'Amount';
-
-  String get _unitLabel => widget.units.firstWhere((u) => u.$1 == _unit).$2;
-
-  String get _hint => switch (_unit) {
-    'reps' => 'Reps',
-    'pages' => 'Pages read',
-    _ => 'Minutes read',
-  };
 }
 
 class MealPane extends StatefulWidget {
@@ -281,9 +309,9 @@ class _MealPaneState extends State<MealPane> {
                 padding: EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: [
-                    SkeletonBlock(width: 96, height: 38, radius: 19),
+                    SkeletonBlock(width: 96, height: 44, radius: 22),
                     SizedBox(width: 8),
-                    SkeletonBlock(width: 120, height: 38, radius: 19),
+                    SkeletonBlock(width: 120, height: 44, radius: 22),
                   ],
                 ),
               );
@@ -303,7 +331,7 @@ class _MealPaneState extends State<MealPane> {
                       for (final meal in meals)
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 200),
-                          child: ChipButton(
+                          child: LogChip(
                             label: meal.name,
                             enabled: !widget.busy,
                             onTap: () => _logRecent(meal),
@@ -316,17 +344,11 @@ class _MealPaneState extends State<MealPane> {
             );
           },
         ),
-        const FieldLabel('Portion'),
-        Segmented<double>(
-          options: [for (final p in kPortions) (p, p.toString().replaceFirst(RegExp(r'\.0$'), ''))],
-          selected: _portion,
-          onChanged: (v) => setState(() => _portion = v),
-        ),
-        const SizedBox(height: 16),
         const FieldLabel('Name'),
         AppTextField(
           controller: _name,
           hint: 'What was it? (optional)',
+          textCapitalization: TextCapitalization.sentences,
           inputFormatters: [LengthLimitingTextInputFormatter(80)],
         ),
         const SizedBox(height: 12),
@@ -361,39 +383,59 @@ class _MealPaneState extends State<MealPane> {
             child: GestureDetector(
               onTap: () => setState(() => _more = !_more),
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Text(
-                  _more ? 'Less' : 'More',
-                  style: const TextStyle(
-                    color: kFgSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Align(
+                  widthFactor: 1,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _more ? 'Less' : 'More',
+                    style: AppText.label.copyWith(color: context.accentText),
                   ),
                 ),
               ),
             ),
           ),
         ),
+        const FieldLabel('Portion'),
+        _portionChips(context),
         if (_portion != 1 && _kcalValue > 0)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: Text(
               'Logs ${_scaleKcal(_kcalValue).formatted} kcal',
-              style: const TextStyle(
-                color: kFgSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppText.label.copyWith(color: kInkSecondary),
             ),
           ),
-        const SizedBox(height: 8),
-        PrimaryButton(
+        const SizedBox(height: 20),
+        ChunkyButton(
           label: widget.failed ? 'Try again' : 'Save',
-          enabled: _valid && !widget.busy,
           busy: widget.busy,
-          onTap: _logForm,
+          onPressed: _valid && !widget.busy ? _logForm : null,
         ),
+      ],
+    );
+  }
+
+  Widget _portionChips(BuildContext context) {
+    final chips = [
+      for (final p in kPortions)
+        LogChip(
+          label: p.toString().replaceFirst(RegExp(r'\.0$'), ''),
+          selected: p == _portion,
+          compact: true,
+          onTap: () => setState(() => _portion = p),
+        ),
+    ];
+    // Six chips share one row until Dynamic Type makes them too wide for it.
+    final fitsInRow = MediaQuery.textScalerOf(context).scale(15) <= 19;
+    if (!fitsInRow) return Wrap(spacing: 8, runSpacing: 8, children: chips);
+    return Row(
+      children: [
+        for (var i = 0; i < chips.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          Expanded(child: chips[i]),
+        ],
       ],
     );
   }

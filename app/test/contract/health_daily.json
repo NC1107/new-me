@@ -5,30 +5,72 @@
   "request": {
     "items": [
       {
-        "date": "2026-10-26",
+        "date": "2026-10-27",
         "metric": "steps",
         "value": 6200,
         "source": "healthkit",
-        "measuredAt": "2026-10-27T01:31:16.560Z"
+        "measuredAt": "2026-10-27T12:46:53.595Z"
       },
       {
-        "date": "2026-10-26",
+        "date": "2026-10-27",
         "metric": "active_energy",
         "value": 410,
         "source": "healthkit",
-        "measuredAt": "2026-10-27T01:31:16.560Z"
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "exercise_minutes",
+        "value": 24,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "sleep_minutes",
+        "value": 432,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "resting_hr",
+        "value": 58,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "weight_kg",
+        "value": 82.4,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "body_fat_pct",
+        "value": 18.2,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
+      },
+      {
+        "date": "2026-10-27",
+        "metric": "vo2max",
+        "value": 41.5,
+        "source": "healthkit",
+        "measuredAt": "2026-10-27T12:46:53.595Z"
       }
     ]
   },
   "body": {
     "days": [
       {
-        "date": "2026-10-26",
-        "basePoints": 304,
-        "bonusPoints": 20,
-        "points": 324,
-        "maxBase": 400,
-        "percent": 76,
+        "date": "2026-10-27",
+        "basePoints": 347,
+        "bonusPoints": 30,
+        "points": 377,
+        "maxBase": 450,
+        "percent": 77,
         "counted": true,
         "streakLine": 70,
         "quests": [
@@ -48,8 +90,8 @@
           },
           {
             "key": "pushups",
-            "title": "Pushups",
-            "target": 30,
+            "title": "Push-ups",
+            "target": 40,
             "unit": "reps",
             "targetAlt": null,
             "unitAlt": null,
@@ -91,16 +133,30 @@
           {
             "key": "protein",
             "title": "Protein",
-            "target": 100,
+            "target": 150,
             "unit": "g",
             "targetAlt": null,
             "unitAlt": null,
             "actual": 42,
             "actualAlt": null,
             "points": 50,
-            "basePoints": 21,
+            "basePoints": 14,
             "bonusPoints": 0,
             "done": false
+          },
+          {
+            "key": "yoga",
+            "title": "Yoga",
+            "target": 15,
+            "unit": "minutes",
+            "targetAlt": null,
+            "unitAlt": null,
+            "actual": 15,
+            "actualAlt": null,
+            "points": 50,
+            "basePoints": 50,
+            "bonusPoints": 10,
+            "done": true
           }
         ]
       }

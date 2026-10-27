@@ -47,7 +47,7 @@ Map<String, dynamic> dayJson({int points = 150, int percent = 62, bool counted =
 
 final _richQuests = [
   quest('steps', 'Steps', {'unit': 'steps', 'target': 8000}),
-  quest('pushups', 'Pushups', {
+  quest('pushups', 'Push-ups', {
     'target': 30,
     'actual': 30,
     'basePoints': 100,
@@ -100,7 +100,12 @@ Map<String, dynamic> richTodayJson({
     'burned': 540,
     'targets': {..._noTargets, 'kcal': 2200, 'protein': 150},
   },
-  'health': {'stepsEverSynced': stepsEverSynced, 'syncedAt': '2026-10-26T11:00:00Z'},
+  'health': {
+    'stepsEverSynced': stepsEverSynced,
+    'syncedAt': '2026-10-26T11:00:00Z',
+    'metrics': <String, dynamic>{},
+    'latest': <String, dynamic>{},
+  },
 };
 
 Map<String, dynamic> _template(
@@ -135,7 +140,7 @@ Map<String, dynamic> meJson({
   'targets': {..._noTargets, 'kcal': 2200, 'protein': 150},
   'questTemplates': [
     _template('steps', 'Steps', 8000, 'steps', 100, 0),
-    _template('pushups', 'Pushups', 30, 'reps', 100, 1),
+    _template('pushups', 'Push-ups', 30, 'reps', 100, 1),
     _template('reading', 'Reading', 20, 'minutes', 100, 2, targetAlt: 15, unitAlt: 'pages'),
     _template('yoga', 'Yoga', 20, 'minutes', 50, 5, enabled: yoga),
   ],
@@ -174,6 +179,7 @@ Map<String, dynamic> boardUser(
         {'date': '2026-10-26', 'percent': 30, 'counted': false, 'rest': false},
       ],
   'syncedAt': '2026-10-26T11:00:00Z',
+  'highlights': <String, dynamic>{},
 };
 
 Map<String, dynamic> board(List<Map<String, dynamic>> users) => {

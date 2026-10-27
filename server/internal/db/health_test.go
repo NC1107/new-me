@@ -2,7 +2,9 @@ package db_test
 
 import (
 	"fmt"
+	"github.com/nc1107/new-me/server/internal/score"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -26,7 +28,7 @@ func TestHealthUpsertNeverLetsAStaleReadingWin(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return in.Steps
+		return in.Metric(db.MetricSteps)
 	}
 
 	if !put(5000, noon) || steps() != 5000 {
@@ -97,9 +99,11 @@ func TestLoadDayInputsAggregatesTheDay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := db.DayInputs{Steps: 4321, ActiveEnergy: 540, StepsConnected: true, Pushups: 35, ReadingMinutes: 12,
+	want := db.DayInputs{
+		Metrics: map[string]float64{db.MetricSteps: 4321, db.MetricActiveEnergy: 540},
+		Synced:  map[string]bool{db.MetricSteps: true, db.MetricActiveEnergy: true}, Pushups: 35, ReadingMinutes: 12,
 		ReadingPages: 5, YogaMinutes: 30, Meals: 2, Kcal: 1200, ProteinG: 70.9, CarbsG: 120, FatG: 30, FiberG: 7.5}
-	if in != want {
+	if !reflect.DeepEqual(in, want) {
 		t.Fatalf("inputs = %+v\nwant     %+v", in, want)
 	}
 
@@ -107,11 +111,11 @@ func TestLoadDayInputsAggregatesTheDay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if before.StepsConnected || before.Steps != 0 || before.Pushups != 0 {
+	if before.Connected(db.MetricSteps) || before.Metric(db.MetricSteps) != 0 || before.Pushups != 0 {
 		t.Fatalf("the day before the first reading = %+v; steps are not connected yet", before)
 	}
 	after, _ := db.LoadDayInputs(ctx, database.Pool, u.ID, day.AddDays(1))
-	if !after.StepsConnected || after.Steps != 0 {
+	if !after.Connected(db.MetricSteps) || after.Metric(db.MetricSteps) != 0 {
 		t.Fatalf("the day after = %+v; connected but with no reading yet", after)
 	}
 
@@ -125,5 +129,71 @@ func TestLastHealthSyncIsNilWithoutReadings(t *testing.T) {
 	u := join(t, database, "Nick", "green", true)
 	if synced, err := db.LastHealthSync(ctx, database.Pool, u.ID); err != nil || synced != nil {
 		t.Fatalf("last sync = %v, %v", synced, err)
+	}
+}
+
+func TestHealthAcceptsEveryMetricWithinItsBounds(t *testing.T) {
+	database := dbtest.Fresh(t)
+	u := join(t, database, "Nick", "green", true)
+	cases := []struct {
+		metric       string
+		lo, hi       float64
+		below, above float64
+	}{
+		{"steps", 0, 200000, -1, 200001},
+		{"active_energy", 0, 20000, -1, 20001},
+		{"basal_energy", 0, 20000, -1, 20001},
+		{"exercise_minutes", 0, 1440, -1, 1441},
+		{"distance_m", 0, 200000, -1, 200001},
+		{"flights", 0, 1000, -1, 1001},
+		{"workouts", 0, 50, -1, 51},
+		{"workout_minutes", 0, 1440, -1, 1441},
+		{"sleep_minutes", 0, 1440, -1, 1441},
+		{"mindful_minutes", 0, 1440, -1, 1441},
+		{"water_ml", 0, 20000, -1, 20001},
+		{"resting_hr", 20, 250, 19, 251},
+		{"hrv_ms", 0, 500, -1, 501},
+		{"vo2max", 0, 100, -1, 101},
+		{"weight_kg", 20, 400, 19, 401},
+		{"body_fat_pct", 1, 80, 0, 81},
+		{"lean_mass_kg", 10, 300, 9, 301},
+	}
+	for _, c := range cases {
+		for _, ok := range []float64{c.lo, c.hi} {
+			if _, err := db.UpsertHealthDaily(ctx, database.Pool, u.ID, day, c.metric, ok, "healthkit", time.Now()); err != nil {
+				t.Fatalf("%s %v: %v", c.metric, ok, err)
+			}
+		}
+		for _, bad := range []float64{c.below, c.above, math.NaN()} {
+			if _, err := db.UpsertHealthDaily(ctx, database.Pool, u.ID, day, c.metric, bad, "healthkit", time.Now()); err == nil {
+				t.Fatalf("%s %v must be rejected", c.metric, bad)
+			}
+		}
+	}
+}
+
+func TestLatestHealthAndSeries(t *testing.T) {
+	database := dbtest.Fresh(t)
+	u := join(t, database, "Nick", "green", true)
+	put := func(d score.Date, metric string, v float64) {
+		if _, err := db.UpsertHealthDaily(ctx, database.Pool, u.ID, d, metric, v, "healthkit", time.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	put(day.AddDays(-3), "weight_kg", 80)
+	put(day.AddDays(-1), "weight_kg", 79.5)
+	put(day.AddDays(1), "weight_kg", 70)
+	put(day, "steps", 100)
+
+	latest, err := db.LatestHealth(ctx, database.Pool, u.ID, day, []string{"weight_kg", "vo2max"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := latest["weight_kg"]; got.Value != 79.5 || got.Date != day.AddDays(-1) || len(latest) != 1 {
+		t.Fatalf("latest = %+v", latest)
+	}
+	series, err := db.HealthSeries(ctx, database.Pool, u.ID, "weight_kg", day.AddDays(-2), day)
+	if err != nil || len(series) != 1 || series[0].Value != 79.5 {
+		t.Fatalf("series = %+v, %v", series, err)
 	}
 }

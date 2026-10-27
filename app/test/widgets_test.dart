@@ -18,11 +18,11 @@ void main() {
       _host(AccentPicker(selected: 'green', taken: const {'sky'}, onChanged: picked.add)),
     );
 
-    await tester.tap(find.text('Violet'));
+    await tester.tap(find.text('Iris'));
     await tester.tap(find.text('Sky'));
     expect(picked, ['violet']);
-    expect(find.byIcon(Icons.check), findsOneWidget);
-    expect(find.byIcon(Icons.block), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.block_rounded), findsOneWidget);
   });
 
   testWidgets('all six swatches share one row even in a narrow card', (tester) async {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'accent.dart';
 import 'tokens.dart';
+import 'typography.dart';
 
 /// One row of accent swatches, a slot each so the six always fit. Colors in [taken] belong to someone else and cannot be chosen.
 class AccentPicker extends StatelessWidget {
@@ -78,26 +79,27 @@ class _Swatch extends StatelessWidget {
               width: size,
               height: size,
               decoration: BoxDecoration(
-                color: taken ? palette.base.withValues(alpha: 0.18) : palette.base,
+                color: taken ? palette.tint : palette.fill,
                 shape: BoxShape.circle,
-                border: Border.all(color: selected ? kFgPrimary : kBorder, width: selected ? 3 : 1),
+                border: Border.all(
+                  color: selected ? kInk : (taken ? kBorder : palette.lip),
+                  width: selected ? 3 : 2,
+                ),
               ),
               child: taken
-                  ? const Icon(Icons.block, color: kFgMuted, size: 20)
+                  ? const Icon(Icons.block_rounded, color: kInkMuted, size: 20)
                   : selected
-                  ? Icon(Icons.check, color: palette.onAccent, size: size * 0.45)
+                  ? Icon(Icons.check_rounded, color: palette.onFill, size: size * 0.45)
                   : null,
             ),
             const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                // The full name is in the semantics label; six equal slots only fit one word.
-                palette.name.split(' ').last,
-                style: TextStyle(
-                  color: taken ? kFgMuted : (selected ? kFgPrimary : kFgSecondary),
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                palette.name,
+                style: AppText.caption.copyWith(
+                  color: taken ? kInkMuted : (selected ? kInk : kInkSecondary),
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 ),
               ),
             ),

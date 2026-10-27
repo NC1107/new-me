@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/api_client.dart';
 import 'package:newme/api/models.dart';
 
+import 'fixtures.dart';
 import 'test_support.dart';
 
 ApiClient _client(StubAdapter stub, {String? token, void Function()? onUnauthorized}) => ApiClient(
@@ -255,5 +256,71 @@ void main() {
     final pubspec = File('pubspec.yaml').readAsLinesSync();
     final declared = pubspec.firstWhere((l) => l.startsWith('version:')).split(':')[1].trim();
     expect(declared.split('+').first, kClientVersion);
+  });
+
+  group('health v2 shapes', () {
+    test('Today reads metrics and latest, and tolerates their absence', () {
+      final j = todayJson();
+      final old = Today.fromJson(j);
+      expect(old.health.metrics, isEmpty);
+      expect(old.health.latest, isEmpty);
+
+      (j['health'] as Map<String, dynamic>)
+        ..['metrics'] = {'steps': 4321, 'weight_kg': 82.4}
+        ..['latest'] = {
+          'weight_kg': {'value': 82.4, 'date': '2026-10-25'},
+        };
+      final parsed = Today.fromJson(j);
+      expect(parsed.health.metrics, {'steps': 4321, 'weight_kg': 82.4});
+      expect(parsed.health.latest['weight_kg']!.value, 82.4);
+      expect(parsed.health.latest['weight_kg']!.date, '2026-10-25');
+      expect(Today.fromJson(parsed.toJson()).health.metrics, parsed.health.metrics);
+    });
+
+    test('exercise and sleep quests parse like any other', () {
+      final j = todayJson();
+      final steps = (j['quests'] as List).first as Map<String, dynamic>;
+      j['quests'] = <dynamic>[
+        steps,
+        {...steps, 'key': 'exercise', 'unit': 'min'},
+        {...steps, 'key': 'sleep', 'unit': 'min'},
+      ];
+      expect(Today.fromJson(j).quests.map((q) => q.key), ['steps', 'exercise', 'sleep']);
+    });
+
+    test('board members read highlights, each optional, and tolerate their absence', () {
+      final plain = boardUser(2, 'Sam', 'violet');
+      expect(BoardUser.fromJson(plain).highlights.steps, isNull);
+
+      final rich = boardUser(2, 'Sam', 'violet')
+        ..['highlights'] = {'steps': 4321, 'sleep_minutes': 432};
+      final h = BoardUser.fromJson(rich).highlights;
+      expect((h.steps, h.exerciseMinutes, h.sleepMinutes), (4321, null, 432));
+    });
+
+    test('healthTrends sends metric and days and parses the points', () async {
+      final stub = StubAdapter()
+        ..on(
+          'GET /api/health/trends',
+          const StubResponse(200, {
+            'metric': 'weight_kg',
+            'points': [
+              {'date': '2026-10-25', 'value': 82.6},
+              {'date': '2026-10-26', 'value': 82.4},
+            ],
+          }),
+        );
+      final trend = await _client(stub, token: 't').healthTrends('weight_kg', 30);
+      expect(stub.last!.queryParameters, {'metric': 'weight_kg', 'days': 30});
+      expect(trend.metric, 'weight_kg');
+      expect(trend.points.map((p) => (p.date, p.value)), [
+        ('2026-10-25', 82.6),
+        ('2026-10-26', 82.4),
+      ]);
+    });
+
+    test('a trend without points is empty', () {
+      expect(HealthTrend.fromJson({'metric': 'steps'}).points, isEmpty);
+    });
   });
 }

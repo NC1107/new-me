@@ -17,7 +17,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                         </subviews>
-                        <color key="backgroundColor" red="0.039" green="0.039" blue="0.039" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.984" green="0.973" blue="0.953" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                         </constraints>
                     </view>

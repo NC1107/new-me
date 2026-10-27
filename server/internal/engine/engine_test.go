@@ -51,7 +51,8 @@ func byKey(results []score.QuestResult, key string) (score.QuestResult, bool) {
 }
 
 func TestQuestResultsMapInputsToQuests(t *testing.T) {
-	in := db.DayInputs{Steps: 4999.9, StepsConnected: true, Pushups: 35, ReadingMinutes: 10, ReadingPages: 5,
+	in := db.DayInputs{Metrics: map[string]float64{db.MetricSteps: 4999.9},
+		Synced: map[string]bool{db.MetricSteps: true}, Pushups: 35, ReadingMinutes: 10, ReadingPages: 5,
 		Meals: 2, ProteinG: 79.9}
 	results := engine.QuestResults(quests(), in)
 	want := map[string][2]int{
@@ -79,6 +80,47 @@ func TestQuestResultsLeaveStepsOutUntilHealthIsConnected(t *testing.T) {
 	}
 	if len(results) != 4 {
 		t.Fatalf("results = %d, want the 4 other quests", len(results))
+	}
+}
+
+func healthQuests() []db.DayQuest {
+	return []db.DayQuest{
+		{Key: db.QuestExercise, Target: 30, Points: 100},
+		{Key: db.QuestSleep, Target: 420, Points: 50},
+	}
+}
+
+func TestExerciseAndSleepScoreFromHealthMetrics(t *testing.T) {
+	synced := map[string]bool{db.MetricExercise: true, db.MetricSleep: true}
+	partial := engine.QuestResults(healthQuests(), db.DayInputs{
+		Metrics: map[string]float64{db.MetricExercise: 15.9, db.MetricSleep: 210}, Synced: synced})
+	day := score.ScoreDay(partial)
+	if day.Quests[0].Actual != 15 || day.Quests[0].Base != 50 || day.Quests[0].Complete ||
+		day.Quests[1].Actual != 210 || day.Quests[1].Base != 25 || day.BonusPoints != 0 {
+		t.Fatalf("partial = %+v", day)
+	}
+
+	done := score.ScoreDay(engine.QuestResults(healthQuests(), db.DayInputs{
+		Metrics: map[string]float64{db.MetricExercise: 45, db.MetricSleep: 420}, Synced: synced}))
+	if done.BasePoints != 150 || done.BonusPoints != 30 || done.Percent != 100 || !done.Counted {
+		t.Fatalf("complete = %+v; want full base and a 20 + 10 bonus", done)
+	}
+}
+
+func TestExerciseAndSleepWaitForTheirOwnMetric(t *testing.T) {
+	in := db.DayInputs{
+		Metrics: map[string]float64{db.MetricExercise: 10},
+		Synced:  map[string]bool{db.MetricExercise: true, db.MetricSteps: true}}
+	results := engine.QuestResults(healthQuests(), in)
+	if len(results) != 1 || results[0].Key != db.QuestExercise {
+		t.Fatalf("results = %+v; sleep has never been synced so it must not appear", results)
+	}
+	if got := engine.QuestResults(healthQuests(), db.DayInputs{}); len(got) != 0 {
+		t.Fatalf("nothing synced produced %+v", got)
+	}
+	a, _ := engine.Actuals(healthQuests()[1], db.DayInputs{Metrics: map[string]float64{db.MetricSleep: 400.7}})
+	if a != 400 {
+		t.Fatalf("sleep actual = %d", a)
 	}
 }
 

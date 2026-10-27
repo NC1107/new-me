@@ -27,10 +27,20 @@ type foodJSON struct {
 	Targets targetsJSON `json:"targets"`
 }
 
-type healthStatusJSON struct {
-	StepsEverSynced bool    `json:"stepsEverSynced"`
-	SyncedAt        *string `json:"syncedAt"`
+type latestJSON struct {
+	Value float64    `json:"value"`
+	Date  score.Date `json:"date"`
 }
+
+type healthStatusJSON struct {
+	StepsEverSynced bool                  `json:"stepsEverSynced"`
+	SyncedAt        *string               `json:"syncedAt"`
+	Metrics         map[string]float64    `json:"metrics"`
+	Latest          map[string]latestJSON `json:"latest"`
+}
+
+// latestMetrics are the slow-moving body measurements worth showing as of their last reading.
+var latestMetrics = []string{"weight_kg", "body_fat_pct", "lean_mass_kg", "vo2max"}
 
 type todayJSON struct {
 	Date          score.Date       `json:"date"`
@@ -83,6 +93,16 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	latestRows, err := db.LatestHealth(ctx, s.db.Pool, c.user.ID, date, latestMetrics)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	latest := make(map[string]latestJSON, len(latestRows))
+	for key, m := range latestRows {
+		latest[key] = latestJSON{Value: m.Value, Date: m.Date}
+	}
+
 	in := scored.Inputs
 	writeJSON(w, http.StatusOK, todayJSON{
 		Date:          date,
@@ -94,9 +114,12 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 		Streak:        toStreakJSON(streak, localToday),
 		Food: foodJSON{
 			Kcal: in.Kcal, Protein: round1(in.ProteinG), Carbs: round1(in.CarbsG), Fat: round1(in.FatG),
-			Fiber: round1(in.FiberG), Burned: int(math.Round(in.ActiveEnergy)), Targets: toTargetsJSON(c.user),
+			Fiber: round1(in.FiberG), Burned: int(math.Round(in.Metric(db.MetricActiveEnergy))), Targets: toTargetsJSON(c.user),
 		},
-		Health: healthStatusJSON{StepsEverSynced: in.StepsConnected, SyncedAt: wireTimePtr(syncedAt)},
+		Health: healthStatusJSON{
+			StepsEverSynced: in.Connected(db.MetricSteps), SyncedAt: wireTimePtr(syncedAt),
+			Metrics: in.Metrics, Latest: latest,
+		},
 	})
 }
 

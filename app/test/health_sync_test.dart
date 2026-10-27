@@ -89,9 +89,9 @@ void main() {
   test('start pushes today from local midnight to now, in the documented shape', () async {
     await prompted();
     final h = _Harness(start: DateTime(2026, 10, 26, 14, 5));
-    h.source
-      ..steps = 5200
-      ..activeEnergyKcal = 312.4;
+    h.source.metrics
+      ..clear()
+      ..addAll({'steps': 5200, 'active_energy': 312.4});
     await h.boot();
 
     expect(h.source.reads.single, (start: DateTime(2026, 10, 26), end: h.now));
@@ -377,5 +377,76 @@ void main() {
     final stale = puts.where((r) => r.headers['Authorization'] == 'Bearer tok');
     expect(stale, hasLength(1), reason: 'only the start sync, before the switch');
     expect(puts.last.headers['Authorization'], 'Bearer other');
+  });
+
+  test('every metric Health has is pushed, rounded for its unit', () async {
+    await prompted();
+    final h = _Harness();
+    await h.boot();
+
+    final byMetric = {for (final i in h.pushed) i['metric']: i['value']};
+    expect(byMetric.keys.toSet(), FakeHealthSource.defaults.keys.toSet());
+    expect(byMetric['weight_kg'], 82.4);
+    expect(byMetric['vo2max'], 41.5);
+    expect(byMetric['body_fat_pct'], 18.2);
+    expect(byMetric['sleep_minutes'], 432.0);
+    expect(byMetric['hrv_ms'], 46.0);
+  });
+
+  test('a metric Health has no data for is left out, and the rest still go', () async {
+    await prompted();
+    final h = _Harness();
+    h.source.metrics
+      ..remove('sleep_minutes')
+      ..remove('vo2max');
+    await h.boot();
+
+    expect(h.puts, 1);
+    final sent = h.pushed.map((i) => i['metric']).toSet();
+    expect(sent, isNot(contains('sleep_minutes')));
+    expect(sent, isNot(contains('vo2max')));
+    expect(sent, containsAll(['steps', 'weight_kg', 'workouts']));
+  });
+
+  test('only the metrics that changed are pushed again', () async {
+    await prompted();
+    final h = _Harness();
+    await h.boot();
+
+    h.source.metrics['water_ml'] = 1750;
+    h.source.metrics['weight_kg'] = 82.2;
+    await h.sync.sync(SyncTrigger.manual);
+
+    expect(h.lastPut.map((i) => i['metric']).toSet(), {'water_ml', 'weight_kg'});
+  });
+
+  test('a push keeps the metrics on Today without another GET', () async {
+    await prompted();
+    final h = _Harness();
+    h.adapter.on('GET /api/today', StubResponse(200, todayJson()));
+    await h.container.read(todayProvider.future);
+    h.adapter.on(
+      'PUT /api/health/daily',
+      StubResponse(200, {
+        'days': [
+          {
+            'date': '2026-10-26',
+            'basePoints': 220,
+            'bonusPoints': 0,
+            'points': 220,
+            'maxBase': 480,
+            'percent': 46,
+            'counted': false,
+            'streakLine': 70,
+            'quests': todayJson()['quests'],
+          },
+        ],
+      }),
+    );
+    await h.boot();
+
+    final health = h.container.read(todayProvider).requireValue.data.health;
+    expect(health.metrics['sleep_minutes'], 432);
+    expect(health.metrics['steps'], 4321);
   });
 }

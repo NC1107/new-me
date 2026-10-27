@@ -122,7 +122,7 @@ func applyTarget(field **int, patch nullable[int], upper int, name string) *http
 }
 
 // handlePatchMe edits the profile and the quest templates. Every still-open day is scored first,
-// which freezes its snapshot, so a template or protein-target change applies from the next day.
+// which freezes its snapshot, so a template or protein-target change applies from the next day, except on the join day, which is re-snapshotted.
 func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	var req patchMeRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -162,7 +162,10 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		}
-		return applyTemplatePatches(ctx, tx, user.ID, req.QuestTemplates)
+		if err := applyTemplatePatches(ctx, tx, user.ID, req.QuestTemplates); err != nil {
+			return err
+		}
+		return s.resnapshotJoinDay(ctx, tx, c, user, req)
 	})
 	if err != nil {
 		fail(w, r, err)
@@ -179,6 +182,25 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, me)
+}
+
+// resnapshotJoinDay lets a brand-new person's first day follow the quests and targets they
+// pick during onboarding. The day lock taken by the earlier rescore is still held, so a
+// concurrent log or Health write waits and then scores against the new snapshot. Every later
+// day keeps the next-day rule.
+func (s *Server) resnapshotJoinDay(ctx context.Context, tx pgx.Tx, c caller, user db.User, req patchMeRequest) error {
+	today := score.LocalToday(s.now(), c.loc)
+	if today != c.user.JoinedOn || (len(req.QuestTemplates) == 0 && req.Targets == nil) {
+		return nil
+	}
+	if err := db.LockUserDay(ctx, tx, user.ID, today); err != nil {
+		return err
+	}
+	if err := db.ResetDaySnapshot(ctx, tx, user.ID, today); err != nil {
+		return err
+	}
+	_, err := engine.RecomputeDayAt(ctx, tx, user.ID, today, c.loc, s.now())
+	return err
 }
 
 // applyProfilePatch validates the profile fields of a PATCH and writes them onto u.

@@ -230,6 +230,12 @@ class ApiClient {
     (data) => HealthDailyResult.fromJson(data as Json),
   );
 
+  Future<HealthTrend> healthTrends(String metric, int days) => _send(
+    () =>
+        _dio.get<dynamic>('/api/health/trends', queryParameters: {'metric': metric, 'days': days}),
+    (data) => HealthTrend.fromJson(data as Json),
+  );
+
   Future<Invite> createInvite() =>
       _send(() => _dio.post<dynamic>('/api/invites'), (data) => Invite.fromJson(data as Json));
 }

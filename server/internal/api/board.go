@@ -47,6 +47,14 @@ type boardUserJSON struct {
 	Streak   streakCountJSON `json:"streak"`
 	Last7    []dayMarkJSON   `json:"last7"`
 	SyncedAt *string         `json:"syncedAt"`
+	// Highlights are today's Health readings, each omitted when the member has none.
+	Highlights highlightsJSON `json:"highlights"`
+}
+
+type highlightsJSON struct {
+	Steps           *float64 `json:"steps,omitempty"`
+	ExerciseMinutes *float64 `json:"exercise_minutes,omitempty"`
+	SleepMinutes    *float64 `json:"sleep_minutes,omitempty"`
 }
 
 // seasonOn is the season a local date belongs to. Before the first season starts, which a user
@@ -150,6 +158,16 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	if err != nil {
 		return boardUserJSON{}, err
 	}
+	readings, err := db.HealthDay(ctx, s.db.Pool, u.ID, today)
+	if err != nil {
+		return boardUserJSON{}, err
+	}
+	pick := func(key string) *float64 {
+		if v, ok := readings[key]; ok {
+			return &v
+		}
+		return nil
+	}
 	todayRow := byDate[today]
 	return boardUserJSON{
 		ID: u.ID, Name: u.Name, Color: u.Color,
@@ -159,5 +177,8 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 		Streak:   streakCountJSON{Current: streak.Count},
 		Last7:    last7,
 		SyncedAt: wireTimePtr(syncedAt),
+		Highlights: highlightsJSON{
+			Steps: pick(db.MetricSteps), ExerciseMinutes: pick(db.MetricExercise), SleepMinutes: pick(db.MetricSleep),
+		},
 	}, nil
 }

@@ -87,7 +87,16 @@ Season and scoring model
 | meals_logged | derived from meal logs | count of meals with `kcal > 0` |
 | protein | derived from meal logs | sum of `protein_g` in tenths of a gram |
 | yoga | manual log, minutes | sum of `quantity` of `yoga` logs |
+| exercise | HealthKit, `health_daily` metric `exercise_minutes` | `floor(value)` |
+| sleep | HealthKit, `health_daily` metric `sleep_minutes` | `floor(value)` |
 | active_energy | HealthKit, `health_daily` metric `active_energy` | not scored; shown on Today as "burned N" |
+
+`health_daily` holds 17 metrics, each with a per-day bound enforced by a CHECK and by `PUT /health/daily`.
+Steps, active_energy, basal_energy, distance_m and water_ml are 0 to 200000, 20000, 20000, 200000 and 20000.
+exercise_minutes, workout_minutes, sleep_minutes and mindful_minutes are 0 to 1440.
+flights is 0 to 1000, workouts 0 to 50, hrv_ms 0 to 500 and vo2max 0 to 100.
+resting_hr is 20 to 250, weight_kg 20 to 400, body_fat_pct 1 to 80 and lean_mass_kg 10 to 300.
+Only steps, exercise_minutes, sleep_minutes and active_energy feed scoring or the Today screen; the rest are served through `GET /today` `health` and `GET /health/trends`.
 
 ### Quest templates
 
@@ -103,8 +112,12 @@ Users edit only `enabled` and `target`, and edits take effect from the next loca
 | meals_logged | 2 meals | 50 | enabled |
 | protein | profile protein target, 100 g when unset | 50 | enabled |
 | yoga | 20 minutes | 50 | disabled |
+| exercise | 30 min | 100 | disabled |
+| sleep | 420 min | 50 | disabled |
 
 Yoga is a template and an activity log type that ship disabled.
+Exercise and sleep are automatic like steps, take no manual logs, and ship disabled with positions 6 and 7.
+Their target bounds are exercise 5 to 300 minutes and sleep 240 to 720 minutes.
 The Log sheet shows the yoga segment only while the template is enabled.
 Horse and walking quests are deferred; walking is covered by steps.
 Targets are per person.
@@ -138,8 +151,8 @@ Then, with integer division throughout:
 Bonus points count toward displayed day, week and season points on the Board, but not toward percent or the streak.
 The server sends points and percent; the app never recomputes them.
 
-A quest is excluded from `dayMax` and `dayBase` (state `needs_health`) while the user has never had a `steps` row in `health_daily`.
-The first steps sync includes it from that moment, for the current and open days only.
+A Health-fed quest (steps, exercise, sleep) is excluded from `dayMax` and `dayBase` (state `needs_health`) while the user has never had a row for its own metric (`steps`, `exercise_minutes`, `sleep_minutes`) on or before that day.
+The first sync of that metric includes the quest from that moment, for the current and open days only.
 Finalized days are never rewritten.
 
 Worked example: steps 5000 of 8000 gives `(100*5000 + 4000) / 8000 = 63`.
@@ -355,6 +368,7 @@ PATCH  /me
               questTemplates: [{key, enabled, target, targetAlt}]}
   200 same body as GET /me
   template edits are snapshot-first and apply from the next local day
+  on the person's join day (local today equals the join date) template and target edits instead re-snapshot today and rescore it, so onboarding choices count from Day 1; logs and Health readings already made stay
 
 GET    /today?date=YYYY-MM-DD
   200 {date, localToday, backdateUntil, serverNow,
@@ -363,7 +377,9 @@ GET    /today?date=YYYY-MM-DD
        streak: {current, restAvailable, restUsedOn},
        food: {kcal, protein, carbs, fat, fiber, burned,
               targets: {kcal, protein, carbs, fat}},
-       health: {stepsEverSynced, syncedAt}}
+       health: {stepsEverSynced, syncedAt,
+                metrics: {<metric key>: number},         the day's readings, only keys that have one
+                latest: {<key>: {value, date}}}}         weight_kg, body_fat_pct, lean_mass_kg, vo2max: newest on or before the day, omitted when none
   date defaults to localToday and must fall between the join date and today
   backdateUntil is the instant yesterday closes while it is open, otherwise null
   burned is the day's active energy; reads rescore, so they are never stale
@@ -374,7 +390,10 @@ GET    /board
                 today: {points, percent, counted},
                 week: {points}, season: {points}, streak: {current},
                 last7: [{date, percent, counted, rest}],
-                syncedAt}]}                              the caller first, each person on their own local today
+                syncedAt,
+                highlights: {steps, exercise_minutes, sleep_minutes}}]}
+                                                         the caller first, each person on their own local today
+                                                         highlights are that person's local-today readings, each key omitted when there is no row
 
 POST   /logs                                            201 first time, 200 with the same body on replay
   req {clientOpId, kind: "activity", type: "pushups"|"reading"|"yoga",
@@ -394,9 +413,13 @@ GET    /meals/recent?limit=20
   distinct across both users, newest first
 
 PUT    /health/daily
-  req {items: [{date, metric: "steps"|"active_energy", value, source, measuredAt}]}
+  req {items: [{date, metric: one of the 17 keys, value, source, measuredAt}]}
   200 {days: [DayDetail]}                                every affected date, oldest first, so the app skips GET /today
   422 {code, error, items: [{index, code, error}]}       code is date_closed when every bad item is, else invalid_request
+
+GET    /health/trends?metric=<key>&days=<1..365>
+  200 {metric, points: [{date, value}]}                  the caller's own readings, ascending, the last N local days ending today; days with no reading are absent
+  422 invalid_request                                    unknown metric, or days missing, not an integer or outside 1 to 365
 ```
 
 Wire types:
@@ -408,7 +431,7 @@ Wire types:
   `points` is base plus bonus, `percent` is on base points, and `streakLine` is the percent a day needs to count.
 - `QuestScore`: `{key, title, target, unit, targetAlt, unitAlt, actual, actualAlt, points, basePoints, bonusPoints, done}`.
   `points` is the quest's full base value; `basePoints` and `bonusPoints` are what has been earned.
-  Steps are listed before Health connects, with nothing earned and outside `maxBase`.
+  Health-fed quests (steps, exercise, sleep) are listed before their metric has synced, with nothing earned and outside `maxBase`.
 - Log ids come from one shared sequence across both log tables, so `DELETE /logs/{id}` is unambiguous.
 - The app's contract tests replay recordings of these bodies, captured by `app/tool/capture_contract.mjs` into `app/test/contract`.
 
@@ -419,7 +442,7 @@ Behaviour rules:
   A replay of a deleted row does not undelete it.
   Undo of a delete is a new `POST` with a fresh `clientOpId`.
 - `PUT /health/daily` accepts at most 50 items in one transaction.
-  Each item is validated for window, whitelist, finiteness and range (steps at most 200000, active_energy at most 20000).
+  Each item is validated for window, whitelist, finiteness and range (each metric against its own bounds, listed under Metrics in v1).
   Any invalid item fails the whole request with per-item errors.
 - The upsert is `ON CONFLICT (user_id, local_date, metric) DO UPDATE SET value = EXCLUDED.value, measured_at = EXCLUDED.measured_at, ... WHERE health_daily.measured_at <= EXCLUDED.measured_at`, so a stale retry or a second device cannot lower a count.
 - API changes inside a release are additive.
@@ -491,7 +514,7 @@ CREATE TABLE invites (
 CREATE TABLE quest_templates (
     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id    BIGINT NOT NULL REFERENCES users (id),
-    key        TEXT NOT NULL CHECK (key IN ('steps','pushups','reading','meals_logged','protein','yoga')),
+    key        TEXT NOT NULL CHECK (key IN ('steps','pushups','reading','meals_logged','protein','yoga','exercise','sleep')),
     target     INTEGER NOT NULL CHECK (target > 0 AND target <= 200000),
     unit       TEXT NOT NULL CHECK (unit IN ('steps','reps','minutes','meals','g')),
     target_alt INTEGER CHECK (target_alt > 0 AND target_alt <= 2000),
@@ -507,7 +530,7 @@ CREATE TABLE day_quests (
     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id    BIGINT NOT NULL REFERENCES users (id),
     local_date DATE NOT NULL,
-    key        TEXT NOT NULL CHECK (key IN ('steps','pushups','reading','meals_logged','protein','yoga')),
+    key        TEXT NOT NULL CHECK (key IN ('steps','pushups','reading','meals_logged','protein','yoga','exercise','sleep')),
     target     INTEGER NOT NULL CHECK (target > 0),
     unit       TEXT NOT NULL,
     target_alt INTEGER CHECK (target_alt > 0),
@@ -558,10 +581,10 @@ CREATE INDEX meal_logs_recent ON meal_logs (logged_at DESC) WHERE deleted_at IS 
 CREATE TABLE health_daily (
     user_id     BIGINT NOT NULL REFERENCES users (id),
     local_date  DATE NOT NULL,
-    metric      TEXT NOT NULL CHECK (metric IN ('steps','active_energy')),
-    value       DOUBLE PRECISION NOT NULL CHECK (value >= 0 AND value < 'Infinity'::float8
-                    AND ((metric = 'steps' AND value <= 200000)
-                      OR (metric = 'active_energy' AND value <= 20000))),
+    metric      TEXT NOT NULL CHECK (metric IN ('steps','active_energy','basal_energy','exercise_minutes',
+                    'distance_m','flights','workouts','workout_minutes','sleep_minutes','mindful_minutes',
+                    'water_ml','resting_hr','hrv_ms','vo2max','weight_kg','body_fat_pct','lean_mass_kg')),
+    value       DOUBLE PRECISION NOT NULL,         -- per-metric bounds in a CHECK, see Metrics in v1
     source      TEXT NOT NULL CHECK (source IN ('healthkit','fake')),
     measured_at TIMESTAMPTZ NOT NULL,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),

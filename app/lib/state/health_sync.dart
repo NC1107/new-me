@@ -161,22 +161,28 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     if (totals == null) return [];
     final date = formatLocalDate(day);
     return [
-      HealthItem(
-        date: date,
-        metric: 'steps',
-        value: totals.steps.toDouble(),
-        source: 'healthkit',
-        measuredAt: measuredAt,
-      ),
-      HealthItem(
-        date: date,
-        metric: 'active_energy',
-        value: totals.activeEnergyKcal.roundToDouble(),
-        source: 'healthkit',
-        measuredAt: measuredAt,
-      ),
+      for (final key in HealthMetric.all)
+        if (totals[key] case final value?)
+          HealthItem(
+            date: date,
+            metric: key,
+            value: _round(key, value),
+            source: 'healthkit',
+            measuredAt: measuredAt,
+          ),
     ];
   }
+
+  /// Body composition and fitness readings carry a meaningful decimal; the rest are whole.
+  static const _tenths = {
+    HealthMetric.weightKg,
+    HealthMetric.leanMassKg,
+    HealthMetric.bodyFatPct,
+    HealthMetric.vo2max,
+  };
+
+  double _round(String key, double value) =>
+      _tenths.contains(key) ? (value * 10).roundToDouble() / 10 : value.roundToDouble();
 
   String _keyOf(HealthItem item) => '${item.date}|${item.metric}';
 
@@ -198,7 +204,14 @@ class HealthSyncController extends Notifier<HealthSyncState> {
             result,
             burnedByDate: {
               for (final item in sent)
-                if (item.metric == 'active_energy') item.date: item.value,
+                if (item.metric == HealthMetric.activeEnergy) item.date: item.value,
+            },
+            metricsByDate: {
+              for (final item in sent)
+                item.date: {
+                  for (final i in sent)
+                    if (i.date == item.date) i.metric: i.value,
+                },
             },
           );
     }

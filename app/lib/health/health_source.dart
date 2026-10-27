@@ -1,24 +1,74 @@
 import 'package:flutter/foundation.dart';
 
+/// The metric keys shared with the server; see docs/design-v2.md.
+abstract final class HealthMetric {
+  static const steps = 'steps';
+  static const activeEnergy = 'active_energy';
+  static const basalEnergy = 'basal_energy';
+  static const exerciseMinutes = 'exercise_minutes';
+  static const distanceM = 'distance_m';
+  static const flights = 'flights';
+  static const workouts = 'workouts';
+  static const workoutMinutes = 'workout_minutes';
+  static const sleepMinutes = 'sleep_minutes';
+  static const mindfulMinutes = 'mindful_minutes';
+  static const waterMl = 'water_ml';
+  static const restingHr = 'resting_hr';
+  static const hrvMs = 'hrv_ms';
+  static const vo2max = 'vo2max';
+  static const weightKg = 'weight_kg';
+  static const bodyFatPct = 'body_fat_pct';
+  static const leanMassKg = 'lean_mass_kg';
+
+  static const all = [
+    steps,
+    activeEnergy,
+    basalEnergy,
+    exerciseMinutes,
+    distanceM,
+    flights,
+    workouts,
+    workoutMinutes,
+    sleepMinutes,
+    mindfulMinutes,
+    waterMl,
+    restingHr,
+    hrvMs,
+    vo2max,
+    weightKg,
+    bodyFatPct,
+    leanMassKg,
+  ];
+}
+
+/// The values Health holds for one window. A metric with no data, or one the person did not
+/// share, is absent rather than zero.
 @immutable
 class HealthTotals {
-  const HealthTotals({required this.steps, required this.activeEnergyKcal});
+  HealthTotals(Map<String, double> metrics) : metrics = Map.unmodifiable(metrics);
 
-  final int steps;
-  final double activeEnergyKcal;
+  final Map<String, double> metrics;
+
+  bool get isEmpty => metrics.isEmpty;
+
+  double? operator [](String key) => metrics[key];
+
+  int? get steps => metrics[HealthMetric.steps]?.round();
+  double? get activeEnergyKcal => metrics[HealthMetric.activeEnergy];
 
   @override
-  bool operator ==(Object other) =>
-      other is HealthTotals && other.steps == steps && other.activeEnergyKcal == activeEnergyKcal;
+  bool operator ==(Object other) => other is HealthTotals && mapEquals(other.metrics, metrics);
 
   @override
-  int get hashCode => Object.hash(steps, activeEnergyKcal);
+  int get hashCode =>
+      Object.hashAllUnordered(metrics.entries.map((e) => Object.hash(e.key, e.value)));
 }
 
 abstract interface class HealthSource {
   /// Shows the system permission sheet when it has not been shown yet.
   Future<bool> requestAccess();
 
-  /// Totals for [start, end), or null when Health cannot be read.
+  /// Metrics for the local day that starts at [start], read up to [end]; null when Health
+  /// cannot be read at all.
   Future<HealthTotals?> totals(DateTime start, DateTime end);
 }

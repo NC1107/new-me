@@ -23,13 +23,18 @@ func TestCreateUserSeedsTemplatesAndInitializes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(templates) != 6 {
-		t.Fatalf("templates = %d, want 6", len(templates))
+	if len(templates) != 8 {
+		t.Fatalf("templates = %d, want 8", len(templates))
 	}
-	for _, tpl := range templates {
-		if tpl.Enabled != (tpl.Key != db.QuestYoga) {
-			t.Fatalf("%s enabled = %v; only yoga ships disabled", tpl.Key, tpl.Enabled)
+	for i, tpl := range templates {
+		off := tpl.Key == db.QuestYoga || tpl.Key == db.QuestExercise || tpl.Key == db.QuestSleep
+		if tpl.Enabled == off || tpl.Position != i {
+			t.Fatalf("%+v; yoga, exercise and sleep ship disabled, in order", tpl)
 		}
+	}
+	if templates[6].Key != db.QuestExercise || templates[6].Target != 30 || templates[6].Points != 100 ||
+		templates[7].Key != db.QuestSleep || templates[7].Target != 420 || templates[7].Points != 50 {
+		t.Fatalf("new templates = %+v %+v", templates[6], templates[7])
 	}
 	info, err := database.GetServerInfo(ctx)
 	if err != nil || !info.Initialized {

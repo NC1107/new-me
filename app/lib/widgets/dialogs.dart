@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
-/// A two-button confirmation on the Onyx surface. Resolves true only when confirmed.
+/// A two-button confirmation on a white card. Resolves true only when confirmed.
 Future<bool> confirmDialog(
   BuildContext context, {
   required String title,

@@ -39,9 +39,11 @@ func LastHealthSync(ctx context.Context, q Querier, userID int64) (*time.Time, e
 
 // DayInputs is everything scoring and the Today screen read for one user-day.
 type DayInputs struct {
-	Steps          float64
-	ActiveEnergy   float64
-	StepsConnected bool
+	// Metrics holds the day's Health readings by metric key, only for keys that have one.
+	Metrics map[string]float64
+	// Synced marks every metric with a reading on or before the day, which is what lets a
+	// Health-fed quest appear.
+	Synced map[string]bool
 
 	Pushups        int
 	ReadingMinutes int
@@ -56,20 +58,20 @@ type DayInputs struct {
 	FiberG   float64
 }
 
-// LoadDayInputs aggregates the day's live logs and Health readings in one round trip.
-// StepsConnected is true once any steps reading exists on or before the date.
+// Metric is the day's reading for a metric, or 0 when there is none.
+func (in DayInputs) Metric(key string) float64 { return in.Metrics[key] }
+
+// Connected reports whether the metric has ever been synced on or before the day.
+func (in DayInputs) Connected(key string) bool { return in.Synced[key] }
+
+// LoadDayInputs aggregates the day's live logs and Health readings in two queries.
+// A metric is Synced once any reading of it exists on or before the date.
 func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date) (DayInputs, error) {
 	var in DayInputs
 	err := q.QueryRow(ctx, `
-		SELECT h.steps, h.active_energy, h.steps_connected,
-		       a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes,
+		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes,
 		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber
 		FROM (
-			SELECT COALESCE(max(value) FILTER (WHERE metric = 'steps' AND local_date = $2::date), 0)::float8 AS steps,
-			       COALESCE(max(value) FILTER (WHERE metric = 'active_energy' AND local_date = $2::date), 0)::float8 AS active_energy,
-			       COALESCE(bool_or(metric = 'steps' AND local_date <= $2::date), false) AS steps_connected
-			FROM health_daily WHERE user_id = $1
-		) h, (
 			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups'), 0)::int AS pushups,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_minutes'), 0)::int AS reading_minutes,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_pages'), 0)::int AS reading_pages,
@@ -84,8 +86,101 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(fiber_g), 0)::float8 AS fiber
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
 		) m`, userID, date).Scan(
-		&in.Steps, &in.ActiveEnergy, &in.StepsConnected,
 		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
+	if err != nil {
+		return in, err
+	}
+	in.Metrics, in.Synced, err = loadHealthDay(ctx, q, userID, date)
 	return in, err
+}
+
+func loadHealthDay(ctx context.Context, q Querier, userID int64, date score.Date) (map[string]float64, map[string]bool, error) {
+	rows, err := q.Query(ctx, `
+		SELECT metric,
+		       max(value) FILTER (WHERE local_date = $2::date)::float8,
+		       true
+		FROM health_daily WHERE user_id = $1 AND local_date <= $2::date
+		GROUP BY metric`, userID, date)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	metrics, synced := map[string]float64{}, map[string]bool{}
+	for rows.Next() {
+		var key string
+		var value *float64
+		var seen bool
+		if err := rows.Scan(&key, &value, &seen); err != nil {
+			return nil, nil, err
+		}
+		synced[key] = seen
+		if value != nil {
+			metrics[key] = *value
+		}
+	}
+	return metrics, synced, rows.Err()
+}
+
+// HealthDay returns the date's readings by metric key.
+func HealthDay(ctx context.Context, q Querier, userID int64, date score.Date) (map[string]float64, error) {
+	metrics, _, err := loadHealthDay(ctx, q, userID, date)
+	return metrics, err
+}
+
+// LatestMeasurement is the newest reading of a metric on or before a date.
+type LatestMeasurement struct {
+	Value float64
+	Date  score.Date
+}
+
+// LatestHealth returns, for each requested metric that has one, the newest reading on or
+// before the date.
+func LatestHealth(ctx context.Context, q Querier, userID int64, date score.Date, metrics []string) (map[string]LatestMeasurement, error) {
+	rows, err := q.Query(ctx, `
+		SELECT DISTINCT ON (metric) metric, value, to_char(local_date, 'YYYY-MM-DD')
+		FROM health_daily
+		WHERE user_id = $1 AND local_date <= $2::date AND metric = ANY($3)
+		ORDER BY metric, local_date DESC`, userID, date, metrics)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]LatestMeasurement{}
+	for rows.Next() {
+		var key string
+		var m LatestMeasurement
+		if err := rows.Scan(&key, &m.Value, &m.Date); err != nil {
+			return nil, err
+		}
+		out[key] = m
+	}
+	return out, rows.Err()
+}
+
+// HealthPoint is one day of a metric.
+type HealthPoint struct {
+	Date  score.Date
+	Value float64
+}
+
+// HealthSeries lists a metric's readings from..to inclusive, oldest first.
+func HealthSeries(ctx context.Context, q Querier, userID int64, metric string, from, to score.Date) ([]HealthPoint, error) {
+	rows, err := q.Query(ctx, `
+		SELECT to_char(local_date, 'YYYY-MM-DD'), value FROM health_daily
+		WHERE user_id = $1 AND metric = $2 AND local_date BETWEEN $3::date AND $4::date
+		ORDER BY local_date`, userID, metric, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []HealthPoint{}
+	for rows.Next() {
+		var p HealthPoint
+		if err := rows.Scan(&p.Date, &p.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../theme/accent.dart';
 import '../theme/tokens.dart';
+import '../theme/typography.dart';
+import 'app_card.dart';
 
 /// A muted label shown above an input.
 class FieldLabel extends StatelessWidget {
@@ -13,14 +15,11 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      text,
-      style: const TextStyle(color: kFgMuted, fontWeight: FontWeight.w600, fontSize: 12),
-    ),
+    child: Text(text, style: AppText.caption),
   );
 }
 
-/// The app's standard dark text field.
+/// The app's standard text field: sunken fill, 2px border, radius 12.
 class AppTextField extends StatelessWidget {
   const AppTextField({
     super.key,
@@ -35,6 +34,8 @@ class AppTextField extends StatelessWidget {
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
     this.semanticLabel,
+    this.onSubmitted,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
@@ -53,6 +54,8 @@ class AppTextField extends StatelessWidget {
 
   /// Names the field for screen readers when a separate label widget sits above it.
   final String? semanticLabel;
+  final ValueChanged<String>? onSubmitted;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -64,23 +67,26 @@ class AppTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       textCapitalization: textCapitalization,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      autofocus: autofocus,
       minLines: obscure ? 1 : minLines,
       maxLines: obscure ? 1 : maxLines,
-      style: const TextStyle(color: kFgPrimary, fontSize: 15),
+      style: AppText.body,
       cursorColor: context.accent,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: kFgMuted),
+        hintStyle: AppText.body.copyWith(color: kInkMuted),
         filled: true,
-        fillColor: kBgSurface,
+        fillColor: kSurface,
+        hoverColor: Colors.transparent,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: hasError ? kDanger : kBorder),
+          borderRadius: BorderRadius.circular(kRadiusField),
+          borderSide: BorderSide(color: hasError ? kDanger : kBorder, width: kBorderWidth),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: hasError ? kDanger : context.accent),
+          borderRadius: BorderRadius.circular(kRadiusField),
+          borderSide: BorderSide(color: hasError ? kDanger : context.accent, width: kBorderWidth),
         ),
       ),
     );
@@ -99,12 +105,12 @@ class AppTextField extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline, size: 14, color: kDanger),
+              const Icon(Icons.error_outline_rounded, size: 16, color: kDanger),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   errorText!,
-                  style: const TextStyle(color: kDanger, fontSize: 12, height: 1.3),
+                  style: AppText.caption.copyWith(color: kDangerText, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -115,7 +121,7 @@ class AppTextField extends StatelessWidget {
   }
 }
 
-/// The app's full-width primary (filled, accent) button with a busy state.
+/// The full-width filled button older screens use; new screens use [ChunkyButton].
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -138,19 +144,20 @@ class PrimaryButton extends StatelessWidget {
         onPressed: enabled ? onTap : null,
         style: FilledButton.styleFrom(
           backgroundColor: context.accent,
-          disabledBackgroundColor: kBgSurfaceHover,
+          disabledBackgroundColor: kSunken,
           foregroundColor: context.onAccent,
-          disabledForegroundColor: kFgMuted,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledForegroundColor: kInkMuted,
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusButton)),
+          textStyle: AppText.button,
         ),
         child: busy
             ? SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: context.onAccent),
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: context.onAccent),
               )
-            : Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            : Text(label),
       ),
     );
   }
@@ -171,16 +178,16 @@ class PillBadge extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(color: accent.light, borderRadius: BorderRadius.circular(9999)),
+        decoration: BoxDecoration(color: accent.tint, borderRadius: BorderRadius.circular(9999)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: accent.base),
+            Icon(icon, size: 12, color: accent.lip),
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(
-                color: accent.base,
+              style: AppText.caption.copyWith(
+                color: accent.lip,
                 fontWeight: FontWeight.w800,
                 fontSize: 11,
                 letterSpacing: 0.6,
@@ -193,7 +200,7 @@ class PillBadge extends StatelessWidget {
   }
 }
 
-/// The hairline card every screen is built from: surface fill, 1px border, radius 14.
+/// Older screens' name for [AppCard], with their tighter default padding.
 class OnyxCard extends StatelessWidget {
   const OnyxCard({
     super.key,
@@ -207,23 +214,7 @@ class OnyxCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) {
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
-      side: const BorderSide(color: kBorder),
-    );
-    return Material(
-      color: kBgSurface,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: onTap == null
-          ? Padding(padding: padding, child: child)
-          : InkWell(
-              onTap: onTap,
-              child: Padding(padding: padding, child: child),
-            ),
-    );
-  }
+  Widget build(BuildContext context) => AppCard(onTap: onTap, padding: padding, child: child);
 }
 
 /// A small section heading above a card.
@@ -237,10 +228,9 @@ class SectionLabel extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(2, 20, 2, 8),
     child: Text(
       text.toUpperCase(),
-      style: const TextStyle(
-        color: kFgMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
+      style: AppText.caption.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.8,
       ),
     ),
@@ -271,7 +261,7 @@ class ProgressBar extends StatelessWidget {
           builder: (context, v, _) => LinearProgressIndicator(
             value: v,
             minHeight: height,
-            backgroundColor: kBorder,
+            backgroundColor: kSunken,
             color: color ?? context.accent,
           ),
         ),

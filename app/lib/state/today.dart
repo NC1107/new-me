@@ -36,6 +36,7 @@ class TodayNotifier extends CachedNotifier<Today> {
   Future<void> applyRescored(
     HealthDailyResult result, {
     Map<String, num> burnedByDate = const {},
+    Map<String, Map<String, double>> metricsByDate = const {},
   }) async {
     final today = state.value?.data;
     if (today == null) return;
@@ -47,7 +48,10 @@ class TodayNotifier extends CachedNotifier<Today> {
           day: rescored.score,
           quests: rescored.quests,
           food: burned == null ? null : today.food.withBurned(burned),
-          health: HealthStatus(stepsEverSynced: true, syncedAt: ref.read(clockProvider)().toUtc()),
+          health: today.health.synced(
+            ref.read(clockProvider)().toUtc(),
+            metrics: metricsByDate[rescored.date] ?? const {},
+          ),
         ),
       );
       _reloadStreakIfDayFlipped(today, rescored.score);

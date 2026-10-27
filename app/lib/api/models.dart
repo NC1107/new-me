@@ -540,19 +540,67 @@ class Food {
   };
 }
 
-class HealthStatus {
-  const HealthStatus({required this.stepsEverSynced, this.syncedAt});
+/// The newest reading of a slow-moving metric on or before the day shown.
+class HealthLatest {
+  const HealthLatest({required this.value, required this.date});
 
+  factory HealthLatest.fromJson(Json j) =>
+      HealthLatest(value: _num(j['value']), date: _str(j['date']));
+
+  final num value;
+  final String date;
+
+  Json toJson() => {'value': value, 'date': date};
+}
+
+Map<String, T> _keyed<T>(Object? v, T Function(Object? value) parse) {
+  if (v is! Map) return const {};
+  return {for (final e in v.entries) e.key as String: parse(e.value)};
+}
+
+class HealthStatus {
+  const HealthStatus({
+    required this.stepsEverSynced,
+    this.syncedAt,
+    this.metrics = const {},
+    this.latest = const {},
+  });
+
+  /// `metrics` and `latest` are absent from servers older than v2.
   factory HealthStatus.fromJson(Json j) => HealthStatus(
     stepsEverSynced: j['stepsEverSynced'] as bool? ?? false,
     syncedAt: _time(j['syncedAt']),
+    metrics: _keyed(j['metrics'], (v) => _num(v)),
+    latest: {
+      for (final e in _keyed<Object?>(j['latest'], (v) => v).entries)
+        if (e.value is Map) e.key: HealthLatest.fromJson((e.value as Map).cast<String, dynamic>()),
+    },
   );
 
   /// False until a steps row has ever arrived.
   final bool stepsEverSynced;
   final DateTime? syncedAt;
 
-  Json toJson() => {'stepsEverSynced': stepsEverSynced, 'syncedAt': _timeJson(syncedAt)};
+  /// The day's value for each metric that has data.
+  final Map<String, num> metrics;
+
+  /// Weight, body fat, lean mass and VO2 max: the newest value on or before the day.
+  final Map<String, HealthLatest> latest;
+
+  /// After a push: [metrics] overwrite the day's values and the newest weight-like readings follow.
+  HealthStatus synced(DateTime at, {Map<String, num> metrics = const {}}) => HealthStatus(
+    stepsEverSynced: true,
+    syncedAt: at,
+    metrics: {...this.metrics, ...metrics},
+    latest: latest,
+  );
+
+  Json toJson() => {
+    'stepsEverSynced': stepsEverSynced,
+    'syncedAt': _timeJson(syncedAt),
+    if (metrics.isNotEmpty) 'metrics': metrics,
+    if (latest.isNotEmpty) 'latest': {for (final e in latest.entries) e.key: e.value.toJson()},
+  };
 }
 
 class Today {
@@ -655,6 +703,26 @@ class BoardDay {
   Json toJson() => {'points': points, 'percent': percent, 'counted': counted};
 }
 
+class BoardHighlights {
+  const BoardHighlights({this.steps, this.exerciseMinutes, this.sleepMinutes});
+
+  factory BoardHighlights.fromJson(Json j) => BoardHighlights(
+    steps: j['steps'] as num?,
+    exerciseMinutes: j['exercise_minutes'] as num?,
+    sleepMinutes: j['sleep_minutes'] as num?,
+  );
+
+  final num? steps;
+  final num? exerciseMinutes;
+  final num? sleepMinutes;
+
+  Json toJson() => {
+    'steps': ?steps,
+    'exercise_minutes': ?exerciseMinutes,
+    'sleep_minutes': ?sleepMinutes,
+  };
+}
+
 class BoardUser {
   const BoardUser({
     required this.id,
@@ -666,6 +734,7 @@ class BoardUser {
     required this.streak,
     required this.last7,
     this.syncedAt,
+    this.highlights = const BoardHighlights(),
   });
 
   factory BoardUser.fromJson(Json j) => BoardUser(
@@ -678,6 +747,9 @@ class BoardUser {
     streak: _int((j['streak'] as Json)['current']),
     last7: _list(j['last7'], DayMark.fromJson),
     syncedAt: _time(j['syncedAt']),
+    highlights: j['highlights'] is Map
+        ? BoardHighlights.fromJson((j['highlights'] as Map).cast<String, dynamic>())
+        : const BoardHighlights(),
   );
 
   final int id;
@@ -696,6 +768,9 @@ class BoardUser {
   final List<DayMark> last7;
   final DateTime? syncedAt;
 
+  /// Today's health numbers worth showing next to a member; empty before v2 servers.
+  final BoardHighlights highlights;
+
   Json toJson() => {
     'id': id,
     'name': name,
@@ -706,6 +781,7 @@ class BoardUser {
     'streak': {'current': streak},
     'last7': [for (final d in last7) d.toJson()],
     'syncedAt': _timeJson(syncedAt),
+    if (highlights.toJson().isNotEmpty) 'highlights': highlights.toJson(),
   };
 }
 
@@ -1021,7 +1097,7 @@ class HealthItem {
 
   final String date;
 
-  /// `steps` or `active_energy`.
+  /// One of the metric keys in `HealthMetric`.
   final String metric;
   final double value;
   final String source;
@@ -1047,5 +1123,33 @@ class HealthDailyResult {
 
   Json toJson() => {
     'days': [for (final d in days) d.toJson()],
+  };
+}
+
+class HealthTrendPoint {
+  const HealthTrendPoint({required this.date, required this.value});
+
+  factory HealthTrendPoint.fromJson(Json j) =>
+      HealthTrendPoint(date: _str(j['date']), value: _num(j['value']));
+
+  final String date;
+  final num value;
+
+  Json toJson() => {'date': date, 'value': value};
+}
+
+/// GET /health/trends: one metric's daily values, oldest first.
+class HealthTrend {
+  const HealthTrend({required this.metric, required this.points});
+
+  factory HealthTrend.fromJson(Json j) =>
+      HealthTrend(metric: _str(j['metric']), points: _list(j['points'], HealthTrendPoint.fromJson));
+
+  final String metric;
+  final List<HealthTrendPoint> points;
+
+  Json toJson() => {
+    'metric': metric,
+    'points': [for (final p in points) p.toJson()],
   };
 }

@@ -91,7 +91,7 @@ void main() {
     final app = _app(tester, adapter);
     await app.pump(const MeScreen());
 
-    await app.tap(find.text('Amber'));
+    await app.tap(find.text('Honey'));
     await app.tap(find.widgetWithText(FilledButton, 'Save').first);
 
     expect(app.body('PATCH /api/me'), {'color': 'amber'});
@@ -107,7 +107,7 @@ void main() {
     final app = _app(tester, adapter);
     await app.pump(const MeScreen());
 
-    expect(find.byIcon(Icons.block), findsOneWidget);
+    expect(find.byIcon(Icons.block_rounded), findsOneWidget);
     await app.tap(find.text('Sky'));
     expect(
       tester.widgetList<FilledButton>(find.widgetWithText(FilledButton, 'Save')).first.onPressed,
@@ -247,7 +247,7 @@ void main() {
     await app.pump(const MeScreen());
     final loads = adapter.to('GET /api/me').length;
 
-    await app.tap(find.text('Amber'));
+    await app.tap(find.text('Honey'));
     await app.tap(find.widgetWithText(FilledButton, 'Save').first);
 
     expect(adapter.to('PATCH /api/me'), hasLength(1));
@@ -261,7 +261,7 @@ void main() {
 
     await app.enter(fieldWith('2200'), '2400');
     await app.enter(fieldWith('30'), '45');
-    await app.tap(find.text('Amber'));
+    await app.tap(find.text('Honey'));
     await app.tap(find.widgetWithText(FilledButton, 'Save').first);
 
     expect(fieldWith('2400'), findsOneWidget);

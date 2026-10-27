@@ -26,8 +26,13 @@ func TestGetMe(t *testing.T) {
 	if !got.isNull("backdateUntil") {
 		t.Fatal("at noon the backdate window is closed")
 	}
-	if got.length("questTemplates") != 6 || got.str("questTemplates.0.key") != "steps" ||
-		got.flag("questTemplates.5.enabled") || got.str("questTemplates.5.key") != "yoga" {
+	if got.length("questTemplates") != 8 || got.str("questTemplates.0.key") != "steps" ||
+		got.flag("questTemplates.5.enabled") || got.str("questTemplates.5.key") != "yoga" ||
+		got.str("questTemplates.6.key") != "exercise" || got.flag("questTemplates.6.enabled") ||
+		got.num("questTemplates.6.target") != 30 || got.num("questTemplates.6.points") != 100 ||
+		got.str("questTemplates.6.title") != "Exercise" || got.str("questTemplates.6.unit") != "min" ||
+		got.str("questTemplates.7.key") != "sleep" || got.num("questTemplates.7.target") != 420 ||
+		got.num("questTemplates.7.points") != 50 || got.str("questTemplates.7.title") != "Sleep" {
 		t.Fatalf("templates = %s", got.Body)
 	}
 	if got.num("questTemplates.2.targetAlt") != 15 || got.str("questTemplates.2.unitAlt") != "pages" {
@@ -114,7 +119,9 @@ func TestPatchMeRejectsBadValues(t *testing.T) {
 func TestTemplateEditsApplyFromTomorrow(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	// Today's snapshot may not exist yet when the edit arrives; the edit must not leak into it.
+	// The join day follows edits, so test on the day after. Its snapshot may not exist yet when
+	// the edit arrives; the edit must not leak into it.
+	h.clock.Set(ny(2026, time.November, 3, 9, 0))
 	got := h.patch("/api/me", nick.Token, obj{
 		"questTemplates": []obj{
 			{"key": "pushups", "target": 10},
@@ -138,7 +145,7 @@ func TestTemplateEditsApplyFromTomorrow(t *testing.T) {
 		t.Fatalf("today's snapshot picked up the edit: %s", today.Body)
 	}
 
-	h.clock.Set(ny(2026, time.November, 3, 9, 0))
+	h.clock.Set(ny(2026, time.November, 4, 9, 0))
 	tomorrow := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	byKey = questsByKey(tomorrow)
 	if byKey["pushups"].target != 10 || byKey["protein"].target != 140 || byKey["yoga"].target != 15 ||

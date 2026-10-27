@@ -13,6 +13,7 @@ import 'features/shell/update_required_screen.dart';
 import 'state/session.dart';
 import 'state/update_gate.dart';
 import 'theme/accent.dart';
+import 'theme/tokens.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -47,21 +48,35 @@ class NewMeApp extends ConsumerWidget {
     });
     final session = state.session;
     final updateRequired = ref.watch(updateGateProvider);
-    final finishingOnboarding = ref.watch(
-      onboardingProvider.select((s) => s.step == OnboardingStep.health),
+    final onboarding = ref.watch(
+      onboardingProvider.select((s) => (loaded: s.loaded, pending: s.pending)),
     );
 
     final Widget home = updateRequired
         ? const UpdateRequiredScreen()
-        : !state.restored
+        : !state.restored || !onboarding.loaded
         ? const Scaffold(body: SizedBox.shrink())
-        : (session != null && !finishingOnboarding ? const HomeShell() : const OnboardingScreen());
+        : (session != null && !onboarding.pending ? const HomeShell() : const OnboardingScreen());
 
     return MaterialApp(
       title: 'New Me',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       theme: themeFor(accentById(session?.color)),
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+        child: ColoredBox(
+          color: kCanvas,
+          // Only the web test build is ever wider than a phone.
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+              child: child,
+            ),
+          ),
+        ),
+      ),
       home: home,
     );
   }

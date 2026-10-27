@@ -128,6 +128,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/logs/{id}", s.handleDeleteLog)
 		r.Get("/api/meals/recent", s.handleRecentMeals)
 		r.With(limit(s.limits.healthPut, byDevice)).Put("/api/health/daily", s.handlePutHealthDaily)
+		r.Get("/api/health/trends", s.handleHealthTrends)
 
 		r.Group(func(r chi.Router) {
 			r.Use(requireAdmin)

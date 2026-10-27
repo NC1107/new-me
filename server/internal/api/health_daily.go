@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"slices"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -16,16 +17,34 @@ import (
 
 const (
 	maxHealthItems = 50
+	maxTrendDays   = 365
 	maxSourceLen   = 32
 	// clockSkew is how far ahead of the server a device clock may run before its reading is
 	// refused. A far-future measuredAt would win every later conflict and freeze the day.
 	clockSkew = 5 * time.Minute
 )
 
+type healthBounds struct{ min, max float64 }
+
 // healthLimits bound a daily reading per metric, matching the table check.
-var healthLimits = map[string]float64{
-	db.MetricSteps:        200000,
-	db.MetricActiveEnergy: 20000,
+var healthLimits = map[string]healthBounds{
+	db.MetricSteps:        {0, 200000},
+	db.MetricActiveEnergy: {0, 20000},
+	"basal_energy":        {0, 20000},
+	db.MetricExercise:     {0, 1440},
+	"distance_m":          {0, 200000},
+	"flights":             {0, 1000},
+	"workouts":            {0, 50},
+	"workout_minutes":     {0, 1440},
+	db.MetricSleep:        {0, 1440},
+	"mindful_minutes":     {0, 1440},
+	"water_ml":            {0, 20000},
+	"resting_hr":          {20, 250},
+	"hrv_ms":              {0, 500},
+	"vo2max":              {0, 100},
+	"weight_kg":           {20, 400},
+	"body_fat_pct":        {1, 80},
+	"lean_mass_kg":        {10, 300},
 }
 
 type healthItem struct {
@@ -49,12 +68,12 @@ func (s *Server) checkHealthItem(c caller, item healthItem, now time.Time) (scor
 	if err != nil {
 		return reject(codeInvalidRequest, "date must be YYYY-MM-DD")
 	}
-	maxValue, ok := healthLimits[item.Metric]
+	bounds, ok := healthLimits[item.Metric]
 	if !ok {
-		return reject(codeInvalidRequest, "metric must be steps or active_energy")
+		return reject(codeInvalidRequest, "metric is not a supported Health metric")
 	}
-	if math.IsNaN(item.Value) || item.Value < 0 || item.Value > maxValue {
-		return reject(codeInvalidRequest, fmt.Sprintf("%s must be between 0 and %g", item.Metric, maxValue))
+	if math.IsNaN(item.Value) || item.Value < bounds.min || item.Value > bounds.max {
+		return reject(codeInvalidRequest, fmt.Sprintf("%s must be between %g and %g", item.Metric, bounds.min, bounds.max))
 	}
 	if n := utf8.RuneCountInString(item.Source); n < 1 || n > maxSourceLen || hasControlChars(item.Source) {
 		return reject(codeInvalidRequest, "source must be 1 to 32 characters")
@@ -143,4 +162,36 @@ func batchError(problems []itemError) *httpError {
 		code, msg = codeDateClosed, errDateClosed.msg
 	}
 	return &httpError{status: http.StatusUnprocessableEntity, code: code, msg: msg, items: problems}
+}
+
+// handleHealthTrends returns one metric's daily values for the caller over the last N local
+// days ending today. Days without a reading are left out.
+func (s *Server) handleHealthTrends(w http.ResponseWriter, r *http.Request) {
+	metric := r.URL.Query().Get("metric")
+	if _, ok := healthLimits[metric]; !ok {
+		fail(w, r, invalid("metric is not a supported Health metric"))
+		return
+	}
+	days, err := strconv.Atoi(r.URL.Query().Get("days"))
+	if err != nil || days < 1 || days > maxTrendDays {
+		fail(w, r, invalid("days must be between 1 and 365"))
+		return
+	}
+	c := callerFrom(r)
+	today := score.LocalToday(s.now(), c.loc)
+	points, err := db.HealthSeries(r.Context(), s.db.Pool, c.user.ID, metric, today.AddDays(-(days - 1)), today)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	out := make([]trendPointJSON, len(points))
+	for i, p := range points {
+		out[i] = trendPointJSON{Date: p.Date, Value: p.Value}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"metric": metric, "points": out})
+}
+
+type trendPointJSON struct {
+	Date  score.Date `json:"date"`
+	Value float64    `json:"value"`
 }

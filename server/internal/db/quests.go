@@ -14,6 +14,8 @@ const (
 	QuestMealsLogged = "meals_logged"
 	QuestProtein     = "protein"
 	QuestYoga        = "yoga"
+	QuestExercise    = "exercise"
+	QuestSleep       = "sleep"
 
 	ActivityPushups        = "pushups"
 	ActivityReadingMinutes = "reading_minutes"
@@ -22,6 +24,8 @@ const (
 
 	MetricSteps        = "steps"
 	MetricActiveEnergy = "active_energy"
+	MetricExercise     = "exercise_minutes"
+	MetricSleep        = "sleep_minutes"
 )
 
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
@@ -55,7 +59,7 @@ func intPtr(n int) *int { return &n }
 
 func strPtr(s string) *string { return &s }
 
-// DefaultTemplates are the quests every new user starts with. Yoga ships disabled.
+// DefaultTemplates are the quests every new user starts with. Yoga, exercise and sleep ship disabled.
 func DefaultTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{Key: QuestSteps, Target: 8000, Unit: "steps", Points: 100, Enabled: true, Position: 0},
@@ -65,6 +69,8 @@ func DefaultTemplates() []QuestTemplate {
 		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Points: 50, Enabled: true, Position: 3},
 		{Key: QuestProtein, Target: DefaultProteinTarget, Unit: "g", Points: 50, Enabled: true, Position: 4},
 		{Key: QuestYoga, Target: 20, Unit: "minutes", Points: 50, Enabled: false, Position: 5},
+		{Key: QuestExercise, Target: 30, Unit: "min", Points: 100, Enabled: false, Position: 6},
+		{Key: QuestSleep, Target: 420, Unit: "min", Points: 50, Enabled: false, Position: 7},
 	}
 }
 
@@ -130,6 +136,17 @@ func EnsureSnapshot(ctx context.Context, q Querier, userID int64, date score.Dat
 		  AND NOT EXISTS (SELECT 1 FROM day_quests d WHERE d.user_id = $1 AND d.local_date = $2::date)
 		  AND NOT EXISTS (SELECT 1 FROM day_scores s WHERE s.user_id = $1 AND s.local_date = $2::date)
 		ON CONFLICT (user_id, local_date, key) DO NOTHING`, userID, date)
+	return err
+}
+
+// ResetDaySnapshot drops the date's frozen quests and stored score so the next scoring
+// snapshots the templates afresh. The caller holds the day lock and rescores in the same
+// transaction; logs and Health readings are keyed by date and are untouched.
+func ResetDaySnapshot(ctx context.Context, q Querier, userID int64, date score.Date) error {
+	if _, err := q.Exec(ctx, `DELETE FROM day_quests WHERE user_id = $1 AND local_date = $2::date`, userID, date); err != nil {
+		return err
+	}
+	_, err := q.Exec(ctx, `DELETE FROM day_scores WHERE user_id = $1 AND local_date = $2::date`, userID, date)
 	return err
 }
 

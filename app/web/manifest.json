@@ -1,11 +1,11 @@
 {
-    "name": "newme",
-    "short_name": "newme",
+    "name": "New Me",
+    "short_name": "New Me",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FBF8F3",
+    "theme_color": "#FBF8F3",
+    "description": "A daily game for two. Small habits, big year.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

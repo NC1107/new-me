@@ -29,7 +29,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>New Me reads your steps and active energy to score your day.</string>
+	<string>New Me reads your activity, workouts, sleep, heart, and body measurements from Health to score your day and chart your progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>New Me never writes to Health.</string>
 	<key>UIApplicationSceneManifest</key>
@@ -60,7 +60,7 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleLightContent</string>
+	<string>UIStatusBarStyleDarkContent</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -14,13 +14,20 @@ import (
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
-// QuestResults measures each snapshotted quest against the day's inputs. Steps stay out of the
-// day until the first Health reading has arrived, so a user who has not connected Health is
-// not scored against a number they cannot produce.
+// healthMetric maps each Health-fed quest to the metric that feeds it.
+var healthMetric = map[string]string{
+	db.QuestSteps:    db.MetricSteps,
+	db.QuestExercise: db.MetricExercise,
+	db.QuestSleep:    db.MetricSleep,
+}
+
+// QuestResults measures each snapshotted quest against the day's inputs. A Health-fed quest
+// stays out of the day until its metric has been synced once, so a user who has not shared it
+// is not scored against a number they cannot produce.
 func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 	results := make([]score.QuestResult, 0, len(quests))
 	for _, q := range quests {
-		if q.Key == db.QuestSteps && !in.StepsConnected {
+		if metric, fed := healthMetric[q.Key]; fed && !in.Connected(metric) {
 			continue
 		}
 		actual, target := progress(q, in)
@@ -32,8 +39,8 @@ func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 // progress returns the quest's actual and target in one shared unit.
 func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	switch q.Key {
-	case db.QuestSteps:
-		return wholeUnits(in.Steps), q.Target
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
+		return wholeUnits(in.Metric(healthMetric[q.Key])), q.Target
 	case db.QuestPushups:
 		return in.Pushups, q.Target
 	case db.QuestReading:
@@ -62,8 +69,8 @@ func tenthsOfGrams(g float64) int { return int(math.Round(g * 10)) }
 // pages separately. It is what the Today screen shows beside the target.
 func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	switch q.Key {
-	case db.QuestSteps:
-		return wholeUnits(in.Steps), nil
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
+		return wholeUnits(in.Metric(healthMetric[q.Key])), nil
 	case db.QuestPushups:
 		return in.Pushups, nil
 	case db.QuestReading:

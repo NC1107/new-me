@@ -83,7 +83,7 @@ Season and scoring model
 |---|---|---|
 | steps | HealthKit, `health_daily` metric `steps` | `floor(value)` |
 | pushups | manual log, sets of reps | sum of `quantity` of `pushups` logs |
-| reading | manual log, minutes or pages | minutes `m` and pages `g`, summed separately |
+| reading | manual log, minutes or pages, plus Audiobookshelf listening | minutes `m` (manual minutes plus that day's `listening_daily` minutes) and pages `g`, summed separately |
 | meals_logged | derived from meal logs | count of meals with `kcal > 0` |
 | protein | derived from meal logs | sum of `protein_g` in tenths of a gram |
 | yoga | manual log, minutes | sum of `quantity` of `yoga` logs |
@@ -260,6 +260,7 @@ server/
 | `NEWME_TRUSTED_PROXY_HOPS` | `1` | proxies in front of the server |
 | `NEWME_MAX_USERS` | `2` | live user cap |
 | `NEWME_MIN_CLIENT_VERSION` | `0.0.0` | lowest accepted app version |
+| `NEWME_ABS_URL` | empty | Audiobookshelf base URL; empty turns listening sync off |
 | `NEWME_DEV_CORS` | `false` | local web review only, never set in production |
 
 There is no bootstrap code and no season-start variable; the Season 0 start is the migration date.
@@ -321,6 +322,9 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 | 413 | `payload_too_large` | body over 1 MB |
 | 422 | `date_closed` | date outside the day window |
 | 422 | `invalid_timezone`, `invalid_request` | validation, with per-item errors where relevant |
+| 422 | `abs_login_failed` | Audiobookshelf rejected the username or password |
+| 404 | `abs_disabled` | `NEWME_ABS_URL` is not set |
+| 502 | `abs_unavailable` | Audiobookshelf could not be reached while linking |
 | 426 | `update_required` | client older than `minClientVersion`, which the body repeats |
 | 429 | `rate_limited` | limiter, with `Retry-After` |
 | 500 | `internal` | anything unexpected |
@@ -360,7 +364,18 @@ GET    /me
   200 {user: {id, name, color, timezone, isAdmin},
        targets: {kcal, protein, carbs, fat},          integers or null
        questTemplates: [{key, title, enabled, target, unit, targetAlt, unitAlt, points, position}],
-       localToday, backdateUntil, serverNow}
+       localToday, backdateUntil, serverNow,
+       audiobookshelf: {linked, username, syncedAt, lastError} | null}
+                                                         null when NEWME_ABS_URL is unset; linked false with null fields until the person links
+                                                         lastError is "auth_failed" (sign in again), "unreachable" or null
+
+PUT    /me/audiobookshelf
+  req {username, password}                               the password is used once to sign in to Audiobookshelf and never stored
+  200 {linked: true, username, syncedAt, lastError}      links, then syncs once before answering, so syncedAt is normally set; linking again replaces the account
+  404 abs_disabled, 422 abs_login_failed, 502 abs_unavailable, 429 after 5 attempts a minute per device
+
+DELETE /me/audiobookshelf
+  204 deletes the stored tokens and the listening minutes of still-open days, then rescores them; idempotent
 
 PATCH  /me
   req any of {name, color, timezone,
@@ -379,7 +394,9 @@ GET    /today?date=YYYY-MM-DD
               targets: {kcal, protein, carbs, fat}},
        health: {stepsEverSynced, syncedAt,
                 metrics: {<metric key>: number},         the day's readings, only keys that have one
-                latest: {<key>: {value, date}}}}         weight_kg, body_fat_pct, lean_mass_kg, vo2max: newest on or before the day, omitted when none
+                latest: {<key>: {value, date}}},
+       listening: {minutes}}                             Audiobookshelf minutes already counted in the reading quest, 0 when none
+                                                         latest: weight_kg, body_fat_pct, lean_mass_kg, vo2max: newest on or before the day, omitted when none
   date defaults to localToday and must fall between the join date and today
   backdateUntil is the instant yesterday closes while it is open, otherwise null
   burned is the day's active energy; reads rescore, so they are never stale
@@ -606,6 +623,27 @@ CREATE TABLE day_scores (
     PRIMARY KEY (user_id, local_date)
 );
 CREATE INDEX day_scores_recent ON day_scores (user_id, local_date DESC);
+
+-- migration 0005
+CREATE TABLE audiobookshelf_accounts (
+    user_id           BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    abs_user_id       TEXT NOT NULL,
+    username          TEXT NOT NULL,
+    access_token      TEXT NOT NULL,
+    refresh_token     TEXT NOT NULL,         -- rotated by Audiobookshelf on every refresh
+    access_expires_at TIMESTAMPTZ NOT NULL,
+    linked_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    synced_at         TIMESTAMPTZ,
+    last_error        TEXT CHECK (last_error IN ('auth_failed', 'unreachable'))
+);
+
+CREATE TABLE listening_daily (
+    user_id    BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    local_date DATE NOT NULL,
+    minutes    INTEGER NOT NULL CHECK (minutes BETWEEN 0 AND 1440),
+    synced_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, local_date)
+);
 ```
 
 Notes:
@@ -622,6 +660,14 @@ For each live user, in the user's timezone, it finds every `local_date` from `fi
 For each such date, in one transaction with the advisory lock, it runs `ensureSnapshot`, `scoreDay`, and upserts the row with `finalized_at = now()`.
 Catch-up after restarts and deploys is therefore automatic, and no day is skipped.
 It also applies pending timezone switches that have come due.
+
+When `NEWME_ABS_URL` is set, a second loop under the same guards polls every 15 minutes (and on boot) for each linked account.
+It refreshes the Audiobookshelf session when the access token is within 2 minutes of expiring, or once when Audiobookshelf answers 401, and stores the rotated refresh token before using the new access token.
+It reads `GET /api/me/listening-stats`, and for the person's still-open local dates (today, and yesterday until its 10:00 grace ends, never before the join date) stores `floor(seconds / 60)` capped at 1440 in `listening_daily`.
+Only a changed value writes and rescores the day, in one transaction under the day lock; finalized days are never touched.
+A rejected sign-in records `last_error = auth_failed` and keeps the link, a network or server failure records `unreachable`, and the next good poll clears it.
+Linking runs one poll straight away.
+Audiobookshelf dates its days in its own server time zone, which is assumed to be the people's zone.
 
 ### Deployment (compose)
 
@@ -818,14 +864,20 @@ Sync controller (single flight):
 Permission is requested only from a user tap (the Connect Health card or the onboarding step), and then `healthPrompted` is persisted.
 iOS does not report read denial, so the no-data hint above is the denial path.
 
-Swift background shim, shipped in M3 with the first TestFlight build and before the first real join:
+Native background delivery (`BackgroundHealth` in `app/ios/Runner/AppDelegate.swift`, method channel `newme/background`):
 
-- `AppDelegate` registers `HKObserverQuery` for step count and active energy and calls `enableBackgroundDelivery(for:frequency: .hourly)` at launch.
-- On wake it runs an `HKStatisticsQuery` (cumulative sum, which deduplicates sources, excluding samples with `HKMetadataKeyWasUserEntered` true) from local midnight to now for each type.
-- It reads the session blob from the Keychain (same service and key as `flutter_secure_storage`, which is why accessibility is `first_unlock_this_device`) and sends `PUT /api/health/daily` with `X-App-Key` (stored in the blob's sibling Keychain item written at login), `Authorization`, `X-Client-Version`, `source: healthkit`, `measuredAt: now`.
-- It wraps the work in a background task and always calls the observer's completion handler.
-- The commit that adds the shim also adds the `com.apple.developer.healthkit.background-delivery` entitlement and the `UIBackgroundModes` entry its wake path needs, and verifies the provisioning profile carries them.
-- The server needs no change: the API and schema already accept the shim's writes.
+- Flutter calls `configure({baseUrl, token, appKey, clientVersion})` whenever a session exists or its token changes, `clear()` on sign-out, and `enable()` after Health access was asked for (also at start when Health was already prompted).
+  `BackgroundHealthBridge` in `app/lib/health/` wraps the channel and is a no-op on web or when the plugin is missing.
+- Swift keeps the config in its own Keychain item (generic password, service `top.npcserver.newme.background-health`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), so a wake while the phone is locked can still read it.
+- `application(_:didFinishLaunchingWithOptions:)` registers an `HKObserverQuery` and `enableBackgroundDelivery(for:frequency: .hourly)` for steps, active energy, basal energy, exercise time, walking and running distance and flights climbed, every launch, when configured and enabled.
+- On wake it runs an `HKStatisticsQuery` (cumulative sum, which deduplicates sources, excluding samples with `HKMetadataKeyWasUserEntered` true) per type from local midnight to now, plus yesterday while the local hour is before 10.
+- Values are rounded to whole numbers and sent as one `PUT /api/health/daily` with `X-App-Key`, `Authorization`, `X-Client-Version`, `source: healthkit` and `measuredAt: now`.
+  A 422 with code `date_closed` retries with today's items only.
+- It runs inside `beginBackgroundTask`, allows one push at a time (a wake during a push triggers one more pass), skips values equal to the last pushed ones (kept in `UserDefaults`), and always calls the observer's completion handler.
+- Sleep, heart and body metrics stay foreground-only.
+- `Runner.entitlements` carries `com.apple.developer.healthkit.background-delivery`.
+  `Info.plist` has no `UIBackgroundModes` entry, because HealthKit launches the app for observer queries without one.
+- The server needs no change.
 
 ### Platform files
 
@@ -835,7 +887,7 @@ Swift background shim, shipped in M3 with the first TestFlight build and before 
 - `flutter config --no-enable-swift-package-manager` runs locally and in `ci.yml` and `release.yml`, because Swift Package Manager leaves a white launch screen.
 - `Runner.entitlements`, written fresh: `com.apple.developer.healthkit = true`, `com.apple.developer.healthkit.access = []`, `keychain-access-groups = [$(AppIdentifierPrefix)top.npcserver.newme]`.
   No `aps-environment`.
-- `Info.plist`: `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` ("New Me never writes to Health."), `ITSAppUsesNonExemptEncryption` false, portrait only, no `UIBackgroundModes` in the first build, no URL scheme, no Firebase keys. `CFBundleDisplayName` is "New Me".
+- `Info.plist`: `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` ("New Me never writes to Health."), `ITSAppUsesNonExemptEncryption` false, portrait only, no `UIBackgroundModes`, no URL scheme, no Firebase keys. `CFBundleDisplayName` is "New Me".
 - Manual signing in Release with Apple Distribution for team 76S78SUWVM, profile "New Me App Store Distribution", `ExportOptions.plist` adapted from check-in with the new bundle id.
 - App icon: generated once from `assets/brand/icon.svg` with ImageMagick into `AppIcon.appiconset`.
   Dark canvas, accent glyph of two overlapping rounded rings forming a rising arc.
@@ -938,7 +990,7 @@ Milestones
 - **M2 app**: theme, onboarding, Today, Board, Log, Me, offline handling, HealthKit foreground sync, tests, visual review on web at phone width.
   The backup restore drill completes before M3.
 - **M3 release**: release workflow, Swift background-delivery shim, first TestFlight build on Nick's phone, Nick joins first, then Nadia is added as an internal tester.
-- **Later**: Audiobookshelf listening sync, workouts, meals from Mealie, notifications, bloodwork, screen time.
+- **Later**: workouts, meals from Mealie, notifications, bloodwork, screen time.
 
 ## 8.
 Open items

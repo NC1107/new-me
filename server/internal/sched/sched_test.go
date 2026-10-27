@@ -9,8 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/nc1107/new-me/server/internal/abs/abstest"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/dbtest"
+	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/sched"
 	"github.com/nc1107/new-me/server/internal/score"
 )
@@ -200,5 +202,55 @@ func TestFinalizeDuePutsAStagedZoneIntoForceForAnInactiveUser(t *testing.T) {
 	}
 	if got, _ := db.GetUser(ctx, database.Pool, nick.ID); got.Timezone != "Asia/Tokyo" || got.PendingTimezone != nil {
 		t.Fatalf("zone = %+v, want Tokyo in force", got)
+	}
+}
+
+func TestPollListeningReadsEveryLinkedAccount(t *testing.T) {
+	database := dbtest.Fresh(t)
+	now := time.Date(2026, 11, 2, 12, 0, 0, 0, newYork)
+	fake := abstest.New(t, func() time.Time { return now })
+	fake.AddUser("nick", "pw")
+	fake.AddUser("nadia", "pw2")
+	fake.SetListening("nick", "2026-11-02", 15*60)
+	fake.SetListening("nadia", "2026-11-02", 40*60)
+	nick := join(t, database, "Nick", "green", "America/New_York", true, "2026-11-02")
+	nadia := join(t, database, "Nadia", "violet", "America/New_York", false, "2026-11-02")
+	join(t, database, "Unlinked", "sky", "America/New_York", false, "2026-11-02")
+
+	syn := listening.New(database, fake.URL)
+	syn.Now = func() time.Time { return now }
+	for user, creds := range map[db.User][2]string{nick: {"nick", "pw"}, nadia: {"nadia", "pw2"}} {
+		sess, err := syn.ABS.Login(ctx, creds[0], creds[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Link would sync at once; store the account directly so the poll is what does the work.
+		if _, err := db.LinkABSAccount(ctx, database.Pool, db.ABSAccount{UserID: user.ID, ABSUserID: sess.UserID,
+			Username: sess.Username, AccessToken: sess.AccessToken, RefreshToken: sess.RefreshToken,
+			AccessExpiresAt: sess.AccessExpires}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := sched.New(database)
+	s.Now = func() time.Time { return now }
+	if err := s.PollListening(ctx); err != nil {
+		t.Fatalf("poll without a syncer must be a no-op: %v", err)
+	}
+	s.Listening = syn
+	if err := s.PollListening(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for user, want := range map[db.User]int{nick: 15, nadia: 40} {
+		got, err := db.ListeningMinutes(ctx, database.Pool, user.ID, "2026-11-02")
+		if err != nil || got != want {
+			t.Fatalf("%s listening = %d, %v, want %d", user.Name, got, err, want)
+		}
+		if row := rows(t, database, user)["2026-11-02"]; row.BasePoints == 0 {
+			t.Fatalf("%s's open day was not rescored: %+v", user.Name, row)
+		}
+	}
+	if _, _, stats := fake.Counts(); stats != 2 {
+		t.Fatalf("stats calls = %d, want one per linked account", stats)
 	}
 }

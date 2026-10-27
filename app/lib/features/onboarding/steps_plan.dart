@@ -65,7 +65,7 @@ class GoalStep extends ConsumerWidget {
       ],
       children: [
         const MascotLine(line: 'Change it any time.'),
-        StepTitle(spec.question),
+        StepTitle(spec.question, subtitle: spec.note),
         PresetList<int>(
           presets: [
             for (final o in spec.options)

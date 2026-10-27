@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../health/background_health_bridge.dart';
 import '../health/health_source.dart';
 import '../health/health_source_factory.dart';
 import 'clock.dart';
@@ -62,6 +63,10 @@ class HealthSyncController extends Notifier<HealthSyncState> {
   @override
   HealthSyncState build() {
     ref.watch(sessionProvider.select((s) => s.session?.userId));
+    // The native side reads this when HealthKit wakes the app, so it must track token changes.
+    ref.listen(sessionProvider.select((s) => (s.session?.baseUrl, s.session?.token)), (_, next) {
+      _syncBackgroundConfig(next.$1, next.$2);
+    }, fireImmediately: true);
     _disposed = false;
     ref.onDispose(() => _disposed = true);
     _pushed.clear();
@@ -74,11 +79,22 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     return const HealthSyncState();
   }
 
+  void _syncBackgroundConfig(String? baseUrl, String? token) {
+    final bridge = ref.read(backgroundHealthBridgeProvider);
+    if (baseUrl == null || token == null) {
+      unawaited(bridge.clear());
+    } else {
+      unawaited(bridge.configure(baseUrl: baseUrl, token: token));
+    }
+  }
+
   Future<void> _restore() async {
     final prompted = await LocalPrefs.healthPrompted();
     final lastSyncedAt = await LocalPrefs.lastSyncedAt();
     if (_disposed) return;
     state = HealthSyncState(prompted: prompted, lastSyncedAt: lastSyncedAt);
+    // Observers must be registered on every launch for HealthKit to keep delivering.
+    if (prompted) unawaited(ref.read(backgroundHealthBridgeProvider).enable());
     await sync(SyncTrigger.start);
   }
 
@@ -96,6 +112,7 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     await LocalPrefs.setHealthPrompted();
     if (_disposed) return granted;
     state = state.copyWith(prompted: true);
+    if (granted) unawaited(ref.read(backgroundHealthBridgeProvider).enable());
     await sync(SyncTrigger.connect);
     return granted;
   }

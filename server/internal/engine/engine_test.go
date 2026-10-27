@@ -50,6 +50,24 @@ func byKey(results []score.QuestResult, key string) (score.QuestResult, bool) {
 	return score.QuestResult{}, false
 }
 
+func TestQuestResultsCountListeningAsReadingMinutes(t *testing.T) {
+	in := db.DayInputs{ReadingMinutes: 5, ListeningMinutes: 15, ReadingPages: 3}
+	r, ok := byKey(engine.QuestResults(quests(), in), db.QuestReading)
+	if !ok || r.Actual != 20*15+3*20 || r.Target != 20*15 {
+		t.Fatalf("reading = %+v", r)
+	}
+	var q db.DayQuest
+	for _, c := range quests() {
+		if c.Key == db.QuestReading {
+			q = c
+		}
+	}
+	minutes, pages := engine.Actuals(q, in)
+	if minutes != 20 || pages == nil || *pages != 3 {
+		t.Fatalf("actuals = %d %v", minutes, pages)
+	}
+}
+
 func TestQuestResultsMapInputsToQuests(t *testing.T) {
 	in := db.DayInputs{Metrics: map[string]float64{db.MetricSteps: 4999.9},
 		Synced: map[string]bool{db.MetricSteps: true}, Pushups: 35, ReadingMinutes: 10, ReadingPages: 5,

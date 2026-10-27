@@ -15,6 +15,10 @@ func QuestPoints(points, actual, target int) int {
 // Bonus is the extra credit for completing a quest.
 func Bonus(points int) int { return points / 5 }
 
+// ReadingMinutes is the minutes the reading quest sees: minutes typed in plus audiobook
+// listening, which is time spent reading by ear. Pages are not touched.
+func ReadingMinutes(manual, listening int) int { return manual + max(listening, 0) }
+
 // ReadingProgressBasis expresses p = min(1, minutes/targetMinutes + pages/targetPages) as an
 // integer pair for QuestPoints: multiplying through by targetMinutes*targetPages makes the
 // sum of two fractions exact.

@@ -90,6 +90,7 @@ func newHarness(t *testing.T, opts ...func(*Server)) *harness {
 	srv.limits.join = bigLimiter()
 	srv.limits.device = bigLimiter()
 	srv.limits.healthPut = bigLimiter()
+	srv.limits.absLink = bigLimiter()
 	for _, opt := range opts {
 		opt(srv)
 	}

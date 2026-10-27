@@ -78,3 +78,22 @@ func TestLoadRequiresDatabaseAndKey(t *testing.T) {
 		t.Fatal("expected an error with nothing configured")
 	}
 }
+
+func TestLoadAudiobookshelfURL(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil || cfg.ABSURL != "" {
+		t.Fatalf("default = %q, %v; the feature must start off", cfg.ABSURL, err)
+	}
+	t.Setenv("NEWME_ABS_URL", " https://books.example.com/ ")
+	cfg, err = Load()
+	if err != nil || cfg.ABSURL != "https://books.example.com" {
+		t.Fatalf("got %q, %v", cfg.ABSURL, err)
+	}
+	for _, bad := range []string{"books.example.com", "ftp://books.example.com", "https://"} {
+		t.Setenv("NEWME_ABS_URL", bad)
+		if _, err := Load(); err == nil {
+			t.Fatalf("expected an error for NEWME_ABS_URL=%q", bad)
+		}
+	}
+}

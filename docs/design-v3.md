@@ -42,6 +42,34 @@ Both people use Audiobookshelf at `books.npc-server.top` (version 2.37.1).
 - App: Me gains an Audiobookshelf row and page (link with username and password, linked state with last sync, unlink).
   The onboarding Read more goal screen mentions that audiobooks count once linked in Me.
 
+### Confirmed against Audiobookshelf v2.37.1
+
+Read from the `v2.37.1` tag of `advplyr/audiobookshelf`; the instance's `GET /status` reports `serverVersion` 2.37.1 with `authMethods: ["local"]`.
+
+- `POST /login` takes `{username, password}` (`server/Auth.js`, `initAuthRoutes`).
+  Without a header, Audiobookshelf sets the refresh token as an httpOnly cookie and leaves `user.refreshToken` null.
+  With `x-return-tokens: true` the body carries `user.accessToken` and `user.refreshToken` next to `user.id` and `user.username`.
+  A wrong password is a plain 401, and the route is behind an auth rate limiter.
+- `POST /auth/refresh` reads the refresh token from the `x-refresh-token` header (or the `refresh_token` cookie), and returns the same `{user: {...}}` body with a new `accessToken`.
+  The header form also returns a new `refreshToken` every time, so the stored refresh token must be replaced on each refresh.
+  The previous refresh token stays usable for a short grace window (`TokenManager.rotateTokensForSession`).
+  An invalid or expired token is a 401 `{"error": "..."}`.
+- Lifetimes (`server/auth/TokenManager.js`): access token 1 hour (`ACCESS_TOKEN_EXPIRY`), refresh token 30 days (`REFRESH_TOKEN_EXPIRY`), the session expiry sliding forward on each rotation.
+  The access token is a JWT whose `exp` claim the server reads to schedule a refresh; the login response has no separate expiry field.
+- `GET /api/me/listening-stats` (`MeController.getListeningStats`, `ApiRouter.getUserListeningStatsHelpers`) answers `{totalTime, items, days, dayOfWeek, today, recentSessions}`.
+  `days` maps `YYYY-MM-DD` to seconds listened (float), summed from playback sessions' `timeListening`, and omits days with none.
+- Dates are formatted with the Audiobookshelf process's local time (`date.format(new Date(), 'YYYY-MM-DD')`), so they follow that container's `TZ`, not the person's zone.
+  Plan unchanged: this is accepted, and `deploy/README.md` tells the operator to keep both `TZ` values equal.
+
+Choices made while building it that the plan left open:
+
+- `PUT /api/me/audiobookshelf` syncs once before answering, so `syncedAt` is normally set in the response instead of null.
+  The response and `GET /api/me` also carry `lastError` (`auth_failed`, `unreachable` or null) for the "sign in again" state.
+- Only still-open days (today, and yesterday before 10:00) are written, so a finalized day never changes.
+  Unlinking removes the minutes of open days only and rescores them.
+- `GET /api/me` reports `audiobookshelf: {linked: false, username: null, syncedAt: null, lastError: null}` while the feature is on and nobody has linked.
+- The tokens are stored as plain text because they must be sent back to Audiobookshelf (device tokens are hashed, these cannot be); the password is never stored.
+
 ## 3. Evening reminder
 
 Local notifications only (no push server), via `flutter_local_notifications`.

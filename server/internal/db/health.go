@@ -49,6 +49,8 @@ type DayInputs struct {
 	ReadingMinutes int
 	ReadingPages   int
 	YogaMinutes    int
+	// ListeningMinutes is Audiobookshelf listening for the day, which counts as reading time.
+	ListeningMinutes int
 
 	Meals    int
 	Kcal     int
@@ -89,6 +91,9 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
 	if err != nil {
+		return in, err
+	}
+	if in.ListeningMinutes, err = ListeningMinutes(ctx, q, userID, date); err != nil {
 		return in, err
 	}
 	in.Metrics, in.Synced, err = loadHealthDay(ctx, q, userID, date)

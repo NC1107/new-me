@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/api_client.dart';
+import '../health/background_health_bridge.dart';
 import 'caches.dart';
 import 'local_prefs.dart';
 import 'update_gate.dart';
@@ -144,6 +145,8 @@ class SessionController extends Notifier<SessionState> {
     if (leaving == null) return;
     state = SessionState(restored: true, signedOutFrom: forced ? leaving.baseUrl : null);
     await _secure.delete(key: kSessionKey);
+    // The health controller may already be gone, and a stale native token must not outlive this.
+    unawaited(ref.read(backgroundHealthBridgeProvider).clear());
     await LocalPrefs.clearForSignOut();
     await clearResponseCaches();
     if (!forced) await _revokeDevice(leaving);

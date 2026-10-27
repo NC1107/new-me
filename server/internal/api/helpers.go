@@ -38,6 +38,9 @@ const (
 	codeUnavailable      = "unavailable"
 	codeInternal         = "internal"
 	codeMethodNotAllowed = "method_not_allowed"
+	codeABSDisabled      = "abs_disabled"
+	codeABSLoginFailed   = "abs_login_failed"
+	codeABSUnavailable   = "abs_unavailable"
 )
 
 // httpError is a failure the caller can see. Handlers return it from transaction bodies so the

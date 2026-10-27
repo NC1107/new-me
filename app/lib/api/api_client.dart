@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 
 import 'models.dart';
 
-/// Sent on every request as X-Client-Version. Hardcoded because the app has no
-/// package_info_plus; api_client_test.dart fails the build when it drifts from pubspec.
-const kClientVersion = '0.1.0';
+/// Sent on every request as X-Client-Version and shown in Me. Release builds pass the tagged
+/// version; the default mirrors pubspec for local and web builds, which a test enforces.
+const kClientVersion = String.fromEnvironment('NEWME_CLIENT_VERSION', defaultValue: '0.1.0');
 
 /// Shared secret baked in at build time with --dart-define=NEWME_APP_KEY=...
 const String kAppKey = String.fromEnvironment('NEWME_APP_KEY');
@@ -58,8 +58,8 @@ class ApiException implements Exception {
   const ApiException.dateClosed({String message = 'That day is closed'})
     : this(message, kind: ApiErrorKind.dateClosed, statusCode: 422, code: 'date_closed');
 
-  const ApiException.offline({int? statusCode, String message = 'Offline'})
-    : this(message, kind: ApiErrorKind.offline, statusCode: statusCode);
+  const ApiException.offline({int? statusCode, String message = 'Offline', String? code})
+    : this(message, kind: ApiErrorKind.offline, statusCode: statusCode, code: code);
 
   const ApiException.wrongServer() : this('Not a New Me server', kind: ApiErrorKind.wrongServer);
 
@@ -84,7 +84,11 @@ class ApiException implements Exception {
       return ApiException.dateClosed(message: serverMessage ?? 'That day is closed');
     }
     if (status != null && status >= 500) {
-      return ApiException.offline(statusCode: status, message: serverMessage ?? 'Server error');
+      return ApiException.offline(
+        statusCode: status,
+        message: serverMessage ?? 'Server error',
+        code: code,
+      );
     }
     return ApiException(
       serverMessage ?? e.message ?? 'Request failed',
@@ -191,6 +195,22 @@ class ApiClient {
     () => _dio.patch<dynamic>('/api/me', data: patch.toJson()),
     (data) => Me.fromJson(data as Json),
   );
+
+  /// Signs in to Audiobookshelf through the server, which keeps the session and never the
+  /// password. Throws an [ApiException] with code `abs_login_failed` for bad credentials.
+  Future<AudiobookshelfLink> linkAudiobookshelf({
+    required String username,
+    required String password,
+  }) => _send(
+    () => _dio.put<dynamic>(
+      '/api/me/audiobookshelf',
+      data: {'username': username, 'password': password},
+    ),
+    (data) => AudiobookshelfLink.fromJson(data as Json),
+  );
+
+  Future<void> unlinkAudiobookshelf() =>
+      _send(() => _dio.delete<dynamic>('/api/me/audiobookshelf'), (_) {});
 
   Future<Today> today({String? date}) => _send(
     () => _dio.get<dynamic>('/api/today', queryParameters: {'date': ?date}),

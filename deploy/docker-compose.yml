@@ -82,6 +82,7 @@ services:
       NEWME_APP_KEY: ${NEWME_APP_KEY:?NEWME_APP_KEY must be set}
       NEWME_SERVER_NAME: ${NEWME_SERVER_NAME:-New Me}
       NEWME_TRUSTED_PROXY_HOPS: ${NEWME_TRUSTED_PROXY_HOPS:-1}
+      NEWME_ABS_URL: ${NEWME_ABS_URL:-}
       TZ: ${TZ:-America/New_York}
     healthcheck:
       test: ["CMD", "/app/server", "-healthcheck"]

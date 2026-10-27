@@ -289,7 +289,8 @@ jobs:
             --build-name=${{ needs.version.outputs.version }} \
             --build-number=${{ needs.version.outputs.build_number }} \
             --export-options-plist=ios/ExportOptions.plist \
-            --dart-define=NEWME_APP_KEY="$NEWME_APP_KEY"
+            --dart-define=NEWME_APP_KEY="$NEWME_APP_KEY" \
+            --dart-define=NEWME_CLIENT_VERSION=${{ needs.version.outputs.version }}
       - name: Upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

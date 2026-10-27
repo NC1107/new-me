@@ -44,6 +44,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep.goals => const GoalStep(),
     OnboardingStep.food => const FoodStep(),
     OnboardingStep.health => const HealthStep(),
+    OnboardingStep.reminders => const ReminderStep(),
     OnboardingStep.done => const DoneStep(),
   };
 

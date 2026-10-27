@@ -35,6 +35,13 @@ Record each drill here.
 | --- | --- | --- |
 | 2026-10-27 | local stack copy | identical row counts in all 12 tables |
 
+## Audiobookshelf listening
+
+Set `NEWME_ABS_URL` in `.env` (for example `https://books.npc-server.top`) and run `docker compose up -d` to turn the feature on; leave it empty to keep it off.
+Each person then links their Audiobookshelf account in Me, and the server polls every 15 minutes.
+The server keeps Audiobookshelf session tokens in Postgres (never the password), so the database backups hold them; unlinking in the app deletes them.
+Audiobookshelf buckets listening days in its own time zone, set by `TZ` on that container, so keep it equal to `TZ` here.
+
 ## Letting CI read the health endpoint
 
 The release workflow polls `https://new-me.npc-server.top/api/health` until the new version is live.

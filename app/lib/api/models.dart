@@ -238,6 +238,37 @@ class Targets {
   Json toJson() => {'kcal': kcal, 'protein': protein, 'carbs': carbs, 'fat': fat};
 }
 
+/// The caller's Audiobookshelf link as GET /me reports it. The server leaves it null while the
+/// feature is off, and older servers omit it, so [Me.audiobookshelf] is null for both.
+class AudiobookshelfLink {
+  const AudiobookshelfLink({this.linked = false, this.username, this.syncedAt, this.lastError});
+
+  factory AudiobookshelfLink.fromJson(Json j) => AudiobookshelfLink(
+    linked: j['linked'] as bool? ?? false,
+    username: j['username'] as String?,
+    syncedAt: _time(j['syncedAt']),
+    lastError: j['lastError'] as String?,
+  );
+
+  final bool linked;
+  final String? username;
+  final DateTime? syncedAt;
+
+  /// `auth_failed` when the person has to sign in again, `unreachable` when the last poll could
+  /// not reach Audiobookshelf, null while polls work.
+  final String? lastError;
+
+  /// The stored session was rejected, so only a fresh sign-in brings listening back.
+  bool get needsSignIn => linked && lastError == 'auth_failed';
+
+  Json toJson() => {
+    'linked': linked,
+    'username': username,
+    'syncedAt': _timeJson(syncedAt),
+    'lastError': lastError,
+  };
+}
+
 class Me {
   const Me({
     required this.user,
@@ -246,6 +277,7 @@ class Me {
     required this.localToday,
     required this.serverNow,
     this.backdateUntil,
+    this.audiobookshelf,
   });
 
   factory Me.fromJson(Json j) => Me(
@@ -255,6 +287,9 @@ class Me {
     localToday: _str(j['localToday']),
     serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     backdateUntil: _time(j['backdateUntil']),
+    audiobookshelf: j['audiobookshelf'] is Map
+        ? AudiobookshelfLink.fromJson((j['audiobookshelf'] as Map).cast<String, dynamic>())
+        : null,
   );
 
   final AccountUser user;
@@ -266,6 +301,9 @@ class Me {
   /// Null once yesterday is closed for entries.
   final DateTime? backdateUntil;
 
+  /// Null while the server has no Audiobookshelf set up, which hides the Me row.
+  final AudiobookshelfLink? audiobookshelf;
+
   Json toJson() => {
     'user': user.toJson(),
     'targets': targets.toJson(),
@@ -273,6 +311,7 @@ class Me {
     'localToday': localToday,
     'serverNow': _timeJson(serverNow),
     'backdateUntil': _timeJson(backdateUntil),
+    if (audiobookshelf != null) 'audiobookshelf': audiobookshelf!.toJson(),
   };
 }
 
@@ -631,6 +670,7 @@ class Today {
     required this.food,
     required this.health,
     this.backdateUntil,
+    this.listening,
   });
 
   factory Today.fromJson(Json j) => Today(
@@ -643,6 +683,7 @@ class Today {
     streak: Streak.fromJson(j['streak'] as Json),
     food: Food.fromJson(j['food'] as Json),
     health: HealthStatus.fromJson(j['health'] as Json),
+    listening: j['listening'] is Map ? _int((j['listening'] as Map)['minutes']) : null,
   );
 
   /// The day shown; always [localToday] unless the request named an earlier one.
@@ -656,6 +697,12 @@ class Today {
   final Food food;
   final HealthStatus health;
 
+  /// Audiobook minutes already counted in the reading quest; null from servers without the
+  /// feature.
+  final int? listening;
+
+  int get listeningMinutes => listening ?? 0;
+
   Today copyWith({DayScore? day, List<Quest>? quests, Food? food, HealthStatus? health}) => Today(
     date: date,
     localToday: localToday,
@@ -666,6 +713,7 @@ class Today {
     streak: streak,
     food: food ?? this.food,
     health: health ?? this.health,
+    listening: listening,
   );
 
   Json toJson() => {
@@ -678,6 +726,7 @@ class Today {
     'streak': streak.toJson(),
     'food': food.toJson(),
     'health': health.toJson(),
+    if (listening != null) 'listening': {'minutes': listening},
   };
 }
 

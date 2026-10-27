@@ -130,3 +130,26 @@ func TestScoreDayReportsPerQuestCredit(t *testing.T) {
 		t.Fatalf("pushups = %+v", q)
 	}
 }
+
+func TestReadingMinutesAddsListeningToManualMinutes(t *testing.T) {
+	for _, c := range []struct{ manual, listening, want int }{
+		{0, 0, 0}, {10, 0, 10}, {0, 25, 25}, {10, 25, 35}, {10, -5, 10},
+	} {
+		if got := ReadingMinutes(c.manual, c.listening); got != c.want {
+			t.Fatalf("ReadingMinutes(%d, %d) = %d, want %d", c.manual, c.listening, got, c.want)
+		}
+	}
+}
+
+func TestListeningFillsTheReadingQuestWithoutTouchingPages(t *testing.T) {
+	// 10 manual + 5 listened minutes of a 20 minute target, plus 3 of 15 pages.
+	actual, target := ReadingProgressBasis(ReadingMinutes(10, 5), 3, 20, 15)
+	if want := (15*15 + 3*20); actual != want || target != 20*15 {
+		t.Fatalf("basis = %d/%d, want %d/300", actual, target, want)
+	}
+	// Listening alone can complete the quest.
+	actual, target = ReadingProgressBasis(ReadingMinutes(0, 20), 0, 20, 15)
+	if actual != target {
+		t.Fatalf("20 listened minutes = %d/%d, want complete", actual, target)
+	}
+}

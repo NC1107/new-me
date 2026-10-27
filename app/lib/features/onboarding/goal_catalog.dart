@@ -19,10 +19,14 @@ class GoalSpec {
     required this.options,
     required this.defaultValue,
     required this.label,
+    this.note,
   });
 
   final String questKey;
   final String question;
+
+  /// One extra line under the question, for goals with something worth knowing up front.
+  final String? note;
   final List<GoalOption> options;
   final int defaultValue;
 
@@ -70,6 +74,7 @@ final Map<String, GoalSpec> kGoalSpecs = {
     GoalSpec(
       questKey: 'reading',
       question: 'How long will you read?',
+      note: 'Audiobooks count too once you link Audiobookshelf in Me.',
       options: _named([10, 20, 30, 45]),
       defaultValue: 20,
       label: _minutes,

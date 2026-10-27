@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/nc1107/new-me/server/internal/semver"
 )
@@ -33,6 +35,9 @@ type Config struct {
 	// DevCORS allows localhost browser origins, for reviewing the web build. Never set in
 	// production.
 	DevCORS bool
+	// ABSURL is the base URL of the Audiobookshelf server whose listening time counts toward
+	// reading. Empty turns the feature off.
+	ABSURL string
 }
 
 // Load reads configuration from the environment.
@@ -55,6 +60,9 @@ func Load() (Config, error) {
 		return cfg, err
 	}
 	cfg.DevCORS = devCORS
+	if cfg.ABSURL, err = getBaseURL("NEWME_ABS_URL"); err != nil {
+		return cfg, err
+	}
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf(
 			"NEWME_DATABASE_URL is required, e.g. postgres://user:password@host:5432/newme?sslmode=disable")
@@ -95,4 +103,18 @@ func getBool(key string) (bool, error) {
 		return false, fmt.Errorf("%s must be a boolean: %w", key, err)
 	}
 	return b, nil
+}
+
+// getBaseURL reads an optional http(s) base URL without a trailing slash, so a typo cannot
+// silently point the server at nothing.
+func getBaseURL(key string) (string, error) {
+	v := strings.TrimRight(strings.TrimSpace(os.Getenv(key)), "/")
+	if v == "" {
+		return "", nil
+	}
+	u, err := url.Parse(v)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", fmt.Errorf("%s must be an http or https URL, got %q", key, v)
+	}
+	return v, nil
 }

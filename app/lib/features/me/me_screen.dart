@@ -8,10 +8,12 @@ import '../../state/board.dart';
 import '../../state/clock.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
+import '../../state/reminders.dart';
 import '../../state/session.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../reminders/reminder_plan.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/avatar.dart';
@@ -21,10 +23,12 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import 'apple_health_page.dart';
+import 'audiobookshelf_page.dart';
 import 'daily_goals_page.dart';
 import 'food_targets_page.dart';
 import 'pairing_page.dart';
 import 'profile_page.dart';
+import 'reminders_page.dart';
 import 'settings_row.dart';
 import 'timezone_page.dart';
 
@@ -64,6 +68,7 @@ class _MeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthSyncProvider);
+    final reminders = ref.watch(remindersProvider);
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
     final kcal = me.targets.kcal;
@@ -116,6 +121,21 @@ class _MeBody extends ConsumerWidget {
                   : 'Last sync ${relativeTime(synced, now)}',
               onTap: () => pushPage(context, const AppleHealthPage()),
             ),
+            SettingsRow(
+              icon: Icons.notifications_rounded,
+              palette: accentById('amber'),
+              title: 'Reminders',
+              subtitle: reminders.active ? formatReminderTime(reminders.minutes) : 'Off',
+              onTap: () => pushPage(context, const RemindersPage()),
+            ),
+            if (me.audiobookshelf case final link?)
+              SettingsRow(
+                icon: Icons.headphones_rounded,
+                palette: accentById('violet'),
+                title: 'Audiobookshelf',
+                subtitle: _audiobookshelfSubtitle(link, now),
+                onTap: () => pushPage(context, const AudiobookshelfPage()),
+              ),
             if (me.user.isAdmin)
               SettingsRow(
                 icon: Icons.group_add_rounded,
@@ -133,6 +153,14 @@ class _MeBody extends ConsumerWidget {
       ],
     );
   }
+}
+
+String _audiobookshelfSubtitle(AudiobookshelfLink link, DateTime now) {
+  if (!link.linked) return 'Count audiobook listening';
+  final name = link.username ?? 'Linked';
+  if (link.needsSignIn) return '$name, sign in again';
+  final synced = link.syncedAt;
+  return synced == null ? name : '$name, synced ${relativeTime(synced, now)}';
 }
 
 class _Header extends ConsumerWidget {

@@ -22,13 +22,22 @@ const _kBurstLifetime = Duration(milliseconds: 1400);
 /// quests logged by hand or an Apple Health chip for automatic ones. Completing it pops a check
 /// badge, throws confetti from the badge and gives a medium haptic.
 class QuestCard extends StatefulWidget {
-  const QuestCard({super.key, required this.quest, required this.onTap, this.onAdd});
+  const QuestCard({
+    super.key,
+    required this.quest,
+    required this.onTap,
+    this.onAdd,
+    this.listeningMinutes = 0,
+  });
 
   final Quest quest;
   final VoidCallback onTap;
 
   /// Null for quests the app cannot log by hand.
   final VoidCallback? onAdd;
+
+  /// Audiobook minutes already counted in this quest; shown under the progress when above zero.
+  final int listeningMinutes;
 
   @override
   State<QuestCard> createState() => _QuestCardState();
@@ -167,6 +176,22 @@ class _QuestCardState extends State<QuestCard> {
                       _BonusChip(bonus: q.bonusPoints),
                   ],
                 ),
+                if (widget.listeningMinutes > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.headphones_rounded, size: 14, color: category.lip),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${widget.listeningMinutes} min listened',
+                            style: AppText.caption.copyWith(color: kInkSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 ThickProgressBar(
                   value: questFraction(q),

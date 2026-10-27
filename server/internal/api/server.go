@@ -12,6 +12,7 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/ratelimit"
 	"github.com/nc1107/new-me/server/internal/semver"
 )
@@ -27,6 +28,9 @@ type limits struct {
 	device *ratelimit.Limiter
 	// healthPut is the extra budget of PUT /health/daily, per device.
 	healthPut *ratelimit.Limiter
+	// absLink caps sign-in attempts, per device, so the endpoint cannot be used to guess
+	// Audiobookshelf passwords.
+	absLink *ratelimit.Limiter
 }
 
 func newLimits() limits {
@@ -34,6 +38,7 @@ func newLimits() limits {
 		join:      ratelimit.New(5, 5),
 		device:    ratelimit.New(120, 60),
 		healthPut: ratelimit.New(30, 10),
+		absLink:   ratelimit.New(5, 5),
 	}
 }
 
@@ -46,6 +51,8 @@ type Server struct {
 	limits    limits
 	minClient semver.Version
 	health    healthCache
+	// listen is nil while NEWME_ABS_URL is unset, which is how the feature is off.
+	listen *listening.Syncer
 }
 
 // New builds a Server on the wall clock.
@@ -58,7 +65,12 @@ func New(cfg config.Config, database *db.DB) *Server {
 	}
 	// Load has validated the value; a hand-built Config falls back to accepting everything.
 	minClient, _ := semver.Parse(cfg.MinClientVersion)
+	var syncer *listening.Syncer
+	if cfg.ABSURL != "" {
+		syncer = listening.New(database, cfg.ABSURL)
+	}
 	return &Server{
+		listen:    syncer,
 		cfg:       cfg,
 		db:        database,
 		version:   "dev",
@@ -77,6 +89,9 @@ func (s *Server) WithVersion(version string) *Server {
 // WithClock replaces the clock handlers read, so tests can place a request at a chosen moment.
 func (s *Server) WithClock(now func() time.Time) *Server {
 	s.now = now
+	if s.listen != nil {
+		s.listen.Now = now
+	}
 	return s
 }
 
@@ -129,6 +144,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/api/meals/recent", s.handleRecentMeals)
 		r.With(limit(s.limits.healthPut, byDevice)).Put("/api/health/daily", s.handlePutHealthDaily)
 		r.Get("/api/health/trends", s.handleHealthTrends)
+		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
+		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 
 		r.Group(func(r chi.Router) {
 			r.Use(requireAdmin)

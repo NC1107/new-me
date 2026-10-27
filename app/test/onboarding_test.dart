@@ -6,12 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/health/fake_health_source.dart';
 import 'package:newme/health/health_source_factory.dart';
 import 'package:newme/main.dart';
+import 'package:newme/reminders/reminder_scheduler.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/state/timezone.dart';
 import 'package:newme/theme/accent.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fake_reminder_scheduler.dart';
 import 'fixtures.dart';
 import 'test_support.dart';
 
@@ -27,6 +30,7 @@ class _App {
   final WidgetTester tester;
   final StubAdapter adapter;
   final health = FakeHealthSource();
+  final reminders = FakeReminderScheduler();
   final storage = FakeStorage();
 
   Future<void> launch({SessionController Function()? session}) async {
@@ -40,6 +44,7 @@ class _App {
           apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
           deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
           healthSourceProvider.overrideWithValue(health),
+          reminderSchedulerProvider.overrideWithValue(reminders),
           if (session != null) sessionProvider.overrideWith(session),
         ],
         child: const NewMeApp(),
@@ -163,6 +168,10 @@ void main() {
       expect(find.text('NOT NOW'), findsOneWidget);
       await app.tapButton('Not now');
       expect(app.health.accessRequests, 0);
+      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+      await app.tapButton('Not now');
+      expect(app.reminders.permissionRequests, 0, reason: 'NOT NOW never asks the system');
+      expect(app.reminders.pending, isEmpty);
       expect(find.text("You're in, Ana!"), findsOneWidget);
       expect(find.text('Day 1 starts now.'), findsOneWidget);
       await app.tapButton("Let's go");
@@ -258,6 +267,16 @@ void main() {
     await app.tapButton('Continue');
     await app.tapButton('Connect Apple Health');
     expect(app.health.accessRequests, 1);
+
+    expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+    expect(find.text('8:00 PM'), findsOneWidget);
+    await app.tapText('9:00 PM');
+    expect(app.reminders.permissionRequests, 0, reason: 'picking a time asks for nothing');
+    await app.tapButton('Allow');
+    expect(app.reminders.permissionRequests, 1);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('reminderMinutes'), 21 * 60);
+    expect(prefs.getBool('remindersEnabled'), isTrue);
     expect(find.text("You're in, Ana!"), findsOneWidget);
   });
 
@@ -300,6 +319,7 @@ void main() {
       'amber',
       reason: 'the health step already wears the returning person colour',
     );
+    await app.tapButton('Not now');
     await app.tapButton('Not now');
     expect(find.text('Welcome back, Nick!'), findsOneWidget);
     await app.tapButton("Let's go");
@@ -429,6 +449,7 @@ void main() {
           apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
           deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
           healthSourceProvider.overrideWithValue(relaunch.health),
+          reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
         ],
         child: const NewMeApp(),
       ),
@@ -437,6 +458,51 @@ void main() {
 
     expect(find.text('How long will you read?'), findsOneWidget);
     expect(find.text('Today'), findsNothing, reason: 'the app does not open until onboarding ends');
+  });
+
+  testWidgets('leaving at the reminder step resumes there, and Allow honours a denial', (
+    tester,
+  ) async {
+    final adapter = _server(info: {..._info, 'initialized': false});
+    final first = _App(tester, adapter);
+    await first.launch();
+    await first.tapButton('Get started');
+    await first.enter('Ana');
+    await first.tapButton('Continue');
+    await first.tapButton('Continue');
+    await first.tapText('Read more');
+    await first.tapButton('Continue');
+    await first.tapButton('Continue');
+    await first.tapButton('Not now');
+    expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
+    final denying = FakeReminderScheduler(grantsOnRequest: false);
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
+          deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
+          healthSourceProvider.overrideWithValue(relaunch.health),
+          reminderSchedulerProvider.overrideWithValue(denying),
+        ],
+        child: const NewMeApp(),
+      ),
+    );
+    await relaunch.settle();
+
+    expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+    expect(relaunch.health.accessRequests, 0, reason: 'Health was already answered');
+    await relaunch.tapButton('Allow');
+    expect(denying.permissionRequests, 1);
+    expect(denying.pending, isEmpty, reason: 'nothing is scheduled without permission');
+    expect(
+      find.text("You're in, Ana!"),
+      findsOneWidget,
+      reason: 'a denial does not block the flow',
+    );
   });
 
   testWidgets('after a forced sign-out the code screen says what happened', (tester) async {

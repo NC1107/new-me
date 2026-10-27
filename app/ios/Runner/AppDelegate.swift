@@ -1,6 +1,8 @@
 import Flutter
 import HealthKit
+import Security
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -8,6 +10,8 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Without this the evening reminder is dropped while the app is in the foreground.
+    UNUserNotificationCenter.current().delegate = self
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -15,6 +19,9 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "Vo2MaxBridge") {
       Vo2MaxBridge.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BackgroundHealth") {
+      BackgroundHealth.register(with: registrar)
     }
   }
 }
@@ -70,5 +77,323 @@ final class Vo2MaxBridge: NSObject, FlutterPlugin {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+}
+
+struct BackgroundHealthConfig: Codable {
+  let baseUrl: String
+  let token: String
+  let appKey: String
+  let clientVersion: String
+}
+
+/// Its own Keychain item, readable after the first unlock so a locked phone can still push.
+enum BackgroundHealthKeychain {
+  private static let service = "top.npcserver.newme.background-health"
+  private static let account = "config"
+
+  private static var identity: [String: Any] {
+    [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: account,
+    ]
+  }
+
+  static func save(_ config: BackgroundHealthConfig) -> Bool {
+    guard let data = try? JSONEncoder().encode(config) else { return false }
+    SecItemDelete(identity as CFDictionary)
+    var item = identity
+    item[kSecValueData as String] = data
+    item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+    return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
+  }
+
+  static func load() -> BackgroundHealthConfig? {
+    var query = identity
+    query[kSecReturnData as String] = true
+    query[kSecMatchLimit as String] = kSecMatchLimitOne
+    var out: CFTypeRef?
+    guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess,
+      let data = out as? Data
+    else { return nil }
+    return try? JSONDecoder().decode(BackgroundHealthConfig.self, from: data)
+  }
+
+  static func delete() {
+    SecItemDelete(identity as CFDictionary)
+  }
+}
+
+/// Pushes daily Health totals when HealthKit wakes the app, without Flutter running.
+final class BackgroundHealth: NSObject, FlutterPlugin {
+  static let shared = BackgroundHealth()
+
+  private struct Metric {
+    let identifier: HKQuantityTypeIdentifier
+    let key: String
+    let unit: HKUnit
+  }
+
+  private struct Reading {
+    let date: String
+    let metric: String
+    let value: Double
+  }
+
+  private let metrics = [
+    Metric(identifier: .stepCount, key: "steps", unit: .count()),
+    Metric(identifier: .activeEnergyBurned, key: "active_energy", unit: .kilocalorie()),
+    Metric(identifier: .basalEnergyBurned, key: "basal_energy", unit: .kilocalorie()),
+    Metric(identifier: .appleExerciseTime, key: "exercise_minutes", unit: .minute()),
+    Metric(identifier: .distanceWalkingRunning, key: "distance_m", unit: .meter()),
+    Metric(identifier: .flightsClimbed, key: "flights", unit: .count()),
+  ]
+
+  private let store = HKHealthStore()
+  private let defaults = UserDefaults.standard
+  private let enabledKey = "newme.background.enabled"
+  private let pushedKey = "newme.background.pushed"
+  private let yesterdayGraceHour = 10
+  private let session = URLSession(configuration: .ephemeral)
+
+  // Everything below is touched on the main queue only.
+  private var observers: [HKObserverQuery] = []
+  private var running = false
+  private var rerun = false
+  private var closedDates = Set<String>()
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(name: "newme/background", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(shared, channel: channel)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "configure":
+      guard let args = call.arguments as? [String: Any],
+        let baseUrl = args["baseUrl"] as? String,
+        let token = args["token"] as? String,
+        let appKey = args["appKey"] as? String,
+        let clientVersion = args["clientVersion"] as? String
+      else {
+        result(FlutterError(code: "bad_args", message: "baseUrl, token, appKey and clientVersion are required", details: nil))
+        return
+      }
+      let config = BackgroundHealthConfig(
+        baseUrl: baseUrl, token: token, appKey: appKey, clientVersion: clientVersion)
+      guard BackgroundHealthKeychain.save(config) else {
+        result(FlutterError(code: "keychain_failed", message: "Could not store the background config", details: nil))
+        return
+      }
+      registerObserversIfEnabled()
+      result(nil)
+    case "enable":
+      defaults.set(true, forKey: enabledKey)
+      registerObserversIfEnabled()
+      result(nil)
+    case "clear":
+      clear()
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  func registerObserversIfEnabled() {
+    guard HKHealthStore.isHealthDataAvailable(),
+      defaults.bool(forKey: enabledKey),
+      BackgroundHealthKeychain.load() != nil,
+      observers.isEmpty
+    else { return }
+    for metric in metrics {
+      guard let type = HKQuantityType.quantityType(forIdentifier: metric.identifier) else { continue }
+      let observer = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completion, error in
+        guard let self = self, error == nil else {
+          completion()
+          return
+        }
+        self.wake(completion: completion)
+      }
+      store.execute(observer)
+      observers.append(observer)
+      store.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
+    }
+  }
+
+  private func clear() {
+    BackgroundHealthKeychain.delete()
+    defaults.removeObject(forKey: enabledKey)
+    defaults.removeObject(forKey: pushedKey)
+    for observer in observers { store.stop(observer) }
+    observers.removeAll()
+    closedDates.removeAll()
+    store.disableAllBackgroundDelivery { _, _ in }
+  }
+
+  private func wake(completion: @escaping () -> Void) {
+    DispatchQueue.main.async {
+      // The running pass reads Health again once it finishes, so this wake is covered.
+      if self.running {
+        self.rerun = true
+        completion()
+        return
+      }
+      self.running = true
+      var task = UIBackgroundTaskIdentifier.invalid
+      task = UIApplication.shared.beginBackgroundTask(withName: "newme.health") {
+        UIApplication.shared.endBackgroundTask(task)
+        task = .invalid
+      }
+      self.pass {
+        self.running = false
+        completion()
+        if task != .invalid {
+          UIApplication.shared.endBackgroundTask(task)
+          task = .invalid
+        }
+      }
+    }
+  }
+
+  private func pass(done: @escaping () -> Void) {
+    rerun = false
+    collectAndPush { [self] in
+      if rerun {
+        pass(done: done)
+      } else {
+        done()
+      }
+    }
+  }
+
+  private func collectAndPush(done: @escaping () -> Void) {
+    guard let config = BackgroundHealthKeychain.load() else {
+      done()
+      return
+    }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone.current
+    let now = Date()
+    let midnight = calendar.startOfDay(for: now)
+    var days = [(start: midnight, end: now)]
+    if calendar.component(.hour, from: now) < yesterdayGraceHour,
+      let yesterday = calendar.date(byAdding: .day, value: -1, to: midnight)
+    {
+      days.append((start: yesterday, end: midnight))
+    }
+
+    let dateFormat = DateFormatter()
+    dateFormat.calendar = calendar
+    dateFormat.timeZone = calendar.timeZone
+    dateFormat.locale = Locale(identifier: "en_US_POSIX")
+    dateFormat.dateFormat = "yyyy-MM-dd"
+
+    let collected = DispatchQueue(label: "newme.background.collected")
+    var readings: [Reading] = []
+    let group = DispatchGroup()
+    for day in days {
+      let date = dateFormat.string(from: day.start)
+      let datePredicate = HKQuery.predicateForSamples(
+        withStart: day.start, end: day.end, options: .strictStartDate)
+      let notUserEntered = HKQuery.predicateForObjects(
+        withMetadataKey: HKMetadataKeyWasUserEntered, operatorType: .notEqualTo, value: true)
+      let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, notUserEntered])
+      for metric in metrics {
+        guard let type = HKQuantityType.quantityType(forIdentifier: metric.identifier) else { continue }
+        group.enter()
+        let query = HKStatisticsQuery(
+          quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum
+        ) { _, statistics, _ in
+          if let sum = statistics?.sumQuantity() {
+            let value = sum.doubleValue(for: metric.unit).rounded()
+            collected.sync { readings.append(Reading(date: date, metric: metric.key, value: value)) }
+          }
+          group.leave()
+        }
+        store.execute(query)
+      }
+    }
+
+    group.notify(queue: .main) { [self] in
+      let measuredAt = ISO8601DateFormatter().string(from: now)
+      let today = dateFormat.string(from: midnight)
+      let pushed = defaults.dictionary(forKey: pushedKey) as? [String: Double] ?? [:]
+      let changed = readings.filter {
+        !closedDates.contains($0.date) && pushed["\($0.date)|\($0.metric)"] != $0.value
+      }
+      guard !changed.isEmpty else {
+        done()
+        return
+      }
+      push(changed, today: today, measuredAt: measuredAt, config: config, allowFallback: true, done: done)
+    }
+  }
+
+  private func push(
+    _ readings: [Reading], today: String, measuredAt: String, config: BackgroundHealthConfig,
+    allowFallback: Bool, done: @escaping () -> Void
+  ) {
+    let base = config.baseUrl.hasSuffix("/") ? String(config.baseUrl.dropLast()) : config.baseUrl
+    guard let url = URL(string: base + "/api/health/daily") else {
+      done()
+      return
+    }
+    let items: [[String: Any]] = readings.map {
+      [
+        "date": $0.date, "metric": $0.metric, "value": $0.value,
+        "source": "healthkit", "measuredAt": measuredAt,
+      ]
+    }
+    guard let body = try? JSONSerialization.data(withJSONObject: ["items": items]) else {
+      done()
+      return
+    }
+    var request = URLRequest(url: url, timeoutInterval: 25)
+    request.httpMethod = "PUT"
+    request.httpBody = body
+    request.setValue(config.appKey, forHTTPHeaderField: "X-App-Key")
+    request.setValue("Bearer " + config.token, forHTTPHeaderField: "Authorization")
+    request.setValue(config.clientVersion, forHTTPHeaderField: "X-Client-Version")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    session.dataTask(with: request) { data, response, _ in
+      DispatchQueue.main.async {
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if (200..<300).contains(status) {
+          self.remember(readings)
+        } else if status == 422, allowFallback, self.isDateClosed(data) {
+          let todayOnly = readings.filter { $0.date == today }
+          self.closedDates.formUnion(readings.map { $0.date }.filter { $0 != today })
+          if todayOnly.isEmpty || todayOnly.count == readings.count {
+            done()
+            return
+          }
+          self.push(todayOnly, today: today, measuredAt: measuredAt, config: config, allowFallback: false, done: done)
+          return
+        }
+        done()
+      }
+    }.resume()
+  }
+
+  private func isDateClosed(_ data: Data?) -> Bool {
+    guard let data = data,
+      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return false }
+    return object["code"] as? String == "date_closed"
+  }
+
+  private func remember(_ readings: [Reading]) {
+    var pushed = defaults.dictionary(forKey: pushedKey) as? [String: Double] ?? [:]
+    for reading in readings { pushed["\(reading.date)|\(reading.metric)"] = reading.value }
+    // Dates sort lexically, so anything older than the newest three days can go.
+    let newest = pushed.keys.compactMap { $0.split(separator: "|").first.map(String.init) }.sorted().suffix(3)
+    let keep = Set(newest)
+    pushed = pushed.filter { key, _ in
+      guard let date = key.split(separator: "|").first else { return false }
+      return keep.contains(String(date))
+    }
+    defaults.set(pushed, forKey: pushedKey)
   }
 }

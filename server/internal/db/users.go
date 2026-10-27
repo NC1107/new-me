@@ -201,7 +201,11 @@ func SoftDeleteUser(ctx context.Context, tx pgx.Tx, id int64) error {
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	_, err = tx.Exec(ctx, `DELETE FROM devices WHERE user_id = $1`, id)
+	if _, err = tx.Exec(ctx, `DELETE FROM devices WHERE user_id = $1`, id); err != nil {
+		return err
+	}
+	// The stored Audiobookshelf tokens are credentials, so they go with the person.
+	_, err = tx.Exec(ctx, `DELETE FROM audiobookshelf_accounts WHERE user_id = $1`, id)
 	return err
 }
 

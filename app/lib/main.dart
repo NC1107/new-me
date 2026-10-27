@@ -10,6 +10,7 @@ import 'features/onboarding/onboarding_controller.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/shell/home_shell.dart';
 import 'features/shell/update_required_screen.dart';
+import 'state/reminders.dart';
 import 'state/session.dart';
 import 'state/update_gate.dart';
 import 'theme/accent.dart';
@@ -62,6 +63,7 @@ class NewMeApp extends ConsumerWidget {
       title: 'New Me',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
+      navigatorKey: rootNavigatorKey,
       theme: themeFor(accentById(session?.color)),
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),

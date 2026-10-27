@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/board.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
+import '../../state/reminders.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
@@ -32,6 +33,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.initState();
     // Reading the provider is what starts Health sync and its lifecycle listener.
     ref.read(healthSyncProvider);
+    ref.read(remindersProvider);
     unawaited(_followDeviceTimezone());
     _lifecycle = AppLifecycleListener(onResume: _onResume);
   }
@@ -57,6 +59,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   /// A phone left locked overnight would otherwise open on yesterday's score.
   void _onResume() {
+    unawaited(ref.read(remindersProvider.notifier).refreshPermission());
     unawaited(ref.read(todayProvider.notifier).refresh());
     unawaited(ref.read(boardProvider.notifier).refresh());
     if (ref.read(meProvider).value?.offline != null) {

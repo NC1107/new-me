@@ -44,10 +44,11 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	case db.QuestPushups:
 		return in.Pushups, q.Target
 	case db.QuestReading:
+		minutes := score.ReadingMinutes(in.ReadingMinutes, in.ListeningMinutes)
 		if q.TargetAlt == nil {
-			return in.ReadingMinutes, q.Target
+			return minutes, q.Target
 		}
-		return score.ReadingProgressBasis(in.ReadingMinutes, in.ReadingPages, q.Target, *q.TargetAlt)
+		return score.ReadingProgressBasis(minutes, in.ReadingPages, q.Target, *q.TargetAlt)
 	case db.QuestMealsLogged:
 		return in.Meals, q.Target
 	case db.QuestProtein:
@@ -74,7 +75,7 @@ func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	case db.QuestPushups:
 		return in.Pushups, nil
 	case db.QuestReading:
-		return in.ReadingMinutes, &in.ReadingPages
+		return score.ReadingMinutes(in.ReadingMinutes, in.ListeningMinutes), &in.ReadingPages
 	case db.QuestMealsLogged:
 		return in.Meals, nil
 	case db.QuestProtein:

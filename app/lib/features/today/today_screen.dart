@@ -184,6 +184,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             quest: q,
             onTap: _openEntries,
             onAdd: kind == null ? null : () => showLogSheet(context, kind: kind),
+            listeningMinutes: q.key == 'reading' ? today.listeningMinutes : 0,
           ),
         );
       }

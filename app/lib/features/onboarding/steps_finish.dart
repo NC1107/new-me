@@ -6,10 +6,12 @@ import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/confetti.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/pop_in.dart';
+import '../../widgets/time_presets.dart';
 import 'onboarding_controller.dart';
 import 'step_layout.dart';
 
@@ -102,6 +104,46 @@ class HealthStep extends ConsumerWidget {
             Icon(Icons.lock_rounded, size: 16, color: kInkMuted),
             SizedBox(width: 6),
             Flexible(child: Text('New Me never writes to Health.', style: AppText.caption)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class ReminderStep extends ConsumerWidget {
+  const ReminderStep({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final busy = ref.watch(onboardingProvider.select((s) => s.busy));
+    final minutes = ref.watch(onboardingProvider.select((s) => s.reminderMinutes));
+    final controller = ref.read(onboardingProvider.notifier);
+    return StepLayout(
+      footer: [
+        ChunkyButton(
+          label: 'Allow',
+          icon: Icons.notifications_active_rounded,
+          busy: busy,
+          onPressed: controller.allowReminders,
+        ),
+        ChunkyButton.secondary(label: 'Not now', onPressed: busy ? null : controller.skipReminders),
+      ],
+      children: [
+        const MascotLine(line: 'Want a nudge in the evening?', state: MascotState.happy),
+        const StepTitle(
+          'Evening reminder',
+          subtitle: 'One quiet note a day if your day has not counted yet. Nothing once it has.',
+        ),
+        const FieldLabel('What time?'),
+        TimePresets(selected: minutes, onChanged: controller.setReminderMinutes),
+        const SizedBox(height: 16),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.tune_rounded, size: 16, color: kInkMuted),
+            SizedBox(width: 6),
+            Flexible(child: Text('You can change this any time in Me.', style: AppText.caption)),
           ],
         ),
       ],

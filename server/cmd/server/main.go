@@ -21,6 +21,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/api"
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/sched"
 )
 
@@ -60,7 +61,11 @@ func main() {
 		log.Printf("seed server name: %v", err)
 	}
 
-	go sched.New(database).Run(ctx)
+	scheduler := sched.New(database)
+	if cfg.ABSURL != "" {
+		scheduler.Listening = listening.New(database, cfg.ABSURL)
+	}
+	go scheduler.Run(ctx)
 
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,

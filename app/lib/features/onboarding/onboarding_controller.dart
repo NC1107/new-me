@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
+import '../../reminders/reminder_plan.dart';
 import '../../state/health_sync.dart';
+import '../../state/reminders.dart';
 import '../../state/session.dart';
 import '../../state/timezone.dart';
 import '../../theme/accent.dart';
@@ -30,6 +32,7 @@ enum OnboardingStep {
   goals,
   food,
   health,
+  reminders,
   done,
 }
 
@@ -77,6 +80,7 @@ class OnboardingState {
     this.kcal,
     this.foodAnswered = false,
     this.planSaved = false,
+    this.reminderMinutes = kDefaultReminderMinutes,
     this.displayName = '',
     this.error,
     this.errorTick = 0,
@@ -121,6 +125,9 @@ class OnboardingState {
   final bool foodAnswered;
   final bool planSaved;
 
+  /// The evening reminder time highlighted on its step, in minutes after midnight.
+  final int reminderMinutes;
+
   /// The name to greet on the done screen.
   final String displayName;
 
@@ -163,6 +170,7 @@ class OnboardingState {
       if (wantsFood) (OnboardingStep.food, 0),
     ];
     const health = (OnboardingStep.health, 0);
+    const reminders = (OnboardingStep.reminders, 0);
     const done = (OnboardingStep.done, 0);
     return switch (path) {
       null => [welcome, code, if (hasChoose) choose],
@@ -172,6 +180,7 @@ class OnboardingState {
         (OnboardingStep.color, 0),
         ...plan,
         health,
+        reminders,
         done,
       ],
       OnboardingPath.invitedNew => [
@@ -182,6 +191,7 @@ class OnboardingState {
         (OnboardingStep.color, 0),
         ...plan,
         health,
+        reminders,
         done,
       ],
       OnboardingPath.returning => [
@@ -190,6 +200,7 @@ class OnboardingState {
         if (hasChoose) choose,
         (OnboardingStep.who, 0),
         health,
+        reminders,
         done,
       ],
     };
@@ -216,6 +227,7 @@ class OnboardingState {
       OnboardingStep.goals,
       OnboardingStep.food,
       OnboardingStep.health,
+      OnboardingStep.reminders,
     };
     return !pending || afterJoin.contains(previous);
   }
@@ -243,6 +255,7 @@ class OnboardingState {
     bool clearKcal = false,
     bool? foodAnswered,
     bool? planSaved,
+    int? reminderMinutes,
     String? displayName,
     String? error,
     bool clearError = false,
@@ -270,6 +283,7 @@ class OnboardingState {
     kcal: clearKcal ? null : (kcal ?? this.kcal),
     foodAnswered: foodAnswered ?? this.foodAnswered,
     planSaved: planSaved ?? this.planSaved,
+    reminderMinutes: reminderMinutes ?? this.reminderMinutes,
     displayName: displayName ?? this.displayName,
     error: clearError ? null : (error ?? this.error),
     errorTick: failSubmit ? errorTick + 1 : errorTick,
@@ -337,14 +351,25 @@ class OnboardingController extends Notifier<OnboardingState> {
       foodAnswered: saved.foodAnswered,
       planSaved: saved.planSaved,
     );
-    state = _resumeAt(base, healthAnswered: saved.healthAnswered);
+    state = _resumeAt(
+      base,
+      healthAnswered: saved.healthAnswered,
+      reminderAnswered: saved.reminderAnswered,
+    );
   }
 
   /// The first screen the saved answers do not cover.
-  OnboardingState _resumeAt(OnboardingState s, {required bool healthAnswered}) {
-    if (s.path == OnboardingPath.returning) {
-      return s.copyWith(step: healthAnswered ? OnboardingStep.done : OnboardingStep.health);
-    }
+  OnboardingState _resumeAt(
+    OnboardingState s, {
+    required bool healthAnswered,
+    required bool reminderAnswered,
+  }) {
+    final afterPlan = !healthAnswered
+        ? OnboardingStep.health
+        : reminderAnswered
+        ? OnboardingStep.done
+        : OnboardingStep.reminders;
+    if (s.path == OnboardingPath.returning) return s.copyWith(step: afterPlan);
     if (s.focuses.isEmpty) return s.copyWith(step: OnboardingStep.focus);
     final keys = s.questKeys;
     final nextGoal = keys.indexWhere((k) => !s.goals.containsKey(k));
@@ -355,21 +380,26 @@ class OnboardingController extends Notifier<OnboardingState> {
           ? s.copyWith(step: OnboardingStep.food)
           : s.copyWith(step: OnboardingStep.goals, goalIndex: keys.length - 1);
     }
-    return s.copyWith(step: healthAnswered ? OnboardingStep.done : OnboardingStep.health);
+    return s.copyWith(step: afterPlan);
   }
 
   ApiClient _client() => ref.read(apiClientFactoryProvider)(baseUrl: state.serverUrl);
 
-  Future<void> _persist({bool healthAnswered = false}) => OnboardingProgress(
-    returning: state.path == OnboardingPath.returning,
-    name: state.displayName,
-    focuses: state.focuses,
-    goals: state.goals,
-    kcal: state.kcal,
-    foodAnswered: state.foodAnswered,
-    planSaved: state.planSaved,
-    healthAnswered: healthAnswered || state.step == OnboardingStep.done,
-  ).save();
+  Future<void> _persist({bool healthAnswered = false, bool reminderAnswered = false}) =>
+      OnboardingProgress(
+        returning: state.path == OnboardingPath.returning,
+        name: state.displayName,
+        focuses: state.focuses,
+        goals: state.goals,
+        kcal: state.kcal,
+        foodAnswered: state.foodAnswered,
+        planSaved: state.planSaved,
+        healthAnswered:
+            healthAnswered ||
+            state.step == OnboardingStep.reminders ||
+            state.step == OnboardingStep.done,
+        reminderAnswered: reminderAnswered || state.step == OnboardingStep.done,
+      ).save();
 
   /// Probes the remembered or default server without asking the user anything.
   Future<void> start() async {
@@ -681,8 +711,30 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   Future<void> _healthDone() async {
     state = state.copyWith(busy: false);
-    _go(OnboardingStep.done);
+    _go(OnboardingStep.reminders);
     await _persist(healthAnswered: true);
+  }
+
+  void setReminderMinutes(int minutes) => state = state.copyWith(reminderMinutes: minutes);
+
+  Future<void> allowReminders() async {
+    state = state.copyWith(busy: true);
+    try {
+      await ref.read(remindersProvider.notifier).enable(minutes: state.reminderMinutes);
+    } finally {
+      await _remindersDone();
+    }
+  }
+
+  Future<void> skipReminders() async {
+    await ref.read(remindersProvider.notifier).disable();
+    await _remindersDone();
+  }
+
+  Future<void> _remindersDone() async {
+    state = state.copyWith(busy: false);
+    _go(OnboardingStep.done);
+    await _persist(healthAnswered: true, reminderAnswered: true);
   }
 
   /// Hands over to the app. Resets for the next time onboarding is needed.

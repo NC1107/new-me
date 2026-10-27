@@ -52,6 +52,12 @@ type todayJSON struct {
 	Streak        streakJSON       `json:"streak"`
 	Food          foodJSON         `json:"food"`
 	Health        healthStatusJSON `json:"health"`
+	Listening     listeningJSON    `json:"listening"`
+}
+
+// listeningJSON is the day's Audiobookshelf listening, already counted in the reading quest.
+type listeningJSON struct {
+	Minutes int `json:"minutes"`
 }
 
 // handleToday scores the requested day (today unless ?date= names an earlier one the user has
@@ -120,6 +126,7 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 			StepsEverSynced: in.Connected(db.MetricSteps), SyncedAt: wireTimePtr(syncedAt),
 			Metrics: in.Metrics, Latest: latest,
 		},
+		Listening: listeningJSON{Minutes: in.ListeningMinutes},
 	})
 }
 

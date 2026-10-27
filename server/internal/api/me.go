@@ -43,6 +43,7 @@ type meJSON struct {
 	LocalToday     score.Date     `json:"localToday"`
 	BackdateUntil  *string        `json:"backdateUntil"`
 	ServerNow      string         `json:"serverNow"`
+	Audiobookshelf *absJSON       `json:"audiobookshelf"`
 }
 
 func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, error) {
@@ -61,6 +62,10 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 			TargetAlt: t.TargetAlt, UnitAlt: t.UnitAlt, Points: t.Points, Position: t.Position,
 		})
 	}
+	abs, err := s.absState(ctx, q, u.ID)
+	if err != nil {
+		return meJSON{}, err
+	}
 	now := s.now()
 	return meJSON{
 		User:           toUserJSON(u),
@@ -69,6 +74,7 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		LocalToday:     score.LocalToday(now, loc),
 		BackdateUntil:  s.backdateUntil(u, loc),
 		ServerNow:      wireTime(now),
+		Audiobookshelf: abs,
 	}, nil
 }
 

@@ -13,20 +13,26 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
+	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
 const (
 	// Interval is how often the scheduler looks for days to finalize.
 	Interval = 5 * time.Minute
+	// ListeningInterval is how often linked Audiobookshelf accounts are polled.
+	ListeningInterval = 15 * time.Minute
 	// runTimeout bounds one pass, so a stuck query cannot pile up passes behind it.
 	runTimeout = 2 * time.Minute
 )
 
-// Scheduler finalizes every day whose grace window has ended.
+// Scheduler finalizes every day whose grace window has ended and, when Audiobookshelf is set
+// up, keeps listening time current.
 type Scheduler struct {
 	DB  *db.DB
 	Now func() time.Time
+	// Listening is nil while the Audiobookshelf feature is off.
+	Listening *listening.Syncer
 }
 
 // New builds a scheduler on the wall clock.
@@ -35,9 +41,13 @@ func New(database *db.DB) *Scheduler {
 }
 
 // Run does one pass immediately, which catches up after a restart, then repeats every Interval
-// until ctx ends.
+// until ctx ends. Listening polls run on their own, slower ticker so a slow Audiobookshelf
+// never delays finalizing.
 func (s *Scheduler) Run(ctx context.Context) {
-	s.runGuarded(ctx)
+	if s.Listening != nil {
+		go s.runListening(ctx)
+	}
+	s.runGuarded(ctx, s.FinalizeDue)
 	ticker := time.NewTicker(Interval)
 	defer ticker.Stop()
 	for {
@@ -45,13 +55,35 @@ func (s *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			s.runGuarded(ctx)
+			s.runGuarded(ctx, s.FinalizeDue)
 		}
 	}
 }
 
+func (s *Scheduler) runListening(ctx context.Context) {
+	s.runGuarded(ctx, s.PollListening)
+	ticker := time.NewTicker(ListeningInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.runGuarded(ctx, s.PollListening)
+		}
+	}
+}
+
+// PollListening reads every linked Audiobookshelf account once.
+func (s *Scheduler) PollListening(ctx context.Context) error {
+	if s.Listening == nil {
+		return nil
+	}
+	return s.Listening.SyncAll(ctx)
+}
+
 // runGuarded keeps a panic or a slow pass from taking the scheduler down.
-func (s *Scheduler) runGuarded(ctx context.Context) {
+func (s *Scheduler) runGuarded(ctx context.Context, pass func(context.Context) error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("[NEWME] scheduler panic: %v", r)
@@ -60,7 +92,7 @@ func (s *Scheduler) runGuarded(ctx context.Context) {
 	passCtx, cancel := context.WithTimeout(ctx, runTimeout)
 	defer cancel()
 	// A pass cut short by shutdown is expected; one cut short by its own timeout is not.
-	if err := s.FinalizeDue(passCtx); err != nil && ctx.Err() == nil {
+	if err := pass(passCtx); err != nil && ctx.Err() == nil {
 		log.Printf("[NEWME] scheduler: %v", err)
 	}
 }

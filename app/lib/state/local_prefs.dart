@@ -5,6 +5,8 @@ const _kLastSyncedAt = 'lastSyncedAt';
 const _kLastLogKind = 'lastLogKind';
 const _kCelebratedDate = 'celebratedDate';
 const _kDeviceTimezone = 'deviceTimezone';
+const _kRemindersEnabled = 'remindersEnabled';
+const _kReminderMinutes = 'reminderMinutes';
 
 /// Non-secret, per-install values. The Keychain blob in session.dart holds everything secret.
 class LocalPrefs {
@@ -44,11 +46,26 @@ class LocalPrefs {
   static Future<void> setDeviceTimezone(String zone) async =>
       (await SharedPreferences.getInstance()).setString(_kDeviceTimezone, zone);
 
+  static Future<bool> remindersEnabled() async =>
+      (await SharedPreferences.getInstance()).getBool(_kRemindersEnabled) ?? false;
+
+  static Future<void> setRemindersEnabled(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_kRemindersEnabled, value);
+
+  /// Minutes after local midnight, or null while the person has not picked a time.
+  static Future<int?> reminderMinutes() async =>
+      (await SharedPreferences.getInstance()).getInt(_kReminderMinutes);
+
+  static Future<void> setReminderMinutes(int minutes) async =>
+      (await SharedPreferences.getInstance()).setInt(_kReminderMinutes, minutes);
+
   static Future<void> clearForSignOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kLastSyncedAt);
     await prefs.remove(_kLastLogKind);
     await prefs.remove(_kCelebratedDate);
     await prefs.remove(_kDeviceTimezone);
+    await prefs.remove(_kRemindersEnabled);
+    await prefs.remove(_kReminderMinutes);
   }
 }

@@ -18,6 +18,7 @@ class OnboardingProgress {
     this.foodAnswered = false,
     this.planSaved = false,
     this.healthAnswered = false,
+    this.reminderAnswered = false,
   });
 
   factory OnboardingProgress.fromJson(Map<String, dynamic> j) => OnboardingProgress(
@@ -32,6 +33,7 @@ class OnboardingProgress {
     foodAnswered: j['foodAnswered'] as bool? ?? false,
     planSaved: j['planSaved'] as bool? ?? false,
     healthAnswered: j['healthAnswered'] as bool? ?? false,
+    reminderAnswered: j['reminderAnswered'] as bool? ?? false,
   );
 
   /// A re-paired person skips the plan steps.
@@ -43,6 +45,7 @@ class OnboardingProgress {
   final bool foodAnswered;
   final bool planSaved;
   final bool healthAnswered;
+  final bool reminderAnswered;
 
   Map<String, dynamic> toJson() => {
     'returning': returning,
@@ -53,6 +56,7 @@ class OnboardingProgress {
     'foodAnswered': foodAnswered,
     'planSaved': planSaved,
     'healthAnswered': healthAnswered,
+    'reminderAnswered': reminderAnswered,
   };
 
   static Future<OnboardingProgress?> load() async {

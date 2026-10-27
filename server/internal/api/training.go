@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"slices"
@@ -333,11 +334,13 @@ type sessionTargetJSON struct {
 }
 
 type sessionExerciseJSON struct {
-	Exercise string            `json:"exercise"`
-	Name     string            `json:"name"`
-	Measure  string            `json:"measure"`
-	Load     string            `json:"load"`
-	Plan     prescriptionJSON  `json:"plan"`
+	Exercise string           `json:"exercise"`
+	Name     string           `json:"name"`
+	Measure  string           `json:"measure"`
+	Load     string           `json:"load"`
+	Plan     prescriptionJSON `json:"plan"`
+	// PlanName names the planned exercise when progression moved to a variation.
+	PlanName string            `json:"planName"`
 	Target   sessionTargetJSON `json:"target"`
 	Reason   string            `json:"reason"`
 	Logged   []setJSON         `json:"logged"`
@@ -383,7 +386,20 @@ func (s *Server) handleTrainingToday(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	out, err := s.sessionDetail(r, plan, session, today)
+	// A session that already had sets survives a plan change, and keeps the day of the plan it
+	// was scheduled from.
+	sessionPlan := plan
+	if session.PlanID != plan.ID {
+		if sessionPlan, err = db.PlanByID(ctx, s.db.Pool, c.user.ID, session.PlanID); err != nil {
+			fail(w, r, err)
+			return
+		}
+	}
+	if session.DayIndex >= len(sessionPlan.Days) {
+		fail(w, r, fmt.Errorf("session %d points past its plan's days", session.ID))
+		return
+	}
+	out, err := s.sessionDetail(r, sessionPlan, session, today)
 	if err != nil {
 		fail(w, r, err)
 		return
@@ -456,6 +472,7 @@ func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.T
 		if !ok {
 			continue
 		}
+		plannedName := e.Name
 		// After moving to a variation, progression continues from that variation's own sets.
 		if key := latestVariation(e, history); key != e.Key {
 			if v, err := db.ExerciseByKey(ctx, s.db.Pool, c.user.ID, key); err == nil {
@@ -471,7 +488,7 @@ func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.T
 			}
 		}
 		item := sessionExerciseJSON{Exercise: targetInfo.Key, Name: targetInfo.Name, Measure: targetInfo.Measure,
-			Load: targetInfo.Load, Plan: prescriptionJSON{Exercise: planned, Sets: p.Sets, Min: p.Min, Max: p.Max,
+			Load: targetInfo.Load, PlanName: plannedName, Plan: prescriptionJSON{Exercise: planned, Sets: p.Sets, Min: p.Min, Max: p.Max,
 				RIR: p.RIR, RestSec: p.RestSec},
 			Target: sessionTargetJSON{Exercise: target.Exercise, Sets: target.Sets, Amount: target.Amount},
 			Reason: target.Reason, Logged: []setJSON{}}

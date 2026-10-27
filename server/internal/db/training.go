@@ -70,6 +70,20 @@ func ActivePlan(ctx context.Context, q Querier, userID int64) (StoredPlan, error
 	return p, json.Unmarshal(days, &p.Days)
 }
 
+// PlanByID returns one of the person's plans, active or ended, or ErrNotFound.
+func PlanByID(ctx context.Context, q Querier, userID, id int64) (StoredPlan, error) {
+	var (
+		p    StoredPlan
+		days []byte
+	)
+	err := q.QueryRow(ctx, `SELECT id, starts_on::text, weeks, days, notes FROM training_plans
+		WHERE user_id = $1 AND id = $2`, userID, id).Scan(&p.ID, &p.StartsOn, &p.Weeks, &days, &p.Notes)
+	if err = notFound(err); err != nil {
+		return p, err
+	}
+	return p, json.Unmarshal(days, &p.Days)
+}
+
 // ReplacePlan ends any active plan and saves the new one as active.
 func ReplacePlan(ctx context.Context, q Querier, userID int64, startsOn score.Date, plan training.Plan) (StoredPlan, error) {
 	if err := EndActivePlan(ctx, q, userID); err != nil {

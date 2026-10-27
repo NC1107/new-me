@@ -1,0 +1,111 @@
+{
+  "muscles": [
+    {
+      "muscle": "chest",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "back",
+      "weeks": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "muscle": "shoulders",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "biceps",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "triceps",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "forearms",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "quads",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "hamstrings",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "glutes",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "calves",
+      "weeks": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "muscle": "core",
+      "weeks": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "range": {
+    "label": "beginner range (our convention, Schoenfeld 2017)",
+    "max": 12,
+    "min": 4,
+    "source": "Schoenfeld, Ogborn and Krieger, J Sports Sci 2017;35:1073"
+  },
+  "weeksStart": "2026-10-12"
+}
+

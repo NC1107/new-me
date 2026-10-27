@@ -1,0 +1,23 @@
+{
+  "code": "plan_invalid",
+  "error": "the designed plan broke the training rules twice; try again or change the profile",
+  "violations": [
+    {
+      "rule": "volume_low",
+      "message": "chest gets 2 weekly sets, under the 4 minimum (beginner range (our convention, Schoenfeld 2017))"
+    },
+    {
+      "rule": "volume_low",
+      "message": "shoulders gets 2 weekly sets, under the 4 minimum (beginner range (our convention, Schoenfeld 2017))"
+    },
+    {
+      "rule": "volume_low",
+      "message": "quads gets 2 weekly sets, under the 4 minimum (beginner range (our convention, Schoenfeld 2017))"
+    },
+    {
+      "rule": "volume_low",
+      "message": "hamstrings and glutes gets 2 weekly sets, under the 4 minimum (beginner range (our convention, Schoenfeld 2017))"
+    }
+  ]
+}
+

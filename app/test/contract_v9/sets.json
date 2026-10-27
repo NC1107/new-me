@@ -1,0 +1,27 @@
+{
+  "sets": [
+    {
+      "id": 1,
+      "exercise": "db_row",
+      "localDate": "2026-11-02",
+      "loggedAt": "2026-10-27T22:20:06Z",
+      "reps": 10,
+      "seconds": null,
+      "loadKg": 20,
+      "rir": 2,
+      "sessionId": 1
+    },
+    {
+      "id": 2,
+      "exercise": "plank",
+      "localDate": "2026-11-02",
+      "loggedAt": "2026-10-27T22:20:06Z",
+      "reps": null,
+      "seconds": 45,
+      "loadKg": null,
+      "rir": null,
+      "sessionId": null
+    }
+  ]
+}
+

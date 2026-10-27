@@ -173,7 +173,7 @@ func TestPlanSessionProgressionAndQuest(t *testing.T) {
 	}
 	push := exerciseAt(t, thursday, "push_up")
 	if thursday.str(push+"exercise") != "decline_push_up" || thursday.str(push+"target.exercise") != "decline_push_up" ||
-		thursday.num(push+"target.amount") != 8 {
+		thursday.num(push+"target.amount") != 8 || thursday.str(push+"planName") != "Push-up" {
 		t.Fatalf("after logging the harder variation, the session should follow it: %s", thursday.Body)
 	}
 
@@ -242,5 +242,33 @@ func TestTrainingProgressCountsWeeklySetsPerMuscle(t *testing.T) {
 	}
 	if weeks["chest"] != 2 || weeks["quads"] != 1 || weeks["glutes"] != 1 || weeks["back"] != 0 {
 		t.Fatalf("this week = %v", weeks)
+	}
+}
+
+func TestATodaySessionWithSetsSurvivesAPlanChange(t *testing.T) {
+	// The new plan lists its days the other way round, so index 1 is now Monday's day.
+	reordered := planReply(2)
+	days := reordered["days"].([]obj)
+	days[0]["label"], days[1]["label"] = "New A", "New B"
+	reordered["days"] = []obj{days[1], days[0]}
+	h, _, nick := trainingHarness(t, planReply(2), reordered)
+	profile := obj{}
+	for k, v := range beginnerProfile {
+		profile[k] = v
+	}
+	h.put("/api/training/profile", nick.Token, profile).expect(http.StatusOK)
+	h.post("/api/training/plan", nick.Token, obj{}).expect(http.StatusCreated)
+
+	// Thursday is day index 1 of the first plan.
+	h.clock.Set(ny(2026, time.November, 5, 12, 0))
+	thursday := h.get("/api/training/today", nick.Token).expect(http.StatusOK)
+	h.post("/api/sets", nick.Token, obj{"clientOpId": h.nextOp(), "exercise": "push_up", "reps": 8,
+		"sessionId": thursday.num("session.id")}).expect(http.StatusCreated)
+
+	h.post("/api/training/plan/change", nick.Token, obj{"kind": "shorter"}).expect(http.StatusCreated)
+	after := h.get("/api/training/today", nick.Token).expect(http.StatusOK)
+	if after.num("session.id") != thursday.num("session.id") || after.str("session.label") != "Full body B" ||
+		after.length(exerciseAt(t, after, "push_up")+"logged") != 1 {
+		t.Fatalf("the started session should keep its own plan day: %s", after.Body)
 	}
 }

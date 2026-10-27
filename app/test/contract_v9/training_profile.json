@@ -1,0 +1,14 @@
+{
+  "profile": {
+    "equipment": [
+      "pullup_bar",
+      "dumbbells"
+    ],
+    "dumbbellMaxKg": 30,
+    "daysPerWeek": 2,
+    "sessionMinutes": 40,
+    "experience": "new",
+    "focus": "first set of 10 pull-ups"
+  }
+}
+

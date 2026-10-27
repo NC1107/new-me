@@ -1,17 +1,28 @@
-# newme
+# New Me app
 
-A new Flutter project.
+Flutter app for iPhone.
+Web builds exist only for local visual review.
 
-## Getting Started
+## Checks
 
-This project is a starting point for a Flutter application.
+```sh
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build web --release --dart-define=NEWME_APP_KEY=dev-key-0123456789
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Running for review
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```sh
+flutter run -d chrome --dart-define=NEWME_APP_KEY=dev-key-0123456789 --dart-define=NEWME_SERVER=http://localhost:8080
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+`NEWME_SERVER` overrides the server that onboarding probes on launch (default `https://new-me.npc-server.top`).
+The server needs `NEWME_DEV_CORS=true` for the browser build.
+
+## iOS notes
+
+Run `flutter config --no-enable-swift-package-manager` before building for iOS, locally and in CI.
+With Swift Package Manager enabled the app launches to a white screen.
+The deployment target is 15.0, which `package:health` requires.

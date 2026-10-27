@@ -182,3 +182,90 @@ class PillBadge extends StatelessWidget {
     );
   }
 }
+
+/// The hairline card every screen is built from: surface fill, 1px border, radius 14.
+class OnyxCard extends StatelessWidget {
+  const OnyxCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.padding = const EdgeInsets.all(14),
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: const BorderSide(color: kBorder),
+    );
+    return Material(
+      color: kBgSurface,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? Padding(padding: padding, child: child)
+          : InkWell(
+              onTap: onTap,
+              child: Padding(padding: padding, child: child),
+            ),
+    );
+  }
+}
+
+/// A small section heading above a card.
+class SectionLabel extends StatelessWidget {
+  const SectionLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(2, 20, 2, 8),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        color: kFgMuted,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+      ),
+    ),
+  );
+}
+
+/// A thin progress track whose fill eases to a new value and does not animate on first build.
+class ProgressBar extends StatelessWidget {
+  const ProgressBar({super.key, required this.value, this.color, this.height = 6});
+
+  final double value;
+  final Color? color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(height),
+      child: SizedBox(
+        height: height,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: value.clamp(0.0, 1.0)),
+          duration: duration,
+          curve: Curves.easeOut,
+          builder: (context, v, _) => LinearProgressIndicator(
+            value: v,
+            minHeight: height,
+            backgroundColor: kBorder,
+            color: color ?? context.accent,
+          ),
+        ),
+      ),
+    );
+  }
+}

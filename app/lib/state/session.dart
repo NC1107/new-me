@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
+import 'caches.dart';
+import 'local_prefs.dart';
+import 'update_gate.dart';
 
-const _kSessionPref = 'session';
-const _kTokenKey = 'token';
+/// One key holding the whole session as JSON, so a read or write is never half applied.
+const kSessionKey = 'session';
 
 class Session {
   const Session({
@@ -19,6 +22,14 @@ class Session {
     required this.color,
   });
 
+  factory Session.fromJson(Map<String, dynamic> j) => Session(
+    baseUrl: j['baseUrl'] as String,
+    token: j['token'] as String,
+    userId: (j['userId'] as num).toInt(),
+    userName: j['userName'] as String,
+    color: j['color'] as String,
+  );
+
   final String baseUrl;
   final String token;
   final int userId;
@@ -27,23 +38,53 @@ class Session {
   /// Accent preset id, see accentById.
   final String color;
 
-  Map<String, dynamic> toPrefsJson() => {
+  Session copyWith({String? userName, String? color}) => Session(
+    baseUrl: baseUrl,
+    token: token,
+    userId: userId,
+    userName: userName ?? this.userName,
+    color: color ?? this.color,
+  );
+
+  Map<String, dynamic> toJson() => {
     'baseUrl': baseUrl,
     'userId': userId,
     'userName': userName,
     'color': color,
+    'token': token,
   };
 }
 
 class SessionState {
-  const SessionState({this.session, this.restored = false});
+  const SessionState({this.session, this.restored = false, this.signedOutFrom});
 
   final Session? session;
 
   /// False until storage has been read, so startup shows a blank frame instead of flashing
   /// onboarding.
   final bool restored;
+
+  /// The server a forced sign-out came from; onboarding prefills it and explains what happened.
+  final String? signedOutFrom;
 }
+
+typedef ApiClientFactory = ApiClient Function({
+  required String baseUrl,
+  String? token,
+  void Function()? onUnauthorized,
+  void Function()? onUpdateRequired,
+});
+
+/// The seam tests override to put a stub HTTP adapter under every client.
+final apiClientFactoryProvider = Provider<ApiClientFactory>(
+  (ref) =>
+      ({required baseUrl, token, onUnauthorized, onUpdateRequired}) => ApiClient(
+        baseUrl: baseUrl,
+        token: token,
+        onUnauthorized: onUnauthorized,
+        onUpdateRequired: onUpdateRequired,
+      ),
+);
 
 class SessionController extends Notifier<SessionState> {
   SessionController() : _seed = null;
@@ -54,7 +95,9 @@ class SessionController extends Notifier<SessionState> {
 
   final SessionState? _seed;
 
-  final _secure = const FlutterSecureStorage();
+  final _secure = const FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
 
   @override
   SessionState build() {
@@ -70,39 +113,52 @@ class SessionController extends Notifier<SessionState> {
   Future<void> get restoreDone => _restoring;
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = await _secure.read(key: _kTokenKey);
-    final raw = prefs.getString(_kSessionPref);
     Session? session;
-    if (token != null && raw != null) {
-      try {
-        final j = jsonDecode(raw) as Map<String, dynamic>;
-        session = Session(
-          baseUrl: j['baseUrl'] as String,
-          token: token,
-          userId: (j['userId'] as num).toInt(),
-          userName: j['userName'] as String,
-          color: j['color'] as String,
-        );
-      } on Object catch (e) {
-        debugPrint('[NEWME] discarding unreadable session: $e');
-      }
+    try {
+      final raw = await _secure.read(key: kSessionKey);
+      if (raw != null) session = Session.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } on Object catch (e) {
+      debugPrint('[NEWME] discarding unreadable session: $e');
     }
     state = SessionState(session: session, restored: true);
   }
 
   Future<void> signIn(Session session) async {
-    final prefs = await SharedPreferences.getInstance();
-    await _secure.write(key: _kTokenKey, value: session.token);
-    await prefs.setString(_kSessionPref, jsonEncode(session.toPrefsJson()));
+    await _secure.write(key: kSessionKey, value: jsonEncode(session.toJson()));
     state = SessionState(session: session, restored: true);
   }
 
-  Future<void> signOut() async {
-    state = const SessionState(restored: true);
-    final prefs = await SharedPreferences.getInstance();
-    await _secure.delete(key: _kTokenKey);
-    await prefs.remove(_kSessionPref);
+  /// Mirrors a saved profile edit into the stored session, which drives the accent.
+  Future<void> updateProfile({required String name, required String color}) async {
+    final current = state.session;
+    if (current == null) return;
+    final updated = current.copyWith(userName: name, color: color);
+    await _secure.write(key: kSessionKey, value: jsonEncode(updated.toJson()));
+    state = SessionState(session: updated, restored: true);
+  }
+
+  /// Leaves the server. A forced sign-out (the server rejected the token) keeps the server
+  /// address for onboarding and skips revoking the device, which the server already did.
+  Future<void> signOut({bool forced = false}) async {
+    final leaving = state.session;
+    if (leaving == null) return;
+    state = SessionState(restored: true, signedOutFrom: forced ? leaving.baseUrl : null);
+    await _secure.delete(key: kSessionKey);
+    await LocalPrefs.clearForSignOut();
+    await clearResponseCaches();
+    if (!forced) await _revokeDevice(leaving);
+  }
+
+  Future<void> _revokeDevice(Session leaving) async {
+    try {
+      final client = ref.read(apiClientFactoryProvider)(
+        baseUrl: leaving.baseUrl,
+        token: leaving.token,
+      );
+      await client.deleteDevice().timeout(const Duration(seconds: 5));
+    } on Object catch (e) {
+      debugPrint('[NEWME] device revoke skipped: $e');
+    }
   }
 }
 
@@ -111,9 +167,10 @@ final sessionProvider = NotifierProvider<SessionController, SessionState>(Sessio
 final apiClientProvider = Provider<ApiClient?>((ref) {
   final session = ref.watch(sessionProvider).session;
   if (session == null) return null;
-  return ApiClient(
+  return ref.watch(apiClientFactoryProvider)(
     baseUrl: session.baseUrl,
     token: session.token,
-    onUnauthorized: () => ref.read(sessionProvider.notifier).signOut(),
+    onUnauthorized: () => unawaited(ref.read(sessionProvider.notifier).signOut(forced: true)),
+    onUpdateRequired: () => ref.read(updateGateProvider.notifier).require(),
   );
 });

@@ -1,19 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/health_sync.dart';
+import '../../state/me.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
-import '../../widgets/empty_state.dart';
+import '../board/board_screen.dart';
+import '../log/log_sheet.dart';
+import '../me/me_screen.dart';
+import '../today/today_screen.dart';
+import 'home_tab.dart';
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+class _HomeShellState extends ConsumerState<HomeShell> {
+  @override
+  void initState() {
+    super.initState();
+    // Reading the provider is what starts Health sync and its lifecycle listener.
+    ref.read(healthSyncProvider);
+    unawaited(_followDeviceTimezone());
+  }
+
+  Future<void> _followDeviceTimezone() async {
+    try {
+      await ref.read(meProvider.notifier).syncDeviceTimezone();
+    } on Object catch (e) {
+      debugPrint('[NEWME] timezone sync skipped: $e');
+    }
+  }
 
   static const _tabs = [
     (icon: Icons.today_outlined, activeIcon: Icons.today_rounded, label: 'Today'),
@@ -23,20 +46,24 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final tab = ref.watch(homeTabProvider);
     return Scaffold(
       body: IndexedStack(
-        index: _index,
-        children: [for (final t in _tabs) EmptyState(icon: t.icon, title: t.label)],
+        index: tab.index,
+        children: const [TodayScreen(), BoardScreen(), MeScreen()],
       ),
       floatingActionButton: SizedBox(
         height: 58,
         width: 58,
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            showLogSheet(context);
+          },
           backgroundColor: context.accent,
           foregroundColor: context.onAccent,
           elevation: 4,
-          tooltip: 'Add',
+          tooltip: 'Log',
           shape: const CircleBorder(),
           child: const Icon(Icons.add, size: 28),
         ),
@@ -62,8 +89,8 @@ class _HomeShellState extends State<HomeShell> {
                   icon: _tabs[i].icon,
                   activeIcon: _tabs[i].activeIcon,
                   label: _tabs[i].label,
-                  selected: _index == i,
-                  onTap: () => setState(() => _index = i),
+                  selected: tab.index == i,
+                  onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
                 ),
               ],
             ],
@@ -97,6 +124,8 @@ class _NavItem extends StatelessWidget {
         button: true,
         selected: selected,
         label: label,
+        excludeSemantics: true,
+        onTap: onTap,
         child: InkResponse(
           onTap: () {
             HapticFeedback.selectionClick();

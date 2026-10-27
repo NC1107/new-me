@@ -103,5 +103,17 @@ ThemeData themeFor(AccentPalette accent) => ThemeData(
   cardColor: kBgSurface,
   dividerColor: kBorder,
   useMaterial3: true,
+  snackBarTheme: SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: kBgSurfaceHover,
+    contentTextStyle: const TextStyle(color: kFgPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+    actionTextColor: accent.base,
+    elevation: 0,
+    insetPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: const BorderSide(color: kBorder),
+    ),
+  ),
   extensions: [accent],
 );

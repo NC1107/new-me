@@ -35,6 +35,7 @@
 		6FACC994BC625FDBCD465DE5 /* CompanionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE806B9216FA50183ACA68B2 /* CompanionSnapshot.swift */; };
 		ED89B378734E78C50B5CAE45 /* CompanionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B199DD9BED65056AA5953C6E /* CompanionAPI.swift */; };
 		D46512DCC348A9C62FB5D378 /* CompanionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 800FA2DC3599E6066403C047 /* CompanionStyle.swift */; };
+		227B3225D66A7026C840A9FD /* NewMeComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 613FA4E7D9A80DAAB6EF7F9B /* NewMeComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +100,17 @@
 				835A4BAD3887AE70926360FE /* NewMeWatch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		93D4EF8E216B6EE976E6A895 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				227B3225D66A7026C840A9FD /* NewMeComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -357,6 +369,7 @@
 				1327221B482D9F4B3AB8423B /* Sources */,
 				B4E67063D504820389265F17 /* Frameworks */,
 				FA410A0100875D701D8EA5E0 /* Resources */,
+				93D4EF8E216B6EE976E6A895 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -1102,7 +1115,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1122,9 +1135,9 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_ENTITLEMENTS = NewMeComplication/NewMeComplication.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 76S78SUWVM;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NewMeComplication/Info.plist;
@@ -1133,8 +1146,9 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "New Me Watch Widgets App Store";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
@@ -1162,7 +1176,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.complication;
+				PRODUCT_BUNDLE_IDENTIFIER = top.npcserver.newme.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

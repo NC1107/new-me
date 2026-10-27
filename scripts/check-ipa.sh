@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks an exported IPA before it goes to App Store Connect: the widget extension and the
-# Watch app are embedded, every bundle carries the app's version and build number, and every
+# Checks an exported IPA before it goes to App Store Connect: the widget extension, the Watch
+# app and its complication are embedded, every bundle carries the app's version and build number, and every
 # signature verifies. Usage: check-ipa.sh <ipa> <version> <build-number>
 set -euo pipefail
 
@@ -12,7 +12,12 @@ trap 'rm -rf "$work"' EXIT
 unzip -q "$ipa" -d "$work"
 
 app=$(find "$work/Payload" -maxdepth 1 -name '*.app' | head -1)
-bundles=("$app" "$app/PlugIns/NewMeWidgets.appex" "$app/Watch/NewMeWatch.app")
+bundles=(
+  "$app"
+  "$app/PlugIns/NewMeWidgets.appex"
+  "$app/Watch/NewMeWatch.app"
+  "$app/Watch/NewMeWatch.app/PlugIns/NewMeComplication.appex"
+)
 
 failed=0
 for bundle in "${bundles[@]}"; do

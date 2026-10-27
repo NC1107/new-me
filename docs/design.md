@@ -1070,7 +1070,7 @@ Targets in `Runner.xcodeproj`, added by hand and kept on CocoaPods (the Podfile 
 | --- | --- | --- | --- |
 | `NewMeWidgets` (app extension, embedded by Runner's "Embed Foundation Extensions") | `top.npcserver.newme.widgets` | iOS 17 | "New Me Widgets App Store" |
 | `NewMeWatch` (single-target SwiftUI app, embedded by Runner's "Embed Watch Content") | `top.npcserver.newme.watchkitapp` | watchOS 10 | "New Me Watch App Store" |
-| `NewMeComplication` (watchOS widget extension, built but not embedded yet) | `top.npcserver.newme.watchkitapp.complication` | watchOS 10 | none yet |
+| `NewMeComplication` (watchOS widget extension, embedded by `NewMeWatch`'s "Embed Foundation Extensions") | `top.npcserver.newme.watchkitapp.widgets` | watchOS 10 | "New Me Watch Widgets App Store" |
 
 - All three take `Flutter/Companion.xcconfig`, which includes `Generated.xcconfig` and sets `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` from `FLUTTER_BUILD_NAME` and `FLUTTER_BUILD_NUMBER`, so every embedded bundle carries the app's version and build number.
 - Release signs manually with Apple Distribution for team 76S78SUWVM; Debug and Profile use automatic signing, and CI's `--no-codesign` build signs nothing.
@@ -1137,8 +1137,8 @@ Jobs:
    On schedule and dispatch it does not tag and outputs the latest existing tag.
 3. `docker`: push only.
    Builds `ghcr.io/nc1107/new-me:latest` and `:X.Y.Z` with `-ldflags -X main.version`.
-4. `app-store`: `macos-15`, checks out the version tag (the latest tag on schedule, the dispatched ref on a dry run), Flutter 3.47.0, `flutter config --no-enable-swift-package-manager`, CocoaPods, "Select latest Xcode" copied from check-in plus `xcodebuild -version`, manual signing with the three profiles (app, widgets, Watch), `test -n` on every secret, `flutter build ipa --dart-define=NEWME_APP_KEY=...`, `scripts/check-ipa.sh` (widget and Watch embedded, every bundle on the app's version and build number, every signature valid), then `altool` upload and `scripts/asc-wait.sh`, or `altool --validate-app` on a dry run.
-   - `ExportOptions.plist` maps `top.npcserver.newme`, `top.npcserver.newme.widgets` and `top.npcserver.newme.watchkitapp` to their profile names.
+4. `app-store`: `macos-15`, checks out the version tag (the latest tag on schedule, the dispatched ref on a dry run), Flutter 3.47.0, `flutter config --no-enable-swift-package-manager`, CocoaPods, "Select latest Xcode" copied from check-in plus `xcodebuild -version`, manual signing with the four profiles (app, widgets, Watch, Watch complication), `test -n` on every secret, `flutter build ipa --dart-define=NEWME_APP_KEY=...`, `scripts/check-ipa.sh` (widgets, Watch app and complication embedded, every bundle on the app's version and build number, every signature valid), then `altool` upload and `scripts/asc-wait.sh`, or `altool --validate-app` on a dry run.
+   - `ExportOptions.plist` maps `top.npcserver.newme`, `top.npcserver.newme.widgets`, `top.npcserver.newme.watchkitapp` and `top.npcserver.newme.watchkitapp.widgets` to their profile names.
    - `scripts/asc-wait.sh` mints an App Store Connect JWT and polls the build until `processingState` is `VALID`.
      It fails on `INVALID` or after 30 minutes.
 5. `release`: needs `[version, docker, app-store]`, push only, creates the GitHub Release after processing passes.
@@ -1156,7 +1156,7 @@ Other rules:
 
 ### Secrets
 
-Nine in total.
+Ten in total.
 
 Shared with check-in (rotating the certificate means updating both repositories):
 
@@ -1171,6 +1171,7 @@ New for this app:
 - `IOS_PROVISIONING_PROFILE_BASE64` ("New Me App Store Distribution")
 - `IOS_WIDGET_PROFILE_BASE64` ("New Me Widgets App Store")
 - `IOS_WATCH_PROFILE_BASE64` ("New Me Watch App Store")
+- `IOS_WATCH_WIDGETS_PROFILE_BASE64` ("New Me Watch Widgets App Store")
 - `NEWME_APP_KEY`, generated with `openssl rand -hex 32`.
   The web review build uses a different key.
 
@@ -1196,7 +1197,8 @@ Scripted through the App Store Connect API, in this order:
 4.
    For v6: register the App Group `group.top.npcserver.newme`, the bundle ids `top.npcserver.newme.widgets` (App Groups) and `top.npcserver.newme.watchkitapp` (HealthKit, App Groups), assign the group to all three ids, and create the "New Me Widgets App Store" and "New Me Watch App Store" profiles; regenerate the app profile so it carries the group.
 5.
-   Still to do for the complication: register `top.npcserver.newme.watchkitapp.complication` with App Groups and the same group, and create its App Store profile.
+   For the complication: register `top.npcserver.newme.watchkitapp.widgets` with App Groups and the same group, and create the "New Me Watch Widgets App Store" profile.
+   Apple refused `.complication` as unavailable, hence `.widgets`.
 
 Enable automatic updates in TestFlight on both phones.
 

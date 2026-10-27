@@ -62,7 +62,7 @@ A watchOS app (`top.npcserver.newme.watchkitapp`, HealthKit and App Group), Swif
 
 ## Build and release
 
-- The widget and Watch targets are added to the Xcode project; `release.yml` installs the three profiles (secrets `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_WIDGET_PROFILE_BASE64`, `IOS_WATCH_PROFILE_BASE64`) and `ExportOptions.plist` maps each bundle id to its profile.
+- The widget and Watch targets are added to the Xcode project; `release.yml` installs the four profiles (secrets `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_WIDGET_PROFILE_BASE64`, `IOS_WATCH_PROFILE_BASE64`, `IOS_WATCH_WIDGETS_PROFILE_BASE64`) and `ExportOptions.plist` maps each bundle id to its profile.
 - Every native change is verified by the CI iOS build before it reaches `main`.
 - A manual `release.yml` run with `dry_run` builds, signs, exports, checks and validates the IPA from a branch without tagging or uploading, so signing changes are proven before they merge.
 
@@ -81,8 +81,7 @@ The build is described in `docs/design.md` under "Widgets and Watch (v6)"; these
   The phone activates WatchConnectivity at launch, before any Flutter engine, because that message can wake it in the background.
 - **Midnight makes the snapshot stale.** Widgets and the Watch show "New day" instead of yesterday's numbers until the app runs again.
 - **Reading minutes on the Watch** sit beside push-ups on the Log page, as section 5 lists, both on the Digital Crown.
-- **The complication waits for a profile.** A watchOS complication must be its own widget extension with its own bundle id, and no App Store profile exists for `top.npcserver.newme.watchkitapp.complication` yet.
-  The `NewMeComplication` target is built in every CI run (unsigned in Release) so its code stays honest, but the Watch app does not embed it.
-  Once the bundle id and profile exist: add an "Embed Foundation Extensions" phase to `NewMeWatch` holding `NewMeComplication.appex`, switch its Release settings to manual signing with the new profile, map it in `ExportOptions.plist`, and install the profile in `release.yml`.
+- **The complication is its own extension.** A watchOS complication must be a widget extension with its own bundle id and profile, so `NewMeComplication` (`top.npcserver.newme.watchkitapp.widgets`, profile "New Me Watch Widgets App Store") is embedded in the Watch app by an "Embed Foundation Extensions" phase.
+  Apple refused `top.npcserver.newme.watchkitapp.complication` as unavailable, so the id ends in `.widgets` while the target keeps its name.
 - **HealthKit on the Watch** is entitled and described because the profile carries it, but nothing reads Health on the Watch yet; the phone's background delivery already covers the data.
 - **Icons.** The Watch icon is a single 1024 px opaque PNG generated from `assets/brand/icon-1024.png` with ImageMagick; widget extensions need none.

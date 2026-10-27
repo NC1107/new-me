@@ -1,0 +1,383 @@
+{
+  "method": "GET",
+  "path": "/api/targets",
+  "status": 200,
+  "body": {
+    "asOf": "2026-10-27",
+    "disclaimer": "This is general guidance, not medical advice.",
+    "inputs": [
+      {
+        "key": "weightKg",
+        "value": 82.4,
+        "unit": "kg",
+        "source": "health",
+        "note": "smoothed trend of 12 weigh-ins (v7); latest reading 82.6 kg"
+      },
+      {
+        "key": "heightCm",
+        "value": null,
+        "unit": "cm",
+        "source": "missing"
+      },
+      {
+        "key": "age",
+        "value": 36,
+        "unit": "years",
+        "source": "profile",
+        "note": "calendar year minus birth year"
+      },
+      {
+        "key": "sex",
+        "value": null,
+        "source": "missing"
+      },
+      {
+        "key": "goal",
+        "value": {
+          "kind": "lose",
+          "paceKgPerWeek": 0.5
+        },
+        "source": "profile"
+      },
+      {
+        "key": "steps14",
+        "value": 8400,
+        "unit": "steps a day",
+        "source": "health",
+        "note": "average of 12 days with steps in the last 14"
+      }
+    ],
+    "targets": [
+      {
+        "key": "restingEnergy",
+        "value": null,
+        "unit": "kcal",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "mifflin1990",
+          "frankenfield2005"
+        ],
+        "label": "guideline",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": false
+      },
+      {
+        "key": "maintenance",
+        "value": null,
+        "unit": "kcal",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "faowhounu2004",
+          "tudorlocke",
+          "shcherbina2017",
+          "germini2022"
+        ],
+        "label": "convention",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": false,
+        "details": {
+          "palValue": 1.55,
+          "stepBand": "7500-9999",
+          "note": "Wearable active calories are not used: reported errors are roughly 28 to 43% with no published correction."
+        }
+      },
+      {
+        "key": "estimatedFromLogs",
+        "value": null,
+        "unit": "kcal",
+        "current": null,
+        "formula": "Estimated from your logs: average logged intake 2,520 kcal minus the change in your weight trend (-0.9 kg over 21 days x 7,700 kcal per kg / 21 days) = 2,650 kcal, and logged intake is commonly under-reported.",
+        "sources": [
+          "racette2012",
+          "hall2011",
+          "lichtman1992"
+        ],
+        "label": "derivation",
+        "missing": [
+          "need 14 days between the first and last weigh-in"
+        ],
+        "applicable": false,
+        "details": {
+          "weighIns": 12,
+          "spanDays": 21,
+          "loggedDays": 16
+        }
+      },
+      {
+        "key": "calories",
+        "value": null,
+        "unit": "kcal",
+        "current": 2200,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "hall2011",
+          "helms2014",
+          "jensen2014"
+        ],
+        "label": "derivation",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": true,
+        "details": {
+          "goal": {
+            "kind": "lose",
+            "paceKgPerWeek": 0.5
+          },
+          "floorKcal": 1800,
+          "paceOptions": {
+            "lose": [
+              0.25,
+              0.5
+            ],
+            "gainMaxKgPerWeek": 0.4
+          }
+        }
+      },
+      {
+        "key": "protein",
+        "value": 165,
+        "unit": "g",
+        "current": 150,
+        "formula": "2.0 g per kg x 82.4 kg = 164.8 g, rounded to 5 g.",
+        "sources": [
+          "jager2017",
+          "morton2018",
+          "helms2014",
+          "longland2016",
+          "schoenfeld2018"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "perKg": 2,
+          "perMealG": 33,
+          "perMealTip": "About 0.4 g/kg a meal, 33 g, across 4 meals.",
+          "bmi": 25.4
+        }
+      },
+      {
+        "key": "fat",
+        "value": null,
+        "unit": "g",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "iom2005",
+          "thomas2016"
+        ],
+        "label": "guideline",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": true
+      },
+      {
+        "key": "saturatedFatMax",
+        "value": null,
+        "unit": "g",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "dga2020",
+          "who2023"
+        ],
+        "label": "guideline",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": false
+      },
+      {
+        "key": "carbs",
+        "value": null,
+        "unit": "g",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "iom2005",
+          "thomas2016"
+        ],
+        "label": "guideline",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": true,
+        "details": {
+          "floored": false,
+          "floorG": 130,
+          "context": "ACSM sport ranges: 3 to 5 g/kg for light activity, 5 to 7 g/kg for about an hour a day."
+        }
+      },
+      {
+        "key": "fiber",
+        "value": null,
+        "unit": "g",
+        "current": null,
+        "formula": "Needs height, sex to be filled in; nothing is guessed.",
+        "sources": [
+          "iom2005",
+          "dga2020",
+          "reynolds2019"
+        ],
+        "label": "guideline",
+        "missing": [
+          "heightCm",
+          "sex"
+        ],
+        "applicable": false,
+        "details": {
+          "benefitObservedG": "25 to 29",
+          "adequateIntakeG": 38
+        }
+      },
+      {
+        "key": "sleep",
+        "value": 450,
+        "unit": "min",
+        "current": 420,
+        "formula": "Default 7 h 30 min within the 7 to 9 hours recommended for adults, and bedtime is wake time 7:00 AM - 7 h 30 min - 15 min of sleep onset = 11:15 PM (11:45 PM on days off).",
+        "sources": [
+          "watson2015",
+          "hirshkowitz2015",
+          "ohayon2017",
+          "phillips2017",
+          "windred2024",
+          "depner2019"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "rangeMin": 420,
+          "rangeMax": 540,
+          "bedtime": {
+            "workday": "11:15 PM",
+            "dayOff": "11:45 PM",
+            "onsetLatencyMin": 15
+          },
+          "shortfall7": {
+            "nights": 6,
+            "asleepMin": 2400,
+            "targetMin": 2700,
+            "shortfallMin": 300,
+            "note": "Information only; catch-up sleep has weak evidence, so there is no recovery plan."
+          },
+          "regularity": {
+            "score": 82.4,
+            "nights": 10,
+            "pairs": 8,
+            "missing": [],
+            "windowDays": 14,
+            "minNights": 5,
+            "advice": "Keep sleep and wake times regular; there is no threshold.",
+            "note": "Sleep Regularity Index (Phillips 2017) from your night records: 100 is perfectly regular. Only the 18:00 to 12:00 span each night record describes is compared."
+          }
+        }
+      },
+      {
+        "key": "activity",
+        "value": 150,
+        "unit": "min a week",
+        "current": null,
+        "formula": "150 to 300 minutes of moderate or 75 to 150 minutes of vigorous activity a week (a vigorous minute counts as two) plus muscle-strengthening on 2 or more days; this week you have 95 moderate-equivalent minutes and 1 strength days.",
+        "sources": [
+          "who2020",
+          "piercy2018",
+          "impellizzeri2020"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": false,
+        "details": {
+          "maxMin": 300,
+          "note": "No training-load ratio is used or prescribed."
+        }
+      },
+      {
+        "key": "steps",
+        "value": 7000,
+        "unit": "steps",
+        "current": 8000,
+        "formula": "7,000 steps a day, around where the benefit of walking starts to level off (5,000 to 7,000), raised in steps of 1,000 once you are above it.",
+        "sources": [
+          "ding2025",
+          "paluch2022"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "incrementSteps": 1000,
+          "median14": 8300
+        }
+      },
+      {
+        "key": "pushups",
+        "value": null,
+        "unit": "reps",
+        "current": 30,
+        "formula": "3 sets x 18 reps, 75% (the middle of 70 to 80%) of your latest max of 24, a derivation from reps-in-reserve guidance rather than a published constant.",
+        "sources": [
+          "zourdos2016",
+          "schoenfeld2017",
+          "acsm2009"
+        ],
+        "label": "derivation",
+        "missing": [
+          "pushupMax"
+        ],
+        "applicable": true
+      }
+    ],
+    "sources": {
+      "mifflin1990": "Mifflin MD et al., Am J Clin Nutr 1990;51:241",
+      "frankenfield2005": "Frankenfield D, Roth-Yousey L, Compher C, J Am Diet Assoc 2005;105:775",
+      "faowhounu2004": "FAO/WHO/UNU, Human Energy Requirements, 2004",
+      "tudorlocke": "Tudor-Locke C, Bassett DR, Sports Med 2004;34:1",
+      "shcherbina2017": "Shcherbina A et al., J Pers Med 2017;7:3",
+      "germini2022": "Germini F et al., J Med Internet Res 2022;24:e30791",
+      "racette2012": "Racette SB et al., Obesity 2012;20:2404",
+      "hall2011": "Hall KD et al., Lancet 2011;378:826",
+      "lichtman1992": "Lichtman SW et al., N Engl J Med 1992;327:1893",
+      "helms2014": "Helms ER et al., Int J Sport Nutr Exerc Metab 2014;24:127",
+      "jensen2014": "Jensen MD et al., AHA/ACC/TOS guideline, Circulation 2014;129:S102",
+      "jager2017": "Jager R et al., J Int Soc Sports Nutr 2017;14:20",
+      "morton2018": "Morton RW et al., Br J Sports Med 2018;52:376",
+      "longland2016": "Longland TM et al., Am J Clin Nutr 2016;103:738",
+      "schoenfeld2018": "Schoenfeld BJ, Aragon AA, J Int Soc Sports Nutr 2018;15:10",
+      "iom2005": "Institute of Medicine, Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, Protein, and Amino Acids, 2005",
+      "thomas2016": "Thomas DT, Erdman KA, Burke LM, Med Sci Sports Exerc 2016;48:543",
+      "dga2020": "Dietary Guidelines for Americans 2020 to 2025",
+      "who2023": "WHO, Saturated fatty acid and trans-fatty acid intake for adults and children, 2023",
+      "reynolds2019": "Reynolds A et al., Lancet 2019;393:434",
+      "watson2015": "Watson NF et al., Sleep 2015;38:843",
+      "hirshkowitz2015": "Hirshkowitz M et al., Sleep Health 2015;1:40",
+      "ohayon2017": "Ohayon M et al., Sleep Health 2017;3:6",
+      "phillips2017": "Phillips AJK et al., Sci Rep 2017;7:3216",
+      "windred2024": "Windred DP et al., Sleep 2024;47:zsad253",
+      "depner2019": "Depner CM et al., Curr Biol 2019",
+      "who2020": "Bull FC et al., Br J Sports Med 2020;54:1451",
+      "piercy2018": "Piercy KL et al., JAMA 2018;320:2020",
+      "impellizzeri2020": "Impellizzeri FM et al., Int J Sports Physiol Perform 2020;15:907",
+      "ding2025": "Ding D et al., Lancet Public Health 2025;10:e668",
+      "paluch2022": "Paluch AE et al., Lancet Public Health 2022;7:e219",
+      "zourdos2016": "Zourdos MC et al., J Strength Cond Res 2016",
+      "schoenfeld2017": "Schoenfeld BJ et al., J Sports Sci 2017;35:1073",
+      "acsm2009": "ACSM position stand on progression models, Med Sci Sports Exerc 2009;41:687"
+    }
+  }
+}

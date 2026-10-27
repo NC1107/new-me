@@ -391,6 +391,7 @@ void main() {
     expect(byMetric['body_fat_pct'], 18.2);
     expect(byMetric['sleep_minutes'], 432.0);
     expect(byMetric['hrv_ms'], 46.0);
+    expect(byMetric['height_cm'], 180.0);
   });
 
   test('a metric Health has no data for is left out, and the rest still go', () async {

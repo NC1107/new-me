@@ -156,6 +156,19 @@ class _Macro extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(value, style: AppText.tabular(AppText.label)),
         ),
+        if (goal != null && goal > 0) ...[
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              eaten > goal
+                  ? '${(eaten - goal).round().formatted} g over'
+                  : '${(goal - eaten).round().formatted} g left',
+              style: AppText.tabular(AppText.caption),
+            ),
+          ),
+        ],
       ],
     );
   }

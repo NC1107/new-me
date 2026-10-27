@@ -38,6 +38,7 @@ import 'reminders_page.dart';
 import 'schedule_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
+import 'targets_page.dart';
 import 'timezone_page.dart';
 
 class MeScreen extends ConsumerWidget {
@@ -123,6 +124,13 @@ class _MeBody extends ConsumerWidget {
               title: 'Food targets',
               subtitle: kcal == null ? 'Not set' : '${kcal.formatted} kcal a day',
               onTap: () => pushPage(context, const FoodTargetsPage()),
+            ),
+            SettingsRow(
+              icon: Icons.science_rounded,
+              palette: accentById('green'),
+              title: 'Targets',
+              subtitle: 'Calories, macros, sleep and more, with sources',
+              onTap: () => pushPage(context, const TargetsPage()),
             ),
             SettingsRow(
               icon: Icons.bookmarks_rounded,

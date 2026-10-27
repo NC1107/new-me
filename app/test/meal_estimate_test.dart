@@ -47,12 +47,15 @@ void main() {
   ) async {
     await _open(tester, _server());
     expect(find.text('DESCRIBE IT'), findsOneWidget);
+    expect(find.bySemanticsLabel('Search your foods'), findsOneWidget);
     expect(find.textContaining('SNAP'), findsNothing);
   });
 
   testWidgets('without the feature the form is just the form', (tester) async {
     await _open(tester, _server(enabled: false));
     expect(find.text('DESCRIBE IT'), findsNothing);
+    // Searching the library needs no Claude key.
+    expect(find.bySemanticsLabel('Search your foods'), findsOneWidget);
   });
 
   testWidgets('a sentence pre-fills the form with the estimate and logs nothing until Save', (

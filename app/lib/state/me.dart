@@ -10,6 +10,7 @@ import 'cached_resource.dart';
 import 'caches.dart';
 import 'local_prefs.dart';
 import 'session.dart';
+import 'targets.dart';
 import 'timezone.dart';
 import 'today.dart';
 
@@ -33,6 +34,8 @@ class MeNotifier extends CachedNotifier<Me> {
       if (ref.exists(boardProvider)) unawaited(ref.read(boardProvider.notifier).refresh());
     }
     if (ref.exists(todayProvider)) unawaited(ref.read(todayProvider.notifier).refresh());
+    // Height, sex, goal and birth year all feed the formulas.
+    if (ref.exists(targetsProvider)) unawaited(ref.read(targetsProvider.notifier).refresh());
   }
 
   /// Links Audiobookshelf. The server counts the listening it finds into today's reading quest

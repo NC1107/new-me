@@ -199,6 +199,23 @@ class ApiClient {
     (data) => Me.fromJson(data as Json),
   );
 
+  Future<TargetsReport> targets() =>
+      _send(() => _dio.get<dynamic>('/api/targets'), TargetsReport.parse);
+
+  /// Sets the chosen targets from tomorrow, all or nothing; answers with the refreshed profile
+  /// and the keys that were applied. Throws a 422 for a key that cannot be applied.
+  Future<({Me me, List<String> applied})> applyTargets(List<String> keys) => _send(
+    () => _dio.post<dynamic>('/api/targets/apply', data: {'keys': keys}),
+    (data) => (me: Me.fromJson(data as Json), applied: parseApplied(data)),
+  );
+
+  /// Records a push-up max test: one set to near failure. [date] is YYYY-MM-DD and defaults to
+  /// today on the server; a second test on the same day replaces the first.
+  Future<PushupMaxResult> recordPushupMax({required int reps, String? date}) => _send(
+    () => _dio.post<dynamic>('/api/pushups/max', data: {'reps': reps, 'date': ?date}),
+    PushupMaxResult.parse,
+  );
+
   /// Signs in to Audiobookshelf through the server, which keeps the session and never the
   /// password. Throws an [ApiException] with code `abs_login_failed` for bad credentials.
   Future<AudiobookshelfLink> linkAudiobookshelf({

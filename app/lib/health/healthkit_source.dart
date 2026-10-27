@@ -30,13 +30,14 @@ class HealthKitSource implements HealthSource {
     HealthMetric.waterMl: (type: HealthDataType.WATER, scale: 1000, manual: true),
   };
 
-  /// Weight, body fat and lean mass are often logged by hand, so manual entries count.
+  /// Weight, body fat, lean mass and height are often logged by hand, so manual entries count.
   static const _pointInTime = <String, HealthDataType>{
     HealthMetric.restingHr: HealthDataType.RESTING_HEART_RATE,
     HealthMetric.hrvMs: HealthDataType.HEART_RATE_VARIABILITY_SDNN,
     HealthMetric.weightKg: HealthDataType.WEIGHT,
     HealthMetric.bodyFatPct: HealthDataType.BODY_FAT_PERCENTAGE,
     HealthMetric.leanMassKg: HealthDataType.LEAN_BODY_MASS,
+    HealthMetric.heightCm: HealthDataType.HEIGHT,
   };
 
   /// Core is the package's SLEEP_LIGHT. In-bed and awake are left out on purpose.
@@ -259,11 +260,19 @@ class HealthKitSource implements HealthSource {
     DateTime start,
     DateTime end,
   ) async {
+    if (key == HealthMetric.heightCm) return _height(health, end);
     final points = await _numeric(health, type, start, end);
     if (key == HealthMetric.hrvMs) return averageValue(points);
     final latest = latestValue(points);
     if (latest == null) return null;
     return key == HealthMetric.bodyFatPct ? bodyFatPercent(latest) : latest;
+  }
+
+  /// Height is entered once, years ago, so the newest reading is wanted and not one from today.
+  Future<double?> _height(Health health, DateTime end) async {
+    final points = await _numeric(health, HealthDataType.HEIGHT, DateTime(end.year - 100), end);
+    final metres = latestValue(points);
+    return metres == null ? null : heightCm(metres);
   }
 
   /// The night that ends on [day]: 18:00 the evening before to 12:00 that day.

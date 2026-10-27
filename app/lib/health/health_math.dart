@@ -45,6 +45,13 @@ double? averageValue(Iterable<Sample> samples) {
 /// HealthKit reports body fat as a fraction (0.182); the server stores percent.
 double bodyFatPercent(double raw) => raw <= 1 ? raw * 100 : raw;
 
+/// HealthKit reports height in metres; the server takes 100 to 250 cm and a reading outside that
+/// is dropped rather than clamped, because it is a typing slip and not a height.
+double? heightCm(double metres) {
+  final cm = metres * 100;
+  return cm >= 100 && cm <= 250 ? cm : null;
+}
+
 /// Reads each metric on its own, so one that throws only drops itself.
 Future<Map<String, double>> readEach(
   Map<String, Future<double?> Function()> readers, {

@@ -21,6 +21,7 @@ abstract final class HealthMetric {
   static const weightKg = 'weight_kg';
   static const bodyFatPct = 'body_fat_pct';
   static const leanMassKg = 'lean_mass_kg';
+  static const heightCm = 'height_cm';
 
   static const all = [
     steps,
@@ -40,6 +41,7 @@ abstract final class HealthMetric {
     weightKg,
     bodyFatPct,
     leanMassKg,
+    heightCm,
   ];
 }
 

@@ -25,13 +25,19 @@ import 'log_kind.dart';
 import 'log_panes.dart';
 
 /// Opens the log sheet for [kind], from a quest card's + or the food card.
-Future<void> showLogSheet(BuildContext context, {required LogKind kind}) =>
-    showAppSheet<void>(context, builder: (_) => LogSheet(kind: kind));
+Future<void> showLogSheet(BuildContext context, {required LogKind kind, bool maxTest = false}) =>
+    showAppSheet<void>(
+      context,
+      builder: (_) => LogSheet(kind: kind, maxTest: maxTest),
+    );
 
 class LogSheet extends ConsumerStatefulWidget {
-  const LogSheet({super.key, required this.kind});
+  const LogSheet({super.key, required this.kind, this.maxTest = false});
 
   final LogKind kind;
+
+  /// Opens the push-up form on its max test, for the Targets page's link.
+  final bool maxTest;
 
   @override
   ConsumerState<LogSheet> createState() => _LogSheetState();
@@ -104,6 +110,35 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     if (libraryItems != null) unawaited(actions.syncLibrary(libraryItems));
     if (!mounted) return;
     _finish(added, [result]);
+  }
+
+  /// A max test is a measurement and not a set, so it has no Undo: testing again on the same day
+  /// replaces it.
+  Future<void> _submitMax(int reps) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(logActionsProvider).recordPushupMax(reps, date: _entryDate());
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = errorCopy(e);
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('Max test saved: $reps ${reps == 1 ? 'push-up' : 'push-ups'}')),
+      );
   }
 
   /// Closes the sheet and offers one Undo that removes everything this save logged.
@@ -226,6 +261,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.pushups => QuantityPane(
                   key: const ValueKey(LogKind.pushups),
                   type: 'pushups',
+                  initialUnit: widget.maxTest ? kMaxTestUnit : null,
                   units: const [
                     UnitSpec(
                       unit: 'reps',
@@ -234,10 +270,23 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                       step: 1,
                       chips: [5, 10, 20],
                     ),
+                    UnitSpec(
+                      unit: kMaxTestUnit,
+                      label: 'Max test',
+                      countLabel: 'push-ups in one set',
+                      start: 20,
+                      step: 1,
+                      chips: [5, 10, 20],
+                      caption:
+                          'One set to near failure with good form. It sizes your daily push-up '
+                          'target. Testing every 2 to 4 weeks keeps it honest.',
+                      saveLabel: 'Save max test',
+                    ),
                   ],
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
+                  onMaxTest: _submitMax,
                 ),
                 LogKind.reading => QuantityPane(
                   key: const ValueKey(LogKind.reading),

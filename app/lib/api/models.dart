@@ -5,11 +5,13 @@ import 'habit_models.dart';
 import 'together_models.dart';
 import 'v6_models.dart';
 import 'v7_models.dart';
+import 'v8_models.dart';
 
 export 'food_models.dart';
 export 'together_models.dart';
 export 'v6_models.dart';
 export 'v7_models.dart';
+export 'v8_models.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -51,6 +53,9 @@ class AccountUser {
     required this.timezone,
     required this.isAdmin,
     this.birthYear,
+    this.heightCm,
+    this.sex,
+    this.goal,
   });
 
   factory AccountUser.fromJson(Json j) => AccountUser(
@@ -60,6 +65,9 @@ class AccountUser {
     timezone: _str(j['timezone']),
     isAdmin: j['isAdmin'] as bool? ?? false,
     birthYear: _intOrNull(j['birthYear']),
+    heightCm: (j['heightCm'] as num?)?.toDouble(),
+    sex: j['sex'] is String ? j['sex'] as String : null,
+    goal: j['goal'] is Map ? GoalSetting.parse(j['goal']) : null,
   );
 
   final int id;
@@ -71,6 +79,17 @@ class AccountUser {
   /// Null until the person shares it, and on servers older than v4.
   final int? birthYear;
 
+  /// Optional, in cm; null until entered, and on servers older than v8.
+  final double? heightCm;
+
+  /// `male` or `female`, or null until asked.
+  final String? sex;
+
+  /// Null on servers older than v8; read it through [goalSetting].
+  final GoalSetting? goal;
+
+  GoalSetting get goalSetting => goal ?? const GoalSetting();
+
   Json toJson() => {
     'id': id,
     'name': name,
@@ -78,6 +97,9 @@ class AccountUser {
     'timezone': timezone,
     'isAdmin': isAdmin,
     'birthYear': ?birthYear,
+    'heightCm': ?heightCm,
+    'sex': ?sex,
+    'goal': ?goal?.toJson(),
   };
 }
 
@@ -389,6 +411,11 @@ class MePatch {
     this.clearBirthYear = false,
     this.notifications,
     this.schedule,
+    this.heightCm,
+    this.clearHeight = false,
+    this.sex,
+    this.clearSex = false,
+    this.goal,
   });
 
   /// Builds a targets-only patch where a null value clears that target on the server.
@@ -426,6 +453,21 @@ class MePatch {
   /// The whole schedule; the server validates it as one.
   final Schedule? schedule;
 
+  /// 100..250 cm.
+  final double? heightCm;
+
+  /// Sends `heightCm: null` so the server forgets it.
+  final bool clearHeight;
+
+  /// `male` or `female`.
+  final String? sex;
+
+  /// Sends `sex: null` so the server forgets it.
+  final bool clearSex;
+
+  /// Replaces the goal as a whole; the server validates the pace for the kind.
+  final GoalSetting? goal;
+
   Json toJson() {
     final targets = <String, int?>{
       for (final key in clearTargets) key: null,
@@ -443,6 +485,9 @@ class MePatch {
       if (questTemplates != null) 'questTemplates': [for (final q in questTemplates!) q.toJson()],
       if (notifications != null) 'notifications': notifications!.toJson(),
       if (schedule != null) 'schedule': schedule!.toJson(),
+      if (clearHeight) 'heightCm': null else 'heightCm': ?heightCm,
+      if (clearSex) 'sex': null else 'sex': ?sex,
+      'goal': ?goal?.toJson(),
     };
   }
 }

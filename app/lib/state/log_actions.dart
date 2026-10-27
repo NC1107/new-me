@@ -6,6 +6,7 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import 'board.dart';
 import 'session.dart';
+import 'targets.dart';
 import 'today.dart';
 
 /// The write side of the log: every save and delete keeps Today and the Board in step.
@@ -24,6 +25,14 @@ class LogActions {
     final result = await _client.createLog(draft);
     await _ref.read(todayProvider.notifier).applyLog(result);
     _refreshBoard();
+    return result;
+  }
+
+  /// Records a push-up max test. The push-up target follows the latest test, so the Targets page
+  /// is reloaded if it is held.
+  Future<PushupMaxResult> recordPushupMax(int reps, {String? date}) async {
+    final result = await _client.recordPushupMax(reps: reps, date: date);
+    if (_ref.exists(targetsProvider)) unawaited(_ref.read(targetsProvider.notifier).refresh());
     return result;
   }
 

@@ -279,6 +279,7 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     HealthMetric.leanMassKg,
     HealthMetric.bodyFatPct,
     HealthMetric.vo2max,
+    HealthMetric.heightCm,
   };
 
   double _round(String key, double value) =>

@@ -274,10 +274,11 @@ void main() {
     expect(_saveEnabled(tester), isFalse);
     expect(find.text('Fiber (g)'), findsNothing);
 
+    // The food search field comes first and is always there.
     final fields = find.byType(TextField);
-    await app.enter(fields.at(0), 'Toast');
-    await app.enter(fields.at(1), '300');
-    await app.enter(fields.at(2), '10.5');
+    await app.enter(fields.at(1), 'Toast');
+    await app.enter(fields.at(2), '300');
+    await app.enter(fields.at(3), '10.5');
     expect(_saveEnabled(tester), isTrue);
 
     await app.tap(find.text('More'));
@@ -297,7 +298,7 @@ void main() {
     final adapter = _server();
     final app = await _open(tester, adapter, LogKind.meal);
 
-    await app.enter(find.byType(TextField).at(1), '3200');
+    await app.enter(find.byType(TextField).at(2), '3200');
     await app.tap(_save());
     expect(find.textContaining('3,200 kcal in one meal'), findsOneWidget);
     await app.tap(find.text('Cancel'));

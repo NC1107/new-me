@@ -35,6 +35,7 @@ class FakeHealthSource implements HealthSource {
     HealthMetric.weightKg: 82.4,
     HealthMetric.bodyFatPct: 18.2,
     HealthMetric.leanMassKg: 67.4,
+    HealthMetric.heightCm: 180,
   };
 
   bool granted;

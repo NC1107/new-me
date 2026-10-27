@@ -45,8 +45,11 @@ const kConfirmKcal = 3000;
 
 const kPortions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
+/// The unit of a push-up max test, which is recorded apart from the day's log.
+const kMaxTestUnit = 'max';
+
 int _capFor(String unit) => switch (unit) {
-  'reps' => kMaxReps,
+  'reps' || kMaxTestUnit => kMaxReps,
   'pages' => kMaxPages,
   _ => kMaxMinutes,
 };
@@ -58,7 +61,7 @@ int? _confirmAbove(String unit) => switch (unit) {
 };
 
 String _noun(String unit, int n) => switch (unit) {
-  'reps' => n == 1 ? 'push-up' : 'push-ups',
+  'reps' || kMaxTestUnit => n == 1 ? 'push-up' : 'push-ups',
   'pages' => n == 1 ? 'page' : 'pages',
   _ => n == 1 ? 'minute' : 'minutes',
 };
@@ -72,6 +75,9 @@ class UnitSpec {
     required this.start,
     required this.step,
     required this.chips,
+    this.countLabel,
+    this.caption,
+    this.saveLabel,
   });
 
   final String unit;
@@ -81,6 +87,15 @@ class UnitSpec {
   final int start;
   final int step;
   final List<int> chips;
+
+  /// What the number counts when that differs from the toggle's [label].
+  final String? countLabel;
+
+  /// Explains the unit under the quick chips.
+  final String? caption;
+
+  /// The save button's text, when it is not "Save".
+  final String? saveLabel;
 }
 
 /// Pushups, reading and yoga: one whole number, in one of a few units.
@@ -92,6 +107,8 @@ class QuantityPane extends StatefulWidget {
     required this.busy,
     required this.failed,
     required this.onLog,
+    this.onMaxTest,
+    this.initialUnit,
   });
 
   final String type;
@@ -100,12 +117,19 @@ class QuantityPane extends StatefulWidget {
   final bool failed;
   final LogCallback onLog;
 
+  /// Saves a max test; only a pane that offers [kMaxTestUnit] needs it.
+  final Future<void> Function(int reps)? onMaxTest;
+
+  /// The unit to open on; the first one when null or unknown.
+  final String? initialUnit;
+
   @override
   State<QuantityPane> createState() => _QuantityPaneState();
 }
 
 class _QuantityPaneState extends State<QuantityPane> {
-  late UnitSpec _spec = widget.units.first;
+  late UnitSpec _spec =
+      widget.units.where((u) => u.unit == widget.initialUnit).firstOrNull ?? widget.units.first;
   late final _field = TextEditingController(text: '${_spec.start}');
 
   @override
@@ -141,6 +165,10 @@ class _QuantityPaneState extends State<QuantityPane> {
   }
 
   void _log(int quantity) {
+    if (_unit == kMaxTestUnit) {
+      widget.onMaxTest?.call(quantity);
+      return;
+    }
     final limit = _confirmAbove(_unit);
     widget.onLog(
       (id, date) => ActivityDraft(
@@ -183,7 +211,9 @@ class _QuantityPaneState extends State<QuantityPane> {
         ],
         BigNumberStepper(
           controller: _field,
-          unitLabel: widget.units.length > 1 ? _spec.label.toLowerCase() : _spec.label,
+          unitLabel:
+              _spec.countLabel ??
+              (widget.units.length > 1 ? _spec.label.toLowerCase() : _spec.label),
           errorText: _fieldError,
           onChanged: (_) => setState(() {}),
           onMinus: q > 0 && !widget.busy ? () => _set(q - _spec.step) : null,
@@ -203,9 +233,13 @@ class _QuantityPaneState extends State<QuantityPane> {
               ),
           ],
         ),
+        if (_spec.caption case final caption?) ...[
+          const SizedBox(height: 14),
+          Text(caption, textAlign: TextAlign.center, style: AppText.caption),
+        ],
         const SizedBox(height: 24),
         ChunkyButton(
-          label: widget.failed ? 'Try again' : 'Save',
+          label: widget.failed ? 'Try again' : _spec.saveLabel ?? 'Save',
           busy: widget.busy,
           onPressed: _valid && !widget.busy ? () => _log(_quantity!) : null,
         ),
@@ -225,7 +259,8 @@ class MealPane extends StatefulWidget {
     this.canEstimate = false,
   });
 
-  /// Shows "Snap it" and "Describe it"; the server switches them on with its Claude key.
+  /// Shows "Describe it"; the server switches it on with its Claude key. Searching the food
+  /// library needs no key, so it is always there.
   final bool canEstimate;
 
   final Future<List<RecentMeal>> recent;
@@ -417,9 +452,9 @@ class _MealPaneState extends State<MealPane> {
             onBusyChanged: (busy) => setState(() => _estimating = busy),
           ),
           const SizedBox(height: 12),
-          FoodSearchBox(onAdd: _addFood, enabled: !widget.busy),
-          const SizedBox(height: 16),
         ],
+        FoodSearchBox(onAdd: _addFood, enabled: !widget.busy),
+        const SizedBox(height: 16),
         if (_entries.isNotEmpty)
           ItemizedMeal(
             entries: _entries,

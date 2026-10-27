@@ -34,7 +34,7 @@ const _groups = [
   _HealthGroup(Icons.fitness_center_rounded, 'Workouts', 'Workouts and exercise minutes', 'rose'),
   _HealthGroup(Icons.bedtime_rounded, 'Sleep', 'Time asleep each night', 'violet'),
   _HealthGroup(Icons.favorite_rounded, 'Heart', 'Resting heart rate, HRV, VO2 max', 'amber'),
-  _HealthGroup(Icons.monitor_weight_rounded, 'Body', 'Weight, body fat, lean mass', 'teal'),
+  _HealthGroup(Icons.monitor_weight_rounded, 'Body', 'Weight, height, body fat, lean mass', 'teal'),
   _HealthGroup(Icons.spa_rounded, 'Mindfulness and water', 'Mindful minutes, water', 'green'),
 ];
 

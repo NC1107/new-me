@@ -34,6 +34,12 @@ final insightsCache = ResponseCache<Insights>(
   toJson: (v) => v.toJson(),
 );
 
+final targetsCache = ResponseCache<TargetsReport>(
+  key: 'cache.targets',
+  fromJson: TargetsReport.parse,
+  toJson: (v) => v.toJson(),
+);
+
 const _workoutsCachePrefix = 'cache.workouts.';
 
 /// One cache per window, since a 7 day answer must not stand in for a 90 day one.
@@ -49,6 +55,7 @@ Future<void> clearResponseCaches() async {
   await meCache.clear();
   await insightsCache.clear();
   await habitsCache.clear();
+  await targetsCache.clear();
   final prefs = await SharedPreferences.getInstance();
   for (final key in prefs.getKeys().where((k) => k.startsWith(_workoutsCachePrefix))) {
     await prefs.remove(key);

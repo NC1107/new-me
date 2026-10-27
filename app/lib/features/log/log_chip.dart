@@ -34,6 +34,7 @@ class LogChip extends StatelessWidget {
     final person = context.accentPalette;
     final reduce = MediaQuery.disableAnimationsOf(context);
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       enabled: enabled,

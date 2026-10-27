@@ -117,6 +117,12 @@ jobs:
           channel: stable
           flutter-version: "3.47.0"
           cache: true
+      # Match release.yml: the runner's default Xcode lacks SDK symbols some plugins use.
+      - name: Select latest Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
       - run: flutter config --no-enable-swift-package-manager
       - run: flutter pub get --enforce-lockfile
       - run: flutter build ios --release --no-codesign --dart-define=NEWME_APP_KEY=ci-key

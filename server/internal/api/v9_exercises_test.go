@@ -176,3 +176,21 @@ func TestCustomExercises(t *testing.T) {
 	}
 	h.delete("/api/exercises/"+key, nick.Token).expect(http.StatusNotFound)
 }
+
+func TestLookbackListsTheMonthsLifts(t *testing.T) {
+	h := newHarness(t)
+	nick := h.joinAdmin("Nick", "green")
+	for _, reps := range []int{6, 9, 7} {
+		h.post("/api/sets", nick.Token, obj{"clientOpId": h.nextOp(), "exercise": "pull_up", "reps": reps}).
+			expect(http.StatusCreated)
+	}
+	got := h.get("/api/lookback?month=2026-11", nick.Token).expect(http.StatusOK)
+	if got.length("people.0.lifts") != 1 || got.str("people.0.lifts.0.key") != "pull_up" ||
+		got.num("people.0.lifts.0.best.reps") != 9 || got.str("people.0.lifts.0.measure") != "reps" ||
+		!got.isNull("people.0.lifts.0.first") {
+		t.Fatalf("lifts = %s", got.Body)
+	}
+	if h.get("/api/lookback?month=2026-10", nick.Token).expect(http.StatusOK).length("people.0.lifts") != 0 {
+		t.Fatal("October had no sets")
+	}
+}

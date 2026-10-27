@@ -26,7 +26,8 @@ type questJSON struct {
 	BasePoints  int     `json:"basePoints"`
 	BonusPoints int     `json:"bonusPoints"`
 	Done        bool    `json:"done"`
-	// DoneBy says which Health workout completed the quest; null when logged entries did.
+	// DoneBy says which Health workout or planned session completed the quest; null when logged
+	// entries did.
 	DoneBy *score.DoneBy `json:"doneBy"`
 }
 

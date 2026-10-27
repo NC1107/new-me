@@ -12,6 +12,7 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/anthropic"
 	"github.com/nc1107/new-me/server/internal/estimate"
+	"github.com/nc1107/new-me/server/internal/planner"
 )
 
 // fakeClaude stands in for the Anthropic API: it records requests and answers with a canned
@@ -88,6 +89,11 @@ func withClaude(srv *httptest.Server) func(*Server) {
 		client := anthropic.New("sk-test-key", srv.URL)
 		s.estimator = &estimate.Estimator{Client: client}
 	}
+}
+
+// withPlannerClient points plan design at the fake Claude.
+func withPlannerClient(url string) func(*Server) {
+	return func(s *Server) { s.planner = &planner.Planner{Client: anthropic.New("sk-test-key", url)} }
 }
 
 func jpegB64(size int) string {

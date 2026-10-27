@@ -165,6 +165,8 @@ type PersonMonth struct {
 	CountedDays  int                    `json:"countedDays"`
 	Metrics      []MonthMetric          `json:"metrics"`
 	Improvements []progress.Improvement `json:"improvements"`
+	// Lifts are the exercises logged in the month with their best set against the first month.
+	Lifts []Lift `json:"lifts"`
 }
 
 // CoupleMonth is the two of them together: points, the days both counted, and the metrics
@@ -251,6 +253,11 @@ func (s *Service) BuildMonth(ctx context.Context, month string, viewerToday scor
 			collect(coupleFirst, spec.Key, mm.First)
 		}
 		person.Improvements = progress.TopImprovements(progress.Specs, cur, prev, TopImprovements)
+		liftSets, err := db.LiftSetsThrough(ctx, s.DB.Pool, u.ID, from, to)
+		if err != nil {
+			return out, err
+		}
+		person.Lifts = Lifts(liftSets, from, to)
 		if person.Points, err = db.SumPoints(ctx, s.DB.Pool, u.ID, from, to); err != nil {
 			return out, err
 		}

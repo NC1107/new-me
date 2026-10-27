@@ -132,3 +132,20 @@ func TestHIITCreditUsesIntensityWhenTheThresholdIsKnown(t *testing.T) {
 		}
 	}
 }
+
+func TestStrengthProgressOrder(t *testing.T) {
+	long := []WorkoutSpan{{Type: WorkoutStrength, DurationMin: 30}}
+	if actual, by := StrengthProgress(30, 30, "Full body A", long, nil); actual != 30 || by != nil {
+		t.Fatalf("logged reps that reach the target come first, got %d %+v", actual, by)
+	}
+	if actual, by := StrengthProgress(5, 30, "Full body A", long, nil); actual != 30 || by == nil ||
+		by.Kind != DoneBySession || by.Type != "Full body A" {
+		t.Fatalf("a completed session comes before a workout, got %d %+v", actual, by)
+	}
+	if actual, by := StrengthProgress(5, 30, "", long, nil); actual != 30 || by == nil || by.Kind != DoneByWorkout {
+		t.Fatalf("without a session a workout still counts, got %d %+v", actual, by)
+	}
+	if actual, by := StrengthProgress(5, 30, "", nil, nil); actual != 5 || by != nil {
+		t.Fatalf("nothing else leaves the reps, got %d %+v", actual, by)
+	}
+}

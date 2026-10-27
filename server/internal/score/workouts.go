@@ -103,6 +103,23 @@ func PushupsProgress(reps, target int, workouts []WorkoutSpan, hiitMinHR *float6
 	return reps, nil
 }
 
+// DoneBySession is the kind of a quest finished by completing the day's planned training
+// session.
+const DoneBySession = "session"
+
+// StrengthProgress is the push-ups ("Get stronger") quest with v9 training: logged reps count
+// first, then a completed planned session (named by its plan-day label) completes the quest,
+// then a qualifying Health workout does, as in PushupsProgress.
+func StrengthProgress(reps, target int, sessionLabel string, workouts []WorkoutSpan, hiitMinHR *float64) (actual int, doneBy *DoneBy) {
+	if reps >= target {
+		return reps, nil
+	}
+	if sessionLabel != "" {
+		return target, &DoneBy{Kind: DoneBySession, Type: sessionLabel}
+	}
+	return PushupsProgress(reps, target, workouts, hiitMinHR)
+}
+
 // YogaWorkoutMinutes is the whole minutes of yoga workouts, which add to logged yoga minutes.
 func YogaWorkoutMinutes(workouts []WorkoutSpan) int {
 	total := 0.0

@@ -18,6 +18,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/lookback"
 	"github.com/nc1107/new-me/server/internal/milestone"
+	"github.com/nc1107/new-me/server/internal/planner"
 	"github.com/nc1107/new-me/server/internal/ratelimit"
 	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/semver"
@@ -72,7 +73,11 @@ type Server struct {
 	polisher *coach.Polisher
 	// estimates caps meal estimates per person, since each one costs a Claude call.
 	estimates *ratelimit.Window
-	recap     *recap.Service
+	// planner is nil while NEWME_ANTHROPIC_API_KEY is unset, which turns plan design off.
+	planner *planner.Planner
+	// plans caps plan designs and changes per person.
+	plans *ratelimit.Window
+	recap *recap.Service
 	// milestones records and announces streak milestones and firsts.
 	milestones *milestone.Service
 	lookback   *lookback.Service
@@ -109,9 +114,11 @@ func New(cfg config.Config, database *db.DB) *Server {
 	if cfg.Anthropic.Enabled() {
 		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
 		srv.estimator = &estimate.Estimator{Client: claude, Foods: srv.foods, Library: libraryStore{database}}
+		srv.planner = &planner.Planner{Client: claude}
 	}
 	srv.polisher = &coach.Polisher{DB: database, Client: claude}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
+	srv.plans = ratelimit.NewWindow(plansPerDay, 24*time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
 	srv.milestones = &milestone.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
 	srv.lookback = &lookback.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
@@ -206,6 +213,15 @@ func (s *Server) Router() http.Handler {
 		r.With(s.settleAfter).Post("/api/sets", s.handleCreateSet)
 		r.Get("/api/sets", s.handleListSets)
 		r.With(s.settleAfter).Delete("/api/sets/{id}", s.handleDeleteSet)
+		r.Get("/api/training/profile", s.handleGetTrainingProfile)
+		r.Put("/api/training/profile", s.handlePutTrainingProfile)
+		r.Get("/api/training/plan", s.handleGetPlan)
+		r.Post("/api/training/plan", s.handleGeneratePlan)
+		r.Post("/api/training/plan/change", s.handleChangePlan)
+		r.Delete("/api/training/plan", s.handleDeletePlan)
+		r.Get("/api/training/today", s.handleTrainingToday)
+		r.With(s.settleAfter).Post("/api/training/sessions/{id}/complete", s.handleCompleteSession)
+		r.Get("/api/training/progress", s.handleTrainingProgress)
 		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)

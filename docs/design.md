@@ -728,6 +728,21 @@ All additive; the formulas, labels and citations are in `docs/design-v8.md`.
 - `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
 - `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
 
+### Endpoints, v9 additions
+
+All additive; the rules and citations are in `docs/design-v9.md`.
+
+- `GET /exercises`: `{exercises, muscles, equipment}`; each exercise has `key, name, primaryMuscles, secondaryMuscles, measure, load, equipment, easierKey, harderKey, custom, best, maxTest`, where `best` is the strongest set (with `e1rmKg` for loaded work) and `maxTest` the latest max test.
+- `POST /exercises`, `PATCH /exercises/{key}` and `DELETE /exercises/{key}` manage the caller's custom exercises; deleting keeps the sets.
+- `POST /exercises/{key}/max {reps|seconds, date?}` records a max test; a push-up max also writes the v8 push-up max.
+- `POST /sets {clientOpId, exercise, reps|seconds, loadKg?, rir?, sessionId?, date?}` logs a set once per op id (201, or 200 on replay) and answers with the rescored day; push-up sets count toward the push-ups quest. `DELETE /sets/{id}` soft deletes and rescores. `GET /sets?exercise=&days=` lists live sets.
+- `GET /training/profile` and `PUT /training/profile {equipment, dumbbellMaxKg, daysPerWeek 2..6, sessionMinutes 20..90, experience new|some|experienced, focus}`.
+- `POST /training/plan {weeks?}` designs a plan with Claude and validates it (201, 404 `training_disabled` without a key, 422 `no_training_profile`, 422 `plan_invalid` with `violations`, 502 `planner_unavailable`, 429 after 10 a day). `GET /training/plan`, `POST /training/plan/change {kind: swap|bodyweight|shorter|pain|new_block, detail}` and `DELETE /training/plan`.
+- `GET /training/today`: `{date, plan, session, restDay, blockEnded}`; the session lists each exercise with its plan prescription, the progression `target {exercise, sets, amount, loadKg}`, the `reason` and the sets logged today.
+- `POST /training/sessions/{id}/complete` completes the session and answers with the rescored day; the push-ups quest then has `doneBy {kind: session, type: <plan-day label>}`.
+- `GET /training/progress`: hard sets per muscle for the last four ISO weeks against the evidence `range`.
+- `GET /lookback` gains `people[].lifts[] {key, name, measure: reps|seconds|e1rm, value, best, first, firstMonth}`.
+
 
 ### Schema
 
@@ -969,6 +984,12 @@ Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
 - `plan_polish` (primary key user + `local_date`, `facts_key`, `text` nullable, `attempted_at`): the row is the claim on the day's single Claude call and `text` the cached wording.
 - `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
 - The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
+
+#### Migrations 0013 and 0014 (v9)
+
+- `exercises`: the seeded catalog (key, name, primary and secondary muscles, `measure` reps|seconds, `load` bodyweight|external, equipment, easier and harder keys, position) plus custom rows with a `user_id`.
+- `exercise_sets` (reps or seconds, optional `load_kg` and `rir`, optional `session_id`, soft delete, unique on user + `client_op_id`) and `exercise_max_tests`.
+- `training_profiles` (one row per person), `training_plans` (weekly template as JSONB, one active plan per person) and `training_sessions` (one per person and date, `completed_at`).
 
 #### Migrations 0011 and 0012 (v8)
 

@@ -59,6 +59,9 @@ type DayInputs struct {
 
 	// Workouts are the day's Health workouts, which complete the push-ups quest and add to yoga.
 	Workouts []score.WorkoutSpan
+	// TrainingSession is the plan-day label of the day's completed training session, which
+	// completes the push-ups quest; empty when there is none.
+	TrainingSession string
 	// HIITMinHR is the average heart rate a HIIT workout needs to count, nil when the person's
 	// age or resting heart rate is unknown.
 	HIITMinHR *float64
@@ -114,6 +117,9 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 		return in, err
 	}
 	in.Pushups += setReps
+	if in.TrainingSession, err = CompletedSessionLabel(ctx, q, userID, date); err != nil {
+		return in, err
+	}
 	if in.ListeningMinutes, err = ListeningMinutes(ctx, q, userID, date); err != nil {
 		return in, err
 	}

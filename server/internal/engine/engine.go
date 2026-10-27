@@ -59,7 +59,7 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
 		return healthUnits(q.Key, in), q.Target
 	case db.QuestPushups:
-		actual, _ = score.PushupsProgress(in.Pushups, q.Target, in.Workouts, in.HIITMinHR)
+		actual, _ = score.StrengthProgress(in.Pushups, q.Target, in.TrainingSession, in.Workouts, in.HIITMinHR)
 		return actual, q.Target
 	case db.QuestReading:
 		minutes := score.ReadingMinutes(in.ReadingMinutes, in.ListeningMinutes)
@@ -112,7 +112,7 @@ func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 func DoneBy(q db.DayQuest, in db.DayInputs) *score.DoneBy {
 	switch q.Key {
 	case db.QuestPushups:
-		if _, by := score.PushupsProgress(in.Pushups, q.Target, in.Workouts, in.HIITMinHR); by != nil {
+		if _, by := score.StrengthProgress(in.Pushups, q.Target, in.TrainingSession, in.Workouts, in.HIITMinHR); by != nil {
 			return by
 		}
 	case db.QuestYoga:

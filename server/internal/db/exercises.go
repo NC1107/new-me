@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/training"
 )
 
 // Exercise measures and load types, mirroring the table checks.
@@ -285,6 +286,41 @@ func LatestMaxTests(ctx context.Context, q Querier, userID int64) (map[int64]Max
 			return nil, err
 		}
 		out[t.ExerciseID] = t
+	}
+	return out, rows.Err()
+}
+
+// LiftSet is a logged set with what a look-back needs about its exercise.
+type LiftSet struct {
+	Key    string
+	Name   string
+	Loaded bool
+	training.Set
+}
+
+// LiftSetsThrough returns every live set of the person up to a date, oldest first, for the
+// exercises logged between from and to. Look-backs compare a month's best with the best of the
+// first month each exercise was logged.
+func LiftSetsThrough(ctx context.Context, q Querier, userID int64, from, to score.Date) ([]LiftSet, error) {
+	rows, err := q.Query(ctx, `
+		SELECT e.key, e.name, e.load = 'external', s.local_date::text, COALESCE(s.reps, 0), COALESCE(s.seconds, 0),
+		       COALESCE(s.load_kg::float8, 0)
+		FROM exercise_sets s JOIN exercises e ON e.id = s.exercise_id
+		WHERE s.user_id = $1 AND s.deleted_at IS NULL AND s.local_date <= $3::date
+		  AND s.exercise_id IN (SELECT exercise_id FROM exercise_sets
+		                        WHERE user_id = $1 AND deleted_at IS NULL AND local_date BETWEEN $2::date AND $3::date)
+		ORDER BY s.local_date, s.id`, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []LiftSet
+	for rows.Next() {
+		var l LiftSet
+		if err := rows.Scan(&l.Key, &l.Name, &l.Loaded, &l.Date, &l.Reps, &l.Seconds, &l.LoadKg); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
 	}
 	return out, rows.Err()
 }

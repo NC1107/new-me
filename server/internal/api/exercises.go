@@ -370,6 +370,11 @@ func (s *Server) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 		if err := db.LockUserDay(ctx, tx, c.user.ID, date); err != nil {
 			return err
 		}
+		if req.SessionID != nil {
+			if _, err := sessionByID(r, tx, *req.SessionID); err != nil {
+				return err
+			}
+		}
 		var err error
 		set, created, err = db.InsertExerciseSet(ctx, tx, db.NewExerciseSet{UserID: c.user.ID, LocalDate: date,
 			ExerciseID: exercise.ID, Reps: req.Reps, Seconds: req.Seconds, LoadKg: req.LoadKg, RIR: req.RIR,

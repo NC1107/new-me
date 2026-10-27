@@ -38,7 +38,34 @@ class LogActions {
   Future<List<RecentMeal>> recentMeals() => _client.recentMeals();
 
   /// Works a meal out from a sentence. Nothing is logged by this call.
-  Future<MealEstimate> estimateMeal(String text) => _client.estimateMeal(text: text);
+  Future<MealBreakdown> estimateMeal(String text) => _client.estimateMeal(text: text);
+
+  Future<FoodSearch> searchFoods(String q, {bool remote = false}) =>
+      _client.foods(q: q, remote: remote);
+
+  Future<SavedFood> saveFood(SavedFood food) => _client.createFood(food);
+
+  Future<SavedFood> updateFood(int id, SavedFood food) => _client.updateFood(id, food);
+
+  Future<void> deleteFood(int id) => _client.deleteFood(id);
+
+  /// After a meal is logged: counts a use of each saved food, and saves database foods (and
+  /// estimates the person chose to keep) so the same food has the same numbers next time.
+  /// Best effort: the meal is already logged, so a failure here is not worth surfacing.
+  Future<void> syncLibrary(List<MealItem> items) async {
+    for (final item in items) {
+      try {
+        if (item.source == FoodSource.library) {
+          await _client.useFood(int.parse(item.sourceId));
+        } else if (item.willSave) {
+          final saved = await _client.createFood(item.toSavedFood());
+          if (saved.id != null) await _client.useFood(saved.id!);
+        }
+      } on Object {
+        continue;
+      }
+    }
+  }
 
   void _refreshBoard() {
     if (_ref.exists(boardProvider)) unawaited(_ref.read(boardProvider.notifier).refresh());

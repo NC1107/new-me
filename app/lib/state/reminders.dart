@@ -8,6 +8,7 @@ import '../reminders/reminder_plan.dart';
 import '../reminders/reminder_scheduler.dart';
 import 'clock.dart';
 import 'local_prefs.dart';
+import 'me.dart';
 import 'session.dart';
 import 'today.dart';
 
@@ -58,6 +59,7 @@ class ReminderController extends Notifier<ReminderSettings> {
   @override
   ReminderSettings build() {
     ref.listen(todayProvider, (_, _) => _reschedule());
+    ref.listen(meProvider.select((m) => m.value?.data.schedule), (_, _) => _reschedule());
     ref.listen(sessionProvider.select((s) => s.session?.userId), (prev, next) {
       if (next != null || prev == null) return;
       state = const ReminderSettings(loaded: true);
@@ -160,6 +162,7 @@ class ReminderController extends Notifier<ReminderSettings> {
       now: ref.read(clockProvider)(),
       minutes: settings.minutes,
       today: ref.read(todayProvider).value?.data,
+      schedule: ref.read(meProvider).value?.data.schedule,
     );
     for (final MapEntry(:key, :value) in plan.entries) {
       if (value == null) {

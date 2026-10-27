@@ -9,6 +9,7 @@ import 'steps_entry.dart';
 import 'steps_finish.dart';
 import 'steps_plan.dart';
 import 'steps_profile.dart';
+import 'steps_schedule.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -40,6 +41,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep.who => const WhoStep(),
     OnboardingStep.name => const NameStep(),
     OnboardingStep.color => const ColorStep(),
+    OnboardingStep.schedule => const ScheduleStep(),
     OnboardingStep.focus => const FocusStep(),
     OnboardingStep.goals => const GoalStep(),
     OnboardingStep.food => const FoodStep(),

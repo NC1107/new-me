@@ -4,9 +4,12 @@ import 'habit_models.dart';
 
 import 'together_models.dart';
 import 'v6_models.dart';
+import 'v7_models.dart';
 
+export 'food_models.dart';
 export 'together_models.dart';
 export 'v6_models.dart';
+export 'v7_models.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -296,6 +299,8 @@ class Me {
     this.audiobookshelf,
     this.notifications = const NotificationPrefs(),
     this.features = const Features(),
+    this.schedule = const Schedule(),
+    this.protein = const ProteinInfo(),
   });
 
   factory Me.fromJson(Json j) => Me(
@@ -310,6 +315,8 @@ class Me {
         : null,
     notifications: NotificationPrefs.fromJson(j['notifications']),
     features: Features.fromJson(j['features']),
+    schedule: Schedule.parse(j['schedule']),
+    protein: ProteinInfo.parse(j['protein']),
   );
 
   final AccountUser user;
@@ -330,6 +337,12 @@ class Me {
   /// Optional server features; all off for servers that predate v6.
   final Features features;
 
+  /// Wake and bed times, workdays and the first-notification offset.
+  final Schedule schedule;
+
+  /// The protein target explained; empty before v7 servers.
+  final ProteinInfo protein;
+
   Me copyWith({NotificationPrefs? notifications}) => Me(
     user: user,
     targets: targets,
@@ -340,6 +353,8 @@ class Me {
     audiobookshelf: audiobookshelf,
     notifications: notifications ?? this.notifications,
     features: features,
+    schedule: schedule,
+    protein: protein,
   );
 
   Json toJson() => {
@@ -352,6 +367,9 @@ class Me {
     if (audiobookshelf != null) 'audiobookshelf': audiobookshelf!.toJson(),
     'notifications': notifications.toJson(),
     'features': features.toJson(),
+    // Left out while default, so a response from an older server re-encodes to what it sent.
+    if (schedule != const Schedule()) 'schedule': schedule.toJson(),
+    if (!protein.isEmpty) 'protein': protein.toJson(),
   };
 }
 
@@ -370,6 +388,7 @@ class MePatch {
     this.birthYear,
     this.clearBirthYear = false,
     this.notifications,
+    this.schedule,
   });
 
   /// Builds a targets-only patch where a null value clears that target on the server.
@@ -404,6 +423,9 @@ class MePatch {
 
   final NotificationPatch? notifications;
 
+  /// The whole schedule; the server validates it as one.
+  final Schedule? schedule;
+
   Json toJson() {
     final targets = <String, int?>{
       for (final key in clearTargets) key: null,
@@ -420,6 +442,7 @@ class MePatch {
       if (clearBirthYear) 'birthYear': null else 'birthYear': ?birthYear,
       if (questTemplates != null) 'questTemplates': [for (final q in questTemplates!) q.toJson()],
       if (notifications != null) 'notifications': notifications!.toJson(),
+      if (schedule != null) 'schedule': schedule!.toJson(),
     };
   }
 }
@@ -735,6 +758,10 @@ class Today {
     this.habits = const [],
     this.readiness,
     this.plan,
+    this.freezes = const Freezes(),
+    this.repair,
+    this.away = const AwayState(),
+    this.newMilestones = const [],
   });
 
   factory Today.fromJson(Json j) => Today(
@@ -753,6 +780,10 @@ class Today {
     habits: parseHabitStates(j['habits']),
     readiness: Readiness.tryParse(j['readiness']),
     plan: Plan.tryParse(j['plan']),
+    freezes: Freezes.parse(j['freezes']),
+    repair: Repair.tryParse(j['repair']),
+    away: AwayState.parse(j['away']),
+    newMilestones: parseMilestones(j['newMilestones']),
   );
 
   /// The day shown; always [localToday] unless the request named an earlier one.
@@ -785,6 +816,18 @@ class Today {
   /// The day's plan; null on any day but today.
   final Plan? plan;
 
+  /// Streak freezes held and how far the next one is.
+  final Freezes freezes;
+
+  /// The open window to repair a missed yesterday; null when there is none.
+  final Repair? repair;
+
+  /// Whether today is an away day, and the spans around it.
+  final AwayState away;
+
+  /// Milestones reached yesterday or today, for a one-off celebration.
+  final List<Milestone> newMilestones;
+
   int get listeningMinutes => listening ?? 0;
 
   Today copyWith({
@@ -809,6 +852,10 @@ class Today {
     habits: habits ?? this.habits,
     readiness: readiness,
     plan: plan,
+    freezes: freezes,
+    repair: repair,
+    away: away,
+    newMilestones: newMilestones,
   );
 
   Json toJson() => {
@@ -830,6 +877,10 @@ class Today {
     'habits': [for (final h in habits) h.toJson()],
     if (readiness != null) 'readiness': readiness!.toJson(),
     if (plan != null) 'plan': plan!.toJson(),
+    if (!freezes.isEmpty) 'freezes': freezes.toJson(),
+    if (repair != null) 'repair': repair!.toJson(),
+    if (!away.isEmpty) 'away': away.toJson(),
+    if (newMilestones.isNotEmpty) 'newMilestones': [for (final m in newMilestones) m.toJson()],
   };
 }
 
@@ -839,6 +890,9 @@ class DayMark {
     required this.percent,
     required this.counted,
     required this.rest,
+    this.frozen = false,
+    this.away = false,
+    this.repaired = false,
   });
 
   factory DayMark.fromJson(Json j) => DayMark(
@@ -846,6 +900,9 @@ class DayMark {
     percent: _int(j['percent']),
     counted: j['counted'] as bool? ?? false,
     rest: j['rest'] as bool? ?? false,
+    frozen: j['frozen'] as bool? ?? false,
+    away: j['away'] as bool? ?? false,
+    repaired: j['repaired'] as bool? ?? false,
   );
 
   final String date;
@@ -853,7 +910,24 @@ class DayMark {
   final bool counted;
   final bool rest;
 
-  Json toJson() => {'date': date, 'percent': percent, 'counted': counted, 'rest': rest};
+  /// Covered by a freeze: the streak holds but gains no day.
+  final bool frozen;
+
+  /// An away day, which neither breaks nor extends the streak.
+  final bool away;
+
+  /// A missed day that was repaired afterwards; it counts as a frozen day.
+  final bool repaired;
+
+  Json toJson() => {
+    'date': date,
+    'percent': percent,
+    'counted': counted,
+    'rest': rest,
+    if (frozen) 'frozen': true,
+    if (away) 'away': true,
+    if (repaired) 'repaired': true,
+  };
 }
 
 class BoardDay {
@@ -905,6 +979,8 @@ class BoardUser {
     this.syncedAt,
     this.highlights = const BoardHighlights(),
     this.workoutsThisWeek,
+    this.freezes = const Freezes(),
+    this.away = const AwayState(),
   });
 
   factory BoardUser.fromJson(Json j) => BoardUser(
@@ -921,6 +997,8 @@ class BoardUser {
         ? BoardHighlights.fromJson((j['highlights'] as Map).cast<String, dynamic>())
         : const BoardHighlights(),
     workoutsThisWeek: _intOrNull(j['workoutsThisWeek']),
+    freezes: Freezes.parse(j['freezes']),
+    away: AwayState.parse(j['away']),
   );
 
   final int id;
@@ -945,6 +1023,12 @@ class BoardUser {
   /// Workouts in the current week; null on servers older than v4.
   final int? workoutsThisWeek;
 
+  /// Streak freezes held; none before v7 servers.
+  final Freezes freezes;
+
+  /// Whether the person is away today, and the spans.
+  final AwayState away;
+
   Json toJson() => {
     'id': id,
     'name': name,
@@ -957,6 +1041,8 @@ class BoardUser {
     'syncedAt': _timeJson(syncedAt),
     'highlights': highlights.toJson(),
     'workoutsThisWeek': ?workoutsThisWeek,
+    if (!freezes.isEmpty) 'freezes': freezes.toJson(),
+    if (!away.isEmpty) 'away': away.toJson(),
   };
 }
 
@@ -983,6 +1069,7 @@ class Board {
     required this.users,
     this.challenge,
     this.reward,
+    this.sharedStreak = const SharedStreak(),
   });
 
   factory Board.fromJson(Json j) => Board(
@@ -991,6 +1078,7 @@ class Board {
     users: _list(j['users'], BoardUser.fromJson),
     challenge: Challenge.tryParse(j['challenge']),
     reward: Reward.tryParse(j['reward']),
+    sharedStreak: SharedStreak.parse(j['sharedStreak']),
   );
 
   final SeasonInfo season;
@@ -1005,12 +1093,16 @@ class Board {
   /// The reward being earned, or the newest reached one not yet enjoyed.
   final Reward? reward;
 
+  /// The couple's streak; zero before v7 servers.
+  final SharedStreak sharedStreak;
+
   Board copyWith({Reward? reward, bool clearReward = false}) => Board(
     season: season,
     serverNow: serverNow,
     users: users,
     challenge: challenge,
     reward: clearReward ? null : (reward ?? this.reward),
+    sharedStreak: sharedStreak,
   );
 
   Json toJson() => {
@@ -1019,6 +1111,7 @@ class Board {
     'users': [for (final u in users) u.toJson()],
     'challenge': challenge?.toJson(),
     'reward': reward?.toJson(),
+    if (!sharedStreak.isEmpty) 'sharedStreak': sharedStreak.toJson(),
   };
 }
 
@@ -1049,6 +1142,8 @@ class ActivityLog extends LogEntry {
     required this.type,
     required this.quantity,
     required this.unit,
+    this.name = '',
+    this.intensity,
   });
 
   factory ActivityLog.fromJson(Json j) => ActivityLog(
@@ -1058,12 +1153,20 @@ class ActivityLog extends LogEntry {
     type: _str(j['type']),
     quantity: _int(j['quantity']),
     unit: _str(j['unit']),
+    name: _str(j['name']),
+    intensity: j['intensity'] as String?,
   );
 
-  /// `pushups` or `reading`.
+  /// `pushups`, `reading`, `yoga` or `other`.
   final String type;
   final int quantity;
   final String unit;
+
+  /// The free name of an `other` activity.
+  final String name;
+
+  /// easy, moderate or hard, for an `other` activity.
+  final String? intensity;
 
   @override
   String get kind => 'activity';
@@ -1077,6 +1180,8 @@ class ActivityLog extends LogEntry {
     'type': type,
     'quantity': quantity,
     'unit': unit,
+    if (name.isNotEmpty) 'name': name,
+    'intensity': ?intensity,
   };
 }
 
@@ -1151,17 +1256,41 @@ class ActivityDraft extends LogDraft {
     required this.quantity,
     required this.unit,
     super.date,
+    this.name,
+    this.intensity,
   });
+
+  /// A free-named activity that counts toward exercise minutes.
+  const ActivityDraft.other({
+    required super.clientOpId,
+    required String this.name,
+    required int minutes,
+    required String this.intensity,
+    super.date,
+  }) : type = 'other',
+       quantity = minutes,
+       unit = 'minutes';
 
   final String type;
   final int quantity;
   final String unit;
 
+  /// Only for type `other`.
+  final String? name;
+  final String? intensity;
+
   @override
   String get kind => 'activity';
 
   @override
-  Json toJson() => {...super.toJson(), 'type': type, 'quantity': quantity, 'unit': unit};
+  Json toJson() => {
+    ...super.toJson(),
+    'type': type,
+    'quantity': quantity,
+    'unit': unit,
+    'name': ?name,
+    'intensity': ?intensity,
+  };
 }
 
 class MealDraft extends LogDraft {
@@ -1206,6 +1335,8 @@ extension LogEntryDraft on LogEntry {
       type: a.type,
       quantity: a.quantity,
       unit: a.unit,
+      name: a.type == 'other' ? a.name : null,
+      intensity: a.type == 'other' ? a.intensity : null,
       date: date,
     ),
     final MealLog m => MealDraft(
@@ -1830,21 +1961,39 @@ class Insights {
     this.steps = const StepInsights(),
     this.sleep = const SleepInsights(),
     this.workouts = const WorkoutInsights(),
+    this.weight = const WeightInsights(),
+    this.activity = const ActivitySummary(),
+    this.protein = const ProteinHitRate(),
   });
 
   factory Insights.fromJson(Json j) => Insights(
     steps: StepInsights.fromJson(j['steps']),
     sleep: SleepInsights.fromJson(j['sleep']),
     workouts: WorkoutInsights.fromJson(j['workouts']),
+    weight: WeightInsights.parse(j['weight']),
+    activity: ActivitySummary.parse(j['activity']),
+    protein: ProteinHitRate.parse(j['protein']),
   );
 
   final StepInsights steps;
   final SleepInsights sleep;
   final WorkoutInsights workouts;
 
+  /// Smoothed weight with the weekly rate.
+  final WeightInsights weight;
+
+  /// The last seven days against the WHO 2020 guideline.
+  final ActivitySummary activity;
+
+  /// The 7-day protein hit rate.
+  final ProteinHitRate protein;
+
   Json toJson() => {
     'steps': steps.toJson(),
     'sleep': sleep.toJson(),
     'workouts': workouts.toJson(),
+    if (weight.hasData || weight.points.isNotEmpty) 'weight': weight.toJson(),
+    if (activity.available) 'activity': activity.toJson(),
+    if (protein.available) 'protein': protein.toJson(),
   };
 }

@@ -1,0 +1,1200 @@
+{
+  "method": "GET",
+  "path": "/api/progress",
+  "status": 200,
+  "request": null,
+  "body": {
+    "window": 30,
+    "today": "2026-10-27",
+    "people": [
+      {
+        "userId": 1,
+        "name": "Nick",
+        "color": "green",
+        "joinedOn": "2026-06-01",
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "current": 24,
+            "previous": 18,
+            "first": 11,
+            "changeFromPrevious": {
+              "abs": 6,
+              "pct": 33.3,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 13,
+              "pct": 118.2,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 10
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 12
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 15
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 18
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 22
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 23
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 24
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "current": 8420,
+            "previous": 9100,
+            "first": 7800,
+            "changeFromPrevious": {
+              "abs": -680,
+              "pct": -7.5,
+              "better": false
+            },
+            "changeFromFirst": {
+              "abs": 620,
+              "pct": 7.9,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 7800
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 8000
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 8200
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 9100
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 9300
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 9000
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 8700
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 8420
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "current": 437,
+            "previous": 437,
+            "first": 410,
+            "changeFromPrevious": {
+              "abs": 0,
+              "pct": 0.0,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": 27,
+              "pct": 6.6,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 410
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 415
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 420
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 430
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 437
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 437
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 436
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 437
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "current": 3.2,
+            "previous": 2.6,
+            "first": 1.4,
+            "changeFromPrevious": {
+              "abs": 0.6,
+              "pct": 23.1,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 1.8,
+              "pct": 128.6,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 1
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 2
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 4
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 3
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 40,
+            "previous": 32,
+            "first": 12,
+            "changeFromPrevious": {
+              "abs": 8,
+              "pct": 25.0,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 28,
+              "pct": 233.3,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 12
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 25
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 30
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 32
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 35
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 38
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 40
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "current": 118,
+            "previous": 104,
+            "first": 90,
+            "changeFromPrevious": {
+              "abs": 14,
+              "pct": 13.5,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 28,
+              "pct": 31.1,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 90
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 95
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 100
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 104
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 108
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 112
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 115
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 118
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 1.8,
+            "previous": 1.4,
+            "first": 0.9,
+            "changeFromPrevious": {
+              "abs": 0.4,
+              "pct": 28.6,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 0.9,
+              "pct": 100.0,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 0.9
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 1.0
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 1.2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 1.4
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 1.5
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 1.6
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 1.7
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 1.8
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "current": 82.4,
+            "previous": 83.1,
+            "first": 85.0,
+            "changeFromPrevious": {
+              "abs": -0.7,
+              "pct": -0.8,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": -2.6,
+              "pct": -3.1,
+              "better": null
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 85
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 84.6
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 84.2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 83.8
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 83.4
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 83.1
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 82.8
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 82.4
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "current": 18.2,
+            "previous": 18.9,
+            "first": 20.4,
+            "changeFromPrevious": {
+              "abs": -0.7,
+              "pct": -3.7,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": -2.2,
+              "pct": -10.8,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 20.4
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 19.6
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 19.2
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 18.9
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 18.6
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 18.4
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 18.2
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "current": 58,
+            "previous": 58,
+            "first": 64,
+            "changeFromPrevious": {
+              "abs": 0,
+              "pct": 0.0,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": -6,
+              "pct": -9.4,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 64
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 63
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 61
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 60
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 59
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 58
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 58
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 58
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": ""
+          }
+        ]
+      },
+      {
+        "userId": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "joinedOn": "2026-06-01",
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "current": 24,
+            "previous": 18,
+            "first": 11,
+            "changeFromPrevious": {
+              "abs": 6,
+              "pct": 33.3,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 13,
+              "pct": 118.2,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 10
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 12
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 15
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 18
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 22
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 23
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 24
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "current": 9262.0,
+            "previous": 10010.0,
+            "first": 8580.0,
+            "changeFromPrevious": {
+              "abs": -680,
+              "pct": -7.5,
+              "better": false
+            },
+            "changeFromFirst": {
+              "abs": 620,
+              "pct": 7.9,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 7800
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 8000
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 8200
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 9100
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 9300
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 9000
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 8700
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 8420
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "current": 437,
+            "previous": 437,
+            "first": 410,
+            "changeFromPrevious": {
+              "abs": 0,
+              "pct": 0.0,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": 27,
+              "pct": 6.6,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 410
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 415
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 420
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 430
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 437
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 437
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 436
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 437
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "current": 3.2,
+            "previous": 2.6,
+            "first": 1.4,
+            "changeFromPrevious": {
+              "abs": 0.6,
+              "pct": 23.1,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 1.8,
+              "pct": 128.6,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 1
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 2
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 3
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 4
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 3
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 40,
+            "previous": 32,
+            "first": 12,
+            "changeFromPrevious": {
+              "abs": 8,
+              "pct": 25.0,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 28,
+              "pct": 233.3,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 12
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 25
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 30
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 32
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 35
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 38
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 40
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "current": 118,
+            "previous": 104,
+            "first": 90,
+            "changeFromPrevious": {
+              "abs": 14,
+              "pct": 13.5,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 28,
+              "pct": 31.1,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 90
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 95
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 100
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 104
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 108
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 112
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 115
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 118
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 1.8,
+            "previous": 1.4,
+            "first": 0.9,
+            "changeFromPrevious": {
+              "abs": 0.4,
+              "pct": 28.6,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": 0.9,
+              "pct": 100.0,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 0.9
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 1.0
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 1.2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 1.4
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 1.5
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 1.6
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 1.7
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 1.8
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "current": 82.4,
+            "previous": 83.1,
+            "first": 85.0,
+            "changeFromPrevious": {
+              "abs": -0.7,
+              "pct": -0.8,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": -2.6,
+              "pct": -3.1,
+              "better": null
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 85
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 84.6
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 84.2
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 83.8
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 83.4
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 83.1
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 82.8
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 82.4
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "current": 18.2,
+            "previous": 18.9,
+            "first": 20.4,
+            "changeFromPrevious": {
+              "abs": -0.7,
+              "pct": -3.7,
+              "better": true
+            },
+            "changeFromFirst": {
+              "abs": -2.2,
+              "pct": -10.8,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 20.4
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 20
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 19.6
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 19.2
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 18.9
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 18.6
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 18.4
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 18.2
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "current": 58,
+            "previous": 58,
+            "first": 64,
+            "changeFromPrevious": {
+              "abs": 0,
+              "pct": 0.0,
+              "better": null
+            },
+            "changeFromFirst": {
+              "abs": -6,
+              "pct": -9.4,
+              "better": true
+            },
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": 64
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": 63
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": 61
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": 60
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": 59
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": 58
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": 58
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": 58
+              }
+            ],
+            "summary": ""
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-09-07",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-14",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-21",
+                "value": null
+              },
+              {
+                "weekStart": "2026-09-28",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-05",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-12",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-19",
+                "value": null
+              },
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": ""
+          }
+        ]
+      }
+    ]
+  }
+}

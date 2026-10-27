@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import '../streaks/streak_visuals.dart';
 
 /// The last seven dates the board knows about, oldest first.
 List<String> weekDates(List<BoardUser> users) {
@@ -31,7 +32,14 @@ class WeekChart extends StatelessWidget {
     final summary = users
         .map((u) {
           final counted = u.last7.where((d) => d.counted && dates.contains(d.date)).length;
-          return '${u.name} counted $counted of ${dates.length} days';
+          int days(DayStatus s) =>
+              u.last7.where((d) => dates.contains(d.date) && dayStatus(d) == s).length;
+          final extras = [
+            for (final s in [DayStatus.frozen, DayStatus.repaired, DayStatus.away])
+              if (days(s) > 0) '${days(s)} ${s.label}${days(s) == 1 ? '' : 's'}',
+          ];
+          return '${u.name} counted $counted of ${dates.length} days'
+              '${extras.isEmpty ? '' : ', ${extras.join(', ')}'}';
         })
         .join('. ');
     return AppCard(
@@ -85,14 +93,14 @@ class WeekChart extends StatelessWidget {
                               color: date == dates.last ? kInk : kInkSecondary,
                             ),
                           ),
-                          if (users.any((u) => u.last7.any((d) => d.date == date && d.rest)))
-                            const Icon(Icons.bedtime_rounded, size: 12, color: kInkMuted),
+                          _DayMarks(users: users, date: date),
                         ],
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 10),
+              if (_hasMarks(users, dates)) ...[const _MarksLegend(), const SizedBox(height: 6)],
               const Row(
                 children: [
                   _DashSample(),
@@ -111,6 +119,60 @@ class WeekChart extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _hasMarks(List<BoardUser> users, List<String> dates) => users.any(
+  (u) => u.last7.any(
+    (d) =>
+        dates.contains(d.date) &&
+        dayStatus(d) != DayStatus.counted &&
+        dayStatus(d) != DayStatus.none,
+  ),
+);
+
+/// Under a day's letter: a small icon in each person's colour where they were frozen, away or
+/// repaired that day.
+class _DayMarks extends StatelessWidget {
+  const _DayMarks({required this.users, required this.date});
+
+  final List<BoardUser> users;
+  final String date;
+
+  @override
+  Widget build(BuildContext context) {
+    final marks = <Widget>[];
+    for (final u in users) {
+      final mark = u.last7.where((d) => d.date == date).firstOrNull;
+      if (mark == null) continue;
+      final status = dayStatus(mark);
+      final icon = status.icon;
+      if (icon == null || status == DayStatus.counted) continue;
+      marks.add(Icon(icon, size: 14, color: accentById(u.color).lip));
+    }
+    if (marks.isEmpty) return const SizedBox(height: 14);
+    return Row(mainAxisSize: MainAxisSize.min, children: marks);
+  }
+}
+
+class _MarksLegend extends StatelessWidget {
+  const _MarksLegend();
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 14,
+    runSpacing: 2,
+    children: [
+      for (final s in [DayStatus.frozen, DayStatus.repaired, DayStatus.away])
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(s.icon, size: 14, color: kInkSecondary),
+            const SizedBox(width: 4),
+            Text(s.label.replaceAll(' day', ''), style: AppText.caption),
+          ],
+        ),
+    ],
+  );
 }
 
 class _LegendDot extends StatelessWidget {

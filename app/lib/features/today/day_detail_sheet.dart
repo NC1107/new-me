@@ -220,15 +220,17 @@ class _EntryRow extends StatelessWidget {
       switch (a.type) {
         'pushups' => 'pushups',
         'reading' => 'reading',
+        'other' => 'exercise',
         _ => 'yoga',
       },
       switch (a.type) {
         'pushups' => 'Push-ups',
         'reading' => 'Reading',
+        'other' => a.name.isEmpty ? 'Activity' : a.name,
         _ => 'Yoga',
       },
       '${a.quantity.formatted} ${shortUnit(a.unit)}',
-      null,
+      a.type == 'other' && a.intensity != null ? '${a.intensity} effort' : null,
     ),
     final MealLog m => (
       'meals_logged',

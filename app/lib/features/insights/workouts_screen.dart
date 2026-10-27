@@ -10,9 +10,12 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/chunky_button.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/quest_copy.dart';
+import '../log/log_kind.dart';
+import '../log/log_sheet.dart';
 import 'insight_charts.dart';
 import 'insights_logic.dart';
 import 'insights_widgets.dart';
@@ -38,11 +41,13 @@ class WorkoutsScreen extends ConsumerWidget {
         final data = insights.value!.data.workouts;
         final workouts = list.value!.data.workouts;
         if (workouts.isEmpty && data.last30.count == 0 && data.week.count == 0) {
-          return [const _NoWorkouts()];
+          return [const _NoWorkouts(), const SizedBox(height: kCardGap), _LogActivityButton()];
         }
         return [
           _WeekCard(week: data.week),
           const SizedBox(height: kCardGap),
+          _LogActivityButton(),
+          const SizedBox(height: 20),
           if (data.byType.isNotEmpty) ...[_ByType(workouts: data), const SizedBox(height: 20)],
           if (workouts.isNotEmpty) ...[
             const Text('Recent workouts', style: AppText.headline),
@@ -66,6 +71,16 @@ class WorkoutsScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Anything Health does not see: it counts toward the day's exercise minutes.
+class _LogActivityButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ChunkyButton.secondary(
+    label: 'Log an activity',
+    icon: Icons.add_rounded,
+    onPressed: () => showLogSheet(context, kind: LogKind.activity),
+  );
 }
 
 class _NoWorkouts extends StatelessWidget {

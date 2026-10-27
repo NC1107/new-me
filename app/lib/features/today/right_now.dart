@@ -6,22 +6,49 @@ import '../../api/models.dart';
 import '../../state/clock.dart';
 import '../../state/right_now.dart';
 import '../../state/together.dart';
+import '../../state/v7.dart';
 import '../../theme/tokens.dart';
 import '../../util/errors.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pop_in.dart';
+import '../progress/lookback_card.dart';
+import '../progress/lookback_screen.dart';
 import '../recap/recap_cards.dart';
 import '../recap/recap_screen.dart';
+import '../streaks/cover_card.dart';
+import '../streaks/repair_card.dart';
 import '../together/cheer_chip.dart';
 import 'goals_card.dart';
 import 'plan_sheet.dart';
 import 'readiness_card.dart';
+import 'today_providers.dart';
 
 /// Readiness is a morning card; it goes at noon even if nobody dismissed it.
 const kReadinessUntilHour = 12;
 
 sealed class RightNow {
   const RightNow();
+}
+
+class RightNowRepair extends RightNow {
+  const RightNowRepair(this.repair, this.percent);
+
+  final Repair repair;
+  final int percent;
+}
+
+/// The partner's missed yesterday, which one of my freezes can cover.
+class RightNowCover extends RightNow {
+  const RightNowCover(this.partner, this.date);
+
+  final BoardUser partner;
+  final String date;
+}
+
+class RightNowLookback extends RightNow {
+  const RightNowLookback(this.lookback);
+
+  final Lookback lookback;
 }
 
 class RightNowCheers extends RightNow {
@@ -49,12 +76,18 @@ class RightNowRecap extends RightNow {
 }
 
 /// The one card Today shows under the day card, or null for none. The first match wins:
-/// a cheer that just arrived, then readiness until noon, then Monday's goal proposals, then the
+/// the repair window of a missed yesterday, a cover for the partner, a cheer that just arrived,
+/// the look-back on the 1st, then readiness until noon, then Monday's goal proposals, then the
 /// recap on Sunday evening and Monday. A dismissed card falls through to the next.
 ///
 /// [cheers] are the ones not yet dismissed. [now] is the phone's local time.
 RightNow? pickRightNow({
   required DateTime now,
+  Repair? repair,
+  int percent = 0,
+  ({BoardUser partner, String date})? cover,
+  Lookback? lookback,
+  bool lookbackDismissed = false,
   List<Cheer> cheers = const [],
   Readiness? readiness,
   bool readinessDismissed = false,
@@ -62,7 +95,12 @@ RightNow? pickRightNow({
   Recap? recap,
   bool recapDismissed = false,
 }) {
+  if (repair != null && !(repair.until?.isBefore(now) ?? false)) {
+    return RightNowRepair(repair, percent);
+  }
+  if (cover != null) return RightNowCover(cover.partner, cover.date);
   if (cheers.isNotEmpty) return RightNowCheers(cheers);
+  if (lookback != null && !lookbackDismissed && now.day == 1) return RightNowLookback(lookback);
   if (readiness != null && !readinessDismissed && now.hour < kReadinessUntilHour) {
     return RightNowReadiness(readiness);
   }
@@ -84,8 +122,20 @@ class RightNowSlot extends ConsumerWidget {
     final cheerMemory = ref.watch(cheerMemoryProvider);
     final proposals = ref.watch(goalProposalsProvider).value?.proposals ?? const [];
     final recap = recapWindow(now) ? ref.watch(recapProvider(null)).value : null;
+    final lookback = now.day == 1 ? ref.watch(lookbackProvider(null)).value : null;
+    final me = ref.watch(ownBoardUserProvider);
+    final partner = ref.watch(partnerProvider);
+    final coverDate = me == null || partner == null
+        ? null
+        : coverableDate(me: me, partner: partner, localToday: today.localToday, now: now);
     final picked = pickRightNow(
       now: now,
+      repair: today.repair,
+      percent: today.day.percent,
+      cover: partner == null || coverDate == null ? null : (partner: partner, date: coverDate),
+      lookback: lookback,
+      lookbackDismissed:
+          !memory.loaded || (lookback != null && memory.has(lookbackDismissKey(lookback.month))),
       cheers: cheerMemory.loaded
           ? [
               for (final c in today.cheers)
@@ -100,6 +150,14 @@ class RightNowSlot extends ConsumerWidget {
     );
     if (picked == null) return const SizedBox.shrink();
     final card = switch (picked) {
+      RightNowRepair(:final repair, :final percent) => RepairCard(repair: repair, percent: percent),
+      RightNowCover(:final partner, :final date) => CoverCard(partner: partner, date: date),
+      RightNowLookback(:final lookback) => LookbackNowCard(
+        lookback: lookback,
+        onTap: () => pushPage(context, LookbackScreen(month: lookback.month)),
+        onDismiss: () =>
+            ref.read(rightNowMemoryProvider.notifier).dismiss(lookbackDismissKey(lookback.month)),
+      ),
       RightNowCheers(:final cheers) => CheerChip(cheers: cheers, date: today.localToday),
       RightNowReadiness(:final readiness) => ReadinessCard(
         readiness: readiness,

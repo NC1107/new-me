@@ -1,0 +1,250 @@
+{
+  "method": "GET",
+  "path": "/api/board",
+  "status": 200,
+  "request": null,
+  "body": {
+    "challenge": {
+      "kind": "steps",
+      "title": "Walk 113,000 steps together",
+      "target": 113000,
+      "progress": 22421,
+      "done": false,
+      "endsOn": "2026-11-01",
+      "people": [
+        {
+          "userId": 1,
+          "name": "Nick",
+          "color": "green",
+          "target": 62000,
+          "progress": 13221,
+          "done": false
+        },
+        {
+          "userId": 2,
+          "name": "Nadia",
+          "color": "violet",
+          "target": 51000,
+          "progress": 9200,
+          "done": false
+        }
+      ]
+    },
+    "reward": null,
+    "season": {
+      "name": "Season 0",
+      "startsOn": "2026-10-27",
+      "endsOn": "2026-12-31"
+    },
+    "serverNow": "2026-10-27T18:30:00Z",
+    "sharedStreak": {
+      "current": 9,
+      "best": 21
+    },
+    "users": [
+      {
+        "id": 1,
+        "name": "Nick",
+        "color": "green",
+        "today": {
+          "points": 170,
+          "percent": 36,
+          "counted": false
+        },
+        "week": {
+          "points": 170
+        },
+        "season": {
+          "points": 170
+        },
+        "streak": {
+          "current": 12
+        },
+        "workoutsThisWeek": 2,
+        "last7": [
+          {
+            "date": "2026-10-21",
+            "percent": 100,
+            "counted": true,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-22",
+            "percent": 40,
+            "counted": false,
+            "rest": false,
+            "frozen": true,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-23",
+            "percent": 90,
+            "counted": true,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-24",
+            "percent": 30,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": true,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-25",
+            "percent": 100,
+            "counted": false,
+            "rest": false,
+            "frozen": true,
+            "away": false,
+            "repaired": true
+          },
+          {
+            "date": "2026-10-26",
+            "percent": 20,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-27",
+            "percent": 36,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          }
+        ],
+        "syncedAt": "2026-10-27T15:22:05Z",
+        "highlights": {
+          "steps": 4321,
+          "exercise_minutes": 23,
+          "sleep_minutes": 432
+        },
+        "freezes": {
+          "held": 1,
+          "earnedTowardNext": 4
+        },
+        "away": {
+          "today": false,
+          "current": null,
+          "upcoming": []
+        }
+      },
+      {
+        "id": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "today": {
+          "points": 30,
+          "percent": 7,
+          "counted": false
+        },
+        "week": {
+          "points": 30
+        },
+        "season": {
+          "points": 30
+        },
+        "streak": {
+          "current": 9
+        },
+        "workoutsThisWeek": 1,
+        "last7": [
+          {
+            "date": "2026-10-21",
+            "percent": 90,
+            "counted": true,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-22",
+            "percent": 80,
+            "counted": true,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-23",
+            "percent": 10,
+            "counted": false,
+            "rest": false,
+            "frozen": true,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-24",
+            "percent": 75,
+            "counted": true,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-25",
+            "percent": 0,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": true,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-26",
+            "percent": 12,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          },
+          {
+            "date": "2026-10-27",
+            "percent": 7,
+            "counted": false,
+            "rest": false,
+            "frozen": false,
+            "away": false,
+            "repaired": false
+          }
+        ],
+        "syncedAt": "2026-10-27T14:15:45Z",
+        "highlights": {
+          "steps": 2400
+        },
+        "freezes": {
+          "held": 0,
+          "earnedTowardNext": 6
+        },
+        "away": {
+          "today": true,
+          "current": {
+            "id": 9,
+            "from": "2026-10-26",
+            "to": "2026-10-29",
+            "note": "Flu"
+          },
+          "upcoming": []
+        }
+      }
+    ]
+  }
+}

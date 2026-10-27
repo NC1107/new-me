@@ -100,7 +100,11 @@ void main() {
     expect(find.text('5 h 30 min of 7 h'), findsOneWidget);
     expect(find.text('Exercise 30 min'), findsOneWidget);
     expect(find.text('Apple Health'), findsNWidgets(3));
-    expect(find.byIcon(Icons.add_rounded), findsNWidgets(4), reason: '3 manual quests and food');
+    expect(
+      find.byIcon(Icons.add_rounded),
+      findsNWidgets(5),
+      reason: '3 manual quests, exercise and food',
+    );
   });
 
   testWidgets('a counted day says so in the bubble and the day card', (tester) async {
@@ -114,7 +118,7 @@ void main() {
     await app.closeSheet();
   });
 
-  testWidgets('tapping the flame explains the streak rule and the rest day', (tester) async {
+  testWidgets('tapping the flame explains the streak rule and the freezes', (tester) async {
     final adapter = fullServer()..on('GET /api/today', StubResponse(200, richTodayJson(streak: 0)));
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
@@ -122,11 +126,11 @@ void main() {
     await app.tap(find.bySemanticsLabel(RegExp(r'day streak')));
     expect(find.text('Day 1'), findsOneWidget);
     expect(find.textContaining('reach the streak line, 70% of the day'), findsOneWidget);
-    expect(find.textContaining('One missed day a week is forgiven'), findsOneWidget);
-    expect(find.text('Rest day ready'), findsOneWidget);
+    expect(find.text('Earning and using freezes'), findsOneWidget);
+    expect(find.text('0 of 2 freezes'), findsOneWidget);
   });
 
-  testWidgets('a used rest day names the weekday', (tester) async {
+  testWidgets('a freeze that covered a day names the weekday', (tester) async {
     final today = richTodayJson();
     (today['streak']! as Map<String, dynamic>)
       ..['restAvailable'] = false
@@ -135,14 +139,14 @@ void main() {
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
     await app.tap(find.bySemanticsLabel(RegExp(r'day streak')));
-    expect(find.text('Rest day used Tue'), findsOneWidget);
+    expect(find.text('A freeze covered Tue.'), findsOneWidget);
   });
 
   testWidgets('with nothing logged and a rest day ready the mascot says so', (tester) async {
     final adapter = fullServer()
       ..on('GET /api/today', StubResponse(200, richTodayJson(points: 0, percent: 0)));
     await _app(tester, adapter).pump(const TodayScreen());
-    expect(find.text('Rest day available'), findsOneWidget);
+    expect(find.text('A freeze is ready'), findsOneWidget);
   });
 
   testWidgets('the partner mini avatar opens Us and the own avatar opens Me', (tester) async {

@@ -328,7 +328,7 @@ void main() {
         expect(find.text(l), findsOneWidget);
       }
       final values = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value).toList();
-      expect(values.skip(4), [false, true, false, true, true]);
+      expect(values.skip(5), [false, true, false, true, true, true]);
 
       await app.tap(find.text('Steps to go'));
       expect(app.body('PATCH /api/me'), {
@@ -360,7 +360,7 @@ void main() {
   });
 
   test('the notifications row counts every switch', () {
-    expect(kNotificationSwitches, 9);
-    expect(notificationsOn(const NotificationPrefs()), 7);
+    expect(kNotificationSwitches, 11);
+    expect(notificationsOn(const NotificationPrefs()), 9);
   });
 }

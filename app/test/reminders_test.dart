@@ -6,6 +6,7 @@ import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/reminders/reminder_plan.dart';
 import 'package:newme/reminders/reminder_scheduler.dart';
 import 'package:newme/state/clock.dart';
+import 'package:newme/state/me.dart';
 import 'package:newme/state/reminders.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/state/today.dart';
@@ -16,7 +17,13 @@ import 'fixtures.dart';
 import 'test_support.dart';
 
 class _Setup {
-  _Setup({DateTime? now, bool allowed = true, bool grants = true, Map<String, Object>? prefs}) {
+  _Setup({
+    DateTime? now,
+    bool allowed = true,
+    bool grants = true,
+    Map<String, Object>? prefs,
+    StubAdapter? server,
+  }) {
     FakeStorage().install();
     SharedPreferences.setMockInitialValues(prefs ?? {});
     scheduler = FakeReminderScheduler(allowed: allowed, grantsOnRequest: grants);
@@ -24,7 +31,7 @@ class _Setup {
     container = testContainer(
       overrides: <Override>[
         sessionProvider.overrideWith(() => SessionController.seeded(testSession)),
-        apiClientFactoryProvider.overrideWithValue(stubFactory(fullServer())),
+        apiClientFactoryProvider.overrideWithValue(stubFactory(server ?? fullServer())),
         clockProvider.overrideWithValue(() => this.now),
         reminderSchedulerProvider.overrideWithValue(scheduler),
       ],
@@ -51,6 +58,42 @@ class _Setup {
 }
 
 void main() {
+  group('quiet hours from the schedule', () {
+    StubAdapter bedAt21() => fullServer()
+      ..on(
+        'GET /api/me',
+        StubResponse(200, {
+          ...meJson(),
+          'schedule': {
+            'workdays': [1, 2, 3, 4, 5, 6, 7],
+            'workday': {'wake': '07:00', 'bed': '21:00'},
+            'dayOff': {'wake': '07:00', 'bed': '21:00'},
+            'firstNotificationOffsetMin': 10,
+          },
+        }),
+      );
+
+    test('an evening reminder after bedtime is not scheduled', () async {
+      final t = _Setup(server: bedAt21());
+      await t.start();
+      await t.reminders.enable(minutes: 22 * 60);
+      await t.flush();
+      await t.container.read(meProvider.future);
+      await t.flush();
+      expect(t.scheduler.pending[kTonightReminderId], isNull);
+      expect(t.scheduler.pending[kTomorrowReminderId], isNull);
+    });
+
+    test('a reminder before bedtime still fires', () async {
+      final t = _Setup(server: bedAt21());
+      await t.start();
+      await t.container.read(meProvider.future);
+      await t.reminders.enable(minutes: 20 * 60);
+      await t.flush();
+      expect(t.scheduler.pending[kTonightReminderId]?.at, DateTime(2026, 10, 26, 20));
+    });
+  });
+
   test('nothing is scheduled until reminders are on', () async {
     final t = _Setup();
     await t.start();

@@ -416,7 +416,7 @@ void main() {
         prefs: {'partnerDone': false, 'cheers': true, 'challenge': true, 'reward': false},
       );
       final handle = tester.ensureSemantics();
-      expect(find.bySemanticsLabel('Notifications, 5 of 9 on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Notifications, 7 of 11 on'), findsOneWidget);
       await app.tap(find.text('Notifications'));
       expect(find.byType(NotificationsPage), findsOneWidget);
       handle.dispose();
@@ -449,6 +449,11 @@ void main() {
     testWidgets('it links on to the evening reminder', (tester) async {
       final (app, _) = await open(tester);
       await app.tap(find.text('Notifications'));
+      await tester.scrollUntilVisible(
+        find.text('Evening reminder'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await app.tap(find.text('Evening reminder'));
       expect(find.text('Reminders'), findsWidgets);
     });
@@ -494,6 +499,9 @@ void main() {
 
         await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
         await app.settle();
+        // The shared streak card pushes the partner's card down at large text.
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+        await app.settle();
         await app.tap(find.text('Cheer'));
         expect(tester.takeException(), isNull);
         await app.tap(find.text('Heart'));
@@ -516,7 +524,7 @@ void main() {
         configure(tester, scale);
         final app = TestApp(tester, _server());
         await app.pump(const BoardScreen());
-        tester.view.physicalSize = const Size(390, 2400);
+        tester.view.physicalSize = const Size(390, 4000);
         await app.settle();
         await app.tap(find.text('START A REWARD'));
         expect(tester.takeException(), isNull);

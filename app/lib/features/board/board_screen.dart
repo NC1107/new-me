@@ -20,8 +20,12 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
+import '../progress/progress_entry_card.dart';
+import '../progress/progress_screen.dart';
 import '../recap/recap_cards.dart';
 import '../recap/recap_screen.dart';
+import '../streaks/cover_card.dart';
+import '../streaks/shared_streak_card.dart';
 import '../together/cheer_sheet.dart';
 import '../together/together_section.dart';
 import 'person_card.dart';
@@ -71,6 +75,11 @@ class _UsBody extends ConsumerWidget {
     final ends = board.season.endsOn;
     final isAdmin = ref.watch(meProvider.select((m) => m.value?.data.user.isAdmin)) ?? false;
     final paired = users.length > 1;
+    final localToday =
+        ref.watch(meProvider.select((m) => m.value?.data.localToday)) ?? formatDateKey(now);
+    final coverDate = paired
+        ? coverableDate(me: users[0], partner: users[1], localToday: localToday, now: now)
+        : null;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(kGutter, 16, kGutter, 96),
@@ -83,6 +92,14 @@ class _UsBody extends ConsumerWidget {
           style: AppText.caption,
         ),
         const SizedBox(height: 16),
+        if (paired) ...[
+          SharedStreakCard(streak: board.sharedStreak, names: [for (final u in users) u.name]),
+          const SizedBox(height: kCardGap),
+          if (coverDate != null) ...[
+            CoverCard(partner: users[1], date: coverDate),
+            const SizedBox(height: kCardGap),
+          ],
+        ],
         IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,6 +126,8 @@ class _UsBody extends ConsumerWidget {
           _Together(users: users),
           const SizedBox(height: kCardGap),
           RecapEntryCard(onTap: () => pushPage(context, const RecapScreen())),
+          const SizedBox(height: kCardGap),
+          ProgressEntryCard(onTap: () => openProgress(context)),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),

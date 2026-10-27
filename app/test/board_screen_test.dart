@@ -122,6 +122,7 @@ void main() {
           _withHighlights(boardUser(2, 'Sam', 'violet'), steps: 4321, exercise: 23, sleep: 432),
           _withHighlights(boardUser(1, 'Ana', 'amber'), steps: 10234),
         ]),
+        surfaceHeight: 2400,
       );
       await app.pump(const BoardScreen());
 

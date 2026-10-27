@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "path": "/api/milestones",
+  "status": 200,
+  "request": null,
+  "body": {
+    "milestones": []
+  }
+}

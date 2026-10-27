@@ -17,6 +17,7 @@ class OnboardingProgress {
     this.kcal,
     this.foodAnswered = false,
     this.planSaved = false,
+    this.scheduleAnswered = false,
     this.healthAnswered = false,
     this.reminderAnswered = false,
   });
@@ -32,6 +33,7 @@ class OnboardingProgress {
     kcal: (j['kcal'] as num?)?.toInt(),
     foodAnswered: j['foodAnswered'] as bool? ?? false,
     planSaved: j['planSaved'] as bool? ?? false,
+    scheduleAnswered: j['scheduleAnswered'] as bool? ?? false,
     healthAnswered: j['healthAnswered'] as bool? ?? false,
     reminderAnswered: j['reminderAnswered'] as bool? ?? false,
   );
@@ -44,6 +46,9 @@ class OnboardingProgress {
   final int? kcal;
   final bool foodAnswered;
   final bool planSaved;
+
+  /// The "When do you usually wake up?" screen, which follows the colour step.
+  final bool scheduleAnswered;
   final bool healthAnswered;
   final bool reminderAnswered;
 
@@ -55,6 +60,7 @@ class OnboardingProgress {
     'kcal': kcal,
     'foodAnswered': foodAnswered,
     'planSaved': planSaved,
+    'scheduleAnswered': scheduleAnswered,
     'healthAnswered': healthAnswered,
     'reminderAnswered': reminderAnswered,
   };

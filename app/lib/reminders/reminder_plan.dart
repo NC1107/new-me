@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../api/models.dart';
 import '../util/time_format.dart';
+import 'quiet_hours.dart';
 
 /// Fixed ids, so scheduling again replaces the pending notification instead of stacking.
 const kTonightReminderId = 4101;
@@ -76,13 +77,24 @@ String _dateKey(DateTime d) =>
 /// Tonight's reminder follows [today] when it describes today; without fresh data it falls back
 /// to a generic line so the person is still nudged. Tomorrow's is always generic because the
 /// app cannot know tomorrow's score yet.
-Map<int, Reminder?> planReminders({required DateTime now, required int minutes, Today? today}) {
+///
+/// With a [schedule], a reminder that would land in quiet hours (bedtime to the first
+/// notification) is not scheduled. Habit reminders with an explicit time are not planned here
+/// and still fire.
+Map<int, Reminder?> planReminders({
+  required DateTime now,
+  required int minutes,
+  Today? today,
+  Schedule? schedule,
+}) {
   final at = DateTime(now.year, now.month, now.day, minutes ~/ 60, minutes % 60);
   final tomorrow = DateTime(now.year, now.month, now.day + 1, minutes ~/ 60, minutes % 60);
   final fresh = today != null && today.localToday == _dateKey(now);
 
+  bool quiet(DateTime t) => schedule != null && inQuietHours(t, schedule);
+
   Reminder? tonight;
-  if (at.isAfter(now) && !(fresh && today.day.counted)) {
+  if (at.isAfter(now) && !(fresh && today.day.counted) && !quiet(at)) {
     tonight = Reminder(
       id: kTonightReminderId,
       at: at,
@@ -96,7 +108,9 @@ Map<int, Reminder?> planReminders({required DateTime now, required int minutes, 
   }
   return {
     kTonightReminderId: tonight,
-    kTomorrowReminderId: Reminder(id: kTomorrowReminderId, at: tomorrow, body: _kGenericBody),
+    kTomorrowReminderId: quiet(tomorrow)
+        ? null
+        : Reminder(id: kTomorrowReminderId, at: tomorrow, body: _kGenericBody),
   };
 }
 

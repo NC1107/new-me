@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../util/time_format.dart';
 import '../../widgets/dialogs.dart';
+import 'activity_pane.dart';
 import 'log_kind.dart';
 import 'log_panes.dart';
 
@@ -56,21 +58,26 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     return (localToday: localToday, until: until);
   }
 
-  Future<void> _submit(DraftBuilder build, {required String added, String? confirm}) async {
-    if (_busy) return;
-    if (confirm != null &&
-        !await confirmDialog(
-          context,
-          title: 'Log this?',
-          message: confirm,
-          confirmLabel: 'Log it',
-        )) {
-      return;
-    }
+  Future<bool> _confirmed(String? confirm) async =>
+      confirm == null ||
+      await confirmDialog(context, title: 'Log this?', message: confirm, confirmLabel: 'Log it');
+
+  String? _entryDate() {
     final window = _yesterday
         ? _backdateWindow(ref.read(todayProvider).value?.data, ref.read(meProvider).value?.data)
         : null;
-    final date = window == null ? null : previousDate(window.localToday);
+    return window == null ? null : previousDate(window.localToday);
+  }
+
+  Future<void> _submit(
+    DraftBuilder build, {
+    required String added,
+    String? confirm,
+    List<MealItem>? libraryItems,
+  }) async {
+    if (_busy) return;
+    if (!await _confirmed(confirm)) return;
+    final date = _entryDate();
 
     // A retry of the same entry keeps its id; a different entry is a different operation.
     final signature = jsonEncode(build('', date).toJson()..remove('clientOpId'));
@@ -94,7 +101,14 @@ class _LogSheetState extends ConsumerState<LogSheet> {
       }
       return;
     }
+    if (libraryItems != null) unawaited(actions.syncLibrary(libraryItems));
     if (!mounted) return;
+    _finish(added, [result]);
+  }
+
+  /// Closes the sheet and offers one Undo that removes everything this save logged.
+  void _finish(String added, List<LogResult> results) {
+    final actions = ref.read(logActionsProvider);
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     messenger
@@ -106,7 +120,9 @@ class _LogSheetState extends ConsumerState<LogSheet> {
             label: 'Undo',
             onPressed: () async {
               try {
-                await actions.delete(result.log);
+                for (final r in results) {
+                  await actions.delete(r.log);
+                }
               } on ApiException catch (e) {
                 messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
               }
@@ -114,6 +130,58 @@ class _LogSheetState extends ConsumerState<LogSheet> {
           ),
         ),
       );
+  }
+
+  // Each entry of a "Log separately" keeps its own idempotency key across retries, and the
+  // ones already saved are skipped, so a failure halfway never double-logs.
+  List<String> _manyIds = const [];
+  final Set<int> _manyDone = {};
+  final List<LogResult> _manyResults = [];
+  String? _manySignature;
+
+  Future<void> _submitMany(
+    List<DraftBuilder> builds, {
+    required String added,
+    String? confirm,
+    List<MealItem>? libraryItems,
+  }) async {
+    if (_busy || builds.isEmpty) return;
+    if (!await _confirmed(confirm)) return;
+    final date = _entryDate();
+    final signature = jsonEncode([
+      for (final b in builds) b('', date).toJson()..remove('clientOpId'),
+    ]);
+    if (_manySignature != signature) {
+      _manySignature = signature;
+      _manyIds = [for (final _ in builds) newClientOpId()];
+      _manyDone.clear();
+      _manyResults.clear();
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final actions = ref.read(logActionsProvider);
+    for (var i = 0; i < builds.length; i++) {
+      if (_manyDone.contains(i)) continue;
+      try {
+        _manyResults.add(await actions.create(builds[i](_manyIds[i], date)));
+        _manyDone.add(i);
+      } on ApiException catch (e) {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _error =
+                'Logged ${_manyDone.length} of ${builds.length}. ${errorCopy(e)} '
+                'Tap again to log the rest.';
+          });
+        }
+        return;
+      }
+    }
+    if (libraryItems != null) unawaited(actions.syncLibrary(libraryItems));
+    if (!mounted) return;
+    _finish(added, List.of(_manyResults));
   }
 
   @override
@@ -204,6 +272,12 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   failed: _error != null,
                   onLog: _submit,
                 ),
+                LogKind.activity => ActivityPane(
+                  key: const ValueKey(LogKind.activity),
+                  busy: _busy,
+                  failed: _error != null,
+                  onLog: _submit,
+                ),
                 LogKind.meal => MealPane(
                   key: const ValueKey(LogKind.meal),
                   recent: _loadRecent(),
@@ -213,6 +287,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
+                  onLogMany: _submitMany,
                 ),
               },
               if (_error != null) ...[const SizedBox(height: 12), _ErrorLine(message: _error!)],

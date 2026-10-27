@@ -3,6 +3,8 @@
 /// screen that carries it.
 library;
 
+import 'v7_models.dart';
+
 typedef _Json = Map<String, dynamic>;
 
 int _int(Object? v, [int fallback = 0]) => (v as num?)?.toInt() ?? fallback;
@@ -73,6 +75,7 @@ class Challenge {
     required this.progress,
     required this.done,
     required this.endsOn,
+    this.people = const [],
   });
 
   static Challenge? tryParse(Object? v) {
@@ -85,6 +88,10 @@ class Challenge {
       progress: _int(j['progress']),
       done: j['done'] as bool? ?? false,
       endsOn: _str(j['endsOn']),
+      people: [
+        if (j['people'] is List)
+          for (final p in j['people'] as List) ?ChallengeShare.tryParse(p),
+      ],
     );
   }
 
@@ -98,6 +105,10 @@ class Challenge {
   /// Local date (yyyy-MM-dd) of the last day of the week.
   final String endsOn;
 
+  /// Each person's own share and progress. Empty on servers older than v7 and on challenges
+  /// from before them, which are measured on the pair's total.
+  final List<ChallengeShare> people;
+
   double get fraction => (progress / target).clamp(0.0, 1.0);
 
   Map<String, dynamic> toJson() => {
@@ -107,6 +118,7 @@ class Challenge {
     'progress': progress,
     'done': done,
     'endsOn': endsOn,
+    if (people.isNotEmpty) 'people': [for (final p in people) p.toJson()],
   };
 }
 
@@ -190,6 +202,8 @@ class NotificationPrefs {
     this.windDown = false,
     this.morningPlan = true,
     this.weeklyRecap = true,
+    this.milestones = true,
+    this.lookback = true,
   });
 
   /// Servers older than v5 send nothing, which reads as everything on.
@@ -206,6 +220,8 @@ class NotificationPrefs {
       windDown: j['windDown'] as bool? ?? false,
       morningPlan: j['morningPlan'] as bool? ?? true,
       weeklyRecap: j['weeklyRecap'] as bool? ?? true,
+      milestones: j['milestones'] as bool? ?? true,
+      lookback: j['lookback'] as bool? ?? true,
     );
   }
 
@@ -221,6 +237,10 @@ class NotificationPrefs {
   final bool morningPlan;
   final bool weeklyRecap;
 
+  /// Streak and shared-streak milestones, and the monthly look-back summary.
+  final bool milestones;
+  final bool lookback;
+
   Map<String, dynamic> toJson() => {
     'partnerDone': partnerDone,
     'cheers': cheers,
@@ -231,6 +251,9 @@ class NotificationPrefs {
     'windDown': windDown,
     'morningPlan': morningPlan,
     'weeklyRecap': weeklyRecap,
+    // Left out while on (the default), so an older server's answer re-encodes to what it sent.
+    if (!milestones) 'milestones': false,
+    if (!lookback) 'lookback': false,
   };
 }
 
@@ -246,6 +269,8 @@ class NotificationPatch {
     this.windDown,
     this.morningPlan,
     this.weeklyRecap,
+    this.milestones,
+    this.lookback,
   });
 
   final bool? partnerDone;
@@ -257,6 +282,8 @@ class NotificationPatch {
   final bool? windDown;
   final bool? morningPlan;
   final bool? weeklyRecap;
+  final bool? milestones;
+  final bool? lookback;
 
   Map<String, dynamic> toJson() => {
     'partnerDone': ?partnerDone,
@@ -268,5 +295,7 @@ class NotificationPatch {
     'windDown': ?windDown,
     'morningPlan': ?morningPlan,
     'weeklyRecap': ?weeklyRecap,
+    'milestones': ?milestones,
+    'lookback': ?lookback,
   };
 }

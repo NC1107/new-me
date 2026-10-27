@@ -26,7 +26,7 @@ String mascotLine(Today t) {
   final left = questsToGo(t);
   if (left == 0 && t.quests.isNotEmpty) return 'Every quest done. Amazing!';
   if (t.day.points == 0 && t.streak.restAvailable && t.streak.restUsedOn == null) {
-    return 'Rest day available';
+    return 'A freeze is ready';
   }
   return left == 1 ? '1 quest to go' : '$left quests to go';
 }

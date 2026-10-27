@@ -13,11 +13,16 @@ import 'today.dart';
 
 /// Also removed on sign out by LocalPrefs.
 const _kDismissed = 'rightNowDismissed';
-const _kKeep = 24;
+const _kKeep = 48;
 
 String readinessDismissKey(String date) => 'readiness|$date';
 
 String recapDismissKey(String week) => 'recap|$week';
+
+String lookbackDismissKey(String month) => 'lookback|$month';
+
+/// A milestone celebration plays once per phone, so its id is the memory.
+String milestoneSeenKey(int id) => 'milestone|$id';
 
 /// Which "right now" cards this phone already dismissed. Keys carry their date or week, so an
 /// old dismissal never hides a new card.

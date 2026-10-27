@@ -1,0 +1,438 @@
+{
+  "method": "GET",
+  "path": "/api/lookback",
+  "status": 200,
+  "request": null,
+  "body": {
+    "month": "2026-09",
+    "label": "September 2026",
+    "from": "2026-09-01",
+    "to": "2026-09-30",
+    "complete": true,
+    "people": [
+      {
+        "userId": 1,
+        "name": "Nick",
+        "color": "green",
+        "points": 0,
+        "countedDays": 0,
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "lean_mass_kg",
+            "title": "Lean mass",
+            "unit": "kg",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          }
+        ],
+        "improvements": []
+      },
+      {
+        "userId": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "points": 0,
+        "countedDays": 0,
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "lean_mass_kg",
+            "title": "Lean mass",
+            "unit": "kg",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "value": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null
+          }
+        ],
+        "improvements": []
+      }
+    ],
+    "couple": {
+      "points": 0,
+      "bothCountedDays": 0,
+      "metrics": [
+        {
+          "key": "reading_minutes",
+          "title": "Reading",
+          "unit": "min a day",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "steps",
+          "title": "Steps",
+          "unit": "steps a day",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "sleep_minutes",
+          "title": "Sleep",
+          "unit": "min a night",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "workouts",
+          "title": "Workouts",
+          "unit": "a week",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "pushups",
+          "title": "Push-ups",
+          "unit": "a day",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "protein_g",
+          "title": "Protein",
+          "unit": "g a day",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "habits_kept",
+          "title": "Habits kept",
+          "unit": "a day",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "weight_kg",
+          "title": "Weight",
+          "unit": "kg",
+          "goodDirection": "none",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "body_fat_pct",
+          "title": "Body fat",
+          "unit": "%",
+          "goodDirection": "down",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "lean_mass_kg",
+          "title": "Lean mass",
+          "unit": "kg",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "vo2max",
+          "title": "VO2 max",
+          "unit": "ml/kg/min",
+          "goodDirection": "up",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        },
+        {
+          "key": "resting_hr",
+          "title": "Resting heart rate",
+          "unit": "bpm",
+          "goodDirection": "down",
+          "value": null,
+          "previous": null,
+          "first": null,
+          "changeFromPrevious": null,
+          "changeFromFirst": null
+        }
+      ],
+      "improvements": []
+    }
+  }
+}

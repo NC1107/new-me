@@ -1,0 +1,30 @@
+{
+  "method": "POST",
+  "path": "/api/away",
+  "status": 201,
+  "request": {
+    "from": "2026-10-30",
+    "to": "2026-11-01",
+    "note": "Lisbon"
+  },
+  "body": {
+    "away": {
+      "id": 3,
+      "from": "2026-10-30",
+      "to": "2026-11-01",
+      "note": "Lisbon"
+    },
+    "state": {
+      "today": false,
+      "current": null,
+      "upcoming": [
+        {
+          "id": 3,
+          "from": "2026-10-30",
+          "to": "2026-11-01",
+          "note": "Lisbon"
+        }
+      ]
+    }
+  }
+}

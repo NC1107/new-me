@@ -10,6 +10,7 @@ import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/avatar.dart';
 import '../insights/insights_logic.dart';
+import '../streaks/streak_visuals.dart';
 
 const _kRingSize = 104.0;
 
@@ -58,10 +59,16 @@ class PersonCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
+                  user.away.today
+                      ? 'Away today'
+                      : '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
                   textAlign: TextAlign.center,
                   style: AppText.label.copyWith(
-                    color: user.today.counted ? kSuccessText : kInkSecondary,
+                    color: user.away.today
+                        ? kFreezeText
+                        : user.today.counted
+                        ? kSuccessText
+                        : kInkSecondary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -77,6 +84,24 @@ class PersonCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                Semantics(
+                  container: true,
+                  label: freezesLabel(user.freezes.held),
+                  excludeSemantics: true,
+                  child: Row(
+                    children: [
+                      FreezeFlakes(held: user.freezes.held, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          user.freezes.held == 1 ? '1 freeze' : '${user.freezes.held} freezes',
+                          style: AppText.caption.copyWith(color: kInkSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 _Stat(label: 'Week', value: user.week),

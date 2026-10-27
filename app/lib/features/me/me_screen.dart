@@ -11,6 +11,7 @@ import '../../state/health_sync.dart';
 import '../../state/me.dart';
 import '../../state/reminders.dart';
 import '../../state/session.dart';
+import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -29,9 +30,12 @@ import 'apple_health_page.dart';
 import 'audiobookshelf_page.dart';
 import 'daily_goals_page.dart';
 import 'food_targets_page.dart';
+import 'my_foods_page.dart';
+import '../streaks/away_page.dart';
 import 'pairing_page.dart';
 import 'profile_page.dart';
 import 'reminders_page.dart';
+import 'schedule_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
 import 'timezone_page.dart';
@@ -76,6 +80,7 @@ class _MeBody extends ConsumerWidget {
     final habitCount = ref.watch(habitsProvider.select((h) => h.value?.data.habits.length));
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
+    final away = ref.watch(todayProvider.select((t) => t.value?.data.away)) ?? const AwayState();
     final kcal = me.targets.kcal;
     final accent = accentById(me.user.color);
     final synced = health.lastSyncedAt;
@@ -120,6 +125,13 @@ class _MeBody extends ConsumerWidget {
               onTap: () => pushPage(context, const FoodTargetsPage()),
             ),
             SettingsRow(
+              icon: Icons.bookmarks_rounded,
+              palette: accentById('green'),
+              title: 'My foods',
+              subtitle: 'Saved foods with exact numbers',
+              onTap: () => pushPage(context, const MyFoodsPage()),
+            ),
+            SettingsRow(
               icon: Icons.palette_rounded,
               palette: accent,
               title: 'Profile',
@@ -132,6 +144,20 @@ class _MeBody extends ConsumerWidget {
               title: 'Time zone',
               subtitle: me.user.timezone,
               onTap: () => pushPage(context, const TimezonePage()),
+            ),
+            SettingsRow(
+              icon: Icons.schedule_rounded,
+              palette: accentById('amber'),
+              title: 'Schedule',
+              subtitle: scheduleSummary(me.schedule),
+              onTap: () => pushPage(context, const SchedulePage()),
+            ),
+            SettingsRow(
+              icon: Icons.pause_circle_rounded,
+              palette: accentById('sky'),
+              title: 'Away days',
+              subtitle: awaySummary(away),
+              onTap: () => pushPage(context, const AwayPage()),
             ),
             SettingsRow(
               icon: Icons.favorite_rounded,
@@ -183,6 +209,20 @@ class _MeBody extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// "Mon to Fri, up at 7:00 AM" for the Me row.
+String scheduleSummary(Schedule s) =>
+    '${workdaysLabel(s.workdays)}, up at ${formatReminderTime(s.workday.wake)}';
+
+/// What the Away row says: where the person is away now, what is coming, or what it is for.
+String awaySummary(AwayState away) {
+  final span = away.current;
+  if (span != null) return 'Away until ${awayRangeLabel(span.to, span.to)}';
+  if (away.upcoming.isNotEmpty) {
+    return 'Next: ${awayRangeLabel(away.upcoming.first.from, away.upcoming.first.to)}';
+  }
+  return 'Pause streaks when sick or travelling';
 }
 
 String _audiobookshelfSubtitle(AudiobookshelfLink link, DateTime now) {

@@ -28,7 +28,7 @@ String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
   if (streak.current < 1) return 'Hit ${day.streakLine}% today to start your streak.';
   final base = 'Reach ${day.streakLine}% to keep your streak going.';
   return streak.restAvailable && streak.restUsedOn == null
-      ? '$base A rest day is ready if you need it.'
+      ? '$base A freeze is ready if you need it.'
       : base;
 }
 

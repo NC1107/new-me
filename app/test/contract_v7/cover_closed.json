@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "path": "/api/streak/cover",
+  "status": 422,
+  "request": null,
+  "body": {
+    "error": "that day can no longer be covered",
+    "code": "cover_closed"
+  }
+}

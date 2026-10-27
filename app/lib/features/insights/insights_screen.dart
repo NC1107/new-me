@@ -10,6 +10,9 @@ import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_copy.dart';
+import '../progress/progress_entry_card.dart';
+import '../progress/progress_screen.dart';
+import 'body_insights.dart';
 import 'insights_logic.dart';
 import 'insights_widgets.dart';
 import 'sleep_insight_screen.dart';
@@ -34,6 +37,8 @@ class InsightsScreen extends ConsumerWidget {
       builder: (context) {
         final data = insights.value!.data;
         return [
+          ProgressEntryCard(onTap: () => openProgress(context)),
+          const SizedBox(height: kCardGap),
           _HubCard(
             icon: Icons.directions_walk_rounded,
             palette: questPalette('steps'),
@@ -69,6 +74,16 @@ class InsightsScreen extends ConsumerWidget {
                 : durationLabel(data.workouts.week.minutes),
             onTap: () => pushPage(context, const WorkoutsScreen()),
           ),
+          if (data.activity.available) ...[
+            const SizedBox(height: kCardGap),
+            ActivitySummaryCard(activity: data.activity),
+          ],
+          const SizedBox(height: kCardGap),
+          WeightInsightCard(weight: data.weight),
+          if (data.protein.available) ...[
+            const SizedBox(height: kCardGap),
+            ProteinHitCard(protein: data.protein),
+          ],
         ];
       },
     );

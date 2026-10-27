@@ -144,6 +144,8 @@ void main() {
       });
       expect(app.storage.values[kSessionKey], contains('new-token'));
 
+      expect(find.text('When do you usually wake up?'), findsOneWidget);
+      await app.tapButton('Use 7:00 AM and 11:00 PM');
       expect(find.text('What do you want to work on?'), findsOneWidget);
       expect(app.enabled('Continue'), isFalse, reason: 'one focus is required');
       await app.tapText('Move more');
@@ -187,6 +189,7 @@ void main() {
     await app.enter('Ana');
     await app.tapButton('Continue');
     await app.tapButton('Continue');
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
     await app.tapText('Eat well');
     await app.tapButton('Continue');
 
@@ -217,6 +220,7 @@ void main() {
     await app.enter('Ana');
     await app.tapButton('Continue');
     await app.tapButton('Continue');
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
     await app.tapText('Eat well');
     await app.tapButton('Continue');
     await app.tapButton('Continue');
@@ -262,6 +266,7 @@ void main() {
       'timezone': 'America/New_York',
     });
 
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
     await app.tapText('Read more');
     await app.tapButton('Continue');
     await app.tapButton('Continue');
@@ -433,6 +438,7 @@ void main() {
     await first.enter('Ana');
     await first.tapButton('Continue');
     await first.tapButton('Continue');
+    await first.tapButton('Use 7:00 AM and 11:00 PM');
     await first.tapText('Move more');
     await first.tapText('Read more');
     await first.tapButton('Continue');
@@ -470,6 +476,7 @@ void main() {
     await first.enter('Ana');
     await first.tapButton('Continue');
     await first.tapButton('Continue');
+    await first.tapButton('Use 7:00 AM and 11:00 PM');
     await first.tapText('Read more');
     await first.tapButton('Continue');
     await first.tapButton('Continue');
@@ -503,6 +510,145 @@ void main() {
       findsOneWidget,
       reason: 'a denial does not block the flow',
     );
+  });
+
+  group('the schedule step', () {
+    Future<_App> toSchedule(WidgetTester tester, StubAdapter adapter) async {
+      final app = _App(tester, adapter);
+      await app.launch();
+      await app.tapButton('Get started');
+      await app.enter('Ana');
+      await app.tapButton('Continue');
+      await app.tapButton('Continue');
+      expect(find.text('When do you usually wake up?'), findsOneWidget);
+      return app;
+    }
+
+    testWidgets('follows the colour step and saves one wake and bed time for every day', (
+      tester,
+    ) async {
+      final adapter = _server(info: {..._info, 'initialized': false});
+      final app = await toSchedule(tester, adapter);
+      expect(app.enabled('Continue'), isTrue, reason: '7:00 AM and 11:00 PM are already chosen');
+
+      await app.tapText('6:00 AM');
+      await app.tapText('10:00 PM');
+      await app.tapButton('Continue');
+
+      expect(app.lastBody('PATCH /api/me'), {
+        'schedule': {
+          'workdays': [1, 2, 3, 4, 5],
+          'workday': {'wake': '06:00', 'bed': '22:00'},
+          'dayOff': {'wake': '06:00', 'bed': '22:00'},
+          'firstNotificationOffsetMin': 10,
+        },
+      });
+      expect(find.text('What do you want to work on?'), findsOneWidget);
+    });
+
+    testWidgets('the default button sends nothing and moves on', (tester) async {
+      final adapter = _server(info: {..._info, 'initialized': false});
+      final app = await toSchedule(tester, adapter);
+      await app.tapButton('Use 7:00 AM and 11:00 PM');
+      expect(adapter.to('PATCH /api/me'), isEmpty);
+      expect(find.text('What do you want to work on?'), findsOneWidget);
+    });
+
+    testWidgets('a failed save says why and stays', (tester) async {
+      final adapter = _server(info: {..._info, 'initialized': false})
+        ..on('PATCH /api/me', const StubResponse(422, {'error': 'wake and bed must differ'}));
+      final app = await toSchedule(tester, adapter);
+      await app.tapButton('Continue');
+      expect(find.text('wake and bed must differ'), findsOneWidget);
+      expect(find.text('When do you usually wake up?'), findsOneWidget);
+    });
+
+    testWidgets('going back from the next step returns to it, with the answer kept', (
+      tester,
+    ) async {
+      final adapter = _server(info: {..._info, 'initialized': false});
+      final app = await toSchedule(tester, adapter);
+      await app.tapText('8:00 AM');
+      await app.tapButton('Continue');
+      await app.tap(find.bySemanticsLabel('Back'));
+      expect(find.text('When do you usually wake up?'), findsOneWidget);
+    });
+
+    testWidgets('leaving at the step resumes there, and answering it moves on for good', (
+      tester,
+    ) async {
+      final adapter = _server(info: {..._info, 'initialized': false});
+      final first = await toSchedule(tester, adapter);
+
+      await tester.pumpWidget(const SizedBox());
+      final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
+            deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
+            healthSourceProvider.overrideWithValue(relaunch.health),
+            reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
+          ],
+          child: const NewMeApp(),
+        ),
+      );
+      await relaunch.settle();
+      expect(find.text('When do you usually wake up?'), findsOneWidget);
+      expect(find.text('Today'), findsNothing);
+
+      await relaunch.tapButton('Use 7:00 AM and 11:00 PM');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('onboardingProgress'), contains('"scheduleAnswered":true'));
+      expect(find.text('What do you want to work on?'), findsOneWidget);
+    });
+
+    testWidgets('a returning person is not asked, their schedule is already on the server', (
+      tester,
+    ) async {
+      final adapter = _server()
+        ..on(
+          'POST /api/join',
+          const StubResponse(201, {
+            'user': {
+              'id': 1,
+              'name': 'Nick',
+              'color': 'amber',
+              'timezone': 'America/New_York',
+              'isAdmin': true,
+            },
+            'token': 'repaired-token',
+          }),
+        );
+      final app = _App(tester, adapter);
+      await app.launch();
+      await app.tapButton('Join with a code');
+      await app.enter(_code);
+      await app.tapButton('Continue');
+      await app.tapText('I have been here before');
+      await app.tapText('Nick');
+      await app.tapButton('Continue');
+      expect(find.text('When do you usually wake up?'), findsNothing);
+    });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('fits 390 wide at text scale $scale with 44pt buttons', (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final adapter = _server(info: {..._info, 'initialized': false});
+        final app = await toSchedule(tester, adapter);
+        expect(tester.takeException(), isNull);
+        for (final b in tester.widgetList<ChunkyButton>(find.byType(ChunkyButton))) {
+          expect(tester.getSize(find.byWidget(b)).height, greaterThanOrEqualTo(44));
+        }
+        await app.tapText('6:00 AM');
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 
   testWidgets('after a forced sign-out the code screen says what happened', (tester) async {

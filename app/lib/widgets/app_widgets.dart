@@ -36,6 +36,7 @@ class AppTextField extends StatelessWidget {
     this.semanticLabel,
     this.onSubmitted,
     this.autofocus = false,
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -56,12 +57,14 @@ class AppTextField extends StatelessWidget {
   final String? semanticLabel;
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     final hasError = errorText != null;
     final textField = TextField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       obscureText: obscure,
       inputFormatters: inputFormatters,

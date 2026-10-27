@@ -2,13 +2,15 @@ enum LogKind {
   pushups,
   reading,
   meal,
-  yoga;
+  yoga,
+  activity;
 
   String get label => switch (this) {
     LogKind.pushups => 'Push-ups',
     LogKind.reading => 'Reading',
     LogKind.meal => 'Meal',
     LogKind.yoga => 'Yoga',
+    LogKind.activity => 'Activity',
   };
 
   String get title => switch (this) {
@@ -16,6 +18,7 @@ enum LogKind {
     LogKind.reading => 'Log reading',
     LogKind.meal => 'Log a meal',
     LogKind.yoga => 'Log yoga',
+    LogKind.activity => 'Log activity',
   };
 
   /// The quest whose colour and icon this form borrows.
@@ -24,6 +27,7 @@ enum LogKind {
     LogKind.reading => 'reading',
     LogKind.meal => 'meals_logged',
     LogKind.yoga => 'yoga',
+    LogKind.activity => 'exercise',
   };
 
   /// The log form that feeds a quest, or null for quests the app cannot log by hand.
@@ -32,6 +36,7 @@ enum LogKind {
     'reading' => LogKind.reading,
     'meals_logged' || 'protein' => LogKind.meal,
     'yoga' => LogKind.yoga,
+    'exercise' => LogKind.activity,
     _ => null,
   };
 }

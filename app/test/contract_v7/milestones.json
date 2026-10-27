@@ -1,0 +1,50 @@
+{
+  "method": "GET",
+  "path": "/api/milestones",
+  "status": 200,
+  "request": null,
+  "body": {
+    "milestones": [
+      {
+        "id": 5,
+        "kind": "shared_streak",
+        "value": 7,
+        "shared": true,
+        "title": "7 days together",
+        "achievedOn": "2026-10-27"
+      },
+      {
+        "id": 4,
+        "kind": "streak",
+        "value": 7,
+        "shared": false,
+        "title": "7-day streak",
+        "achievedOn": "2026-10-27"
+      },
+      {
+        "id": 3,
+        "kind": "first_10k_steps",
+        "value": 0,
+        "shared": false,
+        "title": "First 10,000-step day",
+        "achievedOn": "2026-10-20"
+      },
+      {
+        "id": 2,
+        "kind": "first_all_quests",
+        "value": 0,
+        "shared": false,
+        "title": "First day with every quest done",
+        "achievedOn": "2026-10-14"
+      },
+      {
+        "id": 1,
+        "kind": "first_full_week",
+        "value": 0,
+        "shared": false,
+        "title": "First fully counted week",
+        "achievedOn": "2026-10-08"
+      }
+    ]
+  }
+}

@@ -151,14 +151,16 @@ class _QuestCardState extends State<QuestCard> {
                           style: AppText.headline.copyWith(fontSize: 17),
                         ),
                       ),
-                      if (automatic) ...[
-                        if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
-                      ] else if (widget.onAdd != null)
+                      if (automatic && q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
+                      // Exercise is fed by Health but also takes a hand-logged activity.
+                      if (widget.onAdd != null && (!automatic || q.key == 'exercise'))
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: ChunkyIconButton(
                             icon: Icons.add_rounded,
-                            semanticLabel: 'Add entry for ${questTitle(q)}',
+                            semanticLabel: q.key == 'exercise'
+                                ? 'Log an activity'
+                                : 'Add entry for ${questTitle(q)}',
                             onPressed: widget.onAdd,
                           ),
                         ),

@@ -118,8 +118,9 @@ void main() {
         stub,
       ).estimateMeal(text: 'chicken burrito bowl, no rice');
       expect(stub.last!.data, {'text': 'chicken burrito bowl, no rice'});
-      expect(_wire(estimate.toJson()), _wire(_load('estimate')['body']));
-      expect(estimate.confidence, EstimateConfidence.medium);
+      expect(_wire(estimate.legacy.toJson()), _wire(_load('estimate')['body']));
+      expect(estimate.legacy.confidence, EstimateConfidence.medium);
+      expect(estimate.items, isEmpty);
     });
 
     test('accepting a proposal answers with the profile and dismissing sends no body', () async {

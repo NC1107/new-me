@@ -7,6 +7,8 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/avatar.dart';
+import '../../widgets/thick_progress_bar.dart';
 import '../board/person_card.dart' show kSuccessText;
 import 'together_bar.dart';
 
@@ -51,8 +53,14 @@ String? challengeDaysLeft(Challenge c, String today) {
   return left == 1 ? 'Last day' : '$left days left';
 }
 
-/// The week's shared challenge on Us. One bar for both of you, since the server only reports the
-/// combined number.
+/// "13,221 of 62,000 steps" for one person's share.
+String shareProgressText(ChallengeShare s, String kind) {
+  final unit = challengeUnit(kind);
+  return '${s.progress.formatted} of ${s.target.formatted}${unit.isEmpty ? '' : ' $unit'}';
+}
+
+/// The week's shared challenge on Us: the combined bar, and under it each person's own share and
+/// progress, since the challenge completes only when both reach theirs.
 class ChallengeCard extends StatelessWidget {
   const ChallengeCard({
     super.key,
@@ -131,8 +139,64 @@ class ChallengeCard extends StatelessWidget {
                   if (left != null) Text(left, style: AppText.caption),
                 ],
               ),
+            if (c.people.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              for (final (i, s) in c.people.indexed) ...[
+                if (i > 0) const SizedBox(height: 12),
+                _ShareRow(share: s, kind: c.kind),
+              ],
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ShareRow extends StatelessWidget {
+  const _ShareRow({required this.share, required this.kind});
+
+  final ChallengeShare share;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = accentById(share.color);
+    final text = shareProgressText(share, kind);
+    return Semantics(
+      container: true,
+      label: '${share.name}: $text${share.done ? ', done' : ''}',
+      excludeSemantics: true,
+      child: Row(
+        children: [
+          Avatar(name: share.name, palette: palette, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        share.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    if (share.done)
+                      const Icon(Icons.check_circle_rounded, size: 18, color: kSuccess),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ThickProgressBar(value: share.done ? 1 : share.fraction, color: palette.fill),
+                const SizedBox(height: 4),
+                Text(text, style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

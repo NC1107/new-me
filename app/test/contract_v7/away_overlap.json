@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "path": "/api/away",
+  "status": 409,
+  "request": null,
+  "body": {
+    "error": "you already have an away span on some of those days",
+    "code": "away_overlap"
+  }
+}

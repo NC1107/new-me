@@ -1,0 +1,195 @@
+{
+  "method": "GET",
+  "path": "/api/insights",
+  "status": 200,
+  "request": null,
+  "body": {
+    "activity": {
+      "guideline": "WHO 2020",
+      "moderateMin": 285,
+      "vigorousMin": 0,
+      "moderateEquivalentMin": 285,
+      "strengthDays": 2,
+      "aerobicTargetMinMin": 150,
+      "aerobicTargetMaxMin": 300,
+      "strengthTargetDays": 2,
+      "meetsAerobic": true,
+      "meetsStrength": true,
+      "heartRateIntensityUsed": false
+    },
+    "protein": {
+      "targetG": 100,
+      "perKg": 1.6,
+      "weightKg": 82.4,
+      "suggestedG": 130,
+      "daysHit7": 0,
+      "days7": 0,
+      "hitRate7": null
+    },
+    "sleep": {
+      "avg7Min": 428,
+      "avg30Min": 420,
+      "targetMin": 420,
+      "avgBedtime": "23:20",
+      "avgWake": "06:53",
+      "bedtimeSpreadMin": 24,
+      "stages7": {
+        "deepMin": 69,
+        "remMin": 94,
+        "coreMin": 265,
+        "awakeMin": 28
+      },
+      "lastNight": {
+        "date": "2026-10-27",
+        "bedAt": "2026-10-27T03:10:00Z",
+        "wakeAt": "2026-10-27T11:02:00Z",
+        "asleepMin": 437,
+        "deepMin": 70,
+        "remMin": 96,
+        "coreMin": 271,
+        "awakeMin": 29
+      },
+      "nights": [
+        {
+          "date": "2026-10-14",
+          "asleepMin": 452
+        },
+        {
+          "date": "2026-10-15",
+          "asleepMin": 418
+        },
+        {
+          "date": "2026-10-16",
+          "asleepMin": 441
+        },
+        {
+          "date": "2026-10-17",
+          "asleepMin": 389
+        },
+        {
+          "date": "2026-10-18",
+          "asleepMin": 463
+        },
+        {
+          "date": "2026-10-19",
+          "asleepMin": 352
+        },
+        {
+          "date": "2026-10-20",
+          "asleepMin": 371
+        },
+        {
+          "date": "2026-10-21",
+          "asleepMin": 448
+        },
+        {
+          "date": "2026-10-22",
+          "asleepMin": 430
+        },
+        {
+          "date": "2026-10-23",
+          "asleepMin": 405
+        },
+        {
+          "date": "2026-10-24",
+          "asleepMin": 470
+        },
+        {
+          "date": "2026-10-25",
+          "asleepMin": 426
+        },
+        {
+          "date": "2026-10-26",
+          "asleepMin": 380
+        },
+        {
+          "date": "2026-10-27",
+          "asleepMin": 437
+        }
+      ]
+    },
+    "steps": {
+      "avg7": 8129,
+      "avg30": 7439,
+      "median14": 8450,
+      "trend": "flat",
+      "best": {
+        "date": "2026-10-18",
+        "value": 9300
+      },
+      "daysAtGoal30": 0,
+      "goal": 9500,
+      "suggestion": {
+        "target": 9500,
+        "median14": 8450,
+        "bandLow": 7000,
+        "bandHigh": 10000,
+        "ageKnown": false
+      }
+    },
+    "weight": {
+      "latestKg": 82.4,
+      "smoothedKg": 82.4,
+      "weeklyRateKg": null,
+      "points": [
+        {
+          "date": "2026-10-27",
+          "kg": 82.4,
+          "smoothed": 82.4
+        }
+      ]
+    },
+    "workouts": {
+      "week": {
+        "count": 2,
+        "minutes": 67
+      },
+      "last30": {
+        "count": 14,
+        "minutes": 653,
+        "byType": [
+          {
+            "type": "strength",
+            "count": 3,
+            "minutes": 157
+          },
+          {
+            "type": "hiking",
+            "count": 1,
+            "minutes": 140
+          },
+          {
+            "type": "running",
+            "count": 4,
+            "minutes": 125
+          },
+          {
+            "type": "walking",
+            "count": 2,
+            "minutes": 82
+          },
+          {
+            "type": "cycling",
+            "count": 1,
+            "minutes": 62
+          },
+          {
+            "type": "swimming",
+            "count": 1,
+            "minutes": 35
+          },
+          {
+            "type": "yoga",
+            "count": 1,
+            "minutes": 30
+          },
+          {
+            "type": "hiit",
+            "count": 1,
+            "minutes": 22
+          }
+        ]
+      }
+    }
+  }
+}

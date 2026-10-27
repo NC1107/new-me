@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "path": "/api/streak/cover",
+  "status": 201,
+  "request": {
+    "date": "2026-10-26"
+  },
+  "body": {
+    "covered": 2,
+    "date": "2026-10-26",
+    "freezes": {
+      "held": 0,
+      "earnedTowardNext": 4
+    }
+  }
+}

@@ -28,6 +28,7 @@ enum OnboardingStep {
   who,
   name,
   color,
+  schedule,
   focus,
   goals,
   food,
@@ -81,6 +82,9 @@ class OnboardingState {
     this.foodAnswered = false,
     this.planSaved = false,
     this.reminderMinutes = kDefaultReminderMinutes,
+    this.wakeMinutes = kDefaultWake,
+    this.bedMinutes = kDefaultBed,
+    this.scheduleAnswered = false,
     this.displayName = '',
     this.error,
     this.errorTick = 0,
@@ -128,6 +132,11 @@ class OnboardingState {
   /// The evening reminder time highlighted on its step, in minutes after midnight.
   final int reminderMinutes;
 
+  /// The wake and bed times highlighted on the schedule step, in minutes after midnight.
+  final int wakeMinutes;
+  final int bedMinutes;
+  final bool scheduleAnswered;
+
   /// The name to greet on the done screen.
   final String displayName;
 
@@ -169,6 +178,7 @@ class OnboardingState {
       for (var i = 0; i < questKeys.length; i++) (OnboardingStep.goals, i),
       if (wantsFood) (OnboardingStep.food, 0),
     ];
+    const schedule = (OnboardingStep.schedule, 0);
     const health = (OnboardingStep.health, 0);
     const reminders = (OnboardingStep.reminders, 0);
     const done = (OnboardingStep.done, 0);
@@ -178,6 +188,7 @@ class OnboardingState {
         welcome,
         (OnboardingStep.name, 0),
         (OnboardingStep.color, 0),
+        schedule,
         ...plan,
         health,
         reminders,
@@ -189,6 +200,7 @@ class OnboardingState {
         if (hasChoose) choose,
         (OnboardingStep.name, 0),
         (OnboardingStep.color, 0),
+        schedule,
         ...plan,
         health,
         reminders,
@@ -223,6 +235,7 @@ class OnboardingState {
     if (i <= 0 || busy || step == OnboardingStep.done) return false;
     final previous = f[i - 1].$1;
     const afterJoin = {
+      OnboardingStep.schedule,
       OnboardingStep.focus,
       OnboardingStep.goals,
       OnboardingStep.food,
@@ -256,6 +269,9 @@ class OnboardingState {
     bool? foodAnswered,
     bool? planSaved,
     int? reminderMinutes,
+    int? wakeMinutes,
+    int? bedMinutes,
+    bool? scheduleAnswered,
     String? displayName,
     String? error,
     bool clearError = false,
@@ -284,6 +300,9 @@ class OnboardingState {
     foodAnswered: foodAnswered ?? this.foodAnswered,
     planSaved: planSaved ?? this.planSaved,
     reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+    wakeMinutes: wakeMinutes ?? this.wakeMinutes,
+    bedMinutes: bedMinutes ?? this.bedMinutes,
+    scheduleAnswered: scheduleAnswered ?? this.scheduleAnswered,
     displayName: displayName ?? this.displayName,
     error: clearError ? null : (error ?? this.error),
     errorTick: failSubmit ? errorTick + 1 : errorTick,
@@ -350,6 +369,7 @@ class OnboardingController extends Notifier<OnboardingState> {
       kcal: saved.kcal,
       foodAnswered: saved.foodAnswered,
       planSaved: saved.planSaved,
+      scheduleAnswered: saved.scheduleAnswered,
     );
     state = _resumeAt(
       base,
@@ -370,6 +390,7 @@ class OnboardingController extends Notifier<OnboardingState> {
         ? OnboardingStep.done
         : OnboardingStep.reminders;
     if (s.path == OnboardingPath.returning) return s.copyWith(step: afterPlan);
+    if (!s.scheduleAnswered) return s.copyWith(step: OnboardingStep.schedule);
     if (s.focuses.isEmpty) return s.copyWith(step: OnboardingStep.focus);
     final keys = s.questKeys;
     final nextGoal = keys.indexWhere((k) => !s.goals.containsKey(k));
@@ -394,6 +415,7 @@ class OnboardingController extends Notifier<OnboardingState> {
         kcal: state.kcal,
         foodAnswered: state.foodAnswered,
         planSaved: state.planSaved,
+        scheduleAnswered: state.scheduleAnswered,
         healthAnswered:
             healthAnswered ||
             state.step == OnboardingStep.reminders ||
@@ -588,7 +610,7 @@ class OnboardingController extends Notifier<OnboardingState> {
         pending: true,
         color: result.user.color,
         displayName: result.user.name,
-        step: returning ? OnboardingStep.health : OnboardingStep.focus,
+        step: returning ? OnboardingStep.health : OnboardingStep.schedule,
         goalIndex: 0,
         forward: true,
       );
@@ -615,6 +637,38 @@ class OnboardingController extends Notifier<OnboardingState> {
     _ when e.statusCode == 429 => 'Too many tries. Wait a few minutes and try again.',
     _ => e.message,
   };
+
+  void setWake(int minutes) => state = state.copyWith(wakeMinutes: minutes);
+
+  void setBed(int minutes) => state = state.copyWith(bedMinutes: minutes);
+
+  /// Saves one wake and bed time for workdays and days off alike; Me > Schedule tells them apart.
+  Future<void> continueSchedule() async {
+    if (state.busy || state.wakeMinutes == state.bedMinutes) return;
+    final client = ref.read(apiClientProvider);
+    if (client == null) return;
+    state = state.copyWith(busy: true, clearError: true);
+    final times = DayTimes(wake: state.wakeMinutes, bed: state.bedMinutes);
+    try {
+      await client.patchMe(
+        MePatch(
+          schedule: Schedule(workday: times, dayOff: times),
+        ),
+      );
+      state = state.copyWith(busy: false, scheduleAnswered: true);
+      await _persist();
+      _next();
+    } on ApiException catch (e) {
+      state = state.copyWith(busy: false, error: _joinError(e));
+    }
+  }
+
+  /// Keeps the server's defaults (7:00 and 23:00, Monday to Friday).
+  Future<void> skipSchedule() async {
+    state = state.copyWith(scheduleAnswered: true, clearError: true);
+    await _persist();
+    _next();
+  }
 
   void toggleFocus(String id) {
     final on = state.focuses.contains(id);

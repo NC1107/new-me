@@ -1,0 +1,114 @@
+{
+  "method": "GET",
+  "path": "/api/lookback",
+  "status": 200,
+  "request": null,
+  "body": {
+    "month": "2026-09",
+    "label": "September 2026",
+    "from": "2026-09-01",
+    "to": "2026-09-30",
+    "complete": true,
+    "people": [
+      {
+        "userId": 1,
+        "name": "Nick",
+        "color": "green",
+        "points": 4120,
+        "countedDays": 24,
+        "metrics": [],
+        "improvements": [
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "value": 40,
+            "previous": 32,
+            "pct": 25.0,
+            "summary": ""
+          },
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "value": 24,
+            "previous": 18,
+            "pct": 33.3,
+            "summary": ""
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "value": 56,
+            "previous": 60,
+            "pct": 6.7,
+            "summary": ""
+          }
+        ]
+      },
+      {
+        "userId": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "points": 3880,
+        "countedDays": 22,
+        "metrics": [],
+        "improvements": [
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "value": 452,
+            "previous": 420,
+            "pct": 7.6,
+            "summary": ""
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "value": 3.5,
+            "previous": 2.5,
+            "pct": 40.0,
+            "summary": ""
+          }
+        ]
+      }
+    ],
+    "couple": {
+      "points": 8000,
+      "bothCountedDays": 19,
+      "metrics": [],
+      "improvements": [
+        {
+          "key": "workouts",
+          "title": "Workouts",
+          "unit": "a week",
+          "value": 3.3,
+          "previous": 2.6,
+          "pct": 26.9,
+          "summary": ""
+        },
+        {
+          "key": "sleep_minutes",
+          "title": "Sleep",
+          "unit": "min a night",
+          "value": 444,
+          "previous": 428,
+          "pct": 3.7,
+          "summary": ""
+        },
+        {
+          "key": "protein_g",
+          "title": "Protein",
+          "unit": "g a day",
+          "value": 112,
+          "previous": 104,
+          "pct": 7.7,
+          "summary": ""
+        }
+      ]
+    }
+  }
+}

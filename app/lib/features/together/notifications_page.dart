@@ -19,7 +19,7 @@ import '../me/reminders_page.dart';
 import '../me/settings_row.dart';
 
 /// How many push switches the page has.
-const kNotificationSwitches = 9;
+const kNotificationSwitches = 11;
 
 /// How many of the push switches are on, for the Me row's subtitle.
 int notificationsOn(NotificationPrefs p) => [
@@ -32,6 +32,8 @@ int notificationsOn(NotificationPrefs p) => [
   p.windDown,
   p.morningPlan,
   p.weeklyRecap,
+  p.milestones,
+  p.lookback,
 ].where((on) => on).length;
 
 /// Which events may notify this phone, plus a way into the evening reminder.
@@ -97,6 +99,14 @@ class NotificationsPage extends ConsumerWidget {
         on: prefs.weeklyRecap,
         patch: (bool v) => NotificationPatch(weeklyRecap: v),
       ),
+      (
+        icon: Icons.calendar_month_rounded,
+        palette: accentById('violet'),
+        title: 'Monthly look-back',
+        subtitle: 'On the 1st, last month against the one before',
+        on: prefs.lookback,
+        patch: (bool v) => NotificationPatch(lookback: v),
+      ),
     ];
     final rows = [
       (
@@ -130,6 +140,14 @@ class NotificationsPage extends ConsumerWidget {
         subtitle: 'When you earn it',
         on: prefs.reward,
         patch: (bool v) => NotificationPatch(reward: v),
+      ),
+      (
+        icon: Icons.emoji_events_rounded,
+        palette: accentById('amber'),
+        title: 'Milestones',
+        subtitle: 'Streak lengths and firsts, yours and together',
+        on: prefs.milestones,
+        patch: (bool v) => NotificationPatch(milestones: v),
       ),
     ];
     return PageScaffold(

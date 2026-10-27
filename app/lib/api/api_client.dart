@@ -267,6 +267,39 @@ class ApiClient {
     (data) => HabitMarkResult.fromJson(data as Json),
   );
 
+  /// Marks [from] to [to] (inclusive, today to 14 days ahead, at most 14 days) as away. Throws
+  /// code `away_overlap` (409) when it meets an existing span.
+  Future<AwayCreated> createAway({required String from, required String to, String note = ''}) =>
+      _send(
+        () => _dio.post<dynamic>('/api/away', data: {'from': from, 'to': to, 'note': note}),
+        AwayCreated.parse,
+      );
+
+  Future<void> deleteAway(int id) => _send(() => _dio.delete<dynamic>('/api/away/$id'), (_) {});
+
+  /// Spends one of the caller's freezes on the partner's missed [date]. Throws codes
+  /// `cover_closed` and `no_freeze` (422).
+  Future<Freezes> coverStreak(String date) => _send(
+    () => _dio.post<dynamic>('/api/streak/cover', data: {'date': date}),
+    (data) => Freezes.parse((data as Json)['freezes']),
+  );
+
+  Future<Progress> progress({int window = 30}) => _send(
+    () => _dio.get<dynamic>('/api/progress', queryParameters: {'window': window}),
+    Progress.parse,
+  );
+
+  /// [month] is YYYY-MM; null asks for the last completed month.
+  Future<Lookback> lookback({String? month}) => _send(
+    () => _dio.get<dynamic>('/api/lookback', queryParameters: {'month': ?month}),
+    Lookback.parse,
+  );
+
+  Future<List<Milestone>> milestones() => _send(
+    () => _dio.get<dynamic>('/api/milestones'),
+    (data) => parseMilestones((data as Json)['milestones']),
+  );
+
   Future<Board> board() =>
       _send(() => _dio.get<dynamic>('/api/board'), (data) => Board.fromJson(data as Json));
 
@@ -292,7 +325,7 @@ class ApiClient {
 
   /// Works a meal out from a sentence. Nothing is stored or logged. Throws codes
   /// `estimate_disabled`, `rate_limited` and `estimate_unavailable`.
-  Future<MealEstimate> estimateMeal({required String text}) => _send(
+  Future<MealBreakdown> estimateMeal({required String text}) => _send(
     () => _dio.post<dynamic>(
       '/api/meals/estimate',
       data: {'text': text},
@@ -301,8 +334,39 @@ class ApiClient {
         receiveTimeout: const Duration(seconds: 60),
       ),
     ),
-    (data) => MealEstimate.fromJson(data as Json),
+    (data) => MealBreakdown.fromJson(data as Json),
   );
+
+  /// Searches the household food library; [remote] also searches USDA and Open Food Facts.
+  Future<FoodSearch> foods({String q = '', bool remote = false}) => _send(
+    () => _dio.get<dynamic>(
+      '/api/foods',
+      queryParameters: {if (q.isNotEmpty) 'q': q, if (remote) 'remote': 1},
+      options: Options(receiveTimeout: const Duration(seconds: 20)),
+    ),
+    (data) => FoodSearch.fromJson(data as Json),
+  );
+
+  /// Saves a food. A database food that is already saved comes back as the saved copy.
+  Future<SavedFood> createFood(SavedFood food) => _send(
+    () => _dio.post<dynamic>('/api/foods', data: food.toJson()),
+    (data) => SavedFood.fromJson(data as Json),
+  );
+
+  Future<SavedFood> updateFood(int id, SavedFood food) => _send(
+    () => _dio.patch<dynamic>(
+      '/api/foods/$id',
+      data: food.toJson()
+        ..remove('source')
+        ..remove('sourceId'),
+    ),
+    (data) => SavedFood.fromJson(data as Json),
+  );
+
+  Future<void> deleteFood(int id) => _send(() => _dio.delete<dynamic>('/api/foods/$id'), (_) {});
+
+  /// Counts a use of a saved food, which ranks it higher in search.
+  Future<void> useFood(int id) => _send(() => _dio.post<dynamic>('/api/foods/$id/use'), (_) {});
 
   Future<Recap> recap({String? week}) => _send(
     () => _dio.get<dynamic>('/api/recap', queryParameters: {'week': ?week}),

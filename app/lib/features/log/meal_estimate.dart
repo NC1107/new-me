@@ -34,11 +34,12 @@ String estimateErrorCopy(Object error) {
   return errorCopy(error);
 }
 
-/// "Describe it": works a meal out from a sentence and hands the numbers to the form. It never logs anything itself.
+/// "Describe it": splits a sentence into foods, looks each up and hands the items to the meal
+/// sheet. It never logs anything itself.
 class MealEstimateBar extends ConsumerStatefulWidget {
   const MealEstimateBar({super.key, required this.onEstimate, required this.onBusyChanged});
 
-  final ValueChanged<MealEstimate> onEstimate;
+  final ValueChanged<MealBreakdown> onEstimate;
   final ValueChanged<bool> onBusyChanged;
 
   @override
@@ -62,7 +63,7 @@ class _MealEstimateBarState extends ConsumerState<MealEstimateBar> {
     widget.onBusyChanged(busy);
   }
 
-  Future<void> _run(Future<MealEstimate> Function() call) async {
+  Future<void> _run(Future<MealBreakdown> Function() call) async {
     setState(() => _error = null);
     _setBusy(true);
     try {
@@ -105,7 +106,7 @@ class _MealEstimateBarState extends ConsumerState<MealEstimateBar> {
           const FieldLabel('Describe the meal'),
           AppTextField(
             controller: _text,
-            hint: 'Chicken burrito bowl, no rice',
+            hint: 'An apple, a Chomps stick and a Hot Pocket',
             textCapitalization: TextCapitalization.sentences,
             maxLines: 3,
             minLines: 1,

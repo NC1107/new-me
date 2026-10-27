@@ -493,6 +493,7 @@ class GoalProposal {
     required this.current,
     required this.proposed,
     required this.reason,
+    this.kind = 'target',
   });
 
   static GoalProposal? tryParse(Object? v) {
@@ -505,11 +506,15 @@ class GoalProposal {
       current: _int(j['current']),
       proposed: _int(j['proposed']),
       reason: _str(j['reason']),
+      kind: _str(j['kind'], 'target'),
     );
   }
 
-  /// steps or sleep.
+  /// steps, sleep, exercise or protein.
   final String key;
+
+  /// `target` changes the target of a quest that is on; `enable` offers to switch a quest on.
+  final String kind;
   final String title;
   final String unit;
   final int current;
@@ -523,6 +528,7 @@ class GoalProposal {
     'current': current,
     'proposed': proposed,
     'reason': reason,
+    if (kind != 'target') 'kind': kind,
   };
 }
 

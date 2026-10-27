@@ -1,0 +1,247 @@
+{
+  "method": "GET",
+  "path": "/api/today",
+  "status": 200,
+  "request": null,
+  "body": {
+    "date": "2026-10-27",
+    "localToday": "2026-10-27",
+    "backdateUntil": null,
+    "serverNow": "2026-10-27T18:30:00Z",
+    "quests": [
+      {
+        "key": "steps",
+        "title": "Steps",
+        "target": 9500,
+        "unit": "steps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 4321,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 45,
+        "bonusPoints": 0,
+        "done": false,
+        "doneBy": null
+      },
+      {
+        "key": "pushups",
+        "title": "Push-ups",
+        "target": 30,
+        "unit": "reps",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 40,
+        "actualAlt": null,
+        "points": 100,
+        "basePoints": 100,
+        "bonusPoints": 20,
+        "done": true,
+        "doneBy": null
+      },
+      {
+        "key": "reading",
+        "title": "Reading",
+        "target": 20,
+        "unit": "minutes",
+        "targetAlt": 15,
+        "unitAlt": "pages",
+        "actual": 0,
+        "actualAlt": 0,
+        "points": 100,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false,
+        "doneBy": null
+      },
+      {
+        "key": "meals_logged",
+        "title": "Meals",
+        "target": 2,
+        "unit": "meals",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false,
+        "doneBy": null
+      },
+      {
+        "key": "protein",
+        "title": "Protein",
+        "target": 100,
+        "unit": "g",
+        "targetAlt": null,
+        "unitAlt": null,
+        "actual": 0,
+        "actualAlt": null,
+        "points": 50,
+        "basePoints": 0,
+        "bonusPoints": 0,
+        "done": false,
+        "doneBy": null
+      }
+    ],
+    "day": {
+      "basePoints": 145,
+      "bonusPoints": 25,
+      "points": 170,
+      "maxBase": 400,
+      "percent": 36,
+      "counted": false,
+      "streakLine": 70
+    },
+    "streak": {
+      "current": 0,
+      "restAvailable": false,
+      "restUsedOn": null
+    },
+    "food": {
+      "kcal": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "fiber": 0,
+      "burned": 287,
+      "targets": {
+        "kcal": null,
+        "protein": null,
+        "carbs": null,
+        "fat": null
+      }
+    },
+    "health": {
+      "stepsEverSynced": true,
+      "syncedAt": "2026-10-27T15:22:05Z",
+      "metrics": {
+        "active_energy": 287,
+        "basal_energy": 1650,
+        "body_fat_pct": 18.2,
+        "distance_m": 3200,
+        "exercise_minutes": 23,
+        "flights": 6,
+        "hrv_ms": 46,
+        "lean_mass_kg": 67.4,
+        "mindful_minutes": 10,
+        "resting_hr": 58,
+        "sleep_minutes": 432,
+        "steps": 4321,
+        "vo2max": 41.5,
+        "water_ml": 1500,
+        "weight_kg": 82.4,
+        "workout_minutes": 34,
+        "workouts": 1
+      },
+      "latest": {
+        "body_fat_pct": {
+          "value": 18.2,
+          "date": "2026-10-27"
+        },
+        "lean_mass_kg": {
+          "value": 67.4,
+          "date": "2026-10-27"
+        },
+        "vo2max": {
+          "value": 41.5,
+          "date": "2026-10-27"
+        },
+        "weight_kg": {
+          "value": 82.4,
+          "date": "2026-10-27"
+        }
+      }
+    },
+    "listening": {
+      "minutes": 0,
+      "syncedAt": null
+    },
+    "habits": [
+      {
+        "id": 3,
+        "name": "Brush teeth",
+        "icon": "brush",
+        "kind": "check",
+        "slots": [
+          {
+            "index": 0,
+            "label": "Morning",
+            "time": "07:30",
+            "done": true
+          },
+          {
+            "index": 1,
+            "label": "Evening",
+            "time": "22:00",
+            "done": false
+          }
+        ],
+        "target": null,
+        "count": 0
+      }
+    ],
+    "cheers": [],
+    "readiness": {
+      "level": "ready",
+      "reasons": [
+        {
+          "kind": "sleep",
+          "text": "Slept 7 h 17, on target"
+        },
+        {
+          "kind": "basis",
+          "text": "Based on sleep only until there are 7 days of heart data"
+        }
+      ],
+      "basis": "sleep_only"
+    },
+    "plan": {
+      "items": [
+        {
+          "kind": "done",
+          "key": "pushups",
+          "text": "Push-ups done"
+        },
+        {
+          "kind": "todo",
+          "key": "steps",
+          "text": "Steps: 5,179 to go. A 50-minute walk this afternoon covers it."
+        },
+        {
+          "kind": "todo",
+          "key": "reading",
+          "text": "Reading: 20 more minutes. An audiobook counts."
+        },
+        {
+          "kind": "todo",
+          "key": "meals_logged",
+          "text": "Meals: log 2 more meals."
+        },
+        {
+          "kind": "todo",
+          "key": "protein",
+          "text": "Protein: 100 g to go."
+        },
+        {
+          "kind": "habit",
+          "key": "habit:3",
+          "text": "Brush teeth at 22:00"
+        }
+      ],
+      "summary": "1 of 5 quests done. Easiest next: Steps: 5,179 to go. A 50-minute walk this afternoon covers it. 1 habit is still due, starting with Brush teeth at 22:00."
+    },
+    "freezes": {
+      "held": 2,
+      "earnedTowardNext": 0
+    },
+    "repair": null,
+    "away": {
+      "today": false,
+      "current": null,
+      "upcoming": []
+    },
+    "newMilestones": []
+  }
+}

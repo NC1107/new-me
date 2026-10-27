@@ -7,6 +7,7 @@ import '../../state/health_sync.dart';
 import '../../state/insights.dart';
 import '../../state/listening_sync.dart';
 import '../../state/local_prefs.dart';
+import '../../state/right_now.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
@@ -14,13 +15,17 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
+import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
 import '../../widgets/quest_copy.dart';
 import '../habits/habits_strip.dart';
 import '../insights/insights_screen.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
+import '../progress/milestone_celebration.dart';
 import '../shell/home_tab.dart';
+import '../streaks/away_line.dart';
+import '../streaks/away_page.dart';
 import 'body_card.dart';
 import 'connect_health_card.dart';
 import 'day_card.dart';
@@ -35,6 +40,9 @@ import 'today_providers.dart';
 import 'today_skeleton.dart';
 import 'today_top_bar.dart';
 import 'week_card.dart';
+
+/// More than this at once is a flood; the rest are marked seen without playing.
+const kMaxMilestoneCelebrations = 3;
 
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
@@ -67,6 +75,7 @@ class _TodayBody extends ConsumerStatefulWidget {
 
 class _TodayBodyState extends ConsumerState<_TodayBody> {
   String? _celebrationHandled;
+  bool _milestonesRunning = false;
 
   Today get today => widget.today;
 
@@ -100,6 +109,45 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     await showDayCountedSheet(context);
   }
 
+  /// Plays each new milestone full screen, once per phone, after anything already on screen has
+  /// closed. They are marked seen as they play, so a rebuild never replays one.
+  void _maybeCelebrateMilestones(bool onToday) {
+    if (!onToday || widget.offline || _milestonesRunning || today.newMilestones.isEmpty) return;
+    final memory = ref.read(rightNowMemoryProvider);
+    if (!memory.loaded) return;
+    final unseen = [
+      for (final m in today.newMilestones)
+        if (!memory.has(milestoneSeenKey(m.id))) m,
+    ];
+    if (unseen.isEmpty) return;
+    _milestonesRunning = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _celebrateMilestones(unseen));
+  }
+
+  Future<void> _celebrateMilestones(List<Milestone> milestones) async {
+    try {
+      for (final m in milestones.take(kMaxMilestoneCelebrations)) {
+        for (var i = 0; i < 40; i++) {
+          if (!mounted) return;
+          final route = ModalRoute.of(context);
+          if (route == null || route.isCurrent) break;
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+        if (!mounted) return;
+        await ref.read(rightNowMemoryProvider.notifier).dismiss(milestoneSeenKey(m.id));
+        if (!mounted) return;
+        await showMilestoneCelebration(context, m);
+      }
+      for (final m in milestones.skip(kMaxMilestoneCelebrations)) {
+        await ref.read(rightNowMemoryProvider.notifier).dismiss(milestoneSeenKey(m.id));
+      }
+    } finally {
+      _milestonesRunning = false;
+    }
+  }
+
+  void _openAway() => pushPage(context, const AwayPage());
+
   void _openEntries() => showDayDetailSheet(context, date: today.localToday);
 
   void _openPlan() {
@@ -111,6 +159,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
   Widget build(BuildContext context) {
     final onToday = ref.watch(homeTabProvider) == HomeTab.today;
     _maybeCelebrate(onToday);
+    ref.watch(rightNowMemoryProvider);
+    _maybeCelebrateMilestones(onToday);
 
     final name = ref.watch(sessionProvider.select((s) => s.session?.userName)) ?? '';
     final prompted = ref.watch(healthSyncProvider.select((s) => s.prompted));
@@ -138,8 +188,14 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             partner: partner,
             onOpenMe: () => tabs.select(HomeTab.me),
             onOpenUs: () => tabs.select(HomeTab.board),
-            onStreak: () =>
-                showStreakSheet(context, streak: today.streak, line: today.day.streakLine),
+            freezes: today.freezes.held,
+            onStreak: () => showStreakSheet(
+              context,
+              streak: today.streak,
+              line: today.day.streakLine,
+              freezes: today.freezes,
+              onAway: _openAway,
+            ),
           ),
           const SizedBox(height: 12),
           TodayHeader(
@@ -156,6 +212,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             onEntries: _openEntries,
           ),
           RightNowSlot(today: today),
+          const SizedBox(height: kCardGap),
+          AwayLine(away: today.away, onOpen: _openAway),
           HabitsStrip(today: today),
           ..._questCards(prompted, now),
           const SizedBox(height: kCardGap),
@@ -165,7 +223,11 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             onSetTargets: () => tabs.select(HomeTab.me),
           ),
           const SizedBox(height: kCardGap),
-          BodyRow(summary: bodySummary(today.health, insights), onTap: () => openInsights(context)),
+          BodyRow(
+            summary: bodySummary(today.health, insights),
+            weight: insights?.weight,
+            onTap: () => openInsights(context),
+          ),
           if (mine != null && mine.last7.isNotEmpty) ...[
             const SizedBox(height: kCardGap),
             WeekCard(days: mine.last7, today: today.localToday, todayCounted: today.day.counted),

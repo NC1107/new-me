@@ -6,11 +6,13 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import '../streaks/streak_visuals.dart';
 
 const _kFlameWash = Color(0xFFFFF1DE);
 const _kFlameInk = Color(0xFFD9730D);
 
-/// Seven day circles: a flame where the day counted, a moon on the rest day.
+/// Seven day circles: a flame where the day counted, a snowflake where a freeze covered it, a
+/// plaster where it was repaired and a pause where the person was away.
 class WeekCard extends StatelessWidget {
   const WeekCard({super.key, required this.days, required this.today, required this.todayCounted});
 
@@ -59,29 +61,28 @@ class _Day extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final person = context.accentPalette;
-    final rest = mark.rest && !counted;
+    final kind = dayStatus(mark, counted: counted);
     final weekday = weekdayShort(mark.date);
-    final status = counted
-        ? 'streak day counted'
-        : rest
-        ? 'rest day'
-        : isToday
-        ? 'today'
-        : 'not counted';
+    final status = kind == DayStatus.none && isToday ? 'today' : kind.label;
 
     final Color fill;
     final Color border;
     final IconData? icon;
     final Color iconColor;
-    if (counted) {
+    if (kind == DayStatus.counted) {
       fill = _kFlameWash;
       border = kFlame;
-      icon = Icons.local_fire_department_rounded;
+      icon = kind.icon;
       iconColor = _kFlameInk;
-    } else if (rest) {
+    } else if (kind == DayStatus.frozen || kind == DayStatus.repaired) {
+      fill = kFreezeWash;
+      border = kFreezeFill;
+      icon = kind.icon;
+      iconColor = kFreezeText;
+    } else if (kind == DayStatus.away || kind == DayStatus.rest) {
       fill = kSunken;
       border = kBorder;
-      icon = Icons.bedtime_rounded;
+      icon = kind.icon;
       iconColor = kInkSecondary;
     } else {
       fill = kSunken;
@@ -103,7 +104,7 @@ class _Day extends StatelessWidget {
               color: fill,
               shape: BoxShape.circle,
               border: Border.all(
-                color: isToday && !counted ? person.fill : border,
+                color: isToday && kind == DayStatus.none ? person.fill : border,
                 width: kBorderWidth,
               ),
             ),

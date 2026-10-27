@@ -1,0 +1,126 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../api/models.dart';
+import '../../state/foods.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../util/format.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/cached_view.dart';
+import '../../widgets/chunky_button.dart';
+import '../../widgets/page_scaffold.dart';
+import '../../widgets/pressable.dart';
+import 'food_edit_page.dart';
+
+/// Foods saved for the household, so the same food has the same numbers every time.
+class MyFoodsPage extends ConsumerWidget {
+  const MyFoodsPage({super.key});
+
+  Future<void> _open(BuildContext context, WidgetRef ref, [SavedFood? food]) async {
+    await pushPage(context, FoodEditPage(food: food));
+    ref.invalidate(foodLibraryProvider);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final foods = ref.watch(foodLibraryProvider);
+    return PageScaffold(
+      title: 'My foods',
+      children: [
+        Text(
+          'Foods you and your partner use. A saved food always logs with the same numbers, '
+          'with no lookup and no AI. Foods from the databases are saved when you log them.',
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 16),
+        ChunkyButton(
+          label: 'New food',
+          icon: Icons.add_rounded,
+          onPressed: () => _open(context, ref),
+        ),
+        const SizedBox(height: 16),
+        ...switch (foods) {
+          AsyncData(:final value) when value.isEmpty => [
+            Text('Nothing saved yet.', style: AppText.body.copyWith(color: kInkSecondary)),
+          ],
+          AsyncData(:final value) => [
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (final (i, food) in value.indexed) ...[
+                    if (i > 0) const Divider(height: 2, thickness: 2, color: kBorder),
+                    _FoodRow(food: food, onTap: () => _open(context, ref, food)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          AsyncError(:final error) => [
+            ErrorBlock(
+              title: 'Could not load your foods',
+              error: error,
+              onRetry: () async => ref.invalidate(foodLibraryProvider),
+            ),
+          ],
+          _ => [const Center(child: CircularProgressIndicator())],
+        },
+      ],
+    );
+  }
+}
+
+class _FoodRow extends StatelessWidget {
+  const _FoodRow({required this.food, required this.onTap});
+
+  final SavedFood food;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail =
+        '${food.servingText}  -  ${food.kcal.formatted} kcal  -  used ${food.useCount} '
+        '${food.useCount == 1 ? 'time' : 'times'}';
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: '${food.title}, $detail',
+      onTap: onTap,
+      child: Pressable(
+        scale: 0.99,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        food.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        detail,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption.copyWith(color: kInkSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

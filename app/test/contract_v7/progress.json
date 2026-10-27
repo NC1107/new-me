@@ -1,0 +1,460 @@
+{
+  "method": "GET",
+  "path": "/api/progress",
+  "status": 200,
+  "request": null,
+  "body": {
+    "window": 30,
+    "today": "2026-10-27",
+    "people": [
+      {
+        "userId": 1,
+        "name": "Nick",
+        "color": "green",
+        "joinedOn": "2026-10-27",
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "current": 0,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 0
+              }
+            ],
+            "summary": "Reading: 0 min a day"
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "current": 4321,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 4321
+              }
+            ],
+            "summary": "Steps: 4,321 steps a day"
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "current": 437,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 437
+              }
+            ],
+            "summary": "Sleep: 437 min a night"
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "current": 7,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 7
+              }
+            ],
+            "summary": "Workouts: 7 a week"
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 40,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 40
+              }
+            ],
+            "summary": "Push-ups: 40 a day"
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Protein: no data yet"
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 1,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 1
+              }
+            ],
+            "summary": "Habits kept: 1 a day"
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "current": 82.4,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 82.4
+              }
+            ],
+            "summary": "Weight: 82.4 kg"
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "current": 18.2,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 18.2
+              }
+            ],
+            "summary": "Body fat: 18.2 %"
+          },
+          {
+            "key": "lean_mass_kg",
+            "title": "Lean mass",
+            "unit": "kg",
+            "goodDirection": "up",
+            "current": 67.4,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 67.4
+              }
+            ],
+            "summary": "Lean mass: 67.4 kg"
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "current": 41.5,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 41.5
+              }
+            ],
+            "summary": "VO2 max: 41.5 ml/kg/min"
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "current": 58,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 58
+              }
+            ],
+            "summary": "Resting heart rate: 58 bpm"
+          }
+        ]
+      },
+      {
+        "userId": 2,
+        "name": "Nadia",
+        "color": "violet",
+        "joinedOn": "2026-10-27",
+        "metrics": [
+          {
+            "key": "reading_minutes",
+            "title": "Reading",
+            "unit": "min a day",
+            "goodDirection": "up",
+            "current": 0,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 0
+              }
+            ],
+            "summary": "Reading: 0 min a day"
+          },
+          {
+            "key": "steps",
+            "title": "Steps",
+            "unit": "steps a day",
+            "goodDirection": "up",
+            "current": 2400,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 2400
+              }
+            ],
+            "summary": "Steps: 2,400 steps a day"
+          },
+          {
+            "key": "sleep_minutes",
+            "title": "Sleep",
+            "unit": "min a night",
+            "goodDirection": "up",
+            "current": 468,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 468
+              }
+            ],
+            "summary": "Sleep: 468 min a night"
+          },
+          {
+            "key": "workouts",
+            "title": "Workouts",
+            "unit": "a week",
+            "goodDirection": "up",
+            "current": 0,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 0
+              }
+            ],
+            "summary": "Workouts: 0 a week"
+          },
+          {
+            "key": "pushups",
+            "title": "Push-ups",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 0,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 0
+              }
+            ],
+            "summary": "Push-ups: 0 a day"
+          },
+          {
+            "key": "protein_g",
+            "title": "Protein",
+            "unit": "g a day",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Protein: no data yet"
+          },
+          {
+            "key": "habits_kept",
+            "title": "Habits kept",
+            "unit": "a day",
+            "goodDirection": "up",
+            "current": 0,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": 0
+              }
+            ],
+            "summary": "Habits kept: 0 a day"
+          },
+          {
+            "key": "weight_kg",
+            "title": "Weight",
+            "unit": "kg",
+            "goodDirection": "none",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Weight: no data yet"
+          },
+          {
+            "key": "body_fat_pct",
+            "title": "Body fat",
+            "unit": "%",
+            "goodDirection": "down",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Body fat: no data yet"
+          },
+          {
+            "key": "lean_mass_kg",
+            "title": "Lean mass",
+            "unit": "kg",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Lean mass: no data yet"
+          },
+          {
+            "key": "vo2max",
+            "title": "VO2 max",
+            "unit": "ml/kg/min",
+            "goodDirection": "up",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "VO2 max: no data yet"
+          },
+          {
+            "key": "resting_hr",
+            "title": "Resting heart rate",
+            "unit": "bpm",
+            "goodDirection": "down",
+            "current": null,
+            "previous": null,
+            "first": null,
+            "changeFromPrevious": null,
+            "changeFromFirst": null,
+            "series": [
+              {
+                "weekStart": "2026-10-26",
+                "value": null
+              }
+            ],
+            "summary": "Resting heart rate: no data yet"
+          }
+        ]
+      }
+    ]
+  }
+}

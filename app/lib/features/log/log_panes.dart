@@ -11,7 +11,9 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/skeletons.dart';
 import 'big_number_stepper.dart';
 import 'meal_estimate.dart';
+import 'food_search.dart';
 import 'log_chip.dart';
+import 'meal_items.dart';
 
 /// Builds the write for one attempt; the sheet supplies the idempotency key and the date.
 typedef DraftBuilder = LogDraft Function(String clientOpId, String? localDate);
@@ -20,6 +22,15 @@ typedef LogCallback = Future<void> Function(
   DraftBuilder build, {
   required String added,
   String? confirm,
+  List<MealItem>? libraryItems,
+});
+
+/// Logs several entries one after another, each with its own idempotency key.
+typedef LogManyCallback = Future<void> Function(
+  List<DraftBuilder> builds, {
+  required String added,
+  String? confirm,
+  List<MealItem>? libraryItems,
 });
 
 const kMaxReps = 500;
@@ -210,6 +221,7 @@ class MealPane extends StatefulWidget {
     required this.busy,
     required this.failed,
     required this.onLog,
+    required this.onLogMany,
     this.canEstimate = false,
   });
 
@@ -220,6 +232,7 @@ class MealPane extends StatefulWidget {
   final bool busy;
   final bool failed;
   final LogCallback onLog;
+  final LogManyCallback onLogMany;
 
   @override
   State<MealPane> createState() => _MealPaneState();
@@ -236,6 +249,7 @@ class _MealPaneState extends State<MealPane> {
   bool _more = false;
   bool _estimating = false;
   MealEstimate? _estimate;
+  final List<MealEntry> _entries = [];
 
   @override
   void dispose() {
@@ -266,6 +280,77 @@ class _MealPaneState extends State<MealPane> {
       [_protein, _carbs, _fat, _fiber].every((c) => _gramsError(c) == null);
 
   static String _gramsText(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
+
+  /// Shows the itemized result; a server without itemizing answers one meal, which fills the
+  /// form as it always did.
+  void _applyBreakdown(MealBreakdown b) {
+    if (b.items.isEmpty) {
+      _applyEstimate(b.legacy);
+      return;
+    }
+    setState(() {
+      _entries
+        ..clear()
+        ..addAll(b.items.map(MealEntry.new));
+      _estimate = null;
+    });
+  }
+
+  void _addFood(SavedFood food) => setState(() => _entries.add(MealEntry(MealItem.fromFood(food))));
+
+  List<MealItem> get _items => [for (final e in _entries) e.item];
+
+  MealDraft Function(String, String?) _draftFor(
+    String name,
+    int kcal,
+    num p,
+    num c,
+    num f,
+    num fi,
+  ) =>
+      (id, date) => MealDraft(
+        clientOpId: id,
+        name: name,
+        kcal: kcal,
+        protein: p,
+        carbs: c,
+        fat: f,
+        fiber: fi,
+        date: date,
+      );
+
+  void _logOne() {
+    final items = _items;
+    final t = mealTotals(items);
+    final name = joinedMealName(items);
+    widget.onLog(
+      _draftFor(name, t.kcal, t.protein, t.carbs, t.fat, t.fiber),
+      added: 'Added $name',
+      confirm: t.kcal > kConfirmKcal ? _confirmCopy(t.kcal) : null,
+      libraryItems: items,
+    );
+  }
+
+  void _logSeparately() {
+    final items = _items;
+    final total = mealTotals(items).kcal;
+    widget.onLogMany(
+      [
+        for (final i in items)
+          _draftFor(
+            i.name.trim().isEmpty ? 'Meal' : i.name.trim(),
+            i.kcal,
+            i.protein,
+            i.carbs,
+            i.fat,
+            i.fiber,
+          ),
+      ],
+      added: 'Added ${items.length} meals',
+      confirm: total > kConfirmKcal ? _confirmCopy(total) : null,
+      libraryItems: items,
+    );
+  }
 
   /// Fills the form from an estimate. Nothing is logged: the person checks and saves.
   void _applyEstimate(MealEstimate e) {
@@ -328,129 +413,147 @@ class _MealPaneState extends State<MealPane> {
       children: [
         if (widget.canEstimate) ...[
           MealEstimateBar(
-            onEstimate: _applyEstimate,
+            onEstimate: _applyBreakdown,
             onBusyChanged: (busy) => setState(() => _estimating = busy),
           ),
+          const SizedBox(height: 12),
+          FoodSearchBox(onAdd: _addFood, enabled: !widget.busy),
           const SizedBox(height: 16),
         ],
-        if (_estimate case final estimate?) ...[
-          EstimateNote(estimate: estimate),
-          const SizedBox(height: 16),
-        ],
-        FutureBuilder<List<RecentMeal>>(
-          future: widget.recent,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    SkeletonBlock(width: 96, height: 44, radius: 22),
-                    SizedBox(width: 8),
-                    SkeletonBlock(width: 120, height: 44, radius: 22),
-                  ],
-                ),
-              );
-            }
-            final meals = snapshot.data ?? const <RecentMeal>[];
-            if (meals.isEmpty) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        if (_entries.isNotEmpty)
+          ItemizedMeal(
+            entries: _entries,
+            busy: widget.busy,
+            onChanged: () => setState(() {}),
+            onLogOne: _logOne,
+            onLogSeparately: _logSeparately,
+            onClear: () => setState(_entries.clear),
+          )
+        else
+          ..._manualForm(context),
+      ],
+    );
+  }
+
+  List<Widget> _manualForm(BuildContext context) {
+    return [
+      if (_estimate case final estimate?) ...[
+        EstimateNote(estimate: estimate),
+        const SizedBox(height: 16),
+      ],
+      FutureBuilder<List<RecentMeal>>(
+        future: widget.recent,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Row(
                 children: [
-                  const FieldLabel('Recent meals - tap to log'),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final meal in meals)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 200),
-                          child: LogChip(
-                            label: meal.name,
-                            enabled: !widget.busy,
-                            onTap: () => _logRecent(meal),
-                          ),
-                        ),
-                    ],
-                  ),
+                  SkeletonBlock(width: 96, height: 44, radius: 22),
+                  SizedBox(width: 8),
+                  SkeletonBlock(width: 120, height: 44, radius: 22),
                 ],
               ),
             );
-          },
-        ),
-        const FieldLabel('Name'),
-        AppTextField(
-          controller: _name,
-          hint: 'What was it? (optional)',
-          textCapitalization: TextCapitalization.sentences,
-          inputFormatters: [LengthLimitingTextInputFormatter(80)],
-        ),
-        const SizedBox(height: 12),
-        const FieldLabel('Calories'),
-        AppTextField(
-          controller: _kcal,
-          hint: 'kcal',
-          keyboardType: TextInputType.number,
-          errorText: _kcalError,
-          onChanged: (_) => setState(() {}),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(5),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _gramsField('Protein', _protein)),
-            const SizedBox(width: 8),
-            Expanded(child: _gramsField('Carbs', _carbs)),
-            const SizedBox(width: 8),
-            Expanded(child: _gramsField('Fat', _fat)),
-          ],
-        ),
-        if (_more) ...[const SizedBox(height: 12), _gramsField('Fiber', _fiber)],
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Semantics(
-            button: true,
-            child: GestureDetector(
-              onTap: () => setState(() => _more = !_more),
-              behavior: HitTestBehavior.opaque,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Align(
-                  widthFactor: 1,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _more ? 'Less' : 'More',
-                    style: AppText.label.copyWith(color: context.accentText),
-                  ),
+          }
+          final meals = snapshot.data ?? const <RecentMeal>[];
+          if (meals.isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const FieldLabel('Recent meals - tap to log'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final meal in meals)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 200),
+                        child: LogChip(
+                          label: meal.name,
+                          enabled: !widget.busy,
+                          onTap: () => _logRecent(meal),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      const FieldLabel('Name'),
+      AppTextField(
+        controller: _name,
+        hint: 'What was it? (optional)',
+        textCapitalization: TextCapitalization.sentences,
+        inputFormatters: [LengthLimitingTextInputFormatter(80)],
+      ),
+      const SizedBox(height: 12),
+      const FieldLabel('Calories'),
+      AppTextField(
+        controller: _kcal,
+        hint: 'kcal',
+        keyboardType: TextInputType.number,
+        errorText: _kcalError,
+        onChanged: (_) => setState(() {}),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(5),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _gramsField('Protein', _protein)),
+          const SizedBox(width: 8),
+          Expanded(child: _gramsField('Carbs', _carbs)),
+          const SizedBox(width: 8),
+          Expanded(child: _gramsField('Fat', _fat)),
+        ],
+      ),
+      if (_more) ...[const SizedBox(height: 12), _gramsField('Fiber', _fiber)],
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          button: true,
+          child: GestureDetector(
+            onTap: () => setState(() => _more = !_more),
+            behavior: HitTestBehavior.opaque,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Align(
+                widthFactor: 1,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _more ? 'Less' : 'More',
+                  style: AppText.label.copyWith(color: context.accentText),
                 ),
               ),
             ),
           ),
         ),
-        const FieldLabel('Portion'),
-        _portionChips(context),
-        if (_portion != 1 && _kcalValue > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(
-              'Logs ${_scaleKcal(_kcalValue).formatted} kcal',
-              style: AppText.label.copyWith(color: kInkSecondary),
-            ),
+      ),
+      const FieldLabel('Portion'),
+      _portionChips(context),
+      if (_portion != 1 && _kcalValue > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(
+            'Logs ${_scaleKcal(_kcalValue).formatted} kcal',
+            style: AppText.label.copyWith(color: kInkSecondary),
           ),
-        const SizedBox(height: 20),
-        ChunkyButton(
-          label: widget.failed ? 'Try again' : 'Save',
-          busy: widget.busy,
-          onPressed: _valid && !widget.busy ? _logForm : null,
         ),
-      ],
-    );
+      const SizedBox(height: 20),
+      ChunkyButton(
+        label: widget.failed ? 'Try again' : 'Save',
+        busy: widget.busy,
+        onPressed: _valid && !widget.busy ? _logForm : null,
+      ),
+    ];
   }
 
   Widget _portionChips(BuildContext context) {

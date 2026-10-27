@@ -85,6 +85,8 @@ Where this document left a choice open, the server does the following.
 
 ### Meal estimate
 
+Superseded for typed text by the itemized pipeline in `design-v8.md` (Meal estimate and the food library); this section still describes photos.
+
 - The model is `claude-sonnet-4-6`, `anthropic-version: 2023-06-01`, one user message, the tool `report_meal_estimate` forced with `tool_choice`, so the answer is always arguments of that tool.
 - A photo is sent as a base64 `image` block; the optional `text` next to an image is passed on as the person's own words about it.
 - The server validates the declared type against the file's magic bytes, caps the decoded image at 5 MB, and drops it after the call; nothing about the image or the text is stored or logged.
@@ -126,6 +128,7 @@ Where this document left a choice open, the server does the following.
 |---|---|
 | `NEWME_ANTHROPIC_API_KEY` | turns on meal estimates and the Claude plan wording; unset keeps both off |
 | `NEWME_ANTHROPIC_BASE_URL` | optional override of `https://api.anthropic.com` |
+| `NEWME_USDA_API_KEY` | USDA FoodData Central key for meal lookups (v8); unset uses `DEMO_KEY` |
 
 The listening and nudge features need no new configuration: listening follows `NEWME_ABS_URL` and nudges follow the APNs variables.
 

@@ -84,3 +84,54 @@ Missing inputs are listed on the Targets page with a one-tap way to add them; no
 - `GET /api/targets`: the inputs and which are missing, and for each target its value, the current setting, the formula text and the source keys.
 - `PATCH /api/me` gains `heightCm`, `sex` and `goal {kind, paceKgPerWeek}`; `POST /api/targets/apply` with the keys to apply; `POST /api/pushups/max` records a max test.
 - Pure functions with table tests reproducing worked examples from the cited sources where they give them.
+
+## Meal estimate and the food library
+
+Nick's complaint: "an apple, a chomp meat stick, and a hotpocket" came back as one blended meal with numbers the model made up.
+The fix is that AI only reads the sentence; the numbers come from real databases, and a food the household has already confirmed always has the same numbers.
+
+### Pipeline for typed text
+
+1. **Library fast path.** A single phrase (no comma, "and", "&", "+", "with") that exactly names a saved food, optionally with a leading amount ("2 apples"), is sized from the library with no Claude call.
+2. **Parse.** Claude (same key and model, forced tool `split_meal`) only splits the text into items `{text, label, food, brand|null, quantity, unit, grams|null, kind: generic|branded}`.
+   The prompt forbids giving nutrition and the tool schema has no nutrition fields.
+   `grams` is only a weight the person stated.
+3. **Look each item up**, at most three at a time, with a 5 second timeout per call and an in-memory cache of an hour (failed calls are never cached):
+   1. The household library first: the name must match exactly or differ only by descriptor words (raw, medium, plain...), and the brand must agree on both sides.
+      "apple pie" never matches a saved "Apple".
+   2. Branded items: Open Food Facts `cgi/search.pl` (five results, User-Agent `NewMe/<version> (self-hosted)`), per-serving numbers when present, else per 100 g with the serving size; then USDA Branded.
+   3. Generic items: USDA FoodData Central with Foundation and SR Legacy data.
+      Energy comes from nutrient 1008, else the Atwater values 2047 and 2048, else kilojoules.
+      Household measures come from the food's `foodPortions` (a detail call, cached), since search results do not carry them.
+   4. Matching is a tested score: share of the item's name tokens found, share of the candidate's name that was asked for, a bonus when the first word agrees ("Rose-apples" is not "Apples"), and data type preference (Foundation and SR Legacy over Branded for generic foods).
+      At least 60% of the name tokens must match and every brand word must match, so Jack Link's can never answer for Chomps.
+   5. The unit is converted in this order: a weight unit, a household measure whose words contain the unit ("medium" in "medium (3" dia)"), the label's serving, the stated grams, the first household measure.
+4. **Fallback.** An item no database accepts, or whose lookups all failed, gets a Claude estimate for that one item (`source: "estimated"`).
+   If even that fails the item is returned at zero for the person to fill in; the request fails (502) only when the text cannot be split or no item could be sized.
+5. **Scale and clamp.** Numbers are scaled to the quantity and clamped to the meal log bounds (kcal 0 to 10000, grams 0 to 5000). Nothing is stored.
+
+### How accuracy is reported
+
+- Every item carries `source`, the matched database name and id, and a confidence: `high` when the whole name matched and the unit converted exactly, `medium` when a word was missing or the unit was a guess, `low` otherwise.
+- `databaseShare` is the percent of the meal's kcal from USDA, Open Food Facts or a saved food whose numbers began as one.
+  The app shows it as "N% from nutrition databases" and recomputes it as amounts change.
+- Source chips: "USDA", "Label" (Open Food Facts or typed from a label), "Saved" (library), "Estimated" (AI).
+
+### The library
+
+- Table `foods` (migration 0010), shared by the household: name, brand, serving text ("1 medium (182 g)"), serving grams, kcal and macros per serving, optional alternate servings (a label and a weight, converted through the weight), source, source id, creator, use count, last used.
+  A database food is saved once (unique on source and source id), so saving twice returns the saved copy.
+- Saving: foods from USDA or Open Food Facts are saved automatically when a meal using them is logged; estimated items are saved only when the person taps "Keep in My foods" on the row (an AI guess is not made permanent without asking).
+  The app also records a use of every saved food that was logged, which ranks it in search.
+- The meal sheet's "Search your foods" lists saved foods (most used first); "Search USDA and Open Food Facts" adds unsaved candidates below, on request only, because the shared demo key allows few calls.
+- Me > My foods lists, edits (serving, nutrients, other servings) and deletes saved foods and adds a new one from a label.
+- Items carry a numeric amount the person can step or type; numbers always scale from the per-unit values, so stepping up and down never drifts.
+- "Log as one meal" logs the sum with the names joined; "Log separately" logs one meal per item, each with its own `clientOpId`, in order, stopping at the first failure and resuming without repeating the ones already saved.
+
+### Configuration and limits
+
+- `NEWME_USDA_API_KEY`; empty uses `DEMO_KEY`, which USDA currently limits to about 10 calls an hour per IP.
+  A three-item meal costs up to six calls, so set a real key.
+- Open Food Facts search is slow and sometimes answers 503; that item then falls back to USDA Branded and then to an estimate.
+- The 20 estimates an hour per person limit still applies; one estimate may make several Claude calls (one split, plus one per unmatched item).
+

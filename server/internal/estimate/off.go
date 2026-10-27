@@ -137,7 +137,7 @@ func (p offProduct) toFood() (Food, bool) {
 	}
 	f := Food{
 		Source: SourceOpenFoodFacts, ID: p.Code, Name: name,
-		Brand: strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " ")), ServingGrams: p.servingGrams(),
+		Brand: strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " ")), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
 	}
 	f.Per100g, _ = offBasis(p.Nutriments, "_100g")
 	f.PerServing, _ = offBasis(p.Nutriments, "_serving")

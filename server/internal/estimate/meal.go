@@ -25,6 +25,7 @@ const (
 type ItemResult struct {
 	Text        string  `json:"text"`
 	Name        string  `json:"name"`
+	Brand       string  `json:"brand"`
 	Quantity    float64 `json:"quantity"`
 	Unit        string  `json:"unit"`
 	Grams       float64 `json:"grams"`
@@ -37,6 +38,10 @@ type ItemResult struct {
 	SourceID    string  `json:"sourceId"`
 	MatchedName string  `json:"matchedName"`
 	Confidence  string  `json:"confidence"`
+	// Origin is where a saved food's numbers first came from; empty for other sources.
+	Origin string `json:"origin"`
+	// fromDatabase marks numbers that came from a food database or a label rather than a guess.
+	fromDatabase bool
 }
 
 // Total is the meal's summed nutrition.
@@ -182,6 +187,9 @@ confidence is high only when the food and its amount are both clear, medium when
 notes is one short sentence on the main assumption. Never refuse: give your best estimate.`
 
 func (e *Estimator) estimateItem(ctx context.Context, it Item) (ItemResult, error) {
+	if e.Client == nil {
+		return ItemResult{}, fmt.Errorf("%w: no Claude client", ErrUnusable)
+	}
 	desc := fmt.Sprintf("Item: %s\nFood: %s\n", it.Text, it.Food)
 	if it.Brand != "" {
 		desc += "Brand: " + it.Brand + "\n"
@@ -211,7 +219,7 @@ func baseResult(it Item) ItemResult {
 	if name == "" {
 		name = it.Text
 	}
-	return ItemResult{Text: it.Text, Name: cleanText(name, MaxNameRunes), Quantity: it.Quantity, Unit: it.Unit}
+	return ItemResult{Text: it.Text, Name: cleanText(name, MaxNameRunes), Brand: it.Brand, Quantity: it.Quantity, Unit: it.Unit}
 }
 
 // knownGrams is the item's weight when the sentence alone settles it.
@@ -243,17 +251,15 @@ func clampGrams(v float64) float64 {
 	return roundTenth(math.Min(math.Max(v, 0), MaxMacroGrams))
 }
 
-func (e *Estimator) item(ctx context.Context, it Item) (res ItemResult, failed bool) {
+func (e *Estimator) item(ctx context.Context, it Item, library []LibraryFood) (res ItemResult, failed bool) {
+	if l, ok := bestLibrary(it, library); ok {
+		if h, ok := libraryHit(it, l); ok {
+			return e.hitResult(it, h), false
+		}
+	}
 	if e.Foods != nil {
 		if h, ok, _ := e.Foods.Lookup(ctx, it); ok {
-			res = baseResult(it)
-			res.Source = h.Food.Source
-			res.SourceID = h.Food.ID
-			res.MatchedName = matchedName(h.Food)
-			res.Confidence = h.Confidence
-			res.Grams = roundTenth(math.Min(h.Resolved.Grams, maxItemGrams))
-			fill(&res, h.Resolved.N)
-			return res, false
+			return e.hitResult(it, h), false
 		}
 	}
 	res, err := e.estimateItem(ctx, it)
@@ -269,6 +275,23 @@ func (e *Estimator) item(ctx context.Context, it Item) (res ItemResult, failed b
 	return res, true
 }
 
+func (e *Estimator) hitResult(it Item, h hit) ItemResult {
+	res := baseResult(it)
+	res.Source = h.Food.Source
+	res.SourceID = h.Food.ID
+	res.MatchedName = matchedName(h.Food)
+	res.Confidence = h.Confidence
+	res.Grams = roundTenth(math.Min(h.Resolved.Grams, maxItemGrams))
+	res.fromDatabase = countsAsDatabase(h.Food.Source)
+	if h.Food.Source == SourceLibrary {
+		res.Brand = h.Food.Brand
+		res.Origin = h.Food.Origin
+		res.fromDatabase = h.Food.Origin != SourceEstimated
+	}
+	fill(&res, h.Resolved.N)
+	return res
+}
+
 func matchedName(f Food) string {
 	name := f.Name
 	if f.Brand != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(f.Brand)) {
@@ -280,6 +303,15 @@ func matchedName(f Food) string {
 // Meal splits the text into foods, sizes each one and returns the itemized meal. It fails only
 // when the text cannot be split or when no item could be sized at all.
 func (e *Estimator) Meal(ctx context.Context, text string) (Meal, error) {
+	var library []LibraryFood
+	if e.Library != nil {
+		library, _ = e.Library.All(ctx)
+	}
+	if it, l, ok := exactLibraryItem(text, library); ok {
+		if h, ok := libraryHit(it, l); ok {
+			return assemble([]ItemResult{e.hitResult(it, h)}), nil
+		}
+	}
 	items, err := e.split(ctx, text)
 	if err != nil {
 		return Meal{}, err
@@ -294,7 +326,7 @@ func (e *Estimator) Meal(ctx context.Context, text string) (Meal, error) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			results[i], failed[i] = e.item(ctx, it)
+			results[i], failed[i] = e.item(ctx, it, library)
 		}()
 	}
 	wg.Wait()
@@ -308,7 +340,11 @@ func (e *Estimator) Meal(ctx context.Context, text string) (Meal, error) {
 	return assemble(results), nil
 }
 
-func fromDatabase(source string) bool { return source == SourceUSDA || source == SourceOpenFoodFacts }
+// countsAsDatabase: a saved food counts when its numbers came from a database or a label, not
+// from an old guess; the saved food keeps that origin.
+func countsAsDatabase(source string) bool {
+	return source == SourceUSDA || source == SourceOpenFoodFacts
+}
 
 // assemble sums the items and builds the legacy one-meal fields from them.
 func assemble(items []ItemResult) Meal {
@@ -324,7 +360,7 @@ func assemble(items []ItemResult) Meal {
 		fat += it.Fat
 		fiber += it.Fiber
 		names = append(names, it.Name)
-		if fromDatabase(it.Source) {
+		if it.fromDatabase {
 			dbKcal += it.Kcal
 			fromDB++
 		}

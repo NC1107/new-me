@@ -12,6 +12,7 @@ const (
 	SourceUSDA          = "usda"
 	SourceOpenFoodFacts = "openfoodfacts"
 	SourceEstimated     = "estimated"
+	SourceLibrary       = "library"
 )
 
 // Data types the USDA API reports, as far as ranking cares.
@@ -45,12 +46,16 @@ type Food struct {
 	Name     string
 	Brand    string
 	DataType string
+	// Origin is, for a library food, where its numbers first came from.
+	Origin string
 
 	Per100g    *Nutrients
 	PerServing *Nutrients
 	// ServingGrams is the weight of one serving, zero when the label does not say.
 	ServingGrams float64
-	Portions     []Portion
+	// ServingText is the label's wording of one serving, such as "1 stick (32 g)".
+	ServingText string
+	Portions    []Portion
 }
 
 func (f Food) per100() (Nutrients, bool) {
@@ -130,6 +135,10 @@ func resolve(f Food, it Item) (resolved, bool) {
 	if len(units) > 0 {
 		for _, p := range f.Portions {
 			if containsAll(tokens(p.Label), units) {
+				// The label's own numbers beat per-100 g ones scaled by a serving weight.
+				if f.PerServing != nil && f.ServingGrams > 0 && p.Grams == f.ServingGrams {
+					return resolved{N: f.PerServing.scale(it.Quantity), Grams: it.Quantity * p.Grams, Basis: basisExact}, true
+				}
 				return byGrams(it.Quantity*p.Grams, basisExact)
 			}
 		}

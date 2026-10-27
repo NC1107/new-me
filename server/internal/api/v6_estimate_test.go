@@ -25,7 +25,7 @@ type fakeClaude struct {
 }
 
 func newFakeClaude(t *testing.T) (*fakeClaude, *httptest.Server) {
-	f := &fakeClaude{status: http.StatusOK, reply: func(map[string]any) any { return toolReply(goodEstimate()) }}
+	f := &fakeClaude{status: http.StatusOK, reply: forTool(goodEstimate())}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, _ := io.ReadAll(r.Body)
 		var req map[string]any
@@ -51,6 +51,26 @@ func (f *fakeClaude) count() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return len(f.requests)
+}
+
+func toolName(req map[string]any) string {
+	return req["tool_choice"].(map[string]any)["name"].(string)
+}
+
+// splitReply is what the parse step returns for a one-food sentence.
+func splitReply() obj {
+	return toolReply(obj{"items": []obj{{"text": "chicken burrito bowl, no rice", "label": "Chicken burrito bowl",
+		"food": "chicken burrito bowl", "brand": nil, "quantity": 1, "unit": "bowl", "grams": nil, "kind": "generic"}}})
+}
+
+// forTool answers the parse step with one item and every other call with the given estimate.
+func forTool(estimateInput any) func(map[string]any) any {
+	return func(req map[string]any) any {
+		if toolName(req) == "split_meal" {
+			return splitReply()
+		}
+		return toolReply(estimateInput)
+	}
 }
 
 func goodEstimate() obj {
@@ -95,12 +115,16 @@ func TestEstimateFromTextSendsTheForcedToolRequestAndClampsTheAnswer(t *testing.
 
 	got := h.post("/api/meals/estimate", nick.Token, obj{"text": "  chicken burrito bowl, no rice "}).expect(http.StatusOK)
 	if got.str("name") != "Chicken burrito bowl" || got.num("kcal") != 640 || got.at("protein") != 42.0 ||
-		got.str("confidence") != "medium" || got.str("notes") != "Assumes a restaurant-size bowl." {
+		got.str("confidence") != "medium" || got.at("databaseShare") != 0.0 {
 		t.Fatalf("estimate = %s", got.Body)
 	}
 
-	if fake.count() != 1 {
-		t.Fatalf("calls = %d", fake.count())
+	items := got.at("items").([]any)
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "estimated" || got.at("total").(map[string]any)["kcal"] != 640.0 {
+		t.Fatalf("items = %s", got.Body)
+	}
+	if fake.count() != 2 {
+		t.Fatalf("calls = %d, want the parse call and one item estimate", fake.count())
 	}
 	req, hdr := fake.requests[0], fake.headers[0]
 	if hdr.Get("x-api-key") != "sk-test-key" || hdr.Get("anthropic-version") != "2023-06-01" ||
@@ -114,7 +138,7 @@ func TestEstimateFromTextSendsTheForcedToolRequestAndClampsTheAnswer(t *testing.
 	tool := req["tools"].([]any)[0].(map[string]any)
 	schema := tool["input_schema"].(map[string]any)
 	if choice["type"] != "tool" || choice["name"] != tool["name"] || schema["type"] != "object" ||
-		len(schema["required"].([]any)) != 8 {
+		choice["name"] != "split_meal" || len(schema["required"].([]any)) != 1 {
 		t.Fatalf("tool use = %v / %v", choice, tool)
 	}
 	content := req["messages"].([]any)[0].(map[string]any)["content"].([]any)
@@ -150,16 +174,14 @@ func TestEstimateFromAPhotoSendsAnImageBlock(t *testing.T) {
 
 func TestEstimateClampsWildAnswersToTheMealLogBounds(t *testing.T) {
 	fake, srv := newFakeClaude(t)
-	fake.reply = func(map[string]any) any {
-		return toolReply(obj{"name": "x", "kcal": 1e9, "protein": 99999, "carbs": -5, "fat": 3.14159, "fiber": 0,
-			"confidence": "certain", "notes": strings.Repeat("n", 500)})
-	}
+	fake.reply = forTool(obj{"name": "x", "kcal": 1e9, "protein": 99999, "carbs": -5, "fat": 3.14159, "fiber": 0,
+		"confidence": "certain", "notes": strings.Repeat("n", 500)})
 	h := newHarness(t, withClaude(srv))
 	nick := h.joinAdmin("Nick", "green")
 
 	got := h.post("/api/meals/estimate", nick.Token, obj{"text": "mystery"}).expect(http.StatusOK)
 	if got.num("kcal") != 10000 || got.at("protein") != 5000.0 || got.at("carbs") != 0.0 || got.at("fat") != 3.1 ||
-		got.str("confidence") != "low" || len(got.str("notes")) != 200 {
+		got.str("confidence") != "low" {
 		t.Fatalf("estimate = %s", got.Body)
 	}
 	// What comes back must be loggable as it is.
@@ -214,7 +236,7 @@ func TestEstimateUpstreamFailuresAre502(t *testing.T) {
 	}
 	h.post("/api/meals/estimate", nick.Token, obj{"text": "toast"}).expect(http.StatusBadGateway).code("estimate_unavailable")
 
-	fake.reply = func(map[string]any) any { return toolReply(obj{"name": "no energy"}) }
+	fake.reply = forTool(obj{"name": "no energy"})
 	h.post("/api/meals/estimate", nick.Token, obj{"text": "toast"}).expect(http.StatusBadGateway).code("estimate_unavailable")
 
 	srv.Close()
@@ -234,7 +256,7 @@ func TestEstimateIsLimitedToTwentyAnHourPerPerson(t *testing.T) {
 	if limited.Header.Get("Retry-After") == "" {
 		t.Fatal("429 should say when to retry")
 	}
-	if fake.count() != 20 {
+	if fake.count() != 40 {
 		t.Fatalf("calls = %d", fake.count())
 	}
 	h.post("/api/meals/estimate", nadia.Token, obj{"text": "toast"}).expect(http.StatusOK)

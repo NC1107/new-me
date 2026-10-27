@@ -38,6 +38,10 @@ func TestScoringPrefersTheRightFoodAndRejectsOtherBrands(t *testing.T) {
 	if _, ok := pickBest(it, []Food{jack}); ok {
 		t.Fatal("a different brand must never match")
 	}
+	partial := Food{Name: "PEPPERONI PLANT BASED PIZZA POCKET PIES", Brand: "DEL MONTE Del Monte Foods Inc.", DataType: typeBranded}
+	if _, ok := scoreFood(Item{Food: "pepperoni pizza", Brand: "Hot Pockets"}, partial); ok {
+		t.Fatal("a brand that matches only some of its words is a different brand")
+	}
 	if _, ok := scoreFood(Item{Food: "pepperoni pizza", Brand: "Hot Pockets"}, Food{Name: "Pepperoni Pizza", Brand: "Hot Pockets"}); !ok {
 		t.Fatal("brand plural must match")
 	}
@@ -67,7 +71,7 @@ func TestConfidenceCombinesMatchAndUnit(t *testing.T) {
 
 func TestResolveConvertsUnits(t *testing.T) {
 	per100 := &Nutrients{Kcal: 200, Protein: 10, Carbs: 20, Fat: 5, Fiber: 2}
-	food := Food{Per100g: per100, Portions: []Portion{{Label: `medium (3" dia)`, Grams: 182}, {Label: "cup slices", Grams: 109}}}
+	food := Food{Source: SourceUSDA, Per100g: per100, Portions: []Portion{{Label: `medium (3" dia)`, Grams: 182}, {Label: "cup slices", Grams: 109}}}
 	cases := []struct {
 		name  string
 		food  Food
@@ -126,5 +130,55 @@ func TestPortionFromLabelDividesByTheAmount(t *testing.T) {
 		if ok != tc.ok || (ok && got != tc.want) {
 			t.Errorf("%q: got %+v %v, want %+v %v", tc.label, got, ok, tc.want, tc.ok)
 		}
+	}
+}
+
+func TestUSDANoteInParenthesesDoesNotCountAgainstTheName(t *testing.T) {
+	f := decodeUSDA(171688, "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)", nutrients(52, 0.3, 13.8, 0.2, 2.4, srIDs))
+	food, ok := f.toFood()
+	if !ok || food.Name != "Apples, raw, with skin" {
+		t.Fatalf("name = %q", food.Name)
+	}
+}
+
+// The rows below are real USDA search results captured on 2026-10-27, in the order USDA
+// returned them, so the ranking is checked against what production will see.
+func TestRankingOnCapturedUSDAResults(t *testing.T) {
+	apples := []Food{
+		{ID: "168171", Name: "Rose-apples, raw", DataType: typeSRLegacy},
+		{ID: "1750340", Name: "Apples, fuji, with skin, raw", DataType: typeFoundation},
+		{ID: "1750341", Name: "Apples, gala, with skin, raw", DataType: typeFoundation},
+		{ID: "171689", Name: "Apples, raw, without skin", DataType: typeSRLegacy},
+		{ID: "169909", Name: "Mammy-apple, (mamey), raw", DataType: typeSRLegacy},
+		{ID: "168202", Name: "Apples, raw, golden delicious, with skin", DataType: typeSRLegacy},
+		{ID: "171725", Name: "Custard-apple, (bullock's-heart), raw", DataType: typeSRLegacy},
+		{ID: "171688", Name: "Apples, raw, with skin", DataType: typeSRLegacy},
+		{ID: "167782", Name: "Abiyuch, raw", DataType: typeSRLegacy},
+	}
+	best, ok := pickBest(Item{Food: "apple, raw"}, apples)
+	if !ok || best.Food.ID != "171688" {
+		t.Fatalf("apple = %+v", best.Food)
+	}
+
+	pockets := []Food{
+		{ID: "2775462", Name: "HOT POCKETS Pepperoni Pizza 4 oz. Sandwich", Brand: "HOT POCKETS Société des Produits Nestlé S.A.", DataType: typeBranded},
+		{ID: "2290824", Name: "TOFURKY, POCKETS SANDWICHES, PEPPERONI PIZZA", Brand: "TOFURKY Turtle Island Foods, Inc.", DataType: typeBranded},
+		{ID: "2372974", Name: "PEPPERONI PLANT BASED PIZZA POCKET PIES, PEPPERONI", Brand: "DEL MONTE Del Monte Foods Inc.", DataType: typeBranded},
+		{ID: "2165137", Name: "PEPPERONI PIZZA, PEPPERONI", Brand: "ORV'S Bernatello's Pizza, Inc.", DataType: typeBranded},
+	}
+	best, ok = pickBest(Item{Food: "pepperoni pizza", Brand: "Hot Pockets", Kind: KindBranded}, pockets)
+	if !ok || best.Food.ID != "2775462" {
+		t.Fatalf("hot pocket = %+v", best.Food)
+	}
+	if _, ok := pickBest(Item{Food: "pepperoni pizza", Brand: "Hot Pockets"}, pockets[1:]); ok {
+		t.Fatal("without a Hot Pockets row nothing may match")
+	}
+
+	sticks := []Food{
+		{ID: "1997336", Name: "ORIGINAL BEEF STICK, ORIGINAL", Brand: "JACK LINK'S Link Snacks, Inc.", DataType: typeBranded},
+		{ID: "2664594", Name: "ORIGINAL BEEF STICK, ORIGINAL", Brand: "COUNTRY ARCHER JERKY CO. S&E Gourmet Cuts Inc.", DataType: typeBranded},
+	}
+	if _, ok := pickBest(Item{Food: "original beef stick", Brand: "Chomps"}, sticks); ok {
+		t.Fatal("another brand's beef stick must never answer for Chomps")
 	}
 }

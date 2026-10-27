@@ -3,7 +3,7 @@ package estimate
 import "strings"
 
 // minRecall is the share of the item's name tokens a candidate must contain to be accepted.
-const minRecall = 0.5
+const minRecall = 0.6
 
 type match struct {
 	Food  Food
@@ -38,7 +38,7 @@ func scoreFood(it Item, f Food) (match, bool) {
 	brandRecall := 0.0
 	if len(brand) > 0 {
 		brandRecall = share(brand, haveSet)
-		if brandRecall < 0.5 {
+		if brandRecall < 1 {
 			return match{}, false
 		}
 	}

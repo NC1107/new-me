@@ -253,6 +253,7 @@ server/
 | `NEWME_APNS_PRODUCTION` | `true` | `true` uses `api.push.apple.com` (TestFlight, App Store), `false` the sandbox host |
 | `NEWME_ANTHROPIC_API_KEY` | empty | Claude API key (v6); empty turns meal estimates and the plan wording off |
 | `NEWME_ANTHROPIC_BASE_URL` | empty (`https://api.anthropic.com`) | override for tests or a proxy; must be an http(s) URL |
+| `NEWME_USDA_API_KEY` | empty (`DEMO_KEY`) | USDA FoodData Central key for meal lookups and the food search; empty uses the shared demo key, which allows only about 10 calls an hour per IP, so set a real key (free at fdc.nal.usda.gov) |
 | `NEWME_DEV_CORS` | `false` | local web review only, never set in production |
 
 The four `NEWME_APNS_*` credentials are all set or all unset; a partial set stops the server at boot.
@@ -321,7 +322,8 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 | 502 | `abs_unavailable` | Audiobookshelf could not be reached while linking |
 | 404 | `abs_not_linked` | `POST /me/audiobookshelf/sync` before the person linked |
 | 404 | `estimate_disabled` | `NEWME_ANTHROPIC_API_KEY` is not set |
-| 502 | `estimate_unavailable` | Claude could not be reached, answered with an error, or gave no usable estimate |
+| 502 | `estimate_unavailable` | Claude could not split the text, or no item could be sized at all (a single item that fails is returned estimated, or at zero for the person to fill in) |
+| 404 | `not_found` | `/api/foods/{id}` for a food that does not exist |
 | 426 | `update_required` | client older than `minClientVersion`, which the body repeats |
 | 429 | `rate_limited` | limiter, with `Retry-After` |
 | 500 | `internal` | anything unexpected |
@@ -542,10 +544,35 @@ POST   /me/audiobookshelf/sync                          auth
 
 POST   /meals/estimate                                  auth
   req {text} | {image: <base64 JPEG or PNG>, mediaType: "image/jpeg" | "image/png", text?: <hint>}
-  200 {name, kcal, protein, carbs, fat, fiber, confidence: "low"|"medium"|"high", notes}
-  nothing is stored and nothing is logged: the app pre-fills the meal form and the person confirms
+  text 200 {items: [{text, name, brand, quantity, unit, grams, kcal, protein, carbs, fat, fiber,
+                     source: "library"|"usda"|"openfoodfacts"|"estimated", sourceId, matchedName,
+                     confidence: "low"|"medium"|"high", origin}],
+            total: {kcal, protein, carbs, fat, fiber}, databaseShare: 0..100,
+            name, kcal, protein, carbs, fat, fiber, confidence, notes}
+  image 200 {name, kcal, protein, carbs, fat, fiber, confidence, notes}   a single Claude estimate, no items
+  the top-level fields are the total with the item names joined, kept so older app builds keep working;
+  databaseShare is the percent of total kcal whose numbers came from USDA, Open Food Facts or a saved food that began as one
+  nothing is stored and nothing is logged: the app shows the items and the person logs them
   404 estimate_disabled, 413 image over 5 MB decoded, 422 neither text nor image, text over 500 characters, image that is not the declared JPEG or PNG,
   429 rate_limited (20 per person per hour, with Retry-After), 502 estimate_unavailable
+
+GET    /foods?q=&remote=1                               auth
+  200 {foods: [Food], candidates: [Food]}
+  Food {id | null, saved, name, brand, servingText, servingGrams, kcal, protein, carbs, fat, fiber,
+        source: "usda"|"openfoodfacts"|"manual"|"estimated", sourceId, servings: [{text, grams}], useCount, lastUsedAt}
+  foods are the household's saved foods matching every word of q (prefix match), exact names first, then most used; an empty q lists the most used
+  candidates are unsaved USDA and Open Food Facts results with id null, only when remote=1 and q is not empty
+POST   /foods                                           auth
+  req {name, servingText, kcal, brand?, servingGrams?, protein?, carbs?, fat?, fiber?, source?: default "manual", sourceId?, servings?: [{text, grams}]}
+  201 Food; 200 with the saved copy when that source and sourceId are already saved
+PATCH  /foods/{id}                                      auth
+  req any of name, brand, servingText, servingGrams, kcal, protein, carbs, fat, fiber, servings; source and sourceId cannot change
+  200 Food
+DELETE /foods/{id}                                      auth
+  204
+POST   /foods/{id}/use                                  auth
+  200 Food with useCount incremented
+  404 not_found, 422 invalid_request
 
 GET    /recap?week=YYYY-Www                             auth
   200 {week, from, to, complete,

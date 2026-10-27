@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -212,11 +213,11 @@ func TestMealItemizesTheExampleFromDatabasesAndFallsBackToAnEstimate(t *testing.
 		t.Fatalf("claude calls: split %d, estimate %d", claude.calls("split_meal"), claude.calls("report_meal_estimate"))
 	}
 
-	if m.Total.Kcal != 485 || m.Total.Protein != 15.3 || m.DatabaseShare != 62 {
+	if m.Total.Kcal != 485 || m.Total.Protein != 15.5 || m.DatabaseShare != 38 {
 		t.Fatalf("total = %+v share %d", m.Total, m.DatabaseShare)
 	}
 	// The one-meal fields older app builds read.
-	if m.Name != "Apple, Chomps stick, Hot Pocket" || m.Kcal != 485 || m.Protein != 15.3 || m.Confidence != "low" && m.Confidence != "medium" ||
+	if m.Name != "Apple, Chomps stick, Hot Pocket" || m.Kcal != 485 || m.Protein != 15.5 || m.Confidence != "low" && m.Confidence != "medium" ||
 		!strings.Contains(m.Notes, "2 of 3") {
 		t.Fatalf("legacy = %+v", m.Estimate)
 	}
@@ -236,7 +237,7 @@ func TestMealJSONKeepsLegacyFieldsAtTheTopLevel(t *testing.T) {
 		}
 	}
 	items := got["items"].([]any)[0].(obj)
-	for _, key := range []string{"text", "name", "quantity", "unit", "grams", "kcal", "protein", "carbs", "fat", "fiber", "source", "sourceId", "matchedName", "confidence"} {
+	for _, key := range []string{"text", "name", "quantity", "unit", "grams", "kcal", "protein", "carbs", "fat", "fiber", "source", "sourceId", "matchedName", "confidence", "brand", "origin"} {
 		if _, ok := items[key]; !ok {
 			t.Errorf("missing item key %q", key)
 		}
@@ -474,7 +475,7 @@ func TestFoundationEnergyFallsBackToAtwaterAndKilojoules(t *testing.T) {
 	}
 	kj := usdaFood{FdcID: 2, Description: "y", FoodNutrients: []usdaNutrient{{NutrientID: 1062, Value: 418.4}}}
 	f, ok = kj.toFood()
-	if !ok || int(f.Per100g.Kcal) != 100 {
+	if !ok || math.Round(f.Per100g.Kcal) != 100 {
 		t.Fatalf("kj = %+v", f)
 	}
 	none := decodeUSDA(3, "z", nutrients(0, 1, 1, 1, 1, [5]int{9, 1003, 1005, 1004, 1079}))

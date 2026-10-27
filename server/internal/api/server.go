@@ -66,6 +66,8 @@ type Server struct {
 	absSync throttle
 	// estimator is nil while NEWME_ANTHROPIC_API_KEY is unset, which is how meal estimates are off.
 	estimator *estimate.Estimator
+	// foods searches USDA and Open Food Facts; it works without a Claude key.
+	foods *estimate.Foods
 	// polisher is always usable; without a key it returns the deterministic summary.
 	polisher *coach.Polisher
 	// estimates caps meal estimates per person, since each one costs a Claude call.
@@ -102,10 +104,11 @@ func New(cfg config.Config, database *db.DB) *Server {
 		limits:    newLimits(),
 		minClient: minClient,
 	}
+	srv.foods = estimate.NewFoods(cfg.USDAKey, srv.version)
 	var claude *anthropic.Client
 	if cfg.Anthropic.Enabled() {
 		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
-		srv.estimator = &estimate.Estimator{Client: claude, Foods: estimate.NewFoods(cfg.USDAKey, srv.version)}
+		srv.estimator = &estimate.Estimator{Client: claude, Foods: srv.foods, Library: libraryStore{database}}
 	}
 	srv.polisher = &coach.Polisher{DB: database, Client: claude}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
@@ -126,9 +129,7 @@ func (s *Server) WithNotifier(n together.Notifier) *Server {
 // WithVersion sets the build version reported by /api/health.
 func (s *Server) WithVersion(version string) *Server {
 	s.version = version
-	if s.estimator != nil {
-		s.estimator.Foods.SetVersion(version)
-	}
+	s.foods.SetVersion(version)
 	return s
 }
 
@@ -198,6 +199,11 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
+		r.Get("/api/foods", s.handleListFoods)
+		r.Post("/api/foods", s.handleCreateFood)
+		r.Patch("/api/foods/{id}", s.handlePatchFood)
+		r.Delete("/api/foods/{id}", s.handleDeleteFood)
+		r.Post("/api/foods/{id}/use", s.handleUseFood)
 		r.Get("/api/recap", s.handleRecap)
 		r.Get("/api/progress", s.handleProgress)
 		r.Get("/api/lookback", s.handleLookback)

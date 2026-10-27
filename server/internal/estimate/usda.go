@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -224,7 +225,7 @@ func (f usdaFood) toFood() (Food, bool) {
 		return Food{}, false
 	}
 	food := Food{
-		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID), Name: strings.TrimSpace(f.Description),
+		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID), Name: strings.TrimSpace(parenthetical.ReplaceAllString(f.Description, "")),
 		Brand: strings.TrimSpace(firstNonEmpty(f.BrandName, f.BrandOwner)), DataType: f.DataType,
 		Per100g: &per100, Portions: f.portions(),
 	}
@@ -236,6 +237,9 @@ func (f usdaFood) toFood() (Food, bool) {
 		food.ServingGrams = f.ServingSize
 	}
 	if food.ServingGrams > 0 {
+		food.ServingText = firstNonEmpty(f.Household, "1 serving")
+		food.PerServing = &Nutrients{}
+		*food.PerServing = per100.scale(food.ServingGrams / 100)
 		food.Portions = append(food.Portions, Portion{Label: "serving", Grams: food.ServingGrams})
 		if p, ok := portionFromLabel(f.Household, food.ServingGrams); ok {
 			food.Portions = append(food.Portions, p)
@@ -243,6 +247,10 @@ func (f usdaFood) toFood() (Food, bool) {
 	}
 	return food, true
 }
+
+// parenthetical drops notes such as "(Includes foods for USDA's Food Distribution Program)", which
+// would count as extra words against an otherwise exact name.
+var parenthetical = regexp.MustCompile(`\s*\([^)]*\)`)
 
 func firstNonEmpty(ss ...string) string {
 	for _, s := range ss {

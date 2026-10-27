@@ -182,6 +182,8 @@ type Estimator struct {
 	Client *anthropic.Client
 	// Foods is nil in tests that only need the Claude steps; every item is then estimated.
 	Foods *Foods
+	// Library is the household's saved foods, checked before any database; nil skips it.
+	Library Library
 }
 
 func (e *Estimator) run(ctx context.Context, system string, user []anthropic.Block) (Estimate, error) {

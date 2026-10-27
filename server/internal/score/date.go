@@ -4,6 +4,8 @@ package score
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -116,4 +118,30 @@ func DateAllowed(date Date, now time.Time, loc *time.Location) DateAccess {
 		}
 	}
 	return DateClosed
+}
+
+// ISOWeekLabel writes the ISO week containing the date as YYYY-Www, e.g. 2026-W45.
+func ISOWeekLabel(d Date) string {
+	year, week := d.Time().ISOWeek()
+	return fmt.Sprintf("%04d-W%02d", year, week)
+}
+
+var isoWeekPattern = regexp.MustCompile(`^(\d{4})-W(0[1-9]|[1-4]\d|5[0-3])$`)
+
+// ParseISOWeek returns the Monday of the ISO week written as YYYY-Www, or an error when the
+// text is malformed or names a week the year does not have.
+func ParseISOWeek(s string) (Date, error) {
+	m := isoWeekPattern.FindStringSubmatch(s)
+	if m == nil {
+		return "", fmt.Errorf("week %q is not YYYY-Www", s)
+	}
+	year, _ := strconv.Atoi(m[1])
+	week, _ := strconv.Atoi(m[2])
+	// January 4th is always in week 1, so its Monday anchors the count.
+	jan4 := time.Date(year, time.January, 4, 0, 0, 0, 0, time.UTC)
+	monday := DateOf(jan4).AddDays(-((int(jan4.Weekday()) + 6) % 7) + 7*(week-1))
+	if ISOWeekLabel(monday) != s {
+		return "", fmt.Errorf("week %q does not exist", s)
+	}
+	return monday, nil
 }

@@ -127,3 +127,21 @@ func TestLoadAPNS(t *testing.T) {
 		t.Fatal("a bad NEWME_APNS_PRODUCTION was accepted")
 	}
 }
+
+func TestLoadAnthropic(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil || cfg.Anthropic.Enabled() || cfg.Anthropic.BaseURL != "" {
+		t.Fatalf("unset must leave Claude off: %+v, %v", cfg.Anthropic, err)
+	}
+	t.Setenv("NEWME_ANTHROPIC_API_KEY", "  sk-ant-test  ")
+	t.Setenv("NEWME_ANTHROPIC_BASE_URL", "http://127.0.0.1:9999/")
+	cfg, err = Load()
+	if err != nil || !cfg.Anthropic.Enabled() || cfg.Anthropic.Key != "sk-ant-test" || cfg.Anthropic.BaseURL != "http://127.0.0.1:9999" {
+		t.Fatalf("got %+v, %v", cfg.Anthropic, err)
+	}
+	t.Setenv("NEWME_ANTHROPIC_BASE_URL", "not a url")
+	if _, err := Load(); err == nil {
+		t.Fatal("a malformed base URL must fail at boot")
+	}
+}

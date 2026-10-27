@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/nc1107/new-me/server/internal/abs"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/score"
 )
 
 // Bounds of the sign-in fields, generous enough for any real Audiobookshelf account.
@@ -106,4 +109,82 @@ func (s *Server) handleUnlinkAudiobookshelf(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// syncThrottle is the shortest gap between two syncs a person can trigger by hand.
+const syncThrottle = time.Minute
+
+var errABSNotLinked = newErr(http.StatusNotFound, codeABSNotLinked, "Audiobookshelf is not linked")
+
+// absSyncJSON is the answer of a manual sync: the account state plus today's listening.
+type absSyncJSON struct {
+	Linked       bool    `json:"linked"`
+	Username     *string `json:"username"`
+	SyncedAt     *string `json:"syncedAt"`
+	LastError    *string `json:"lastError"`
+	MinutesToday int     `json:"minutesToday"`
+}
+
+// throttle remembers when each person last triggered a manual sync.
+type throttle struct {
+	mu   sync.Mutex
+	last map[int64]time.Time
+}
+
+// try reports whether the person may sync now, and records the attempt when they may.
+func (t *throttle) try(userID int64, now time.Time) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if last, ok := t.last[userID]; ok && now.Sub(last) < syncThrottle {
+		return false
+	}
+	if t.last == nil {
+		t.last = map[int64]time.Time{}
+	}
+	t.last[userID] = now
+	return true
+}
+
+// handleSyncAudiobookshelf reads the caller's listening now, so opening the app shows what was
+// just heard. Within a minute of the previous sync it answers with the stored state instead of
+// asking Audiobookshelf again.
+func (s *Server) handleSyncAudiobookshelf(w http.ResponseWriter, r *http.Request) {
+	if s.listen == nil {
+		fail(w, r, errABSDisabled)
+		return
+	}
+	c := callerFrom(r)
+	ctx := r.Context()
+	if _, err := db.GetABSAccount(ctx, s.db.Pool, c.user.ID); errors.Is(err, db.ErrNotFound) {
+		fail(w, r, errABSNotLinked)
+		return
+	} else if err != nil {
+		fail(w, r, err)
+		return
+	}
+	if s.absSync.try(c.user.ID, s.now()) {
+		// A failed poll is recorded on the account and reported below as lastError.
+		if err := s.listen.SyncUser(ctx, c.user.ID); err != nil && ctx.Err() != nil {
+			fail(w, r, ctx.Err())
+			return
+		}
+	}
+	acct, err := db.GetABSAccount(ctx, s.db.Pool, c.user.ID)
+	if errors.Is(err, db.ErrNotFound) {
+		fail(w, r, errABSNotLinked)
+		return
+	}
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	minutes, err := db.ListeningMinutes(ctx, s.db.Pool, c.user.ID, score.LocalToday(s.now(), c.loc))
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, absSyncJSON{
+		Linked: true, Username: &acct.Username, SyncedAt: wireTimePtr(acct.SyncedAt),
+		LastError: acct.LastError, MinutesToday: minutes,
+	})
 }

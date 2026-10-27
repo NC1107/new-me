@@ -24,6 +24,9 @@ const URLEnv = "TESTDB_URL"
 // SkipOptOutEnv lets a machine with no Postgres run what it can, deliberately.
 const SkipOptOutEnv = "NEWME_SKIP_DB_TESTS"
 
+// lockWait bounds how long a test binary waits for its turn on the database.
+const lockWait = 20 * time.Minute
+
 // suiteLockKey is held on a dedicated connection for the life of each test binary.
 const suiteLockKey int64 = 4915012099
 
@@ -66,7 +69,9 @@ func Open(t testing.TB) *db.DB {
 		t.Skipf("%s is not set - skipping the DB-backed tests", URLEnv)
 	}
 	once.Do(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		// Test binaries queue here for the whole run of the ones ahead of them, so the wait must
+		// outlast the sum of the other packages' suites, not any single test.
+		ctx, cancel := context.WithTimeout(context.Background(), lockWait)
 		defer cancel()
 		if lockConn, openErr = pgx.Connect(ctx, url); openErr != nil {
 			return

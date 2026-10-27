@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/nc1107/new-me/server/internal/score"
@@ -52,6 +53,12 @@ type DayInputs struct {
 	// ListeningMinutes is Audiobookshelf listening for the day, which counts as reading time.
 	ListeningMinutes int
 
+	// Workouts are the day's Health workouts, which complete the push-ups quest and add to yoga.
+	Workouts []score.WorkoutSpan
+	// HIITMinHR is the average heart rate a HIIT workout needs to count, nil when the person's
+	// age or resting heart rate is unknown.
+	HIITMinHR *float64
+
 	Meals    int
 	Kcal     int
 	ProteinG float64
@@ -96,7 +103,14 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 	if in.ListeningMinutes, err = ListeningMinutes(ctx, q, userID, date); err != nil {
 		return in, err
 	}
+	if in.Workouts, err = WorkoutSpans(ctx, q, userID, date); err != nil {
+		return in, err
+	}
 	in.Metrics, in.Synced, err = loadHealthDay(ctx, q, userID, date)
+	if err != nil {
+		return in, err
+	}
+	in.HIITMinHR, err = hiitThreshold(ctx, q, userID, date)
 	return in, err
 }
 
@@ -188,4 +202,30 @@ func HealthSeries(ctx context.Context, q Querier, userID int64, metric string, f
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// hiitThreshold derives the HIIT heart-rate threshold from the birth year and the newest
+// resting heart rate on or before the date.
+func hiitThreshold(ctx context.Context, q Querier, userID int64, date score.Date) (*float64, error) {
+	var birthYear *int
+	if err := q.QueryRow(ctx, `SELECT birth_year FROM users WHERE id = $1`, userID).Scan(&birthYear); err != nil {
+		return nil, err
+	}
+	if birthYear == nil {
+		return nil, nil
+	}
+	resting, err := LatestHealth(ctx, q, userID, date, []string{"resting_hr"})
+	if err != nil {
+		return nil, err
+	}
+	rest, ok := resting["resting_hr"]
+	if !ok {
+		return nil, nil
+	}
+	year, err := strconv.Atoi(string(date)[:4])
+	if err != nil {
+		return nil, nil
+	}
+	age := year - *birthYear
+	return score.HIITMinHR(&age, &rest.Value), nil
 }

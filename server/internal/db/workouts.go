@@ -71,3 +71,44 @@ func CountWorkouts(ctx context.Context, q Querier, userID int64, from, to score.
 		WHERE user_id = $1 AND local_date BETWEEN $2::date AND $3::date`, userID, from, to).Scan(&n)
 	return n, err
 }
+
+// WorkoutSpans lists the type and length of the workouts that fall on one local date.
+func WorkoutSpans(ctx context.Context, q Querier, userID int64, date score.Date) ([]score.WorkoutSpan, error) {
+	rows, err := q.Query(ctx, `
+		SELECT type, duration_min::float8, avg_hr::float8 FROM workouts
+		WHERE user_id = $1 AND local_date = $2::date ORDER BY started_at, id`, userID, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []score.WorkoutSpan
+	for rows.Next() {
+		var w score.WorkoutSpan
+		if err := rows.Scan(&w.Type, &w.DurationMin, &w.AvgHR); err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// WorkoutDates returns the local dates the given workouts are currently stored on, so a
+// workout that moves to another day can rescore the day it left.
+func WorkoutDates(ctx context.Context, q Querier, userID int64, healthIDs []string) ([]score.Date, error) {
+	rows, err := q.Query(ctx, `
+		SELECT DISTINCT local_date::text FROM workouts WHERE user_id = $1 AND health_id = ANY($2)`,
+		userID, healthIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []score.Date
+	for rows.Next() {
+		var d score.Date
+		if err := rows.Scan(&d); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}

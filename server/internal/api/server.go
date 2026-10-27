@@ -10,10 +10,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/nc1107/new-me/server/internal/anthropic"
+	"github.com/nc1107/new-me/server/internal/coach"
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/estimate"
 	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/ratelimit"
+	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/semver"
 	"github.com/nc1107/new-me/server/internal/together"
 )
@@ -56,7 +60,19 @@ type Server struct {
 	listen *listening.Syncer
 	// together is the shared challenge, reward and push logic.
 	together *together.Service
+	// absSync throttles the manual Audiobookshelf sync per person.
+	absSync throttle
+	// estimator is nil while NEWME_ANTHROPIC_API_KEY is unset, which is how meal estimates are off.
+	estimator *estimate.Estimator
+	// polisher is always usable; without a key it returns the deterministic summary.
+	polisher *coach.Polisher
+	// estimates caps meal estimates per person, since each one costs a Claude call.
+	estimates *ratelimit.Window
+	recap     *recap.Service
 }
+
+// estimatesPerHour is how many meal estimates one person may request an hour.
+const estimatesPerHour = 20
 
 // New builds a Server on the wall clock.
 func New(cfg config.Config, database *db.DB) *Server {
@@ -81,7 +97,15 @@ func New(cfg config.Config, database *db.DB) *Server {
 		limits:    newLimits(),
 		minClient: minClient,
 	}
+	var claude *anthropic.Client
+	if cfg.Anthropic.Enabled() {
+		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
+		srv.estimator = &estimate.Estimator{Client: claude}
+	}
+	srv.polisher = &coach.Polisher{DB: database, Client: claude}
+	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
+	srv.recap = &recap.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
 	return srv
 }
 
@@ -162,6 +186,12 @@ func (s *Server) Router() http.Handler {
 		r.Get("/api/insights", s.handleInsights)
 		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
+		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
+		r.Post("/api/meals/estimate", s.handleEstimateMeal)
+		r.Get("/api/recap", s.handleRecap)
+		r.Get("/api/goals/proposals", s.handleGoalProposals)
+		r.Post("/api/goals/proposals/{key}/accept", s.handleAcceptProposal)
+		r.Post("/api/goals/proposals/{key}/dismiss", s.handleDismissProposal)
 
 		r.Get("/api/habits", s.handleListHabits)
 		r.Post("/api/habits", s.handleCreateHabit)

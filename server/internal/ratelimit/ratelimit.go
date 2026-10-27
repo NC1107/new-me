@@ -74,3 +74,39 @@ func (l *Limiter) evictIdle(now time.Time) {
 		}
 	}
 }
+
+// Window allows at most limit events per key within a sliding window. Unlike the token bucket
+// it never forgets a spent allowance early, which is what a per-hour spending cap needs.
+type Window struct {
+	mu     sync.Mutex
+	events map[string][]time.Time
+	limit  int
+	window time.Duration
+	now    func() time.Time
+}
+
+// NewWindow builds a sliding-window limiter.
+func NewWindow(limit int, window time.Duration) *Window {
+	return &Window{events: make(map[string][]time.Time), limit: limit, window: window, now: time.Now}
+}
+
+// Allow records an event for key unless the window is full, in which case it reports when the
+// oldest event leaves the window.
+func (w *Window) Allow(key string) (ok bool, retryAfter time.Duration) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	now := w.now()
+	cutoff := now.Add(-w.window)
+	kept := w.events[key][:0]
+	for _, t := range w.events[key] {
+		if t.After(cutoff) {
+			kept = append(kept, t)
+		}
+	}
+	if len(kept) >= w.limit {
+		w.events[key] = kept
+		return false, kept[0].Add(w.window).Sub(now)
+	}
+	w.events[key] = append(kept, now)
+	return true, 0
+}

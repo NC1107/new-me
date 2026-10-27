@@ -26,6 +26,8 @@ type questJSON struct {
 	BasePoints  int     `json:"basePoints"`
 	BonusPoints int     `json:"bonusPoints"`
 	Done        bool    `json:"done"`
+	// DoneBy says which Health workout completed the quest; null when logged entries did.
+	DoneBy *score.DoneBy `json:"doneBy"`
 }
 
 // dayJSON is the score of a day. StreakLine is the percent a day needs to count.
@@ -69,11 +71,15 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 	for _, q := range s.Quests {
 		earned := byKey[q.Key]
 		actual, actualAlt := engine.Actuals(q, s.Inputs)
-		out = append(out, questJSON{
+		item := questJSON{
 			Key: q.Key, Title: titles[q.Key], Target: q.Target, Unit: q.Unit,
 			TargetAlt: q.TargetAlt, UnitAlt: q.UnitAlt, Actual: actual, ActualAlt: actualAlt,
 			Points: q.Points, BasePoints: earned.Base, BonusPoints: earned.Bonus, Done: earned.Complete,
-		})
+		}
+		if earned.Complete {
+			item.DoneBy = engine.DoneBy(q, s.Inputs)
+		}
+		out = append(out, item)
 	}
 	return out
 }

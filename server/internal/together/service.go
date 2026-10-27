@@ -22,7 +22,21 @@ const (
 	EventCheer       = "cheer"
 	EventChallenge   = "challenge"
 	EventReward      = "reward"
+
+	// The v6 autopilot events. Each behind-pace window is its own kind so it is sent at most
+	// once, and the app routes all of them to Today.
+	EventBehindPaceAfternoon = "nudge_behind_14"
+	EventBehindPaceEvening   = "nudge_behind_1830"
+	EventCloseToDone         = "nudge_close_to_done"
+	EventWindDown            = "nudge_wind_down"
+	EventMorningPlan         = "nudge_morning_plan"
+	EventWeeklyRecap         = "weekly_recap"
 )
+
+// AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
+// challenge, reward and partner-done are between the two people and do not.
+var AutoKinds = []string{EventBehindPaceAfternoon, EventBehindPaceEvening, EventCloseToDone, EventWindDown,
+	EventMorningPlan, EventWeeklyRecap}
 
 // Notifier accepts a message without waiting for its delivery.
 type Notifier interface {
@@ -57,6 +71,16 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Challenge
 	case EventReward:
 		return n.Reward
+	case EventBehindPaceAfternoon, EventBehindPaceEvening:
+		return n.BehindPace
+	case EventCloseToDone:
+		return n.CloseToDone
+	case EventWindDown:
+		return n.WindDown
+	case EventMorningPlan:
+		return n.MorningPlan
+	case EventWeeklyRecap:
+		return n.WeeklyRecap
 	}
 	return false
 }

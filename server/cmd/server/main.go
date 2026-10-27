@@ -18,11 +18,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nc1107/new-me/server/internal/anthropic"
 	"github.com/nc1107/new-me/server/internal/api"
+	"github.com/nc1107/new-me/server/internal/coach"
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/nudge"
 	"github.com/nc1107/new-me/server/internal/push"
+	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/sched"
 	"github.com/nc1107/new-me/server/internal/together"
 )
@@ -70,6 +74,15 @@ func main() {
 		scheduler.Listening = listening.New(database, cfg.ABSURL)
 	}
 	scheduler.Together = &together.Service{DB: database, Now: time.Now, Notifier: notifier}
+	var claude *anthropic.Client
+	if cfg.Anthropic.Enabled() {
+		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
+	} else {
+		log.Println("[NEWME] meal estimates and plan wording are off: NEWME_ANTHROPIC_API_KEY is not set")
+	}
+	scheduler.Nudges = &nudge.Service{DB: database, Together: scheduler.Together, Now: time.Now,
+		Polisher: &coach.Polisher{DB: database, Client: claude}}
+	scheduler.Recap = &recap.Service{DB: database, Together: scheduler.Together, Now: time.Now}
 	go scheduler.Run(ctx)
 
 	httpServer := &http.Server{

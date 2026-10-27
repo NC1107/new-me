@@ -120,9 +120,10 @@ func rejectedBatch(what string, problems []itemError) *httpError {
 	}
 }
 
-// handlePutWorkouts upserts up to 100 workouts by HealthKit id in one transaction. Workouts
-// do not change scoring, so no day is rescored and the day window does not apply: history
-// older than yesterday is welcome.
+// handlePutWorkouts upserts up to 100 workouts by HealthKit id in one transaction. A strength
+// or yoga workout can complete a quest, so every still-open day the batch touches is rescored,
+// including the day an edited workout moved away from. History older than the day window is
+// stored all the same but never rescored.
 func (s *Server) handlePutWorkouts(w http.ResponseWriter, r *http.Request) {
 	var req putWorkoutsRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -149,10 +150,41 @@ func (s *Server) handlePutWorkouts(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, rejectedBatch("workouts", problems))
 		return
 	}
-	err := s.db.WithTx(r.Context(), func(tx pgx.Tx) error {
+	ctx := r.Context()
+	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		ids := make([]string, len(rows))
+		for i, row := range rows {
+			ids[i] = row.HealthID
+		}
+		moved, err := db.WorkoutDates(ctx, tx, c.user.ID, ids)
+		if err != nil {
+			return err
+		}
+		touched := moved
 		for _, row := range rows {
-			if err := db.UpsertWorkout(r.Context(), tx, c.user.ID, row); err != nil {
+			touched = append(touched, row.LocalDate)
+		}
+		// Ascending order keeps two overlapping batches from locking in opposite orders.
+		slices.Sort(touched)
+		touched = slices.Compact(touched)
+		for _, date := range touched {
+			if s.writable(c.user, c.loc, date) {
+				if err := db.LockUserDay(ctx, tx, c.user.ID, date); err != nil {
+					return err
+				}
+			}
+		}
+		for _, row := range rows {
+			if err := db.UpsertWorkout(ctx, tx, c.user.ID, row); err != nil {
 				return err
+			}
+		}
+		// Only open days are rescored: a finished day keeps the score it was finalized with.
+		for _, date := range touched {
+			if s.writable(c.user, c.loc, date) {
+				if _, err := s.scoreDay(ctx, tx, c, date); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

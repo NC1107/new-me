@@ -82,11 +82,11 @@ Season and scoring model
 | metric | source | actual used by scoring |
 |---|---|---|
 | steps | HealthKit, `health_daily` metric `steps` | `floor(value)` |
-| pushups | manual log, sets of reps | sum of `quantity` of `pushups` logs |
+| pushups | manual log, sets of reps, or a Health workout (v6) | sum of `quantity` of `pushups` logs; a qualifying workout on the day makes the quest complete whatever the reps (actual = target), earning full base points and the completion bonus: `strength` of 20 minutes or more, or `hiit` of 15 minutes or more whose `avgHr` is at least 60% of the person's heart-rate reserve (resting HR plus 0.6 times (220 minus age minus resting HR)); when the birth year, a resting HR reading or the workout's `avgHr` is missing, `hiit` needs 20 minutes like strength |
 | reading | manual log, minutes or pages, plus Audiobookshelf listening | minutes `m` (manual minutes plus that day's `listening_daily` minutes) and pages `g`, summed separately |
 | meals_logged | derived from meal logs | count of meals with `kcal > 0` |
 | protein | derived from meal logs | sum of `protein_g` in tenths of a gram |
-| yoga | manual log, minutes | sum of `quantity` of `yoga` logs |
+| yoga | manual log, minutes, plus Health workouts (v6) | sum of `quantity` of `yoga` logs plus the whole minutes of that day's `yoga` workouts (pilates and flexibility arrive from Health as `yoga`) |
 | exercise | HealthKit, `health_daily` metric `exercise_minutes` | `floor(value)` |
 | sleep | HealthKit, `health_daily` metric `sleep_minutes` | `floor(value)` |
 | active_energy | HealthKit, `health_daily` metric `active_energy` | not scored; shown on Today as "burned N" |
@@ -266,6 +266,8 @@ server/
 | `NEWME_APNS_TEAM_ID` | empty | Apple team id (`76S78SUWVM`) |
 | `NEWME_APNS_TOPIC` | empty | app bundle id (`top.npcserver.newme`) |
 | `NEWME_APNS_PRODUCTION` | `true` | `true` uses `api.push.apple.com` (TestFlight, App Store), `false` the sandbox host |
+| `NEWME_ANTHROPIC_API_KEY` | empty | Claude API key (v6); empty turns meal estimates and the plan wording off |
+| `NEWME_ANTHROPIC_BASE_URL` | empty (`https://api.anthropic.com`) | override for tests or a proxy; must be an http(s) URL |
 | `NEWME_DEV_CORS` | `false` | local web review only, never set in production |
 
 The four `NEWME_APNS_*` credentials are all set or all unset; a partial set stops the server at boot.
@@ -326,12 +328,15 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 | 404 | `not_found` | unknown route or resource |
 | 405 | `method_not_allowed` | wrong method on a known route |
 | 409 | `name_taken`, `color_taken`, `server_full`, `server_initialized` | join conflicts |
-| 413 | `payload_too_large` | body over 1 MB |
+| 413 | `payload_too_large` | body over 1 MB (8 MB on `POST /meals/estimate`), or a meal photo over 5 MB decoded |
 | 422 | `date_closed` | date outside the day window |
 | 422 | `invalid_timezone`, `invalid_request` | validation, with per-item errors where relevant |
 | 422 | `abs_login_failed` | Audiobookshelf rejected the username or password |
 | 404 | `abs_disabled` | `NEWME_ABS_URL` is not set |
 | 502 | `abs_unavailable` | Audiobookshelf could not be reached while linking |
+| 404 | `abs_not_linked` | `POST /me/audiobookshelf/sync` before the person linked |
+| 404 | `estimate_disabled` | `NEWME_ANTHROPIC_API_KEY` is not set |
+| 502 | `estimate_unavailable` | Claude could not be reached, answered with an error, or gave no usable estimate |
 | 426 | `update_required` | client older than `minClientVersion`, which the body repeats |
 | 429 | `rate_limited` | limiter, with `Retry-After` |
 | 500 | `internal` | anything unexpected |
@@ -403,7 +408,8 @@ GET    /today?date=YYYY-MM-DD
        health: {stepsEverSynced, syncedAt,
                 metrics: {<metric key>: number},         the day's readings, only keys that have one
                 latest: {<key>: {value, date}}},
-       listening: {minutes}}                             Audiobookshelf minutes already counted in the reading quest, 0 when none
+       listening: {minutes, syncedAt},                   Audiobookshelf minutes already counted in the reading quest, 0 when none; syncedAt is the last good read or null
+       readiness, plan}                                  v6, see below
                                                          latest: weight_kg, body_fat_pct, lean_mass_kg, vo2max: newest on or before the day, omitted when none
   date defaults to localToday and must fall between the join date and today
   backdateUntil is the instant yesterday closes while it is open, otherwise null
@@ -541,6 +547,95 @@ v5 additions to existing responses:
 - `GET /me` and `PATCH /me` gain `notifications: {partnerDone, cheers, challenge, reward}`, all default true; a PATCH may send any subset.
 - `day.bonusPoints` and `day.points` include habit points and the challenge award; `maxBase` never does.
 
+v6 additions (see `docs/design-v6.md`; every field and route is additive, and every feature is off or empty when its configuration is missing):
+
+```
+POST   /me/audiobookshelf/sync                          auth
+  200 {linked: true, username, syncedAt, lastError, minutesToday}
+  runs the caller's listening sync now; at most once per 60 seconds per person, a call within the minute answers with the stored state and does not call Audiobookshelf
+  404 abs_disabled (NEWME_ABS_URL unset), 404 abs_not_linked
+
+POST   /meals/estimate                                  auth
+  req {text} | {image: <base64 JPEG or PNG>, mediaType: "image/jpeg" | "image/png", text?: <hint>}
+  200 {name, kcal, protein, carbs, fat, fiber, confidence: "low"|"medium"|"high", notes}
+  nothing is stored and nothing is logged: the app pre-fills the meal form and the person confirms
+  404 estimate_disabled, 413 image over 5 MB decoded, 422 neither text nor image, text over 500 characters, image that is not the declared JPEG or PNG,
+  429 rate_limited (20 per person per hour, with Retry-After), 502 estimate_unavailable
+
+GET    /recap?week=YYYY-Www                             auth
+  200 {week, from, to, complete,
+       people: [{userId, name, color, this: Stats, previous: Stats, bestDay: {date, points} | null, suggestion}],
+       pair: {this: Stats, previous: Stats, bestDay},
+       challenge: {kind, title, target, progress, completed} | null}
+  Stats = {points, countedDays, steps, sleepAvgMin, sleepNights, workouts, readingMinutes}
+  week defaults to the last completed ISO week, or to the week ending today from Sunday 19:00 local on; a person who joined this week gets this week
+  422 for a malformed week, a week after this one or before the one the caller joined
+
+GET    /goals/proposals                                 auth
+  200 {week, weekStart, proposals: [{key: "steps"|"sleep", title, unit, current, proposed, reason}]}
+POST   /goals/proposals/{key}/accept
+  200 same body as GET /me; the target applies like a PATCH /me template edit (from tomorrow, today on the join day)
+POST   /goals/proposals/{key}/dismiss
+  204
+  404 not_found for an unknown key or a proposal that is not pending this week
+```
+
+v6 additions to existing responses:
+
+- `GET /today` gains `listening.syncedAt`, `readiness` and `plan`.
+  `readiness` is `{level: "ready"|"normal"|"easy", reasons: [{kind, text}], basis: "full"|"sleep_only"}`, or null when there is neither last night's sleep nor a comparable heart reading.
+  `plan` is `{items: [{kind: "done"|"todo"|"habit", key, text}], summary}`.
+  Readiness `easy` is exposed for the app to show; scoring does not change on an easy day.
+Both are null on any day but the caller's local today.
+  `listening.syncedAt` is the last good Audiobookshelf read, null while not linked.
+- `GET /me` and `PATCH /me` `notifications` gain `behindPace`, `closeToDone`, `windDown`, `morningPlan` and `weeklyRecap`; `closeToDone`, `morningPlan` and `weeklyRecap` default true, `behindPace` and `windDown` default false.
+- `GET /me` gains `features: {mealEstimate, planPolish}`, true when `NEWME_ANTHROPIC_API_KEY` is set.
+- Push kinds added: `nudge_behind_14`, `nudge_behind_1830`, `nudge_close_to_done`, `nudge_wind_down`, `nudge_morning_plan`, `weekly_recap`.
+
+Readiness rules (`internal/readiness`).
+Each signal votes: HRV at least 15% below the person's mean of the 30 days before today is -1, at least 5% above is +1; resting heart rate at least 5 bpm above its 30-day mean is -1; last night's sleep at least 60 minutes under the target is -1, within 15 minutes of it or more is +1.
+A baseline needs today's reading and at least 7 readings in the 30 days; with neither HRV nor resting HR comparable the basis is `sleep_only`.
+Full basis: the sum decides, Ready at +2 or more, Easy at -1 or less, otherwise Normal.
+Sleep only: Easy when 60 minutes or more short, Ready when the target was met, otherwise Normal.
+Last night is the `sleep_nights` row dated today (asleep minutes), else today's `sleep_minutes` metric; the target is the sleep quest target (7 h while the quest is off).
+
+Plan rules (`internal/plan`).
+Items are done quests (naming the workout when `doneBy` is set), then open quests with the easiest way to close them, then due habits sorted by their next open slot time.
+Steps: remaining steps and minutes at 100 steps a minute rounded to the nearest 5 (at least 5), with a generic moment from the time of day (before 11:30 "around midday", before 17:00 "this afternoon", then "this evening"; over 60 minutes it suggests two walks).
+There is no hourly step history, so "when you usually walk" is not used.
+Push-ups: remaining reps; reading: remaining minutes (pages count proportionally) and "An audiobook counts."; meals, protein, yoga, exercise: what is left.
+Sleep has no suggestion.
+Health-fed quests whose metric never synced are left out.
+The summary is "N of M quests done." plus the open quest closest to done plus the habit count.
+With the Claude key set, the summary is reworded once per person and day (`plan_polish` claims the day's single call, so a failure is never retried that day), shown only while the set of done and open quests is the same as when it was written, and rejected when it contains a number the facts do not.
+
+Recap rules (`internal/recap`).
+Per ISO week and person: points (base plus bonus of the stored day scores), counted days, steps (sum), average asleep minutes over recorded nights, workouts, reading plus listening minutes; the pair adds them (sleep weighted by nights).
+Best day is the most points, earliest on a tie.
+The suggestion is the first match of: fewer than 4 counted days in a completed week, steps down more than 10% on the week before, average sleep under 7 h over at least 3 nights, no workouts, points down on the week before, otherwise "beat N points".
+The scheduler pushes each person's summary line once on Sunday from 19:00 in their zone (`notice_log` kind `weekly_recap`).
+
+Goal proposals (`internal/goals`).
+Steps: the `GET /insights` suggestion when it differs from the goal by 500 or more.
+A steps raise also needs the goal met on at least 10 of the 14 days before today; lowering is always allowed.
+Nothing about calories is ever proposed.
+Sleep: when at least 5 of the last 14 nights are recorded and their average is 45 minutes or more under the target, the target moves halfway toward the average, rounded to 15 minutes, never under 5 h and never under the average.
+Only enabled quests get proposals.
+A proposal is stored per ISO week when first shown and frozen; one that no longer matches the template target is recomputed; accepted and dismissed ones do not return until next Monday.
+
+Nudges (`internal/nudge`, run by the scheduler on every pass, so every 5 minutes).
+All times are the person's local time, each kind is sent at most once per local day (claimed in `notice_log` before sending) and only when push is on and the person's preference allows it.
+Budget: at most 2 automatic pushes per person per local day across behind pace, close to done, wind down, morning plan and the Sunday recap (counted from `notice_log`); cheers, challenge, reward and partner-done do not count.
+When the budget is tight the order is close to done, behind pace, wind down; the morning plan goes only as the first push of the day, and the recap is skipped when the budget is spent.
+Behind pace and close to done are never sent when today's readiness is `easy`.
+No wording says "behind"; the behind-pace push reads "2,100 steps to go. A 20-minute walk does it." under the title "Steps to go".
+Nothing but the wind down is sent from 21:30 to 07:30.
+Behind pace: in the two-hour windows from 14:00 (`nudge_behind_14`) and from 18:30 (`nudge_behind_1830`), when today's steps reading exists, the steps quest is on and not done, and steps are under 85% of the expected steps so far.
+Expected is the usual daily steps (14-day median, capped at the goal; the goal itself without 5 days of history) times a curve of the share of a day normally walked: 0% at 07:00, 25% at 10:00, 50% at 14:00, 80% at 18:30, 100% at 22:00, linear between.
+Close to done: the day has not counted and finishing one open quest would reach 70% of the day's base points; "One quest left: 10 push-ups finishes your day." when it is the only open quest, otherwise "10 push-ups would make today count."
+Morning plan: at 08:00 or 30 minutes after the average wake time of the last 14 nights (at least 4 recorded), whichever is later, for three hours; title from the readiness level, body the first readiness reason and the plan summary.
+Wind down: 45 minutes before the bedtime that meets the sleep target from the average wake time (rounded to 5 minutes), for 90 minutes, only when last night was at least 30 minutes short, sleep is a quest or at least 4 nights are recorded, and the nudge time is 18:00 or later (a bedtime after midnight is skipped): "Bed by 22:40 for 7 h 30."
+
 Habit icon keys (Material rounded names): `check_circle`, `brush`, `clean_hands`, `bathtub`, `medication`, `vaccines`, `water_drop`, `local_cafe`, `restaurant`, `lunch_dining`, `fitness_center`, `directions_walk`, `directions_run`, `directions_bike`, `sports_gymnastics`, `self_improvement`, `spa`, `bedtime`, `wb_sunny`, `menu_book`, `edit_note`, `favorite`, `bolt`, `eco`, `star`, `pets`.
 
 Wire types:
@@ -550,7 +645,9 @@ Wire types:
   Meal: `{id, kind: "meal", name, kcal, protein, carbs, fat, fiber, localDate, loggedAt}`.
 - `DayDetail`: `{date, basePoints, bonusPoints, points, maxBase, percent, counted, streakLine, quests: [QuestScore]}`.
   `points` is base plus bonus, `percent` is on base points, and `streakLine` is the percent a day needs to count.
-- `QuestScore`: `{key, title, target, unit, targetAlt, unitAlt, actual, actualAlt, points, basePoints, bonusPoints, done}`.
+- `QuestScore`: `{key, title, target, unit, targetAlt, unitAlt, actual, actualAlt, points, basePoints, bonusPoints, done, doneBy}`.
+  `doneBy` (v6) is `{kind: "workout", type, minutes}` when a Health workout is what completed the quest (push-ups by a qualifying strength or hiit workout, yoga when workout minutes were needed to reach the target), otherwise null.
+  `actual` stays the logged amount except for yoga, where it includes workout minutes.
   `points` is the quest's full base value; `basePoints` and `bonusPoints` are what has been earned.
   Health-fed quests (steps, exercise, sleep) are listed before their metric has synced, with nothing earned and outside `maxBase`.
 - Log ids come from one shared sequence across both log tables, so `DELETE /logs/{id}` is unambiguous.
@@ -566,8 +663,10 @@ Behaviour rules:
   Each item is validated for window, whitelist, finiteness and range (each metric against its own bounds, listed under Metrics in v1).
   Any invalid item fails the whole request with per-item errors.
 - The upsert is `ON CONFLICT (user_id, local_date, metric) DO UPDATE SET value = EXCLUDED.value, measured_at = EXCLUDED.measured_at, ... WHERE health_daily.measured_at <= EXCLUDED.measured_at`, so a stale retry or a second device cannot lower a count.
-- `PUT /health/workouts` and `PUT /health/sleep` are history, not day entries: the day window does not apply and nothing is rescored.
-  Workouts do not change scoring.
+- `PUT /health/workouts` and `PUT /health/sleep` are history, not day entries: the day window does not apply.
+  Sleep nights do not change scoring.
+  Workouts do since v6 (a qualifying strength or HIIT workout completes push-ups, yoga workouts add to yoga), so the PUT rescores every still-open day the batch touches, including the day an edited workout moved away from, in the same transaction and under the day locks.
+  Workouts on a day past its grace window are stored but never rescore it.
 - Workout item rules: `id` 1 to 100 characters, `type` one of `walking, running, cycling, strength, hiit, yoga, swimming, hiking, dance, climbing, other`, `source` 1 to 32 characters, none with control characters.
   `startedAt` is within the last 400 days and not more than 5 minutes ahead of the server, `endedAt` is after `startedAt` and not in the future.
   `durationMin` is above 0 (after rounding to a tenth) and at most 1440, `kcal` 0 to 20000, `distanceM` 0 to 1000000, `avgHr` 20 to 250; the last three may be null or absent.
@@ -818,6 +917,13 @@ Migration 0007 `v5_habits_together_push.sql` adds the v5 tables (see `docs/desig
 - `rewards` (name, target, `baseline` combined points at the start, `reached_at`, `claimed_at`); a partial unique index allows one row with `reached_at IS NULL`.
 - `push_tokens` (one per device, token unique), `notice_log` (event dedupe, primary key kind + user + date), and four `users.notify_*` booleans defaulting to true.
 
+Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
+
+- five more `users.notify_*` booleans (`behind_pace` and `wind_down` default false, the rest true): `behind_pace`, `close_to_done`, `wind_down`, `morning_plan`, `weekly_recap`.
+- `plan_polish` (primary key user + `local_date`, `facts_key`, `text` nullable, `attempted_at`): the row is the claim on the day's single Claude call and `text` the cached wording.
+- `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
+- The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
+
 ### Scheduler
 
 One goroutine under `recover` and a per-run context timeout runs on boot and every 5 minutes.
@@ -825,8 +931,9 @@ For each live user, in the user's timezone, it finds every `local_date` from `fi
 For each such date, in one transaction with the advisory lock, it runs `ensureSnapshot`, `scoreDay`, and upserts the row with `finalized_at = now()`.
 Catch-up after restarts and deploys is therefore automatic, and no day is skipped.
 It also applies pending timezone switches that have come due.
+Each pass also runs the v6 nudges and the Sunday recap push (see Endpoints, v6 additions), which only do anything while push is on.
 
-When `NEWME_ABS_URL` is set, a second loop under the same guards polls every 15 minutes (and on boot) for each linked account.
+When `NEWME_ABS_URL` is set, a second loop under the same guards polls every 5 minutes (and on boot) for each linked account; `POST /me/audiobookshelf/sync` runs the same sync for one person on demand.
 It refreshes the Audiobookshelf session when the access token is within 2 minutes of expiring, or once when Audiobookshelf answers 401, and stores the rotated refresh token before using the new access token.
 It reads `GET /api/me/listening-sessions` (50 per page, newest update first) until a session predates the earliest open day, sums `timeListening` per local date of each session's `startedAt` in the person's zone, and for the still-open local dates (today, and yesterday until its 10:00 grace ends, never before the join date) stores `floor(seconds / 60)` capped at 1440 in `listening_daily`.
 Only a changed value writes and rescores the day, in one transaction under the day lock; finalized days are never touched.

@@ -46,6 +46,14 @@ type meJSON struct {
 	ServerNow      string            `json:"serverNow"`
 	Audiobookshelf *absJSON          `json:"audiobookshelf"`
 	Notifications  notificationsJSON `json:"notifications"`
+	Features       featuresJSON      `json:"features"`
+}
+
+// featuresJSON tells the app which optional server features are switched on, so it can hide
+// the buttons of the ones that are not.
+type featuresJSON struct {
+	MealEstimate bool `json:"mealEstimate"`
+	PlanPolish   bool `json:"planPolish"`
 }
 
 type notificationsJSON struct {
@@ -53,6 +61,11 @@ type notificationsJSON struct {
 	Cheers      bool `json:"cheers"`
 	Challenge   bool `json:"challenge"`
 	Reward      bool `json:"reward"`
+	BehindPace  bool `json:"behindPace"`
+	CloseToDone bool `json:"closeToDone"`
+	WindDown    bool `json:"windDown"`
+	MorningPlan bool `json:"morningPlan"`
+	WeeklyRecap bool `json:"weeklyRecap"`
 }
 
 type notificationsPatch struct {
@@ -60,6 +73,11 @@ type notificationsPatch struct {
 	Cheers      *bool `json:"cheers"`
 	Challenge   *bool `json:"challenge"`
 	Reward      *bool `json:"reward"`
+	BehindPace  *bool `json:"behindPace"`
+	CloseToDone *bool `json:"closeToDone"`
+	WindDown    *bool `json:"windDown"`
+	MorningPlan *bool `json:"morningPlan"`
+	WeeklyRecap *bool `json:"weeklyRecap"`
 }
 
 func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, error) {
@@ -92,7 +110,10 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		ServerNow:      wireTime(now),
 		Audiobookshelf: abs,
 		Notifications: notificationsJSON{PartnerDone: u.Notify.PartnerDone, Cheers: u.Notify.Cheers,
-			Challenge: u.Notify.Challenge, Reward: u.Notify.Reward},
+			Challenge: u.Notify.Challenge, Reward: u.Notify.Reward, BehindPace: u.Notify.BehindPace,
+			CloseToDone: u.Notify.CloseToDone, WindDown: u.Notify.WindDown, MorningPlan: u.Notify.MorningPlan,
+			WeeklyRecap: u.Notify.WeeklyRecap},
+		Features: featuresJSON{MealEstimate: s.estimator != nil, PlanPolish: s.cfg.Anthropic.Enabled()},
 	}, nil
 }
 
@@ -254,7 +275,10 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			field *bool
 			patch *bool
 		}{{&u.Notify.PartnerDone, n.PartnerDone}, {&u.Notify.Cheers, n.Cheers},
-			{&u.Notify.Challenge, n.Challenge}, {&u.Notify.Reward, n.Reward}} {
+			{&u.Notify.Challenge, n.Challenge}, {&u.Notify.Reward, n.Reward},
+			{&u.Notify.BehindPace, n.BehindPace}, {&u.Notify.CloseToDone, n.CloseToDone},
+			{&u.Notify.WindDown, n.WindDown}, {&u.Notify.MorningPlan, n.MorningPlan},
+			{&u.Notify.WeeklyRecap, n.WeeklyRecap}} {
 			if sw.patch != nil {
 				*sw.field = *sw.patch
 			}

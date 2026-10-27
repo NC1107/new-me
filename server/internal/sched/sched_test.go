@@ -254,3 +254,9 @@ func TestPollListeningReadsEveryLinkedAccount(t *testing.T) {
 		t.Fatalf("stats calls = %d, want one per linked account", stats)
 	}
 }
+
+func TestListeningIsPolledEveryFiveMinutes(t *testing.T) {
+	if sched.ListeningInterval != 5*time.Minute {
+		t.Fatalf("ListeningInterval = %v", sched.ListeningInterval)
+	}
+}

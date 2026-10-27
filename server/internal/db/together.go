@@ -364,3 +364,46 @@ func ClaimNotice(ctx context.Context, q Querier, kind string, userID int64, date
 		ON CONFLICT DO NOTHING`, kind, userID, date)
 	return tag.RowsAffected() == 1, err
 }
+
+// ReadingMinutesUser is one person's logged reading minutes plus Audiobookshelf listening on
+// local dates from..to inclusive.
+func ReadingMinutesUser(ctx context.Context, q Querier, userID int64, from, to score.Date) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, `
+		SELECT (
+		  SELECT COALESCE(sum(quantity), 0) FROM activity_logs
+		  WHERE user_id = $1 AND type = 'reading_minutes' AND deleted_at IS NULL
+		    AND local_date BETWEEN $2::date AND $3::date
+		) + (
+		  SELECT COALESCE(sum(minutes), 0) FROM listening_daily
+		  WHERE user_id = $1 AND local_date BETWEEN $2::date AND $3::date
+		)`, userID, from, to).Scan(&n)
+	return n, err
+}
+
+// NoticesSent lists the notice kinds already sent to a person for a local date.
+func NoticesSent(ctx context.Context, q Querier, userID int64, date score.Date) (map[string]bool, error) {
+	rows, err := q.Query(ctx, `SELECT kind FROM notice_log WHERE user_id = $1 AND local_date = $2::date`, userID, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var kind string
+		if err := rows.Scan(&kind); err != nil {
+			return nil, err
+		}
+		out[kind] = true
+	}
+	return out, rows.Err()
+}
+
+// CountNotices is how many of the kinds were sent to a person for a local date.
+func CountNotices(ctx context.Context, q Querier, userID int64, date score.Date, kinds []string) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, `
+		SELECT count(*)::int FROM notice_log WHERE user_id = $1 AND local_date = $2::date AND kind = ANY($3)`,
+		userID, date, kinds).Scan(&n)
+	return n, err
+}

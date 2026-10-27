@@ -43,7 +43,8 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
 		return wholeUnits(in.Metric(healthMetric[q.Key])), q.Target
 	case db.QuestPushups:
-		return in.Pushups, q.Target
+		actual, _ = score.PushupsProgress(in.Pushups, q.Target, in.Workouts, in.HIITMinHR)
+		return actual, q.Target
 	case db.QuestReading:
 		minutes := score.ReadingMinutes(in.ReadingMinutes, in.ListeningMinutes)
 		if q.TargetAlt == nil {
@@ -55,7 +56,8 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	case db.QuestProtein:
 		return tenthsOfGrams(in.ProteinG), q.Target * 10
 	case db.QuestYoga:
-		return in.YogaMinutes, q.Target
+		actual, _ = score.YogaProgress(in.YogaMinutes, in.Workouts)
+		return actual, q.Target
 	}
 	return 0, q.Target
 }
@@ -82,9 +84,30 @@ func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	case db.QuestProtein:
 		return wholeUnits(in.ProteinG), nil
 	case db.QuestYoga:
-		return in.YogaMinutes, nil
+		actual, _ = score.YogaProgress(in.YogaMinutes, in.Workouts)
+		return actual, nil
 	}
 	return 0, nil
+}
+
+// DoneBy names the Health workout that completed the quest, or nil when the quest was done by
+// logged entries or is not done. Push-ups completed by a workout and yoga that needed workout
+// minutes to reach its target are the two cases.
+func DoneBy(q db.DayQuest, in db.DayInputs) *score.DoneBy {
+	switch q.Key {
+	case db.QuestPushups:
+		if _, by := score.PushupsProgress(in.Pushups, q.Target, in.Workouts, in.HIITMinHR); by != nil {
+			return by
+		}
+	case db.QuestYoga:
+		if in.YogaMinutes >= q.Target {
+			return nil
+		}
+		if actual, by := score.YogaProgress(in.YogaMinutes, in.Workouts); actual >= q.Target {
+			return by
+		}
+	}
+	return nil
 }
 
 // Scored is one stored day together with the snapshot and inputs it was scored from.

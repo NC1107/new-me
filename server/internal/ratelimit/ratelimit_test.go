@@ -56,3 +56,26 @@ func TestIdleBucketsAreEvicted(t *testing.T) {
 		t.Fatal("the idle bucket should have been swept")
 	}
 }
+
+func TestWindowCapsEventsPerKeyAndReleasesThemWhenTheyAgeOut(t *testing.T) {
+	now := time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+	w := NewWindow(3, time.Hour)
+	w.now = func() time.Time { return now }
+	for i := range 3 {
+		if ok, _ := w.Allow("a"); !ok {
+			t.Fatalf("event %d refused", i)
+		}
+		now = now.Add(10 * time.Minute)
+	}
+	ok, retry := w.Allow("a")
+	if ok || retry != 30*time.Minute {
+		t.Fatalf("fourth = %v retry %v, want refused with 30m", ok, retry)
+	}
+	if ok, _ := w.Allow("b"); !ok {
+		t.Fatal("another key must have its own allowance")
+	}
+	now = now.Add(31 * time.Minute)
+	if ok, _ := w.Allow("a"); !ok {
+		t.Fatal("the oldest event should have left the window")
+	}
+}

@@ -59,6 +59,12 @@ type Notifications struct {
 	Cheers      bool
 	Challenge   bool
 	Reward      bool
+	// The v6 autopilot events.
+	BehindPace  bool
+	CloseToDone bool
+	WindDown    bool
+	MorningPlan bool
+	WeeklyRecap bool
 }
 
 // ChosenTimezone is the zone the user last picked, which is what their profile shows.
@@ -85,14 +91,16 @@ func (u User) Location() (*time.Location, error) {
 
 const userColumns = `u.id, u.name, u.color, u.timezone, u.is_admin, u.kcal_target, u.protein_target,
 	u.carbs_target, u.fat_target, u.joined_on::text, u.created_at, u.pending_timezone, u.pending_from::text,
-	u.birth_year, u.notify_partner_done, u.notify_cheers, u.notify_challenge, u.notify_reward`
+	u.birth_year, u.notify_partner_done, u.notify_cheers, u.notify_challenge, u.notify_reward,
+	u.notify_behind_pace, u.notify_close_to_done, u.notify_wind_down, u.notify_morning_plan, u.notify_weekly_recap`
 
 // scanUser reads userColumns, after any leading columns the query selected first.
 func scanUser(row pgx.Row, leading ...any) (User, error) {
 	var u User
 	dest := append(leading, &u.ID, &u.Name, &u.Color, &u.Timezone, &u.IsAdmin, &u.KcalTarget, &u.ProteinTarget,
 		&u.CarbsTarget, &u.FatTarget, &u.JoinedOn, &u.CreatedAt, &u.PendingTimezone, &u.PendingFrom, &u.BirthYear,
-		&u.Notify.PartnerDone, &u.Notify.Cheers, &u.Notify.Challenge, &u.Notify.Reward)
+		&u.Notify.PartnerDone, &u.Notify.Cheers, &u.Notify.Challenge, &u.Notify.Reward,
+		&u.Notify.BehindPace, &u.Notify.CloseToDone, &u.Notify.WindDown, &u.Notify.MorningPlan, &u.Notify.WeeklyRecap)
 	return u, row.Scan(dest...)
 }
 
@@ -192,10 +200,12 @@ func UpdateUser(ctx context.Context, q Querier, u User) error {
 		UPDATE users SET name = $2, color = $3,
 			kcal_target = $4, protein_target = $5, carbs_target = $6, fat_target = $7,
 			birth_year = $8, notify_partner_done = $9, notify_cheers = $10, notify_challenge = $11,
-			notify_reward = $12
+			notify_reward = $12, notify_behind_pace = $13, notify_close_to_done = $14,
+			notify_wind_down = $15, notify_morning_plan = $16, notify_weekly_recap = $17
 		WHERE id = $1 AND deleted_at IS NULL`,
 		u.ID, u.Name, u.Color, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget, u.BirthYear,
-		u.Notify.PartnerDone, u.Notify.Cheers, u.Notify.Challenge, u.Notify.Reward)
+		u.Notify.PartnerDone, u.Notify.Cheers, u.Notify.Challenge, u.Notify.Reward,
+		u.Notify.BehindPace, u.Notify.CloseToDone, u.Notify.WindDown, u.Notify.MorningPlan, u.Notify.WeeklyRecap)
 	if err != nil {
 		switch violatedConstraint(err) {
 		case "users_name_live":

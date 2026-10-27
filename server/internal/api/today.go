@@ -1,13 +1,17 @@
 package api
 
 import (
+	"errors"
 	"math"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/nc1107/new-me/server/internal/coach"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
+	"github.com/nc1107/new-me/server/internal/plan"
+	"github.com/nc1107/new-me/server/internal/readiness"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -57,11 +61,22 @@ type todayJSON struct {
 	Habits []habitStateJSON `json:"habits"`
 	// Cheers are what the partner sent on the caller's local day.
 	Cheers []cheerJSON `json:"cheers"`
+	// Readiness and Plan are only for the caller's local today, and Readiness is null while
+	// there is neither sleep nor a comparable heart reading to base it on.
+	Readiness *readiness.Result `json:"readiness"`
+	Plan      *planJSON         `json:"plan"`
+}
+
+type planJSON struct {
+	Items   []plan.Item `json:"items"`
+	Summary string      `json:"summary"`
 }
 
 // listeningJSON is the day's Audiobookshelf listening, already counted in the reading quest.
 type listeningJSON struct {
 	Minutes int `json:"minutes"`
+	// SyncedAt is when Audiobookshelf was last read successfully; null while not linked.
+	SyncedAt *string `json:"syncedAt"`
 }
 
 // handleToday scores the requested day (today unless ?date= names an earlier one the user has
@@ -124,6 +139,31 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var listenSyncedAt *string
+	if s.listen != nil {
+		acct, err := db.GetABSAccount(ctx, s.db.Pool, c.user.ID)
+		if err != nil && !errors.Is(err, db.ErrNotFound) {
+			fail(w, r, err)
+			return
+		}
+		if err == nil {
+			listenSyncedAt = wireTimePtr(acct.SyncedAt)
+		}
+	}
+	var (
+		ready   *readiness.Result
+		planOut *planJSON
+	)
+	if date == localToday {
+		day, err := coach.Load(ctx, s.db.Pool, c.user, c.loc, scored, habits, now)
+		if err != nil {
+			fail(w, r, err)
+			return
+		}
+		ready = day.Readiness
+		planOut = &planJSON{Items: day.Plan.Items, Summary: s.polisher.Summary(ctx, c.user, date, day)}
+	}
+
 	in := scored.Inputs
 	writeJSON(w, http.StatusOK, todayJSON{
 		Date:          date,
@@ -141,9 +181,11 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 			StepsEverSynced: in.Connected(db.MetricSteps), SyncedAt: wireTimePtr(syncedAt),
 			Metrics: in.Metrics, Latest: latest,
 		},
-		Listening: listeningJSON{Minutes: in.ListeningMinutes},
+		Listening: listeningJSON{Minutes: in.ListeningMinutes, SyncedAt: listenSyncedAt},
 		Habits:    toHabitStatesJSON(habits),
 		Cheers:    cheers,
+		Readiness: ready,
+		Plan:      planOut,
 	})
 }
 

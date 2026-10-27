@@ -40,7 +40,21 @@ type Config struct {
 	ABSURL string
 	// APNS configures push notifications; the zero value turns them off.
 	APNS APNS
+	// Anthropic configures the Claude features (meal estimates, plan wording); the zero value
+	// turns them off.
+	Anthropic Anthropic
 }
+
+// Anthropic is the Claude API access.
+type Anthropic struct {
+	// Key is the API key. Empty turns every Claude feature off.
+	Key string
+	// BaseURL overrides https://api.anthropic.com, for tests and proxies.
+	BaseURL string
+}
+
+// Enabled is true when a key is set.
+func (a Anthropic) Enabled() bool { return a.Key != "" }
 
 // APNS is the Apple Push Notification service credentials.
 type APNS struct {
@@ -81,6 +95,10 @@ func Load() (Config, error) {
 		return cfg, err
 	}
 	if cfg.APNS, err = loadAPNS(); err != nil {
+		return cfg, err
+	}
+	cfg.Anthropic.Key = strings.TrimSpace(os.Getenv("NEWME_ANTHROPIC_API_KEY"))
+	if cfg.Anthropic.BaseURL, err = getBaseURL("NEWME_ANTHROPIC_BASE_URL"); err != nil {
 		return cfg, err
 	}
 	if cfg.DatabaseURL == "" {

@@ -88,6 +88,8 @@ services:
       NEWME_APNS_TEAM_ID: ${NEWME_APNS_TEAM_ID:-}
       NEWME_APNS_TOPIC: ${NEWME_APNS_TOPIC:-}
       NEWME_APNS_PRODUCTION: ${NEWME_APNS_PRODUCTION:-true}
+      NEWME_ANTHROPIC_API_KEY: ${NEWME_ANTHROPIC_API_KEY:-}
+      NEWME_ANTHROPIC_BASE_URL: ${NEWME_ANTHROPIC_BASE_URL:-}
       TZ: ${TZ:-America/New_York}
     healthcheck:
       test: ["CMD", "/app/server", "-healthcheck"]

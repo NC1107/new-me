@@ -24,6 +24,8 @@ import (
 const (
 	requestTimeout = 30 * time.Second
 	maxBodyBytes   = 1 << 20
+	// maxEstimateBodyBytes fits a 5 MB photo as base64 plus its JSON envelope.
+	maxEstimateBodyBytes = 8 << 20
 )
 
 type ctxKey int
@@ -68,7 +70,11 @@ func requestID(next http.Handler) http.Handler {
 // limitBody caps what a handler can read from the request.
 func limitBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		limit := int64(maxBodyBytes)
+		if r.URL.Path == "/api/meals/estimate" {
+			limit = maxEstimateBodyBytes
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		next.ServeHTTP(w, r)
 	})
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/nudge"
+	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/together"
 )
@@ -22,7 +24,7 @@ const (
 	// Interval is how often the scheduler looks for days to finalize.
 	Interval = 5 * time.Minute
 	// ListeningInterval is how often linked Audiobookshelf accounts are polled.
-	ListeningInterval = 15 * time.Minute
+	ListeningInterval = 5 * time.Minute
 	// runTimeout bounds one pass, so a stuck query cannot pile up passes behind it.
 	runTimeout = 2 * time.Minute
 )
@@ -37,6 +39,10 @@ type Scheduler struct {
 	// Together creates each week's challenge and completes challenges and rewards that no
 	// request was around to notice, such as one finished by a listening poll. Nil skips it.
 	Together *together.Service
+	// Nudges decides and sends the push nudges. Nil skips them.
+	Nudges *nudge.Service
+	// Recap sends the Sunday recap push. Nil skips it.
+	Recap *recap.Service
 }
 
 // New builds a scheduler on the wall clock.
@@ -78,13 +84,20 @@ func (s *Scheduler) runListening(ctx context.Context) {
 	}
 }
 
-// pass finalizes due days, then settles what the pair shares.
+// pass finalizes due days, settles what the pair shares, then sends the nudges and the weekly
+// recap that have come due.
 func (s *Scheduler) pass(ctx context.Context) error {
 	err := s.FinalizeDue(ctx)
-	if s.Together == nil {
-		return err
+	if s.Together != nil {
+		err = errors.Join(err, s.Together.Settle(ctx))
 	}
-	return errors.Join(err, s.Together.Settle(ctx))
+	if s.Nudges != nil {
+		err = errors.Join(err, s.Nudges.Run(ctx))
+	}
+	if s.Recap != nil {
+		err = errors.Join(err, s.Recap.PushDue(ctx, s.Now()))
+	}
+	return err
 }
 
 // PollListening reads every linked Audiobookshelf account once.

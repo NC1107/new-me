@@ -41,6 +41,9 @@ const (
 	codeABSDisabled      = "abs_disabled"
 	codeABSLoginFailed   = "abs_login_failed"
 	codeABSUnavailable   = "abs_unavailable"
+	codeABSNotLinked     = "abs_not_linked"
+	codeEstimateDisabled = "estimate_disabled"
+	codeEstimateFailed   = "estimate_unavailable"
 )
 
 // httpError is a failure the caller can see. Handlers return it from transaction bodies so the

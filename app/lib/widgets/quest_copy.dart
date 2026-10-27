@@ -66,8 +66,11 @@ String _workoutName(String type) => switch (type) {
   _ => '${type[0].toUpperCase()}${type.substring(1)}',
 };
 
-/// "Done by your Strength workout, 42 min": what Health data finished the quest for the person.
-String doneByLabel(DoneBy by) => 'Done by your ${_workoutName(by.type)} workout, ${by.minutes} min';
+/// "Done by your Strength workout, 42 min", or "Done by your Full body A session": what finished
+/// the quest for the person.
+String doneByLabel(DoneBy by) => by.kind == 'session'
+    ? 'Done by your ${by.type.isEmpty ? 'training' : by.type} session'
+    : 'Done by your ${_workoutName(by.type)} workout, ${by.minutes} min';
 
 /// "Listening synced 3 min ago".
 String listeningSyncedLabel(DateTime syncedAt, DateTime now) =>

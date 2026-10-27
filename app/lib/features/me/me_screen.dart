@@ -38,6 +38,7 @@ import 'reminders_page.dart';
 import 'schedule_page.dart';
 import '../setup/about_you_page.dart';
 import '../together/notifications_page.dart';
+import '../training/training_page.dart';
 import 'settings_row.dart';
 import 'targets_page.dart';
 import 'timezone_page.dart';
@@ -111,6 +112,13 @@ class _MeBody extends ConsumerWidget {
                   ? '1 habit'
                   : '$habitCount habits',
               onTap: () => pushPage(context, const HabitsPage()),
+            ),
+            SettingsRow(
+              icon: Icons.fitness_center_rounded,
+              palette: accentById('rose'),
+              title: 'Training',
+              subtitle: 'Your plan, exercises and sets',
+              onTap: () => pushPage(context, const TrainingPage()),
             ),
             SettingsRow(
               icon: Icons.insights_rounded,

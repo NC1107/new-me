@@ -10,6 +10,7 @@ import '../../state/local_prefs.dart';
 import '../../state/right_now.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
+import '../../state/training.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -26,6 +27,7 @@ import '../progress/milestone_celebration.dart';
 import '../shell/home_tab.dart';
 import '../streaks/away_line.dart';
 import '../streaks/away_page.dart';
+import '../training/training_card.dart';
 import 'body_card.dart';
 import 'connect_health_card.dart';
 import 'day_card.dart';
@@ -83,6 +85,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     await ref.read(healthSyncProvider.notifier).sync(SyncTrigger.manual);
     await ref.read(listeningSyncProvider).syncThenRefreshToday();
     if (ref.exists(insightsProvider)) await ref.read(insightsProvider.notifier).refresh();
+    if (ref.exists(trainingTodayProvider)) await ref.read(trainingTodayProvider.notifier).refresh();
   }
 
   /// Plays the day-counted sheet once per date. It waits for the Today tab and for any sheet that
@@ -215,6 +218,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           const SizedBox(height: kCardGap),
           AwayLine(away: today.away, onOpen: _openAway),
           HabitsStrip(today: today),
+          TrainingSlot(localToday: today.localToday),
           ..._questCards(prompted, now),
           const SizedBox(height: kCardGap),
           FoodCard(

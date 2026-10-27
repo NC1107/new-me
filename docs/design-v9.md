@@ -94,3 +94,25 @@ The v8 rule still applies: every number the app recommends comes from a cited gu
 - Ending or replacing a plan deletes its untouched future sessions and keeps any session that was completed or has sets.
 - A completed session completes the "Get stronger" quest with `doneBy.kind` set to `session` and the plan-day label as the type; logged reps still come first, and a qualifying Health workout is the next fallback.
 - As with a workout, the quest's shown reps stay what was logged.
+- A session that already has sets survives a plan change and keeps the day of the plan it was scheduled from, so its label and targets never shift under the person.
+- Each session exercise carries `planName`, the planned exercise's name, so the app can say what a variation stands in for.
+
+## App decisions
+
+- Today shows a Training card only for someone with a plan: the session with Start, Continue or View, a rest day naming the next session, or the end of a block linking to the Training page.
+- The card refreshes itself when Today moves to a new date, so the session flips at midnight without a pull to refresh.
+- The session screen lists each exercise with its target, the reason for it, and the logged sets; long press deletes a set.
+- Logging a set opens a sheet prefilled with the target amount, the last load used (or the target load), and the plan's reps in reserve, so the common case is one tap.
+- Each set sheet keeps one client op id, so a retried tap after a lost answer never logs the set twice.
+- After every set a rest timer runs for the plan's rest time with Skip; it has a fixed accessible label and announces "Rest done" once, instead of reading every second.
+- Finish needs at least one set; finishing with fewer sets than planned asks once and still counts.
+- Training in Me holds the setup (equipment, heaviest dumbbell, days, minutes, experience, focus), the plan by weekday, changes, ending the plan, and the exercise library.
+- A rejected design shows the server's violations as written, and nothing is saved.
+- Plan design and changes get a 120 second timeout, since they may take two Claude calls.
+- The exercise library groups by first primary muscle in the server's muscle order, with search, custom exercises, and per-exercise bests, max tests and sets by day.
+- The one-rep max is always labelled as an Epley estimate with its known limit past about 10 reps.
+- Weekly sets (from Progress) shows each muscle's sets this week over a shaded band for the evidence range, with the three weeks before as numbers.
+- The monthly look-back lists the month's lifts under each person.
+- Weights join number and unit with a non-breaking space, so "24 kg" never wraps apart.
+- Chunky buttons are their own accessibility node, so text beside a button in a card is no longer merged into the button's label.
+- The app's contract fixtures for v9 are real server responses, recorded by `server/internal/api/v9_contract_test.go` with `NEWME_CONTRACT_DIR` set.

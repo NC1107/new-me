@@ -37,6 +37,7 @@ class ApiException implements Exception {
     this.statusCode,
     this.code,
     this.minClientVersion,
+    this.body = const {},
   });
 
   const ApiException.badAppKey({int? statusCode})
@@ -95,6 +96,7 @@ class ApiException implements Exception {
       serverMessage ?? e.message ?? 'Request failed',
       statusCode: status,
       code: code,
+      body: body,
     );
   }
 
@@ -107,6 +109,9 @@ class ApiException implements Exception {
 
   /// On a 426, the oldest client version the server still accepts.
   final String? minClientVersion;
+
+  /// The whole error body, for errors that carry details such as a rejected plan's violations.
+  final Map<String, dynamic> body;
 
   @override
   String toString() => 'ApiException($kind, $statusCode): $message';
@@ -311,6 +316,115 @@ class ApiClient {
     () => _dio.get<dynamic>('/api/lookback', queryParameters: {'month': ?month}),
     Lookback.parse,
   );
+
+  /// The exercise catalog with the caller's custom exercises, best sets and max tests.
+  Future<ExerciseCatalog> exercises() =>
+      _send(() => _dio.get<dynamic>('/api/exercises'), ExerciseCatalog.parse);
+
+  /// Adds a custom exercise for the caller only.
+  Future<Exercise> createExercise({
+    required String name,
+    required List<String> primaryMuscles,
+    required Measure measure,
+    required LoadKind load,
+    List<String> equipment = const [],
+  }) => _send(
+    () => _dio.post<dynamic>(
+      '/api/exercises',
+      data: {
+        'name': name,
+        'primaryMuscles': primaryMuscles,
+        'secondaryMuscles': <String>[],
+        'measure': measure.name,
+        'load': load.name,
+        'equipment': equipment,
+      },
+    ),
+    (data) =>
+        Exercise.tryParse((data as Json)['exercise']) ??
+        (throw const FormatException('no exercise')),
+  );
+
+  /// Deletes a custom exercise; its logged sets stay.
+  Future<void> deleteExercise(String key) =>
+      _send(() => _dio.delete<dynamic>('/api/exercises/$key'), (_) {});
+
+  /// Records a max test (one set to near failure) for any exercise.
+  Future<void> recordMaxTest(String exercise, {int? reps, int? seconds}) => _send(
+    () => _dio.post<dynamic>(
+      '/api/exercises/$exercise/max',
+      data: {'reps': ?reps, 'seconds': ?seconds},
+    ),
+    (_) {},
+  );
+
+  /// Logs a set once per op id and answers with the set and the rescored day.
+  Future<SetResult> logSet(SetDraft draft) =>
+      _send(() => _dio.post<dynamic>('/api/sets', data: draft.toJson()), SetResult.parse);
+
+  Future<SetResult> deleteSet(int id) =>
+      _send(() => _dio.delete<dynamic>('/api/sets/$id'), SetResult.parse);
+
+  /// Live sets of the last [days] days, oldest first, optionally of one exercise.
+  Future<List<ExerciseSet>> sets({String? exercise, int days = 90}) => _send(
+    () => _dio.get<dynamic>('/api/sets', queryParameters: {'exercise': ?exercise, 'days': days}),
+    (data) => [
+      for (final s in ((data as Json)['sets'] as List? ?? const [])) ?ExerciseSet.tryParse(s),
+    ],
+  );
+
+  /// The training profile, or null before the first save.
+  Future<TrainingProfile?> trainingProfile() => _send(
+    () => _dio.get<dynamic>('/api/training/profile'),
+    (data) => TrainingProfile.tryParse((data as Json)['profile']),
+  );
+
+  Future<TrainingProfile> saveTrainingProfile(TrainingProfile profile) => _send(
+    () => _dio.put<dynamic>('/api/training/profile', data: profile.toJson()),
+    (data) => TrainingProfile.tryParse((data as Json)['profile']) ?? profile,
+  );
+
+  /// Plan design asks Claude once or twice, so it gets far longer than the default timeout.
+  static final _planOptions = Options(
+    sendTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 120),
+  );
+
+  /// Designs a plan. A plan that broke the rules twice is a 422 `plan_invalid` whose
+  /// [ApiException.body] carries the violations.
+  Future<TrainingPlan> generatePlan({int? weeks}) => _send(
+    () => _dio.post<dynamic>('/api/training/plan', data: {'weeks': ?weeks}, options: _planOptions),
+    _planFrom,
+  );
+
+  Future<TrainingPlan> changePlan(PlanChange change, {String detail = ''}) => _send(
+    () => _dio.post<dynamic>(
+      '/api/training/plan/change',
+      data: {'kind': change.wire, 'detail': detail},
+      options: _planOptions,
+    ),
+    _planFrom,
+  );
+
+  Future<void> endPlan() => _send(() => _dio.delete<dynamic>('/api/training/plan'), (_) {});
+
+  static TrainingPlan _planFrom(dynamic data) {
+    final plan = TrainingPlan.tryParse((data as Json)['plan']);
+    if (plan == null) throw const FormatException('no plan');
+    return plan;
+  }
+
+  Future<TrainingToday> trainingToday() =>
+      _send(() => _dio.get<dynamic>('/api/training/today'), TrainingToday.parse);
+
+  /// Completes a session; the rescored day has the strength quest done by the session.
+  Future<DayDetail> completeSession(int id) => _send(
+    () => _dio.post<dynamic>('/api/training/sessions/$id/complete'),
+    (data) => DayDetail.fromJson((data as Json)['day'] as Json),
+  );
+
+  Future<TrainingProgress> trainingProgress() =>
+      _send(() => _dio.get<dynamic>('/api/training/progress'), TrainingProgress.parse);
 
   Future<List<Milestone>> milestones() => _send(
     () => _dio.get<dynamic>('/api/milestones'),

@@ -31,6 +31,15 @@ class TodayNotifier extends CachedNotifier<Today> {
     _reloadStreakIfDayFlipped(today, result.day.score);
   }
 
+  /// Applies a rescored day another write answered with, such as a logged set or a completed
+  /// training session. Another day only refreshes.
+  Future<void> applyDay(DayDetail day) async {
+    final today = state.value?.data;
+    if (today == null || day.date != today.localToday) return refresh();
+    await replace(today.copyWith(day: day.score, quests: day.quests));
+    _reloadStreakIfDayFlipped(today, day.score);
+  }
+
   /// Applies the day scores a health push returned, so no second GET /today is needed.
   /// [burnedByDate] carries the active energy that was pushed, which the scores do not repeat.
   Future<void> applyRescored(

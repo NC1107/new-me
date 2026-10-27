@@ -13,6 +13,7 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../board/person_card.dart' show kSuccessText;
+import '../training/training_copy.dart';
 import 'progress_logic.dart';
 
 /// The monthly look-back: the three biggest improvements for the couple and for each person.
@@ -90,6 +91,7 @@ class _LookbackScreenState extends ConsumerState<LookbackScreen> {
           title: p.name,
           leading: Avatar(name: p.name, palette: accentById(p.color), size: 32),
           improvements: p.improvements,
+          lifts: p.lifts,
           facts: _facts(points: p.points, days: p.countedDays),
         ),
       ],
@@ -152,12 +154,16 @@ class _Section extends StatelessWidget {
     required this.leading,
     required this.improvements,
     required this.facts,
+    this.lifts = const [],
   });
 
   final String title;
   final Widget leading;
   final List<Improvement> improvements;
   final String facts;
+
+  /// v9: the month's exercises, best set against the first month.
+  final List<Lift> lifts;
 
   @override
   Widget build(BuildContext context) => AppCard(
@@ -189,6 +195,34 @@ class _Section extends StatelessWidget {
             if (i > 0) const SizedBox(height: 10),
             ImprovementRow(improvement: imp),
           ],
+        if (lifts.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Training', style: AppText.caption.copyWith(color: kInkMuted)),
+          for (final l in lifts)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.fitness_center_rounded,
+                      size: 16,
+                      color: l.first != null && l.value > l.first! ? kSuccess : kInkMuted,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      liftLine(l),
+                      style: AppText.label.copyWith(color: kInk, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ],
     ),
   );

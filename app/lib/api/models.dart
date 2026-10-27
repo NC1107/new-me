@@ -11,6 +11,7 @@ export 'food_models.dart';
 export 'together_models.dart';
 export 'v6_models.dart';
 export 'v7_models.dart';
+export 'training_models.dart';
 export 'v8_models.dart';
 
 typedef Json = Map<String, dynamic>;

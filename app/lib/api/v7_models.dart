@@ -2,6 +2,8 @@
 // insights, progress, the monthly look-back and milestones. Every parser tolerates a missing or
 // malformed part, so an older server (or a half-written cache) still parses.
 
+import 'training_models.dart';
+
 typedef _Json = Map<String, dynamic>;
 
 int _int(Object? v, [int fallback = 0]) => v is num ? v.toInt() : fallback;
@@ -827,6 +829,7 @@ class PersonMonth {
     this.countedDays = 0,
     this.metrics = const [],
     this.improvements = const [],
+    this.lifts = const [],
   });
 
   static PersonMonth? tryParse(Object? v) {
@@ -840,6 +843,7 @@ class PersonMonth {
       countedDays: _int(j['countedDays']),
       metrics: _items(j['metrics'], MonthMetric.tryParse),
       improvements: _items(j['improvements'], Improvement.tryParse),
+      lifts: parseLifts(j['lifts']),
     );
   }
 
@@ -850,6 +854,9 @@ class PersonMonth {
   final int countedDays;
   final List<MonthMetric> metrics;
   final List<Improvement> improvements;
+
+  /// v9: the month's exercises with their best set against the first month.
+  final List<Lift> lifts;
 }
 
 class CoupleMonth {

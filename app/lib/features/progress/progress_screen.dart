@@ -13,6 +13,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../me/settings_row.dart';
+import '../training/training_progress_page.dart';
 import 'lookback_screen.dart';
 import 'metric_card.dart';
 import 'milestones_page.dart';
@@ -63,6 +64,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               title: 'Monthly look-back',
               subtitle: 'The month against the one before',
               onTap: () => pushPage(context, const LookbackScreen()),
+            ),
+            SettingsRow(
+              icon: Icons.fitness_center_rounded,
+              palette: accentById('rose'),
+              title: 'Weekly sets',
+              subtitle: 'Training volume per muscle against the evidence',
+              onTap: () => pushPage(context, const TrainingProgressPage()),
             ),
             SettingsRow(
               icon: Icons.emoji_events_rounded,

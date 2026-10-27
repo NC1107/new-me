@@ -122,6 +122,7 @@ struct HabitsPage: View {
 
 struct LogPage: View {
   private struct Kind: Hashable {
+    let label: String
     let type: String
     let unit: String
     let noun: String
@@ -130,8 +131,8 @@ struct LogPage: View {
   }
 
   private static let kinds = [
-    Kind(type: "pushups", unit: "reps", noun: "push-ups", start: 10, max: 200),
-    Kind(type: "reading", unit: "minutes", noun: "min reading", start: 15, max: 300),
+    Kind(label: "Push-ups", type: "pushups", unit: "reps", noun: "push-ups", start: 10, max: 200),
+    Kind(label: "Reading minutes", type: "reading", unit: "minutes", noun: "minutes of reading", start: 15, max: 300),
   ]
 
   @EnvironmentObject private var model: WatchModel
@@ -146,7 +147,7 @@ struct LogPage: View {
         kind = (kind + 1) % Self.kinds.count
         amount = Self.kinds[kind].start
       } label: {
-        Text(current.noun.capitalized(with: nil))
+        Text(current.label)
           .font(CompanionStyle.rounded(.footnote, weight: .semibold))
       }
       .buttonStyle(.bordered)

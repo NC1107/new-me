@@ -1055,13 +1055,53 @@ Native background delivery (`BackgroundHealth` in `app/ios/Runner/AppDelegate.sw
   `package:health` 13.3.2 requires 15.0 and Flutter 3.47's template default is already 15.0.
   Do not copy check-in's 13.0.
 - `flutter config --no-enable-swift-package-manager` runs locally and in `ci.yml` and `release.yml`, because Swift Package Manager leaves a white launch screen.
-- `Runner.entitlements`, written fresh: `com.apple.developer.healthkit = true`, `com.apple.developer.healthkit.access = []`, `keychain-access-groups = [$(AppIdentifierPrefix)top.npcserver.newme]`.
-  No `aps-environment`.
+- `Runner.entitlements`: `com.apple.developer.healthkit = true`, `com.apple.developer.healthkit.access = []`, HealthKit background delivery, `aps-environment` and time-sensitive notifications for partner pushes, the App Group `group.top.npcserver.newme` shared with the widgets and the Watch, and `keychain-access-groups = [$(AppIdentifierPrefix)top.npcserver.newme]`.
 - `Info.plist`: `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` ("New Me never writes to Health."), `ITSAppUsesNonExemptEncryption` false, portrait only, no `UIBackgroundModes`, no URL scheme, no Firebase keys. `CFBundleDisplayName` is "New Me".
 - Manual signing in Release with Apple Distribution for team 76S78SUWVM, profile "New Me App Store Distribution", `ExportOptions.plist` adapted from check-in with the new bundle id.
 - App icon: generated once from `assets/brand/icon.svg` with ImageMagick into `AppIcon.appiconset`.
   Dark canvas, accent glyph of two overlapping rounded rings forming a rising arc.
   It is also the in-app logo.
+
+### Widgets and Watch (v6)
+
+Targets in `Runner.xcodeproj`, added by hand and kept on CocoaPods (the Podfile only names Runner):
+
+| Target | Bundle id | Platform | Profile |
+| --- | --- | --- | --- |
+| `NewMeWidgets` (app extension, embedded by Runner's "Embed Foundation Extensions") | `top.npcserver.newme.widgets` | iOS 17 | "New Me Widgets App Store" |
+| `NewMeWatch` (single-target SwiftUI app, embedded by Runner's "Embed Watch Content") | `top.npcserver.newme.watchkitapp` | watchOS 10 | "New Me Watch App Store" |
+| `NewMeComplication` (watchOS widget extension, built but not embedded yet) | `top.npcserver.newme.watchkitapp.complication` | watchOS 10 | none yet |
+
+- All three take `Flutter/Companion.xcconfig`, which includes `Generated.xcconfig` and sets `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` from `FLUTTER_BUILD_NAME` and `FLUTTER_BUILD_NUMBER`, so every embedded bundle carries the app's version and build number.
+- Release signs manually with Apple Distribution for team 76S78SUWVM; Debug and Profile use automatic signing, and CI's `--no-codesign` build signs nothing.
+- The embed phases sit before "Thin Binary", which avoids the Xcode build cycle Flutter projects hit with extensions.
+- `NewMeWatch/Info.plist` names `WKCompanionAppBundleIdentifier` literally, which is how `flutter build` detects the Watch app and stops passing `-sdk iphoneos`.
+- `app/ios/Shared/` holds the Swift every target compiles: `CompanionSnapshot.swift` (model, App Group store, applying a server answer), `CompanionAPI.swift` (habit marks and activity logs with `X-App-Key`, Bearer token and `X-Client-Version`) and `CompanionStyle.swift` (warm palette, rounded system font, ring, Material to SF Symbol map).
+
+The snapshot:
+
+- Dart builds it in `lib/companion/companion_snapshot.dart` from the session and Today: version, date, name, accent fill and tint, points, percent, streak line, counted, streak, quests (key, title, done), one habit entry per check slot or count habit (habit id, slot or null, name, label, icon, done, count, target, time), and the session (base URL, token, app key, client version).
+- `CompanionController` (`lib/state/companion.dart`, started by `HomeShell`) sends it over the `newme/widgets` channel whenever Today or the session changes and the JSON differs from the last one sent; sign-out sends `clear` from `SessionController.signOut` as well.
+- `CompanionBridge` in `Runner/CompanionBridge.swift` writes it atomically to `companion-snapshot.json` in the App Group container (readable after first unlock), calls `WidgetCenter.shared.reloadAllTimelines()`, and passes it to the Watch with `updateApplicationContext`.
+  An empty snapshot signs the widgets and the Watch out.
+- The bridge is a no-op on web and when the plugin is missing.
+
+Widgets (`NewMeWidgets/NewMeWidgets.swift`), one `NewMeToday` widget:
+
+- Small: ring with points, "Day N" streak and percent.
+- Medium: the same plus up to four habit buttons, undone first.
+  A button runs `ToggleHabitIntent`: it flips the slot (or adds one to a count habit) in the snapshot, reloads, sends `PUT /api/habits/{id}/marks/{date}`, folds the answered score, quests and habit states back in, and undoes its own change if the server refuses.
+- Lock Screen circular: capacity gauge with the percent.
+  Rectangular: "62% · 180 pts", quests left, habits due.
+- The timeline holds the current entry and a midnight entry that marks the snapshot stale, so yesterday's numbers are never shown as today's.
+
+Watch (`NewMeWatch/`):
+
+- Vertical pages: Today (ring, points, streak, percent, quests), Habits (tap to mark, with haptics) and Log (push-ups or reading minutes on the Digital Crown, then Save).
+- Actions go straight to the API with the snapshot's session; with no network (or a 5xx) they go to the phone with `sendMessage`, and `WatchRelay` on the phone runs the same request, answers with the status and body, updates the phone's snapshot and asks Flutter to refetch Today.
+- `WatchRelay` activates `WCSession` in `didFinishLaunchingWithOptions`, because a Watch message can wake the phone before any Flutter engine exists.
+- The Watch saves each snapshot to its own App Group container for the complication.
+- HealthKit is entitled and described in `Info.plist` (the profile carries it) but not read yet.
 
 ### Tests
 
@@ -1079,10 +1119,12 @@ On pull requests and pushes to non-main branches.
 - `server` job: gofmt, vet, build, `go test -race` with a Postgres service.
 - `app` job: `flutter config --no-enable-swift-package-manager`, `flutter pub get --enforce-lockfile`, format, analyze, test, and `flutter build web` with a dev key.
 - `ios-build` job on `macos-15`, path-filtered to `app/ios/**`, `app/pubspec.yaml` and `app/pubspec.lock`: `flutter build ios --no-codesign`.
+  It compiles the widget extension, the Watch app and the complication too.
 
 ### release.yml
 
 Triggers: `push` to `main`, `schedule` with cron `17 6 1,15 * *`, and `workflow_dispatch`.
+`workflow_dispatch` takes a boolean `dry_run`: `gh workflow run release.yml --ref <branch> -f dry_run=true` skips the tests, the tag, the image, the upload and the GitHub Release, and only builds, signs, exports, checks and validates the IPA from that branch, in its own concurrency group.
 One workflow means one `run_number` counter and one concurrency group (`release`).
 The twice-monthly run keeps the newest TestFlight build well under the 90-day expiry.
 
@@ -1095,7 +1137,8 @@ Jobs:
    On schedule and dispatch it does not tag and outputs the latest existing tag.
 3. `docker`: push only.
    Builds `ghcr.io/nc1107/new-me:latest` and `:X.Y.Z` with `-ldflags -X main.version`.
-4. `app-store`: `macos-15`, checks out the version tag (the latest tag on schedule), Flutter 3.47.0, `flutter config --no-enable-swift-package-manager`, CocoaPods, "Select latest Xcode" copied from check-in plus `xcodebuild -version`, manual signing, `test -n "$NEWME_APP_KEY"`, `flutter build ipa --dart-define=NEWME_APP_KEY=...`, `altool` upload, then `scripts/asc-wait.sh`.
+4. `app-store`: `macos-15`, checks out the version tag (the latest tag on schedule, the dispatched ref on a dry run), Flutter 3.47.0, `flutter config --no-enable-swift-package-manager`, CocoaPods, "Select latest Xcode" copied from check-in plus `xcodebuild -version`, manual signing with the three profiles (app, widgets, Watch), `test -n` on every secret, `flutter build ipa --dart-define=NEWME_APP_KEY=...`, `scripts/check-ipa.sh` (widget and Watch embedded, every bundle on the app's version and build number, every signature valid), then `altool` upload and `scripts/asc-wait.sh`, or `altool --validate-app` on a dry run.
+   - `ExportOptions.plist` maps `top.npcserver.newme`, `top.npcserver.newme.widgets` and `top.npcserver.newme.watchkitapp` to their profile names.
    - `scripts/asc-wait.sh` mints an App Store Connect JWT and polls the build until `processingState` is `VALID`.
      It fails on `INVALID` or after 30 minutes.
 5. `release`: needs `[version, docker, app-store]`, push only, creates the GitHub Release after processing passes.
@@ -1113,7 +1156,7 @@ Other rules:
 
 ### Secrets
 
-Seven in total.
+Nine in total.
 
 Shared with check-in (rotating the certificate means updating both repositories):
 
@@ -1125,7 +1168,9 @@ Shared with check-in (rotating the certificate means updating both repositories)
 
 New for this app:
 
-- `IOS_PROVISIONING_PROFILE_BASE64`
+- `IOS_PROVISIONING_PROFILE_BASE64` ("New Me App Store Distribution")
+- `IOS_WIDGET_PROFILE_BASE64` ("New Me Widgets App Store")
+- `IOS_WATCH_PROFILE_BASE64` ("New Me Watch App Store")
 - `NEWME_APP_KEY`, generated with `openssl rand -hex 32`.
   The web review build uses a different key.
 
@@ -1148,6 +1193,10 @@ Scripted through the App Store Connect API, in this order:
    Enable the HEALTHKIT capability.
 3.
    Create the "New Me App Store Distribution" profile.
+4.
+   For v6: register the App Group `group.top.npcserver.newme`, the bundle ids `top.npcserver.newme.widgets` (App Groups) and `top.npcserver.newme.watchkitapp` (HealthKit, App Groups), assign the group to all three ids, and create the "New Me Widgets App Store" and "New Me Watch App Store" profiles; regenerate the app profile so it carries the group.
+5.
+   Still to do for the complication: register `top.npcserver.newme.watchkitapp.complication` with App Groups and the same group, and create its App Store profile.
 
 Enable automatic updates in TestFlight on both phones.
 

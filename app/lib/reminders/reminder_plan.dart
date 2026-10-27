@@ -17,25 +17,43 @@ const _kNearLinePercent = 40;
 
 @immutable
 class Reminder {
-  const Reminder({required this.id, required this.at, required this.body});
+  const Reminder({
+    required this.id,
+    required this.at,
+    required this.body,
+    this.title = _kTitle,
+    this.payload,
+    this.actionable = false,
+  });
 
   final int id;
 
   /// Wall-clock time on the phone.
   final DateTime at;
   final String body;
+  final String title;
 
-  String get title => _kTitle;
+  /// Handed back when the person taps the notification or one of its actions.
+  final String? payload;
+
+  /// Carries the Done and Snooze actions and breaks through Focus as time sensitive.
+  final bool actionable;
 
   @override
   bool operator ==(Object other) =>
-      other is Reminder && other.id == id && other.at == at && other.body == body;
+      other is Reminder &&
+      other.id == id &&
+      other.at == at &&
+      other.body == body &&
+      other.title == title &&
+      other.payload == payload &&
+      other.actionable == actionable;
 
   @override
-  int get hashCode => Object.hash(id, at, body);
+  int get hashCode => Object.hash(id, at, body, title, payload, actionable);
 
   @override
-  String toString() => 'Reminder($id, $at, $body)';
+  String toString() => 'Reminder($id, $at, $title, $body)';
 }
 
 /// The line for an evening when the day has not counted yet.

@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/api/rewards/1/claim",
+  "status": 200,
+  "request": null,
+  "body": {
+    "reward": {
+      "id": 1,
+      "name": "Pizza night",
+      "target": 1,
+      "progress": 1,
+      "startedAt": "2026-10-27T15:44:19Z",
+      "reachedAt": "2026-10-27T15:44:20Z",
+      "claimedAt": "2026-10-27T15:44:20Z",
+      "createdBy": 1
+    }
+  }
+}

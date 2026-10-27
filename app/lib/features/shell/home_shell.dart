@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/board.dart';
+import '../../state/habit_reminders.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
+import '../../state/push.dart';
 import '../../state/reminders.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
@@ -34,6 +36,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Reading the provider is what starts Health sync and its lifecycle listener.
     ref.read(healthSyncProvider);
     ref.read(remindersProvider);
+    ref.read(habitRemindersProvider);
+    ref.read(pushProvider);
     unawaited(_followDeviceTimezone());
     _lifecycle = AppLifecycleListener(onResume: _onResume);
   }

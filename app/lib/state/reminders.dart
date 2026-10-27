@@ -52,6 +52,9 @@ class ReminderController extends Notifier<ReminderSettings> {
 
   ReminderScheduler get _scheduler => ref.read(reminderSchedulerProvider);
 
+  /// Completes once the scheduler is set up and the saved choices are loaded.
+  Future<void> get ready => _hydrated;
+
   @override
   ReminderSettings build() {
     ref.listen(todayProvider, (_, _) => _reschedule());
@@ -83,6 +86,16 @@ class ReminderController extends Notifier<ReminderSettings> {
   void _openToday() {
     rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
     ref.read(homeTabProvider.notifier).select(HomeTab.today);
+  }
+
+  /// Shows the system prompt (once) without turning the evening reminder on, for features such
+  /// as push that only need the permission. Returns whether notifications are allowed.
+  Future<bool> requestPermission() async {
+    await _hydrated;
+    final allowed = await _scheduler.requestPermission();
+    state = state.copyWith(allowed: allowed);
+    _reschedule();
+    return allowed;
   }
 
   /// Turns reminders on at [minutes] (or the saved time), asking the system the first time.

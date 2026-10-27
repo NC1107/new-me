@@ -1,0 +1,9 @@
+{
+  "method": "PUT",
+  "path": "/api/devices/me/push",
+  "status": 204,
+  "request": {
+    "token": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+  },
+  "body": {}
+}

@@ -109,6 +109,12 @@
     ],
     "localToday": "2026-10-27",
     "backdateUntil": null,
-    "serverNow": "2026-10-27T12:47:53Z"
+    "serverNow": "2026-10-27T12:47:53Z",
+    "notifications": {
+      "partnerDone": true,
+      "cheers": true,
+      "challenge": true,
+      "reward": true
+    }
   }
 }

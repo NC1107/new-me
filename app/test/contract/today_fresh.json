@@ -113,6 +113,8 @@
       "syncedAt": null,
       "metrics": {},
       "latest": {}
-    }
+    },
+    "habits": [],
+    "cheers": []
   }
 }

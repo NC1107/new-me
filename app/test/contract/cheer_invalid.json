@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "path": "/api/cheers",
+  "status": 422,
+  "request": {
+    "to": 1,
+    "kind": "fire"
+  },
+  "body": {
+    "code": "invalid_request",
+    "error": "you cannot cheer yourself"
+  }
+}

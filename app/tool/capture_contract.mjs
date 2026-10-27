@@ -9,7 +9,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const [base = 'http://127.0.0.1:8080', appKey = 'dev-key-0123456789', oldBase] = process.argv.slice(2);
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'contract');
+const outDir =
+  process.env.CONTRACT_OUT ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'contract');
 const timezone = 'America/New_York';
 
 function scrub(value) {
@@ -71,7 +72,7 @@ const member = ok(
 
 const second = ok(await call(null, 'POST', '/api/invites', { token: admin.token }), 201);
 await sleep(13000);
-ok(
+const repaired = ok(
   await call('join_repair', 'POST', '/api/join', {
     body: { code: second.code, userId: member.user.id },
   }),
@@ -91,6 +92,37 @@ ok(
   }),
   200,
 );
+
+// Together: a reward of one point is reached by the first log below, so one run records the
+// active, the early-claim and the reached shapes.
+ok(await call('rewards_empty', 'GET', '/api/rewards', { token }), 200);
+const reward = ok(
+  await call('reward_created', 'POST', '/api/rewards', { token, body: { name: 'Pizza night', target: 1 } }),
+  201,
+);
+ok(await call('reward_active', 'POST', '/api/rewards', { token: repaired.token, body: { name: 'Again', target: 50 } }), 409);
+ok(await call('reward_claim_early', 'POST', `/api/rewards/${reward.reward.id}/claim`, { token }), 409);
+ok(await call('rewards_active', 'GET', '/api/rewards', { token }), 200);
+ok(
+  await call('cheer_created', 'POST', '/api/cheers', {
+    token: repaired.token,
+    body: { to: admin.user.id, kind: 'fire' },
+  }),
+  201,
+);
+ok(
+  await call('cheer_repeat', 'POST', '/api/cheers', {
+    token: repaired.token,
+    body: { to: admin.user.id, kind: 'fire' },
+  }),
+  200,
+);
+ok(await call('cheer_invalid', 'POST', '/api/cheers', { token, body: { to: admin.user.id, kind: 'fire' } }), 422);
+ok(
+  await call('push_put', 'PUT', '/api/devices/me/push', { token, body: { token: 'ab12'.repeat(16) } }),
+  204,
+);
+ok(await call('push_delete', 'DELETE', '/api/devices/me/push', { token }), 204);
 
 const op = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 ok(
@@ -184,6 +216,8 @@ ok(
 ok(await call('health_trends', 'GET', '/api/health/trends?metric=weight_kg&days=30', { token }), 200);
 ok(await call('today', 'GET', '/api/today', { token }), 200);
 ok(await call('board', 'GET', '/api/board', { token }), 200);
+ok(await call('rewards_reached', 'GET', '/api/rewards', { token }), 200);
+ok(await call('reward_claimed', 'POST', `/api/rewards/${reward.reward.id}/claim`, { token }), 200);
 
 ok(await call('error_bad_app_key', 'GET', '/api/server-info', { key: 'wrong-key' }), 403);
 ok(await call('error_unauthorized', 'GET', '/api/me', { token: 'not-a-token' }), 401);

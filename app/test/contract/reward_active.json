@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "path": "/api/rewards",
+  "status": 409,
+  "request": {
+    "name": "Again",
+    "target": 50
+  },
+  "body": {
+    "code": "reward_active",
+    "error": "a reward is already being earned"
+  }
+}

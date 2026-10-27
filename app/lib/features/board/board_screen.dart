@@ -20,6 +20,8 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
+import '../together/cheer_sheet.dart';
+import '../together/together_section.dart';
 import 'person_card.dart';
 import 'week_chart.dart';
 
@@ -89,7 +91,13 @@ class _UsBody extends ConsumerWidget {
                 ),
               const SizedBox(width: kCardGap),
               Expanded(
-                child: paired ? PersonCard(user: users[1], now: now) : const _WaitingCard(),
+                child: paired
+                    ? PersonCard(
+                        user: users[1],
+                        now: now,
+                        onCheer: () => showCheerSheet(context, partner: users[1]),
+                      )
+                    : const _WaitingCard(),
               ),
             ],
           ),
@@ -97,6 +105,7 @@ class _UsBody extends ConsumerWidget {
         if (paired) ...[
           const SizedBox(height: kCardGap),
           _Together(users: users),
+          TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),
           _InviteCard(isAdmin: isAdmin),

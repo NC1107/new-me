@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'together_prefs.dart';
+
 const _kHealthPrompted = 'healthPrompted';
 const _kLastSyncedAt = 'lastSyncedAt';
 const _kLastLogKind = 'lastLogKind';
@@ -7,6 +9,7 @@ const _kCelebratedDate = 'celebratedDate';
 const _kDeviceTimezone = 'deviceTimezone';
 const _kRemindersEnabled = 'remindersEnabled';
 const _kReminderMinutes = 'reminderMinutes';
+const _kMutedHabitSlots = 'mutedHabitSlots';
 
 /// Non-secret, per-install values. The Keychain blob in session.dart holds everything secret.
 class LocalPrefs {
@@ -59,6 +62,18 @@ class LocalPrefs {
   static Future<void> setReminderMinutes(int minutes) async =>
       (await SharedPreferences.getInstance()).setInt(_kReminderMinutes, minutes);
 
+  /// "habitId:slotIndex" for each slot whose reminder is off. The server has no such flag, so a
+  /// reminder choice lives on this phone only.
+  static Future<Set<String>> mutedHabitSlots() async =>
+      ((await SharedPreferences.getInstance()).getStringList(_kMutedHabitSlots) ?? const [])
+          .toSet();
+
+  static Future<void> setMutedHabitSlots(Set<String> keys) async =>
+      (await SharedPreferences.getInstance()).setStringList(
+        _kMutedHabitSlots,
+        keys.toList()..sort(),
+      );
+
   static Future<void> clearForSignOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kLastSyncedAt);
@@ -67,5 +82,7 @@ class LocalPrefs {
     await prefs.remove(_kDeviceTimezone);
     await prefs.remove(_kRemindersEnabled);
     await prefs.remove(_kReminderMinutes);
+    await prefs.remove(_kMutedHabitSlots);
+    await TogetherPrefs.clear(prefs);
   }
 }

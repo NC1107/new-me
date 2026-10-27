@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "path": "/api/rewards/1/claim",
+  "status": 409,
+  "request": null,
+  "body": {
+    "code": "reward_not_reached",
+    "error": "that reward has not been reached yet"
+  }
+}

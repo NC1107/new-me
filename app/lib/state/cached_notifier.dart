@@ -48,8 +48,10 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
     }
   }
 
+  /// The screen changes at once and the cache catches up, so a tap never waits on storage.
   Future<void> replace(T value) async {
     final session = ref.read(sessionProvider).session;
+    state = AsyncData(Cached(value, userId: session?.userId));
     if (session != null) {
       await cache.write(
         value,
@@ -58,6 +60,5 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
         at: ref.read(clockProvider)(),
       );
     }
-    state = AsyncData(Cached(value, userId: session?.userId));
   }
 }

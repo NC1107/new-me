@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../api/habit_models.dart';
 import '../api/models.dart';
 import 'cached_resource.dart';
 
@@ -18,6 +19,12 @@ final boardCache = ResponseCache<Board>(
 final meCache = ResponseCache<Me>(
   key: 'cache.me',
   fromJson: Me.fromJson,
+  toJson: (v) => v.toJson(),
+);
+
+final habitsCache = ResponseCache<HabitList>(
+  key: 'cache.habits',
+  fromJson: HabitList.fromJson,
   toJson: (v) => v.toJson(),
 );
 
@@ -41,6 +48,7 @@ Future<void> clearResponseCaches() async {
   await boardCache.clear();
   await meCache.clear();
   await insightsCache.clear();
+  await habitsCache.clear();
   final prefs = await SharedPreferences.getInstance();
   for (final key in prefs.getKeys().where((k) => k.startsWith(_workoutsCachePrefix))) {
     await prefs.remove(key);

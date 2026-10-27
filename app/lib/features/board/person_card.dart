@@ -17,10 +17,13 @@ const _kRingSize = 104.0;
 /// streak, and week and season points. Text follows Dynamic Type up to a limit, because the
 /// card is half the screen wide.
 class PersonCard extends StatelessWidget {
-  const PersonCard({super.key, required this.user, required this.now});
+  const PersonCard({super.key, required this.user, required this.now, this.onCheer});
 
   final BoardUser user;
   final DateTime now;
+
+  /// Set on the partner's card: tapping it opens the cheer sheet.
+  final VoidCallback? onCheer;
 
   @override
   Widget build(BuildContext context) {
@@ -28,74 +31,105 @@ class PersonCard extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: kBoardColumnMaxTextScale,
       child: Builder(
-        builder: (context) => AppCard(
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Avatar(name: user.name, palette: palette, size: 44),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                user.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppText.body.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: _Ring(user: user, palette: palette),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
-                textAlign: TextAlign.center,
-                style: AppText.label.copyWith(
-                  color: user.today.counted ? kSuccessText : kInkSecondary,
-                  fontWeight: FontWeight.w800,
+        // A tappable card is its own node, or it would merge with its neighbour in the row.
+        builder: (context) => Semantics(
+          container: onCheer != null,
+          child: AppCard(
+            onTap: onCheer,
+            semanticLabel: onCheer == null ? null : 'Cheer ${user.name}',
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Avatar(name: user.name, palette: palette, size: 44),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Icon(Icons.local_fire_department_rounded, size: 20, color: kFlame),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      user.streak < 1 ? 'No streak yet' : '${user.streak}-day streak',
-                      style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                const SizedBox(height: 8),
+                Text(
+                  user.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: _Ring(user: user, palette: palette),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
+                  textAlign: TextAlign.center,
+                  style: AppText.label.copyWith(
+                    color: user.today.counted ? kSuccessText : kInkSecondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded, size: 20, color: kFlame),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        user.streak < 1 ? 'No streak yet' : '${user.streak}-day streak',
+                        style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _Stat(label: 'Week', value: user.week),
+                if (user.workoutsThisWeek case final n?) ...[
+                  const SizedBox(height: 4),
+                  Semantics(
+                    container: true,
+                    label: '${workoutCountLabel(n)} this week',
+                    excludeSemantics: true,
+                    child: _Stat(label: 'Workouts', value: n),
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              _Stat(label: 'Week', value: user.week),
-              if (user.workoutsThisWeek case final n?) ...[
                 const SizedBox(height: 4),
-                Semantics(
-                  container: true,
-                  label: '${workoutCountLabel(n)} this week',
-                  excludeSemantics: true,
-                  child: _Stat(label: 'Workouts', value: n),
+                _Stat(label: 'Season', value: user.season),
+                const SizedBox(height: 10),
+                Text(
+                  user.syncedAt == null
+                      ? 'Health not synced'
+                      : 'synced ${relativeTime(user.syncedAt!, now)}',
+                  style: AppText.caption.copyWith(fontSize: 12),
                 ),
+                if (onCheer != null) ...[const SizedBox(height: 12), _CheerHint(palette: palette)],
               ],
-              const SizedBox(height: 4),
-              _Stat(label: 'Season', value: user.season),
-              const SizedBox(height: 10),
-              Text(
-                user.syncedAt == null
-                    ? 'Health not synced'
-                    : 'synced ${relativeTime(user.syncedAt!, now)}',
-                style: AppText.caption.copyWith(fontSize: 12),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// A pill that says the card can be tapped to cheer.
+class _CheerHint extends StatelessWidget {
+  const _CheerHint({required this.palette});
+
+  final AccentPalette palette;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 36),
+    decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.celebration_rounded, size: 18, color: palette.lip),
+        const SizedBox(width: 6),
+        Text(
+          'Cheer',
+          style: AppText.label.copyWith(color: palette.lip, fontWeight: FontWeight.w800),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Success green dark enough for 13px text on white.

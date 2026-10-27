@@ -10,6 +10,7 @@ class Pressable extends StatefulWidget {
     super.key,
     required this.child,
     required this.onTap,
+    this.onLongPress,
     this.scale = kTapScale,
     this.haptic = true,
     this.behavior = HitTestBehavior.opaque,
@@ -19,6 +20,9 @@ class Pressable extends StatefulWidget {
 
   /// Null disables the press feedback too.
   final VoidCallback? onTap;
+
+  /// A press held down; it answers with a firmer haptic than a tap.
+  final VoidCallback? onLongPress;
   final double scale;
   final bool haptic;
   final HitTestBehavior behavior;
@@ -43,6 +47,13 @@ class _PressableState extends State<Pressable> {
       onTapDown: enabled ? (_) => _set(true) : null,
       onTapUp: enabled ? (_) => _set(false) : null,
       onTapCancel: enabled ? () => _set(false) : null,
+      onLongPress: enabled && widget.onLongPress != null
+          ? () {
+              _set(false);
+              if (widget.haptic) HapticFeedback.mediumImpact();
+              widget.onLongPress!();
+            }
+          : null,
       onTap: enabled
           ? () {
               if (widget.haptic) HapticFeedback.lightImpact();

@@ -7,6 +7,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'habit_notification_actions.dart';
 import 'reminder_plan.dart';
 
 /// The one seam to the OS notification centre, so the rules above it can be tested with a fake.
@@ -22,6 +23,9 @@ abstract class ReminderScheduler {
   Future<void> schedule(Reminder reminder);
 
   Future<void> cancel(int id);
+
+  /// The ids of what is pending now, so stale habit reminders can be found and cancelled.
+  Future<List<int>> pendingIds();
 }
 
 /// For platforms without local notifications. It reports permission as granted so the settings
@@ -43,13 +47,40 @@ class NoopReminderScheduler implements ReminderScheduler {
 
   @override
   Future<void> cancel(int id) async {}
+
+  @override
+  Future<List<int>> pendingIds() async => const [];
 }
 
 class LocalNotificationsScheduler implements ReminderScheduler {
   final _plugin = FlutterLocalNotificationsPlugin();
 
-  @override
-  Future<void> init({required VoidCallback onTap}) async {
+  static final _settings = InitializationSettings(
+    // The prompt belongs to the onboarding step and the Me page, never to launch.
+    iOS: DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestSoundPermission: false,
+      requestBadgePermission: false,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          kHabitCategory,
+          actions: [
+            // No foreground option: iOS runs these in a background isolate, so the lock screen
+            // never has to open the app.
+            DarwinNotificationAction.plain(kActionDone, 'Done'),
+            DarwinNotificationAction.plain(kActionSnooze, 'Snooze 30 min'),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  /// Sets up the time zone and the plugin without callbacks, which is all a background isolate
+  /// needs to schedule a snooze.
+  Future<void> prepare({
+    DidReceiveNotificationResponseCallback? onResponse,
+    DidReceiveBackgroundNotificationResponseCallback? onBackgroundResponse,
+  }) async {
     tzdata.initializeTimeZones();
     try {
       final zone = (await FlutterTimezone.getLocalTimezone()).identifier;
@@ -58,17 +89,22 @@ class LocalNotificationsScheduler implements ReminderScheduler {
       debugPrint('[NEWME] reminder time zone unavailable, using UTC: $e');
     }
     await _plugin.initialize(
-      settings: const InitializationSettings(
-        // The prompt belongs to the onboarding step and the Me page, never to launch.
-        iOS: DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestSoundPermission: false,
-          requestBadgePermission: false,
-        ),
-      ),
-      onDidReceiveNotificationResponse: (_) => onTap(),
+      settings: _settings,
+      onDidReceiveNotificationResponse: onResponse,
+      onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
     );
   }
+
+  @override
+  Future<void> init({required VoidCallback onTap}) => prepare(
+    // Actions without the foreground option never reach here; only a tap on the note does.
+    onResponse: (response) {
+      if (response.notificationResponseType == NotificationResponseType.selectedNotification) {
+        onTap();
+      }
+    },
+    onBackgroundResponse: habitNotificationBackground,
+  );
 
   @override
   Future<bool> isAllowed() async {
@@ -88,15 +124,28 @@ class LocalNotificationsScheduler implements ReminderScheduler {
     return _plugin.zonedSchedule(
       id: reminder.id,
       scheduledDate: tz.TZDateTime(tz.local, at.year, at.month, at.day, at.hour, at.minute),
-      notificationDetails: const NotificationDetails(iOS: DarwinNotificationDetails()),
+      notificationDetails: NotificationDetails(
+        iOS: reminder.actionable
+            ? const DarwinNotificationDetails(
+                categoryIdentifier: kHabitCategory,
+                interruptionLevel: InterruptionLevel.timeSensitive,
+              )
+            : const DarwinNotificationDetails(),
+      ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       title: reminder.title,
       body: reminder.body,
+      payload: reminder.payload,
     );
   }
 
   @override
   Future<void> cancel(int id) => _plugin.cancel(id: id);
+
+  @override
+  Future<List<int>> pendingIds() async => [
+    for (final r in await _plugin.pendingNotificationRequests()) r.id,
+  ];
 }
 
 final reminderSchedulerProvider = Provider<ReminderScheduler>(

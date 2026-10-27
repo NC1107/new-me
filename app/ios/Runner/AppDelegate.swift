@@ -1,5 +1,6 @@
 import Flutter
 import HealthKit
+import flutter_local_notifications
 import Security
 import UIKit
 import UserNotifications
@@ -16,12 +17,20 @@ import UserNotifications
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    // The Done and Snooze actions on a habit reminder run Dart in a second engine, which needs
+    // the plugins (secure storage for the session, notifications for the snooze) registered.
+    FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "Vo2MaxBridge") {
       Vo2MaxBridge.register(with: registrar)
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BackgroundHealth") {
       BackgroundHealth.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "PushBridge") {
+      PushBridge.register(with: registrar)
     }
   }
 }
@@ -395,5 +404,94 @@ final class BackgroundHealth: NSObject, FlutterPlugin {
       return keep.contains(String(date))
     }
     defaults.set(pushed, forKey: pushedKey)
+  }
+}
+
+/// Remote notifications for the partner pushes. Dart decides when to register, once
+/// notification permission is granted, and sends the token to the server itself.
+final class PushBridge: NSObject, FlutterPlugin {
+  static let shared = PushBridge()
+
+  private var channel: FlutterMethodChannel?
+
+  // A push tapped on a cold start arrives before Dart listens, so it waits here to be taken.
+  private var pendingTap: String?
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(name: "newme/push", binaryMessenger: registrar.messenger())
+    shared.channel = channel
+    registrar.addMethodCallDelegate(shared, channel: channel)
+    registrar.addApplicationDelegate(shared)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "register":
+      DispatchQueue.main.async {
+        UIApplication.shared.registerForRemoteNotifications()
+        result(nil)
+      }
+    case "unregister":
+      DispatchQueue.main.async {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        result(nil)
+      }
+    case "takeTap":
+      DispatchQueue.main.async {
+        let kind = self.pendingTap
+        self.pendingTap = nil
+        result(kind)
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+    DispatchQueue.main.async { self.channel?.invokeMethod("token", arguments: hex) }
+  }
+
+  func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    DispatchQueue.main.async {
+      self.channel?.invokeMethod("error", arguments: error.localizedDescription)
+    }
+  }
+
+  // The reminder plugin answers for its own local notifications; a push is told apart by its
+  // trigger, so exactly one handler calls the completion block.
+  private func isPush(_ notification: UNNotification) -> Bool {
+    notification.request.trigger is UNPushNotificationTrigger
+  }
+
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    guard isPush(notification) else { return }
+    completionHandler([.banner, .list, .sound])
+  }
+
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    guard isPush(response.notification) else { return }
+    let kind = response.notification.request.content.userInfo["kind"] as? String ?? ""
+    DispatchQueue.main.async {
+      self.pendingTap = kind
+      self.channel?.invokeMethod("tapped", arguments: kind) { [weak self] reply in
+        if reply as? Bool == true { self?.pendingTap = nil }
+      }
+      completionHandler()
+    }
   }
 }

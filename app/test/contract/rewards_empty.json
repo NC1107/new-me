@@ -1,0 +1,10 @@
+{
+  "method": "GET",
+  "path": "/api/rewards",
+  "status": 200,
+  "request": null,
+  "body": {
+    "history": [],
+    "reward": null
+  }
+}

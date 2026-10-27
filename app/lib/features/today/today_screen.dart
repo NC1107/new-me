@@ -15,6 +15,7 @@ import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
+import '../habits/habits_strip.dart';
 import '../health/health_screen.dart';
 import '../insights/insights_screen.dart';
 import '../insights/sleep_insight_screen.dart';
@@ -22,6 +23,8 @@ import '../insights/workouts_screen.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../shell/home_tab.dart';
+import '../together/challenge_card.dart';
+import '../together/cheer_chip.dart';
 import 'body_card.dart';
 import 'connect_health_card.dart';
 import 'day_card.dart';
@@ -149,7 +152,9 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           ),
           const SizedBox(height: 12),
           TodayHeader(today: today, name: name, now: now),
+          CheerChip(cheers: today.cheers, date: today.localToday),
           const SizedBox(height: 16),
+          HabitsStrip(today: today),
           DayCard(day: today.day, streak: today.streak, onEntries: _openEntries),
           ..._questCards(prompted),
           const SizedBox(height: kCardGap),
@@ -163,6 +168,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             BodyCard(tiles: tiles, onTap: _openHealth),
           ],
           const SizedBox(height: kCardGap),
+          TodayChallengeCard(today: today.localToday),
           InsightsEntry(onTap: () => openInsights(context)),
           if (mine != null && mine.last7.isNotEmpty) ...[
             const SizedBox(height: kCardGap),

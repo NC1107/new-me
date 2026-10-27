@@ -145,6 +145,24 @@
         "syncedAt": null,
         "highlights": {}
       }
-    ]
+    ],
+    "challenge": {
+      "kind": "steps",
+      "title": "Walk 70,000 steps together",
+      "target": 70000,
+      "progress": 6200,
+      "done": false,
+      "endsOn": "2026-11-01"
+    },
+    "reward": {
+      "id": 1,
+      "name": "Pizza night",
+      "target": 1,
+      "progress": 1,
+      "startedAt": "2026-10-27T15:44:19Z",
+      "reachedAt": "2026-10-27T15:44:20Z",
+      "claimedAt": null,
+      "createdBy": 1
+    }
   }
 }

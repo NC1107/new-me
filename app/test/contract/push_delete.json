@@ -1,0 +1,7 @@
+{
+  "method": "DELETE",
+  "path": "/api/devices/me/push",
+  "status": 204,
+  "request": null,
+  "body": {}
+}

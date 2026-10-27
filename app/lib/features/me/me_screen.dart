@@ -6,6 +6,7 @@ import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
+import '../../state/habits.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
 import '../../state/reminders.dart';
@@ -22,6 +23,7 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
+import '../habits/habits_page.dart';
 import '../insights/insights_screen.dart';
 import 'apple_health_page.dart';
 import 'audiobookshelf_page.dart';
@@ -30,6 +32,7 @@ import 'food_targets_page.dart';
 import 'pairing_page.dart';
 import 'profile_page.dart';
 import 'reminders_page.dart';
+import '../together/notifications_page.dart';
 import 'settings_row.dart';
 import 'timezone_page.dart';
 
@@ -70,6 +73,7 @@ class _MeBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthSyncProvider);
     final reminders = ref.watch(remindersProvider);
+    final habitCount = ref.watch(habitsProvider.select((h) => h.value?.data.habits.length));
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
     final kcal = me.targets.kcal;
@@ -89,6 +93,17 @@ class _MeBody extends ConsumerWidget {
               title: 'Daily goals',
               subtitle: '$enabled of ${me.questTemplates.length} on',
               onTap: () => pushPage(context, const DailyGoalsPage()),
+            ),
+            SettingsRow(
+              icon: Icons.checklist_rounded,
+              palette: accentById('teal'),
+              title: 'Habits',
+              subtitle: habitCount == null
+                  ? 'Daily routines'
+                  : habitCount == 1
+                  ? '1 habit'
+                  : '$habitCount habits',
+              onTap: () => pushPage(context, const HabitsPage()),
             ),
             SettingsRow(
               icon: Icons.insights_rounded,
@@ -135,6 +150,13 @@ class _MeBody extends ConsumerWidget {
               title: 'Reminders',
               subtitle: reminders.active ? formatReminderTime(reminders.minutes) : 'Off',
               onTap: () => pushPage(context, const RemindersPage()),
+            ),
+            SettingsRow(
+              icon: Icons.notifications_active_rounded,
+              palette: accentById('rose'),
+              title: 'Notifications',
+              subtitle: '${notificationsOn(me.notifications)} of 4 on',
+              onTap: () => pushPage(context, const NotificationsPage()),
             ),
             if (me.audiobookshelf case final link?)
               SettingsRow(

@@ -1,5 +1,11 @@
 import 'dart:convert';
 
+import 'habit_models.dart';
+
+import 'together_models.dart';
+
+export 'together_models.dart';
+
 typedef Json = Map<String, dynamic>;
 
 int _int(Object? v, [int fallback = 0]) => (v as num?)?.toInt() ?? fallback;
@@ -286,6 +292,7 @@ class Me {
     required this.serverNow,
     this.backdateUntil,
     this.audiobookshelf,
+    this.notifications = const NotificationPrefs(),
   });
 
   factory Me.fromJson(Json j) => Me(
@@ -298,6 +305,7 @@ class Me {
     audiobookshelf: j['audiobookshelf'] is Map
         ? AudiobookshelfLink.fromJson((j['audiobookshelf'] as Map).cast<String, dynamic>())
         : null,
+    notifications: NotificationPrefs.fromJson(j['notifications']),
   );
 
   final AccountUser user;
@@ -312,6 +320,20 @@ class Me {
   /// Null while the server has no Audiobookshelf set up, which hides the Me row.
   final AudiobookshelfLink? audiobookshelf;
 
+  /// Push switches; everything on for servers that predate them.
+  final NotificationPrefs notifications;
+
+  Me copyWith({NotificationPrefs? notifications}) => Me(
+    user: user,
+    targets: targets,
+    questTemplates: questTemplates,
+    localToday: localToday,
+    serverNow: serverNow,
+    backdateUntil: backdateUntil,
+    audiobookshelf: audiobookshelf,
+    notifications: notifications ?? this.notifications,
+  );
+
   Json toJson() => {
     'user': user.toJson(),
     'targets': targets.toJson(),
@@ -320,6 +342,7 @@ class Me {
     'serverNow': _timeJson(serverNow),
     'backdateUntil': _timeJson(backdateUntil),
     if (audiobookshelf != null) 'audiobookshelf': audiobookshelf!.toJson(),
+    'notifications': notifications.toJson(),
   };
 }
 
@@ -337,6 +360,7 @@ class MePatch {
     this.clearTargets = const {},
     this.birthYear,
     this.clearBirthYear = false,
+    this.notifications,
   });
 
   /// Builds a targets-only patch where a null value clears that target on the server.
@@ -369,6 +393,8 @@ class MePatch {
   /// Sends `birthYear: null` so the server forgets it.
   final bool clearBirthYear;
 
+  final NotificationPatch? notifications;
+
   Json toJson() {
     final targets = <String, int?>{
       for (final key in clearTargets) key: null,
@@ -384,6 +410,7 @@ class MePatch {
       if (targets.isNotEmpty) 'targets': targets,
       if (clearBirthYear) 'birthYear': null else 'birthYear': ?birthYear,
       if (questTemplates != null) 'questTemplates': [for (final q in questTemplates!) q.toJson()],
+      if (notifications != null) 'notifications': notifications!.toJson(),
     };
   }
 }
@@ -688,6 +715,8 @@ class Today {
     required this.health,
     this.backdateUntil,
     this.listening,
+    this.cheers = const [],
+    this.habits = const [],
   });
 
   factory Today.fromJson(Json j) => Today(
@@ -701,6 +730,8 @@ class Today {
     food: Food.fromJson(j['food'] as Json),
     health: HealthStatus.fromJson(j['health'] as Json),
     listening: j['listening'] is Map ? _int((j['listening'] as Map)['minutes']) : null,
+    cheers: parseCheers(j['cheers']),
+    habits: parseHabitStates(j['habits']),
   );
 
   /// The day shown; always [localToday] unless the request named an earlier one.
@@ -718,9 +749,21 @@ class Today {
   /// feature.
   final int? listening;
 
+  /// Cheers the partner sent on this local day, oldest first.
+  final List<Cheer> cheers;
+
+  /// The habits due today with what is done, in the person's order.
+  final List<HabitState> habits;
+
   int get listeningMinutes => listening ?? 0;
 
-  Today copyWith({DayScore? day, List<Quest>? quests, Food? food, HealthStatus? health}) => Today(
+  Today copyWith({
+    DayScore? day,
+    List<Quest>? quests,
+    Food? food,
+    HealthStatus? health,
+    List<HabitState>? habits,
+  }) => Today(
     date: date,
     localToday: localToday,
     serverNow: serverNow,
@@ -731,6 +774,8 @@ class Today {
     food: food ?? this.food,
     health: health ?? this.health,
     listening: listening,
+    cheers: cheers,
+    habits: habits ?? this.habits,
   );
 
   Json toJson() => {
@@ -744,6 +789,8 @@ class Today {
     'food': food.toJson(),
     'health': health.toJson(),
     if (listening != null) 'listening': {'minutes': listening},
+    'cheers': [for (final c in cheers) c.toJson()],
+    'habits': [for (final h in habits) h.toJson()],
   };
 }
 
@@ -891,12 +938,20 @@ class SeasonInfo {
 }
 
 class Board {
-  const Board({required this.season, required this.serverNow, required this.users});
+  const Board({
+    required this.season,
+    required this.serverNow,
+    required this.users,
+    this.challenge,
+    this.reward,
+  });
 
   factory Board.fromJson(Json j) => Board(
     season: SeasonInfo.fromJson(j['season'] as Json),
     serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     users: _list(j['users'], BoardUser.fromJson),
+    challenge: Challenge.tryParse(j['challenge']),
+    reward: Reward.tryParse(j['reward']),
   );
 
   final SeasonInfo season;
@@ -905,10 +960,26 @@ class Board {
   /// The signed-in person first.
   final List<BoardUser> users;
 
+  /// This week's shared challenge; null from servers older than v5.
+  final Challenge? challenge;
+
+  /// The reward being earned, or the newest reached one not yet enjoyed.
+  final Reward? reward;
+
+  Board copyWith({Reward? reward, bool clearReward = false}) => Board(
+    season: season,
+    serverNow: serverNow,
+    users: users,
+    challenge: challenge,
+    reward: clearReward ? null : (reward ?? this.reward),
+  );
+
   Json toJson() => {
     'season': season.toJson(),
     'serverNow': _timeJson(serverNow),
     'users': [for (final u in users) u.toJson()],
+    'challenge': challenge?.toJson(),
+    'reward': reward?.toJson(),
   };
 }
 

@@ -166,7 +166,45 @@ final _calls = <String, _Call>{
   'health_daily': (c, x) => c.putHealthDaily(_healthItemsOf(_request(x))),
   'health_trends': (c, x) =>
       c.healthTrends(x.uri.queryParameters['metric']!, int.parse(x.uri.queryParameters['days']!)),
+  'cheer_created': _sendCheer,
+  'cheer_repeat': _sendCheer,
+  'reward_created': (c, x) async => {
+    'reward': (await c.createReward(
+      name: _request(x)['name'] as String,
+      target: _request(x)['target'] as int,
+    )).toJson(),
+  },
+  'reward_claimed': (c, x) async => {
+    'reward': (await c.claimReward(int.parse(x.uri.pathSegments[2]))).toJson(),
+  },
+  'rewards_empty': _rewards,
+  'rewards_active': _rewards,
+  'rewards_reached': _rewards,
+  'push_put': (c, x) async {
+    await c.putPushToken(_request(x)['token'] as String);
+    return <String, dynamic>{};
+  },
+  'push_delete': (c, x) async {
+    await c.deletePushToken();
+    return <String, dynamic>{};
+  },
 };
+
+Future<Object?> _sendCheer(ApiClient c, _Exchange x) async {
+  final cheer = await c.sendCheer(
+    to: _request(x)['to'] as int,
+    kind: CheerKind.parse(_request(x)['kind'])!,
+  );
+  return {'cheer': cheer.toJson(), 'to': _request(x)['to']};
+}
+
+Future<Object?> _rewards(ApiClient c, _Exchange x) async {
+  final list = await c.rewards();
+  return {
+    'reward': list.active?.toJson(),
+    'history': [for (final r in list.history) r.toJson()],
+  };
+}
 
 /// Recordings of failures, with what the app must make of each.
 final _failures = <String, void Function(ApiException e)>{
@@ -184,6 +222,12 @@ final _failures = <String, void Function(ApiException e)>{
   ),
   'error_invalid_json': (e) =>
       expect((e.kind, e.statusCode, e.code), (ApiErrorKind.other, 400, 'invalid_json')),
+  'cheer_invalid': (e) =>
+      expect((e.kind, e.statusCode, e.code), (ApiErrorKind.other, 422, 'invalid_request')),
+  'reward_active': (e) =>
+      expect((e.kind, e.statusCode, e.code), (ApiErrorKind.other, 409, 'reward_active')),
+  'reward_claim_early': (e) =>
+      expect((e.kind, e.statusCode, e.code), (ApiErrorKind.other, 409, 'reward_not_reached')),
 };
 
 /// The call that provoked each recorded failure.
@@ -194,6 +238,11 @@ final _failingCalls = <String, _Call>{
   'error_unauthorized': (c, x) => c.me(),
   'error_update_required': (c, x) => c.me(),
   'error_invalid_json': (c, x) => c.patchMe(const MePatch()),
+  'cheer_invalid': (c, x) =>
+      c.sendCheer(to: _request(x)['to'] as int, kind: CheerKind.parse(_request(x)['kind'])!),
+  'reward_active': (c, x) =>
+      c.createReward(name: _request(x)['name'] as String, target: _request(x)['target'] as int),
+  'reward_claim_early': (c, x) => c.claimReward(int.parse(x.uri.pathSegments[2])),
 };
 
 Object? _normalized(Object? json) => canonicalInstants(json);

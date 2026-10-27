@@ -56,6 +56,22 @@ class Session {
   };
 }
 
+const _kSecureStorage = FlutterSecureStorage(
+  iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+);
+
+/// The saved session without any provider, for code that runs in a background isolate such as
+/// a notification action. Null when signed out or unreadable.
+Future<Session?> loadStoredSession() async {
+  try {
+    final raw = await _kSecureStorage.read(key: kSessionKey);
+    return raw == null ? null : Session.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  } on Object catch (e) {
+    debugPrint('[NEWME] stored session unreadable: $e');
+    return null;
+  }
+}
+
 class SessionState {
   const SessionState({this.session, this.restored = false, this.signedOutFrom});
 
@@ -96,9 +112,7 @@ class SessionController extends Notifier<SessionState> {
 
   final SessionState? _seed;
 
-  final _secure = const FlutterSecureStorage(
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-  );
+  final _secure = _kSecureStorage;
 
   @override
   SessionState build() {
@@ -158,6 +172,13 @@ class SessionController extends Notifier<SessionState> {
         baseUrl: leaving.baseUrl,
         token: leaving.token,
       );
+      // Dropping the push token first keeps notifications from reaching a phone that has left
+      // even if revoking the device fails; neither call may block the other.
+      try {
+        await client.deletePushToken().timeout(const Duration(seconds: 5));
+      } on Object catch (e) {
+        debugPrint('[NEWME] push token removal skipped: $e');
+      }
       await client.deleteDevice().timeout(const Duration(seconds: 5));
     } on Object catch (e) {
       debugPrint('[NEWME] device revoke skipped: $e');

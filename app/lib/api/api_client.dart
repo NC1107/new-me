@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'habit_models.dart';
 import 'models.dart';
 
 /// Sent on every request as X-Client-Version and shown in Me. Release builds pass the tagged
@@ -219,6 +220,46 @@ class ApiClient {
     (data) => Today.fromJson(data as Json),
   );
 
+  Future<List<Habit>> habits() => _send(
+    () => _dio.get<dynamic>('/api/habits'),
+    (data) => HabitList.fromJson(data as Json).habits,
+  );
+
+  Future<Habit> createHabit(HabitDraft draft) => _send(
+    () => _dio.post<dynamic>('/api/habits', data: draft.toJson()),
+    (data) => Habit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  Future<Habit> patchHabit(int id, Json patch) => _send(
+    () => _dio.patch<dynamic>('/api/habits/$id', data: patch),
+    (data) => Habit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  Future<void> deleteHabit(int id) => _send(() => _dio.delete<dynamic>('/api/habits/$id'), (_) {});
+
+  /// [ids] must list every habit once; the answer is the list in its new order.
+  Future<List<Habit>> orderHabits(List<int> ids) => _send(
+    () => _dio.put<dynamic>('/api/habits/order', data: {'ids': ids}),
+    (data) => HabitList.fromJson(data as Json).habits,
+  );
+
+  /// Sets one slot done or undone. Idempotent, so a retry is harmless.
+  Future<HabitMarkResult> markHabitSlot(
+    int id,
+    String date, {
+    required int slot,
+    required bool done,
+  }) => _putMark(id, date, {'slot': slot, 'done': done});
+
+  /// Sets a count habit's total for the day.
+  Future<HabitMarkResult> markHabitCount(int id, String date, int count) =>
+      _putMark(id, date, {'count': count});
+
+  Future<HabitMarkResult> _putMark(int id, String date, Json body) => _send(
+    () => _dio.put<dynamic>('/api/habits/$id/marks/$date', data: body),
+    (data) => HabitMarkResult.fromJson(data as Json),
+  );
+
   Future<Board> board() =>
       _send(() => _dio.get<dynamic>('/api/board'), (data) => Board.fromJson(data as Json));
 
@@ -286,6 +327,33 @@ class ApiClient {
         _dio.get<dynamic>('/api/health/trends', queryParameters: {'metric': metric, 'days': days}),
     (data) => HealthTrend.fromJson(data as Json),
   );
+
+  /// Answers the stored cheer for both a first send (201) and a repeat (200).
+  Future<Cheer> sendCheer({required int to, required CheerKind kind}) => _send(
+    () => _dio.post<dynamic>('/api/cheers', data: {'to': to, 'kind': kind.name}),
+    (data) => Cheer.tryParse((data as Json)['cheer']) ?? (throw const FormatException('cheer')),
+  );
+
+  Future<RewardList> rewards() =>
+      _send(() => _dio.get<dynamic>('/api/rewards'), (data) => RewardList.fromJson(data as Json));
+
+  /// Throws code `reward_active` (409) while another reward is still being earned.
+  Future<Reward> createReward({required String name, required int target}) => _send(
+    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'target': target}),
+    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  );
+
+  /// Throws code `reward_not_reached` (409) before the target is met.
+  Future<Reward> claimReward(int id) => _send(
+    () => _dio.post<dynamic>('/api/rewards/$id/claim'),
+    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  );
+
+  Future<void> putPushToken(String token) =>
+      _send(() => _dio.put<dynamic>('/api/devices/me/push', data: {'token': token}), (_) {});
+
+  Future<void> deletePushToken() =>
+      _send(() => _dio.delete<dynamic>('/api/devices/me/push'), (_) {});
 
   Future<Invite> createInvite() =>
       _send(() => _dio.post<dynamic>('/api/invites'), (data) => Invite.fromJson(data as Json));

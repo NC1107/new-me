@@ -42,4 +42,7 @@ class FakeReminderScheduler implements ReminderScheduler {
     calls.add('cancel $id');
     pending.remove(id);
   }
+
+  @override
+  Future<List<int>> pendingIds() async => pending.keys.toList();
 }

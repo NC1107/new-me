@@ -149,6 +149,7 @@ Map<String, dynamic> todayJson({int points = 120, String localToday = '2026-10-2
     'streakLine': 70,
   },
   'streak': {'current': 3, 'restAvailable': true, 'restUsedOn': null},
+  'habits': <Map<String, dynamic>>[],
   'food': {
     'kcal': 0,
     'protein': 0,
@@ -164,6 +165,7 @@ Map<String, dynamic> todayJson({int points = 120, String localToday = '2026-10-2
     'metrics': <String, dynamic>{},
     'latest': <String, dynamic>{},
   },
+  'cheers': <dynamic>[],
 };
 
 Map<String, dynamic> boardJson() => {
@@ -185,6 +187,8 @@ Map<String, dynamic> boardJson() => {
       'highlights': <String, dynamic>{},
     },
   ],
+  'challenge': null,
+  'reward': null,
 };
 
 final _instant = RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$');

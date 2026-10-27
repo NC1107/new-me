@@ -342,13 +342,23 @@ jobs:
       - name: Poll health endpoint
         env:
           WANT: ${{ needs.version.outputs.version }}
+        # Cloudflare challenges GitHub's runner IPs unless the zone skips the health
+        # path (deploy/README.md), so a challenge page is inconclusive, not a failure.
         run: |
-          while true; do
-            got=$(curl -fsS --max-time 10 "$HEALTH_URL" | jq -r .version 2>/dev/null || true)
-            echo "live version: ${got:-unreachable} (want $WANT)"
+          deadline=$((SECONDS + 840))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            status=$(curl -sS -o body --max-time 10 -w '%{http_code}' "$HEALTH_URL" || echo 000)
+            if [ "$status" = 403 ] && grep -q "Just a moment" body; then
+              echo "::warning::Cloudflare challenged this runner, so the live version could not be read. Add the WAF skip rule from deploy/README.md."
+              exit 0
+            fi
+            got=$(jq -r .version body 2>/dev/null || true)
+            echo "live version: ${got:-unreachable} (HTTP $status, want $WANT)"
             [ "$got" = "$WANT" ] && exit 0
             sleep 30
           done
+          echo "::error::the server never reported $WANT"
+          exit 1
 
   report-failure:
     name: Open issue on failure

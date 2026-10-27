@@ -21,32 +21,32 @@ const (
 var rotation = []string{KindSteps, KindWorkouts, KindCountedDays, KindReading}
 
 const (
-	// stretch is how far above recent form a target is set: reachable, but a push.
+	// stretch is how far above recent form a share is set: reachable, but a push.
 	stretch = 1.1
 
-	stepsRound        = 5000
-	minSteps          = 5000
-	defaultSteps      = 70000
-	minWorkouts       = 3
+	stepsRound        = 1000
+	minSteps          = 10000
+	defaultSteps      = 35000
+	minWorkouts       = 2
 	countedDaysTarget = 5
 	readingRound      = 10
-	minReading        = 60
-	defaultReading    = 150
+	minReading        = 30
+	defaultReading    = 75
 	weeksOfHistory    = 2
 	daysInWeek        = 7
 )
 
-// Sizing is the recent history a target is sized from. Everything is combined across the pair.
+// Sizing is one person's own recent history, which their share of the challenge is sized from.
 type Sizing struct {
-	// StepsDailyAverage is the sum of each person's average daily steps over the last two weeks.
+	// StepsDailyAverage is the person's average daily steps over the last two weeks.
 	StepsDailyAverage float64
-	// WorkoutsLastWeek is the number of workouts in the week before the challenge.
+	// WorkoutsLastWeek is the person's workouts in the week before the challenge.
 	WorkoutsLastWeek int
-	// ReadingLastTwoWeeks is reading plus listening minutes over the two weeks before.
+	// ReadingLastTwoWeeks is the person's reading plus listening minutes over the two weeks before.
 	ReadingLastTwoWeeks int
 }
 
-// Spec is a generated challenge before it is stored.
+// Spec is a generated challenge before it is stored. Target is the sum of the people's shares.
 type Spec struct {
 	Kind   string
 	Title  string
@@ -59,49 +59,87 @@ func KindFor(weekStart score.Date) string {
 	return rotation[week%len(rotation)]
 }
 
-// Generate picks the week's challenge and sizes it.
-func Generate(weekStart score.Date, in Sizing) Spec {
-	kind := KindFor(weekStart)
-	spec := Spec{Kind: kind}
+// Share is one person's share of a challenge of the kind, sized from their own history.
+func Share(kind string, in Sizing) int {
 	switch kind {
 	case KindSteps:
-		spec.Target = StepsTarget(in.StepsDailyAverage)
-		spec.Title = "Walk " + withThousands(spec.Target) + " steps together"
+		return StepsShare(in.StepsDailyAverage)
 	case KindWorkouts:
-		spec.Target = WorkoutsTarget(in.WorkoutsLastWeek)
-		spec.Title = fmt.Sprintf("Do %d workouts together", spec.Target)
+		return WorkoutsShare(in.WorkoutsLastWeek)
 	case KindCountedDays:
-		spec.Target = countedDaysTarget
-		spec.Title = fmt.Sprintf("Both count on %d of 7 days", spec.Target)
-	default:
-		spec.Target = ReadingTarget(in.ReadingLastTwoWeeks)
-		spec.Title = fmt.Sprintf("Read %d minutes together", spec.Target)
+		return countedDaysTarget
 	}
-	return spec
+	return ReadingShare(in.ReadingLastTwoWeeks)
 }
 
-// StepsTarget is 110 percent of the pair's combined daily average over a week, rounded to the
-// nearest 5,000. Without history it falls back to a default rather than a trivial goal.
-func StepsTarget(combinedDailyAverage float64) int {
-	if combinedDailyAverage <= 0 {
+// Generate sizes the week's challenge from the shares of the people taking part.
+func Generate(weekStart score.Date, shares []int) Spec {
+	kind := KindFor(weekStart)
+	total := 0
+	for _, share := range shares {
+		total += share
+	}
+	return Spec{Kind: kind, Title: Title(kind, total), Target: total}
+}
+
+// Title words a challenge of the kind and combined target.
+func Title(kind string, combined int) string {
+	switch kind {
+	case KindSteps:
+		return "Walk " + withThousands(combined) + " steps together"
+	case KindWorkouts:
+		return fmt.Sprintf("Do %d workouts together", combined)
+	case KindCountedDays:
+		return fmt.Sprintf("Both count on %d of 7 days", countedDaysTarget)
+	}
+	return fmt.Sprintf("Read %d minutes together", combined)
+}
+
+// StepsShare is 110 percent of the person's weekly steps over the last two weeks, rounded to the
+// nearest 1,000. Without history it falls back to a default rather than a trivial goal.
+func StepsShare(dailyAverage float64) int {
+	if dailyAverage <= 0 {
 		return defaultSteps
 	}
-	raw := combinedDailyAverage * daysInWeek * stretch
+	raw := dailyAverage * daysInWeek * stretch
 	rounded := int(math.Round(raw/stepsRound)) * stepsRound
 	return max(rounded, minSteps)
 }
 
-// WorkoutsTarget is last week's combined workouts plus one, and never under three.
-func WorkoutsTarget(lastWeek int) int { return max(lastWeek+1, minWorkouts) }
+// WorkoutsShare is the person's workouts of last week plus one, and never under two.
+func WorkoutsShare(lastWeek int) int { return max(lastWeek+1, minWorkouts) }
 
-// ReadingTarget is 110 percent of the combined weekly minutes over the last two weeks, rounded
-// to the nearest ten, with a floor and a default for a pair with no history.
-func ReadingTarget(lastTwoWeeks int) int {
+// ReadingShare is 110 percent of the person's weekly minutes over the last two weeks, rounded to
+// the nearest ten, with a floor and a default for someone with no history.
+func ReadingShare(lastTwoWeeks int) int {
 	if lastTwoWeeks <= 0 {
 		return defaultReading
 	}
 	weekly := float64(lastTwoWeeks) / weeksOfHistory * stretch
 	return max(int(math.Round(weekly/readingRound))*readingRound, minReading)
+}
+
+// Standing is one person's progress on their own share.
+type Standing struct {
+	UserID   int64
+	Target   int
+	Progress int
+}
+
+// Done reports whether the person reached their share.
+func (s Standing) Done() bool { return s.Progress >= s.Target }
+
+// Combined adds the people's progress, each capped at their own share so that one person
+// cannot carry the other, and reports whether everyone reached their share. The challenge
+// completes exactly when it does.
+func Combined(people []Standing) (progress, target int, complete bool) {
+	complete = len(people) > 0
+	for _, p := range people {
+		progress += min(p.Progress, p.Target)
+		target += p.Target
+		complete = complete && p.Done()
+	}
+	return progress, target, complete
 }
 
 // Counted is a day on which one person's day counted.

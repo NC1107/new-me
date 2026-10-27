@@ -28,10 +28,10 @@ func TestGetMe(t *testing.T) {
 	}
 	if got.length("questTemplates") != 8 || got.str("questTemplates.0.key") != "steps" ||
 		got.flag("questTemplates.5.enabled") || got.str("questTemplates.5.key") != "yoga" ||
-		got.str("questTemplates.6.key") != "exercise" || got.flag("questTemplates.6.enabled") ||
+		got.str("questTemplates.6.key") != "exercise" || !got.flag("questTemplates.6.enabled") ||
 		got.num("questTemplates.6.target") != 30 || got.num("questTemplates.6.points") != 100 ||
 		got.str("questTemplates.6.title") != "Exercise" || got.str("questTemplates.6.unit") != "min" ||
-		got.str("questTemplates.7.key") != "sleep" || got.num("questTemplates.7.target") != 420 ||
+		got.str("questTemplates.7.key") != "sleep" || !got.flag("questTemplates.7.enabled") || got.num("questTemplates.7.target") != 420 ||
 		got.num("questTemplates.7.points") != 50 || got.str("questTemplates.7.title") != "Sleep" {
 		t.Fatalf("templates = %s", got.Body)
 	}

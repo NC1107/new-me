@@ -47,6 +47,106 @@ type meJSON struct {
 	Audiobookshelf *absJSON          `json:"audiobookshelf"`
 	Notifications  notificationsJSON `json:"notifications"`
 	Features       featuresJSON      `json:"features"`
+	Schedule       scheduleJSON      `json:"schedule"`
+	Protein        proteinJSON       `json:"protein"`
+}
+
+type dayTimesJSON struct {
+	Wake string `json:"wake"`
+	Bed  string `json:"bed"`
+}
+
+// scheduleJSON is the person's general rhythm: wake and bed times for workdays and days off,
+// which weekdays are workdays (ISO 1 to 7), and how long after waking the first notification may
+// come.
+type scheduleJSON struct {
+	Workdays                   []int        `json:"workdays"`
+	Workday                    dayTimesJSON `json:"workday"`
+	DayOff                     dayTimesJSON `json:"dayOff"`
+	FirstNotificationOffsetMin int          `json:"firstNotificationOffsetMin"`
+}
+
+func toScheduleJSON(s score.Schedule) scheduleJSON {
+	return scheduleJSON{
+		Workdays:                   score.ISOWeekdays(s.Workdays),
+		Workday:                    dayTimesJSON{Wake: score.FormatClock(s.Workday.WakeMin), Bed: score.FormatClock(s.Workday.BedMin)},
+		DayOff:                     dayTimesJSON{Wake: score.FormatClock(s.DayOff.WakeMin), Bed: score.FormatClock(s.DayOff.BedMin)},
+		FirstNotificationOffsetMin: s.FirstOffsetMin,
+	}
+}
+
+type dayTimesPatch struct {
+	Wake *string `json:"wake"`
+	Bed  *string `json:"bed"`
+}
+
+type schedulePatch struct {
+	Workdays                   *[]int         `json:"workdays"`
+	Workday                    *dayTimesPatch `json:"workday"`
+	DayOff                     *dayTimesPatch `json:"dayOff"`
+	FirstNotificationOffsetMin *int           `json:"firstNotificationOffsetMin"`
+}
+
+func applyDayTimes(day *score.DaySchedule, p *dayTimesPatch, name string) *httpError {
+	if p == nil {
+		return nil
+	}
+	for _, f := range []struct {
+		field *int
+		patch *string
+		label string
+	}{{&day.WakeMin, p.Wake, "wake"}, {&day.BedMin, p.Bed, "bed"}} {
+		if f.patch == nil {
+			continue
+		}
+		minutes, err := score.ParseClock(*f.patch)
+		if err != nil {
+			return invalid(name + " " + f.label + " must be HH:MM")
+		}
+		*f.field = minutes
+	}
+	return nil
+}
+
+// applySchedulePatch writes a schedule PATCH onto u.
+func applySchedulePatch(u *db.User, p *schedulePatch) *httpError {
+	if p == nil {
+		return nil
+	}
+	if p.Workdays != nil {
+		mask := 0
+		if len(*p.Workdays) > 0 {
+			var ok bool
+			if mask, ok = score.WeekdaysFromISO(*p.Workdays); !ok {
+				return invalid("workdays must be weekday numbers from 1 (Monday) to 7 (Sunday)")
+			}
+		}
+		u.Schedule.Workdays = mask
+	}
+	if err := applyDayTimes(&u.Schedule.Workday, p.Workday, "workday"); err != nil {
+		return err
+	}
+	if err := applyDayTimes(&u.Schedule.DayOff, p.DayOff, "dayOff"); err != nil {
+		return err
+	}
+	if p.FirstNotificationOffsetMin != nil {
+		u.Schedule.FirstOffsetMin = *p.FirstNotificationOffsetMin
+	}
+	if err := u.Schedule.Validate(); err != nil {
+		return invalid(err.Error())
+	}
+	return nil
+}
+
+// proteinJSON explains the protein target: the per-kilogram default, the latest weight it
+// comes from, what it would be, and the target in force.
+type proteinJSON struct {
+	PerKg float64 `json:"perKg"`
+	// Auto is true while the target follows the per-kilogram default.
+	Auto      bool     `json:"auto"`
+	WeightKg  *float64 `json:"weightKg"`
+	Suggested *int     `json:"suggested"`
+	Effective int      `json:"effective"`
 }
 
 // featuresJSON tells the app which optional server features are switched on, so it can hide
@@ -66,6 +166,8 @@ type notificationsJSON struct {
 	WindDown    bool `json:"windDown"`
 	MorningPlan bool `json:"morningPlan"`
 	WeeklyRecap bool `json:"weeklyRecap"`
+	Milestones  bool `json:"milestones"`
+	Lookback    bool `json:"lookback"`
 }
 
 type notificationsPatch struct {
@@ -78,6 +180,31 @@ type notificationsPatch struct {
 	WindDown    *bool `json:"windDown"`
 	MorningPlan *bool `json:"morningPlan"`
 	WeeklyRecap *bool `json:"weeklyRecap"`
+	Milestones  *bool `json:"milestones"`
+	Lookback    *bool `json:"lookback"`
+}
+
+// proteinFor describes the protein target in force for the person.
+func proteinFor(ctx context.Context, q db.Querier, u db.User, today score.Date, templateTarget int) (proteinJSON, error) {
+	out := proteinJSON{PerKg: score.ProteinPerKg, Effective: templateTarget}
+	latest, err := db.LatestHealth(ctx, q, u.ID, today, []string{db.MetricWeight})
+	if err != nil {
+		return out, err
+	}
+	if w, ok := latest[db.MetricWeight]; ok {
+		kg := round1(w.Value)
+		suggested := score.ProteinTarget(w.Value)
+		out.WeightKg, out.Suggested = &kg, &suggested
+	}
+	switch {
+	case u.ProteinTarget != nil:
+		out.Effective = *u.ProteinTarget
+	case u.ProteinAuto && out.Suggested != nil:
+		out.Auto, out.Effective = true, *out.Suggested
+	case u.ProteinAuto:
+		out.Auto = true
+	}
+	return out, nil
 }
 
 func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, error) {
@@ -101,6 +228,16 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		return meJSON{}, err
 	}
 	now := s.now()
+	proteinTemplate := db.DefaultProteinTarget
+	for _, t := range templates {
+		if t.Key == db.QuestProtein {
+			proteinTemplate = t.Target
+		}
+	}
+	protein, err := proteinFor(ctx, q, u, score.LocalToday(now, loc), proteinTemplate)
+	if err != nil {
+		return meJSON{}, err
+	}
 	return meJSON{
 		User:           toUserJSON(u),
 		Targets:        toTargetsJSON(u),
@@ -112,8 +249,10 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		Notifications: notificationsJSON{PartnerDone: u.Notify.PartnerDone, Cheers: u.Notify.Cheers,
 			Challenge: u.Notify.Challenge, Reward: u.Notify.Reward, BehindPace: u.Notify.BehindPace,
 			CloseToDone: u.Notify.CloseToDone, WindDown: u.Notify.WindDown, MorningPlan: u.Notify.MorningPlan,
-			WeeklyRecap: u.Notify.WeeklyRecap},
+			WeeklyRecap: u.Notify.WeeklyRecap, Milestones: u.Notify.Milestones, Lookback: u.Notify.Lookback},
 		Features: featuresJSON{MealEstimate: s.estimator != nil, PlanPolish: s.cfg.Anthropic.Enabled()},
+		Schedule: toScheduleJSON(u.Schedule),
+		Protein:  protein,
 	}, nil
 }
 
@@ -148,6 +287,7 @@ type patchMeRequest struct {
 	BirthYear      nullable[int]       `json:"birthYear"`
 	QuestTemplates []templatePatch     `json:"questTemplates"`
 	Notifications  *notificationsPatch `json:"notifications"`
+	Schedule       *schedulePatch      `json:"schedule"`
 }
 
 // Bounds of the profile targets, mirroring the users table checks.
@@ -278,11 +418,15 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			{&u.Notify.Challenge, n.Challenge}, {&u.Notify.Reward, n.Reward},
 			{&u.Notify.BehindPace, n.BehindPace}, {&u.Notify.CloseToDone, n.CloseToDone},
 			{&u.Notify.WindDown, n.WindDown}, {&u.Notify.MorningPlan, n.MorningPlan},
-			{&u.Notify.WeeklyRecap, n.WeeklyRecap}} {
+			{&u.Notify.WeeklyRecap, n.WeeklyRecap}, {&u.Notify.Milestones, n.Milestones},
+			{&u.Notify.Lookback, n.Lookback}} {
 			if sw.patch != nil {
 				*sw.field = *sw.patch
 			}
 		}
+	}
+	if err := applySchedulePatch(u, req.Schedule); err != nil {
+		return err
 	}
 	if t := req.Targets; t != nil {
 		for _, step := range []*httpError{

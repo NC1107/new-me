@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -19,18 +21,22 @@ type DayScoreRow struct {
 	Detail      []byte
 	FinalizedAt *time.Time
 	ComputedAt  time.Time
+	// FrozenReason, Away and Settled are the streak outcome recorded when the day finalized.
+	FrozenReason string
+	Away         bool
+	Settled      bool
 }
 
 // Points is what the Board adds up: base plus bonus.
 func (r DayScoreRow) Points() int { return r.BasePoints + r.BonusPoints }
 
 const dayScoreColumns = `user_id, local_date::text, base_points, bonus_points, max_base, percent,
-	counted, detail, finalized_at, computed_at`
+	counted, detail, finalized_at, computed_at, COALESCE(frozen_reason, ''), away, settled`
 
 func scanDayScore(row interface{ Scan(...any) error }) (DayScoreRow, error) {
 	var r DayScoreRow
 	err := row.Scan(&r.UserID, &r.LocalDate, &r.BasePoints, &r.BonusPoints, &r.MaxBase, &r.Percent,
-		&r.Counted, &r.Detail, &r.FinalizedAt, &r.ComputedAt)
+		&r.Counted, &r.Detail, &r.FinalizedAt, &r.ComputedAt, &r.FrozenReason, &r.Away, &r.Settled)
 	return r, err
 }
 
@@ -110,4 +116,30 @@ func UnfinalizedDates(ctx context.Context, q Querier, userID int64, from, throug
 		out = append(out, d)
 	}
 	return out, rows.Err()
+}
+
+// SettleDay records the streak outcome of a finalized day, once. A day that is already settled
+// keeps what it has, which is what makes the recorded history final.
+func SettleDay(ctx context.Context, q Querier, userID int64, date score.Date, reason string, away bool) error {
+	_, err := q.Exec(ctx, `
+		UPDATE day_scores SET settled = true, frozen_reason = NULLIF($3, ''), away = $4
+		WHERE user_id = $1 AND local_date = $2::date AND finalized_at IS NOT NULL AND NOT settled`,
+		userID, date, reason, away)
+	return err
+}
+
+// RepairDay turns a missed, unfrozen, settled day into a repaired one. It reports whether it
+// changed the day.
+func RepairDay(ctx context.Context, q Querier, userID int64, date score.Date) (bool, error) {
+	tag, err := q.Exec(ctx, `
+		UPDATE day_scores SET frozen_reason = 'repair'
+		WHERE user_id = $1 AND local_date = $2::date AND settled AND NOT counted AND NOT away
+		  AND frozen_reason IS NULL`, userID, date)
+	return tag.RowsAffected() == 1, err
+}
+
+// LockUserStreak serializes the settling of one person's days. Everything that finalizes a day
+// takes it before touching the day row, so two settlers can never wait on each other's rows.
+func LockUserStreak(ctx context.Context, tx pgx.Tx, userID int64) error {
+	return LockUserDay(ctx, tx, userID, "1999-12-31")
 }

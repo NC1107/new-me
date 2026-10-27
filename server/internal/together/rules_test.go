@@ -30,56 +30,104 @@ func TestKindRotatesByISOWeekNumber(t *testing.T) {
 	}
 }
 
-func TestStepsTargetIsTenPercentAboveTheWeeklyAverageRoundedToFiveThousand(t *testing.T) {
+func TestStepsShareIsTenPercentAboveTheWeeklyAverageRoundedToAThousand(t *testing.T) {
 	cases := []struct {
 		avg  float64
 		want int
 	}{
 		{0, defaultSteps},
 		{-5, defaultSteps},
-		{10000, 75000},  // 77,000
-		{12000, 90000},  // 92,400
-		{15250, 115000}, // 117,425
-		{500, 5000},     // 3,850 -> floor
+		{10000, 77000},
+		{12000, 92000},  // 92,400
+		{15250, 117000}, // 117,425
+		{500, minSteps}, // 3,850 -> floor
+		{6000, 46000},   // 46,200
 	}
 	for _, tc := range cases {
-		if got := StepsTarget(tc.avg); got != tc.want {
-			t.Errorf("StepsTarget(%v) = %d, want %d", tc.avg, got, tc.want)
+		if got := StepsShare(tc.avg); got != tc.want {
+			t.Errorf("StepsShare(%v) = %d, want %d", tc.avg, got, tc.want)
 		}
 	}
 }
 
-func TestWorkoutsTargetIsLastWeekPlusOneAtLeastThree(t *testing.T) {
-	for last, want := range map[int]int{0: 3, 1: 3, 2: 3, 3: 4, 6: 7} {
-		if got := WorkoutsTarget(last); got != want {
-			t.Errorf("WorkoutsTarget(%d) = %d, want %d", last, got, want)
+func TestWorkoutsShareIsLastWeekPlusOneAtLeastTwo(t *testing.T) {
+	for last, want := range map[int]int{0: 2, 1: 2, 2: 3, 3: 4, 6: 7} {
+		if got := WorkoutsShare(last); got != want {
+			t.Errorf("WorkoutsShare(%d) = %d, want %d", last, got, want)
 		}
 	}
 }
 
-func TestReadingTargetSizesFromTheWeeklyAverage(t *testing.T) {
-	for in, want := range map[int]int{0: defaultReading, 100: 60, 400: 220, 333: 180} {
-		if got := ReadingTarget(in); got != want {
-			t.Errorf("ReadingTarget(%d) = %d, want %d", in, got, want)
+func TestReadingShareSizesFromTheWeeklyAverage(t *testing.T) {
+	for in, want := range map[int]int{0: defaultReading, 50: minReading, 200: 110, 333: 180} {
+		if got := ReadingShare(in); got != want {
+			t.Errorf("ReadingShare(%d) = %d, want %d", in, got, want)
+		}
+	}
+}
+
+func TestSharesAreSizedFromEachPersonsOwnHistory(t *testing.T) {
+	heavy := Sizing{StepsDailyAverage: 12000, WorkoutsLastWeek: 4, ReadingLastTwoWeeks: 400}
+	light := Sizing{StepsDailyAverage: 5000, WorkoutsLastWeek: 1, ReadingLastTwoWeeks: 60}
+	cases := []struct {
+		kind         string
+		heavy, light int
+	}{
+		{KindSteps, 92000, 39000},
+		{KindWorkouts, 5, 2},
+		{KindCountedDays, 5, 5},
+		{KindReading, 220, minReading},
+	}
+	for _, tc := range cases {
+		if got := Share(tc.kind, heavy); got != tc.heavy {
+			t.Errorf("%s heavy = %d, want %d", tc.kind, got, tc.heavy)
+		}
+		if got := Share(tc.kind, light); got != tc.light {
+			t.Errorf("%s light = %d, want %d", tc.kind, got, tc.light)
 		}
 	}
 }
 
 func TestGenerateTitlesAndTargetsPerKind(t *testing.T) {
-	in := Sizing{StepsDailyAverage: 10000, WorkoutsLastWeek: 4, ReadingLastTwoWeeks: 400}
 	cases := []struct {
 		monday string
+		shares []int
 		want   Spec
 	}{
-		{"2026-11-23", Spec{KindSteps, "Walk 75,000 steps together", 75000}},
-		{"2026-11-02", Spec{KindWorkouts, "Do 5 workouts together", 5}},
-		{"2026-11-09", Spec{KindCountedDays, "Both count on 5 of 7 days", 5}},
-		{"2026-11-16", Spec{KindReading, "Read 220 minutes together", 220}},
+		{"2026-11-23", []int{92000, 39000}, Spec{KindSteps, "Walk 131,000 steps together", 131000}},
+		{"2026-11-02", []int{5, 2}, Spec{KindWorkouts, "Do 7 workouts together", 7}},
+		{"2026-11-09", []int{5, 5}, Spec{KindCountedDays, "Both count on 5 of 7 days", 10}},
+		{"2026-11-16", []int{220, 30}, Spec{KindReading, "Read 250 minutes together", 250}},
 	}
 	for _, tc := range cases {
-		if got := Generate(score.MustDate(tc.monday), in); got != tc.want {
+		if got := Generate(score.MustDate(tc.monday), tc.shares); got != tc.want {
 			t.Errorf("%s: %+v, want %+v", tc.monday, got, tc.want)
 		}
+	}
+}
+
+func TestCombinedCompletesOnlyWhenEveryoneReachedTheirOwnShare(t *testing.T) {
+	cases := []struct {
+		name     string
+		people   []Standing
+		progress int
+		target   int
+		complete bool
+	}{
+		{"nobody", nil, 0, 0, false},
+		{"both short", []Standing{{1, 100, 40}, {2, 60, 10}}, 50, 160, false},
+		{"one carries the other: still not complete", []Standing{{1, 100, 300}, {2, 60, 10}}, 110, 160, false},
+		{"both reached", []Standing{{1, 100, 100}, {2, 60, 90}}, 160, 160, true},
+		{"exactly on the share", []Standing{{1, 100, 100}, {2, 60, 60}}, 160, 160, true},
+		{"a single person", []Standing{{1, 5, 5}}, 5, 5, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			progress, target, complete := Combined(tc.people)
+			if progress != tc.progress || target != tc.target || complete != tc.complete {
+				t.Fatalf("got %d/%d %v, want %d/%d %v", progress, target, complete, tc.progress, tc.target, tc.complete)
+			}
+		})
 	}
 }
 

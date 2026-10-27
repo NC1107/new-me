@@ -15,12 +15,6 @@ import (
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
-type streakJSON struct {
-	Current       int         `json:"current"`
-	RestAvailable bool        `json:"restAvailable"`
-	RestUsedOn    *score.Date `json:"restUsedOn"`
-}
-
 type foodJSON struct {
 	Kcal    int         `json:"kcal"`
 	Protein float64     `json:"protein"`
@@ -65,6 +59,13 @@ type todayJSON struct {
 	// there is neither sleep nor a comparable heart reading to base it on.
 	Readiness *readiness.Result `json:"readiness"`
 	Plan      *planJSON         `json:"plan"`
+	// Freezes, Repair and Away are the streak forgiveness state. Repair is the open window to
+	// repair yesterday, null otherwise, and only on the caller's local today.
+	Freezes score.Freezes `json:"freezes"`
+	Repair  *repairJSON   `json:"repair"`
+	Away    awayJSON      `json:"away"`
+	// NewMilestones are the milestones reached yesterday or today, for a one-off celebration.
+	NewMilestones []milestoneJSON `json:"newMilestones"`
 }
 
 type planJSON struct {
@@ -96,6 +97,9 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+	// Milestones are recorded where they are shown, so a streak that just reached 7 days is
+	// celebrated on the Today that follows.
+	s.milestones.RunQuietly(ctx)
 	var (
 		scored engine.Scored
 		streak score.StreakResult
@@ -137,6 +141,21 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, r, err)
 		return
+	}
+
+	away, err := s.awayFor(ctx, s.db.Pool, c.user.ID, localToday)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	recent, err := db.MilestonesSince(ctx, s.db.Pool, c.user.ID, localToday.AddDays(-1))
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	var repair *repairJSON
+	if date == localToday {
+		repair = toRepairJSON(engine.RepairFor(streak, c.user, now, c.loc), scored.Row.Percent)
 	}
 
 	var listenSyncedAt *string
@@ -186,16 +205,10 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 		Cheers:    cheers,
 		Readiness: ready,
 		Plan:      planOut,
-	})
-}
 
-// toStreakJSON reports the weekly rest allowance next to the count: it is ready while a streak
-// is running and none has been spent in the current ISO week.
-func toStreakJSON(streak score.StreakResult, today score.Date) streakJSON {
-	out := streakJSON{Current: streak.Count}
-	if used, ok := streak.RestUsedIn(score.WeekStart(today)); ok {
-		out.RestUsedOn = &used
-	}
-	out.RestAvailable = streak.Count > 0 && out.RestUsedOn == nil
-	return out
+		Freezes:       streak.Freezes,
+		Repair:        repair,
+		Away:          away,
+		NewMilestones: toMilestonesJSON(recent),
+	})
 }

@@ -100,7 +100,7 @@ func TestInsightsStepsAreTheCallersOwn(t *testing.T) {
 func TestInsightsSleepTargetFollowsTheQuest(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "sleep", "target": 480}}}).expect(http.StatusOK)
+	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "sleep", "target": 480, "enabled": false}}}).expect(http.StatusOK)
 	if got := h.get("/api/insights", nick.Token).expect(http.StatusOK); got.num("sleep.targetMin") != 420 {
 		t.Fatalf("a disabled sleep quest keeps the default: %s", got.Body)
 	}

@@ -133,62 +133,6 @@ func ChallengeBonus(ctx context.Context, q Querier, userID int64, date score.Dat
 	return points, err
 }
 
-// StepsByUser is each live user's total and number of days with a steps reading from..to.
-type StepsByUser struct {
-	UserID int64
-	Total  float64
-	Days   int
-}
-
-// StepTotals aggregates Health steps per live user over from..to inclusive.
-func StepTotals(ctx context.Context, q Querier, from, to score.Date) ([]StepsByUser, error) {
-	rows, err := q.Query(ctx, `
-		SELECT h.user_id, sum(h.value)::float8, count(*)::int
-		FROM health_daily h JOIN users u ON u.id = h.user_id AND u.deleted_at IS NULL
-		WHERE h.metric = $3 AND h.local_date BETWEEN $1::date AND $2::date
-		GROUP BY h.user_id ORDER BY h.user_id`, from, to, MetricSteps)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []StepsByUser
-	for rows.Next() {
-		var s StepsByUser
-		if err := rows.Scan(&s.UserID, &s.Total, &s.Days); err != nil {
-			return nil, err
-		}
-		out = append(out, s)
-	}
-	return out, rows.Err()
-}
-
-// WorkoutsAll counts every live user's workouts on local dates from..to inclusive.
-func WorkoutsAll(ctx context.Context, q Querier, from, to score.Date) (int, error) {
-	var n int
-	err := q.QueryRow(ctx, `
-		SELECT count(*)::int FROM workouts w JOIN users u ON u.id = w.user_id AND u.deleted_at IS NULL
-		WHERE w.local_date BETWEEN $1::date AND $2::date`, from, to).Scan(&n)
-	return n, err
-}
-
-// ReadingMinutesAll adds every live user's logged reading minutes and Audiobookshelf listening
-// on local dates from..to inclusive.
-func ReadingMinutesAll(ctx context.Context, q Querier, from, to score.Date) (int, error) {
-	var n int
-	err := q.QueryRow(ctx, `
-		SELECT (
-		  SELECT COALESCE(sum(a.quantity), 0) FROM activity_logs a
-		  JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
-		  WHERE a.type = 'reading_minutes' AND a.deleted_at IS NULL
-		    AND a.local_date BETWEEN $1::date AND $2::date
-		) + (
-		  SELECT COALESCE(sum(l.minutes), 0) FROM listening_daily l
-		  JOIN users u ON u.id = l.user_id AND u.deleted_at IS NULL
-		  WHERE l.local_date BETWEEN $1::date AND $2::date
-		)`, from, to).Scan(&n)
-	return n, err
-}
-
 // CountedDay is a local day on which a person's day counted.
 type CountedDay struct {
 	UserID int64
@@ -406,4 +350,47 @@ func CountNotices(ctx context.Context, q Querier, userID int64, date score.Date,
 		SELECT count(*)::int FROM notice_log WHERE user_id = $1 AND local_date = $2::date AND kind = ANY($3)`,
 		userID, date, kinds).Scan(&n)
 	return n, err
+}
+
+// ChallengeShares lists each person's share of a challenge by user id.
+func ChallengeShares(ctx context.Context, q Querier, challengeID int64) (map[int64]int, error) {
+	rows, err := q.Query(ctx, `SELECT user_id, target FROM challenge_shares WHERE challenge_id = $1`, challengeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]int{}
+	for rows.Next() {
+		var user int64
+		var target int
+		if err := rows.Scan(&user, &target); err != nil {
+			return nil, err
+		}
+		out[user] = target
+	}
+	return out, rows.Err()
+}
+
+// InsertChallengeShare stores one person's share unless they already have one.
+func InsertChallengeShare(ctx context.Context, q Querier, challengeID, userID int64, target int) error {
+	_, err := q.Exec(ctx, `
+		INSERT INTO challenge_shares (challenge_id, user_id, target) VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING`, challengeID, userID, target)
+	return err
+}
+
+// SetChallengeTarget sets the combined target and title of a challenge that is not complete.
+func SetChallengeTarget(ctx context.Context, q Querier, id int64, target int, title string) error {
+	_, err := q.Exec(ctx, `
+		UPDATE challenges SET target = $2, title = $3 WHERE id = $1 AND completed_at IS NULL`, id, target, title)
+	return err
+}
+
+// StepsByUserID is the person's step total and days with a reading from..to.
+func StepsByUserID(ctx context.Context, q Querier, userID int64, from, to score.Date) (total float64, days int, err error) {
+	err = q.QueryRow(ctx, `
+		SELECT COALESCE(sum(value), 0)::float8, count(*)::int FROM health_daily
+		WHERE user_id = $1 AND metric = $4 AND local_date BETWEEN $2::date AND $3::date`,
+		userID, from, to, MetricSteps).Scan(&total, &days)
+	return total, days, err
 }

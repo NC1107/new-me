@@ -140,7 +140,7 @@ func TestBoardCreatesTheWeeksChallengeLazilyWithAFrozenTarget(t *testing.T) {
 	h := newHarness(t)
 	nick, _ := h.pair()
 	ctx := context.Background()
-	// Last week held four workouts, so this week's workout target is five.
+	// Nick had four workouts last week, so his share is five; Nadia had none, so hers is two.
 	for i, day := range []string{"2026-10-26", "2026-10-27", "2026-10-28", "2026-10-30"} {
 		start := ny(2026, time.October, 26+i, 8, 0)
 		if err := db.UpsertWorkout(ctx, h.db.Pool, nick.ID, db.Workout{HealthID: "old-" + day, Type: "running",
@@ -151,10 +151,14 @@ func TestBoardCreatesTheWeeksChallengeLazilyWithAFrozenTarget(t *testing.T) {
 	}
 
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if got.str("challenge.kind") != "workouts" || got.num("challenge.target") != 5 || got.num("challenge.progress") != 0 ||
+	if got.str("challenge.kind") != "workouts" || got.num("challenge.target") != 7 || got.num("challenge.progress") != 0 ||
 		got.flag("challenge.done") || got.str("challenge.endsOn") != "2026-11-08" ||
-		got.str("challenge.title") != "Do 5 workouts together" {
+		got.str("challenge.title") != "Do 7 workouts together" {
 		t.Fatalf("challenge = %s", got.Body)
+	}
+	if int64(got.num("challenge.people.0.userId")) != nick.ID || got.num("challenge.people.0.target") != 5 ||
+		got.num("challenge.people.1.target") != 2 || got.length("challenge.people") != 2 {
+		t.Fatalf("shares = %s", got.Body)
 	}
 	// More history arriving later must not move a target that has been shown.
 	start := ny(2026, time.October, 31, 8, 0)
@@ -162,7 +166,7 @@ func TestBoardCreatesTheWeeksChallengeLazilyWithAFrozenTarget(t *testing.T) {
 		LocalDate: "2026-10-31", StartedAt: start, EndedAt: start.Add(time.Hour), DurationMin: 60, Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	if again := h.get("/api/board", nick.Token).expect(http.StatusOK); again.num("challenge.target") != 5 {
+	if again := h.get("/api/board", nick.Token).expect(http.StatusOK); again.num("challenge.target") != 7 {
 		t.Fatalf("target moved: %s", again.Body)
 	}
 	var rows int
@@ -180,16 +184,23 @@ func TestWorkoutChallengeCompletesOnceAndPaysBothFiftyPoints(t *testing.T) {
 	start := ny(2026, time.November, 2, 8, 0)
 	putWorkouts(h, nick, workout("a", "running", start, 30), workout("b", "yoga", start.Add(time.Hour), 30)).expect(http.StatusOK)
 	mid := h.get("/api/board", nadia.Token).expect(http.StatusOK)
-	if mid.num("challenge.progress") != 2 || mid.num("challenge.target") != 3 || mid.flag("challenge.done") {
+	if mid.num("challenge.progress") != 2 || mid.num("challenge.target") != 4 || mid.flag("challenge.done") ||
+		!mid.flag("challenge.people.0.done") || mid.flag("challenge.people.1.done") {
 		t.Fatalf("midway = %s", mid.Body)
 	}
 	if h.get("/api/today", nick.Token).expect(http.StatusOK).num("day.bonusPoints") != 0 {
 		t.Fatal("bonus paid early")
 	}
 
-	putWorkouts(h, nadia, workout("c", "cycling", start, 45)).expect(http.StatusOK)
+	// Nick doing far more than his share does not carry Nadia: it completes when she reaches hers.
+	putWorkouts(h, nick, workout("x1", "running", start.Add(150*time.Minute), 20), workout("x2", "running", start.Add(180*time.Minute), 20)).expect(http.StatusOK)
+	short := h.get("/api/board", nick.Token).expect(http.StatusOK)
+	if short.flag("challenge.done") || short.num("challenge.progress") != 2 || short.num("challenge.people.0.progress") != 4 {
+		t.Fatalf("one person carried the challenge: %s", short.Body)
+	}
+	putWorkouts(h, nadia, workout("c", "cycling", start, 45), workout("c2", "cycling", start.Add(time.Hour), 45)).expect(http.StatusOK)
 	done := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if !done.flag("challenge.done") || done.num("challenge.progress") != 3 {
+	if !done.flag("challenge.done") || done.num("challenge.progress") != 4 {
 		t.Fatalf("done = %s", done.Body)
 	}
 	for _, p := range []person{nick, nadia} {
@@ -197,7 +208,7 @@ func TestWorkoutChallengeCompletesOnceAndPaysBothFiftyPoints(t *testing.T) {
 		if today.num("day.bonusPoints") != 50 || today.num("day.points") != 50 {
 			t.Fatalf("%s today = %s", p.Name, today.Body)
 		}
-		if got := n.of("challenge", p.ID); len(got) != 1 || got[0].Body != "Do 3 workouts together" {
+		if got := n.of("challenge", p.ID); len(got) != 1 || got[0].Body != "Do 4 workouts together" {
 			t.Fatalf("%s pushes = %+v", p.Name, got)
 		}
 		if week := h.get("/api/board", p.Token).expect(http.StatusOK); week.num("users.0.week.points") != 50 {
@@ -238,8 +249,8 @@ func TestChallengePushRespectsThePreference(t *testing.T) {
 	nick, nadia := h.pair()
 	h.patch("/api/me", nadia.Token, obj{"notifications": obj{"challenge": false}}).expect(http.StatusOK)
 	start := ny(2026, time.November, 2, 8, 0)
-	putWorkouts(h, nick, workout("a", "running", start, 30), workout("b", "yoga", start.Add(time.Hour), 30),
-		workout("c", "hiit", start.Add(2*time.Hour), 30)).expect(http.StatusOK)
+	putWorkouts(h, nick, workout("a", "running", start, 30), workout("b", "yoga", start.Add(time.Hour), 30)).expect(http.StatusOK)
+	putWorkouts(h, nadia, workout("c", "running", start.Add(2*time.Hour), 30), workout("d", "cycling", start.Add(3*time.Hour), 30)).expect(http.StatusOK)
 	if len(n.of("challenge", nick.ID)) != 1 || len(n.of("challenge", nadia.ID)) != 0 {
 		t.Fatalf("pushes = %+v", n.msgs)
 	}
@@ -266,9 +277,10 @@ func TestStepsChallengeIsSizedFromTheLastTwoWeeks(t *testing.T) {
 		}
 	}
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	// (10,000 + 5,000) * 7 * 1.1 = 115,500, rounded to the nearest 5,000.
-	if got.str("challenge.kind") != "steps" || got.num("challenge.target") != 115000 ||
-		got.str("challenge.title") != "Walk 115,000 steps together" {
+	// Each share is the person's own average * 7 * 1.1 rounded to a thousand: 77,000 and 38,500 -> 39,000.
+	if got.str("challenge.kind") != "steps" || got.num("challenge.target") != 116000 ||
+		got.str("challenge.title") != "Walk 116,000 steps together" ||
+		got.num("challenge.people.0.target") != 77000 || got.num("challenge.people.1.target") != 39000 {
 		t.Fatalf("challenge = %s", got.Body)
 	}
 	h.putHealth(nick, "2026-11-23", "steps", 12000).expect(http.StatusOK)
@@ -283,15 +295,18 @@ func TestReadingChallengeCountsLoggedMinutesAndListening(t *testing.T) {
 	h.clock.Set(ny(2026, time.November, 16, 12, 0))
 	nick, nadia := h.pair()
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if got.str("challenge.kind") != "reading" || got.num("challenge.target") != 150 {
+	if got.str("challenge.kind") != "reading" || got.num("challenge.target") != 150 ||
+		got.num("challenge.people.0.target") != 75 {
 		t.Fatalf("challenge = %s", got.Body)
 	}
 	h.logActivity(nick, "reading", "minutes", 100).expect(http.StatusCreated)
 	h.logActivity(nick, "reading", "pages", 40).expect(http.StatusCreated)
-	if mid := h.get("/api/board", nick.Token).expect(http.StatusOK); mid.num("challenge.progress") != 100 {
+	// Nick's 100 minutes count 75 toward the combined progress: his own share is all he can add.
+	if mid := h.get("/api/board", nick.Token).expect(http.StatusOK); mid.num("challenge.progress") != 75 ||
+		mid.num("challenge.people.0.progress") != 100 {
 		t.Fatalf("pages must not count as minutes: %s", mid.Body)
 	}
-	if err := db.UpsertListening(context.Background(), h.db.Pool, nadia.ID, "2026-11-16", 50, h.clock.Now()); err != nil {
+	if err := db.UpsertListening(context.Background(), h.db.Pool, nadia.ID, "2026-11-16", 80, h.clock.Now()); err != nil {
 		t.Fatal(err)
 	}
 	done := h.get("/api/board", nadia.Token).expect(http.StatusOK)
@@ -300,7 +315,7 @@ func TestReadingChallengeCountsLoggedMinutesAndListening(t *testing.T) {
 	}
 }
 
-func TestCountedDaysChallengeNeedsBothPeopleOnTheSameDays(t *testing.T) {
+func TestCountedDaysChallengeNeedsEachPersonsOwnDays(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 14, 12, 0))
 	nick, nadia := h.pair()
@@ -308,17 +323,17 @@ func TestCountedDaysChallengeNeedsBothPeopleOnTheSameDays(t *testing.T) {
 		h.storeScore(nick, day, 300, 0, 400)
 		h.storeScore(nadia, day, 300, 0, 400)
 	}
-	// A day only one of them counted on does not help.
+	// Each needs five counted days of their own: Nick has five, Nadia four.
 	h.storeScore(nick, "2026-11-13", 300, 0, 400)
 	h.storeScore(nadia, "2026-11-13", 100, 0, 400)
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if got.str("challenge.kind") != "counted_days" || got.num("challenge.target") != 5 ||
-		got.num("challenge.progress") != 4 || got.flag("challenge.done") {
+	if got.str("challenge.kind") != "counted_days" || got.num("challenge.target") != 10 ||
+		got.num("challenge.progress") != 9 || got.flag("challenge.done") {
 		t.Fatalf("challenge = %s", got.Body)
 	}
 	h.storeScore(nadia, "2026-11-13", 300, 0, 400)
 	if done := h.get("/api/board", nick.Token).expect(http.StatusOK); !done.flag("challenge.done") ||
-		done.num("challenge.progress") != 5 {
+		done.num("challenge.progress") != 10 {
 		t.Fatalf("done = %s", done.Body)
 	}
 	// The award lands on the day it completed, not on the days that earned it.
@@ -333,8 +348,8 @@ func TestSettleCompletesAChallengeWithoutAnyRequest(t *testing.T) {
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
 	start := ny(2026, time.November, 2, 8, 0)
-	for i, id := range []string{"a", "b", "c"} {
-		who := []person{nick, nadia, nick}[i]
+	for i, id := range []string{"a", "b", "c", "d"} {
+		who := []person{nick, nadia, nick, nadia}[i]
 		if err := db.UpsertWorkout(context.Background(), h.db.Pool, who.ID, db.Workout{HealthID: id, Type: "running",
 			LocalDate: "2026-11-02", StartedAt: start, EndedAt: start.Add(time.Hour), DurationMin: 60, Source: "test"}); err != nil {
 			t.Fatal(err)

@@ -61,3 +61,53 @@ This batch follows the beta review (`beta-review-2026-10.md`) with Nick's decisi
 - Monthly look-back: on the 1st of each month, a card and a push summarising the previous month against the one before and against the first month, for each person and the couple, with the three biggest improvements.
 - Milestones: 7, 14, 30, 50, 100, 200 and 365 days for each person and the shared streak, plus firsts (first 10k-step day, first week of every quest), each with a one-off celebration and kept in a milestones list.
 - Server: one `GET /api/progress?window=30` computing all comparisons in pure, tested functions; `GET /api/lookback?month=YYYY-MM`; milestones recorded once.
+
+## Server decisions
+
+Implemented in `server/` (migration 0009); endpoint shapes, tables and the streak algorithm are in `docs/design.md` (Streak, Endpoints v7 additions, Migration 0009).
+Where this document left a choice open, the server does the following.
+
+### Research change: no training-load ratio
+
+- Section 4's acute:chronic training-load ratio, its lighter-week proposal and the "3 or more easy mornings" proposal are not built: the ACWR is not valid for prescribing training (Impellizzeri et al. 2020) and the easy-mornings count is an invented heuristic.
+- `GET /api/insights` instead reports `activity`: the last seven days of workouts against the WHO 2020 guideline (150 to 300 moderate-equivalent minutes with a vigorous minute counting as two, and 2 or more strength days).
+  A session is vigorous at 60% of heart-rate reserve or more; without a heart rate or a resting rate and age, HIIT is vigorous and everything else moderate.
+  It only reports; it never proposes training less.
+- The readiness "easy" rest day is kept: it is a streak rule of this document, not a training prescription.
+
+### Streaks
+
+- Under the freeze rules a freeze is only spent while the streak is above zero. A miss at zero is simply a miss.
+- Freeze progress waits at 6 of 7 while two freezes are held; the first counted day after one is spent earns it back.
+- An away day neither breaks nor extends a streak even if it counted. For the shared streak a counted away day still counts as the "at least one counted" day.
+- The shared streak adds a day when everyone counted, was frozen or was away and someone counted. A frozen day beside a counted one therefore adds a day for the couple; two frozen or away days add nothing and break nothing.
+- Settling is done by the scheduler (right after finalizing) and records the decision the derivation would make; until then the same decision is shown. The readiness morning is evaluated from stored sleep, HRV and resting heart rate.
+- History stays as recorded: at migration each person's `streak_rules_from` is set to the first unfinalized date, and every earlier day keeps the weekly rest rule. The 22:00 repair window and the 10:00 cover window use the covered person's own local time.
+- A repair needs `percent == 100` on today, which counts only quests that are in the day (Health-fed quests stay out until their data arrives).
+- A cover is refused while the partner holds a freeze of their own. It is stored as a spend on the coverer and refunded when the covered day ends up counted or away.
+- Milestones: streak lengths use the current streak, are recorded once, and a batch recorded together (first run, or a late night) announces only the highest. `newMilestones` on Today lists those achieved yesterday or today. Milestone pushes sit outside the daily budget of 2 but obey the person's notification window; they have their own `milestones` switch. Streak and shared milestones are separate pushes.
+
+### Schedule and notifications
+
+- Quiet hours run from bedtime to wake plus the offset. A bedtime after midnight ends the window at midnight.
+- The wind down runs for 45 minutes before bedtime; a bedtime that puts it before 18:00 (including after midnight) skips it.
+- The monthly look-back is an automatic push (budget slot) at the first notification of the 1st, sent before the morning plan, which then steps aside. `lookback` and `milestones` are new notification switches.
+- Habit reminders stay on the phone.
+
+### Weekly challenge
+
+- Each person's share is sized from their own two previous weeks (steps 110% of their weekly steps to the nearest 1,000, at least 10,000, 35,000 without history; workouts last week plus one, at least 2; reading 110% of their weekly minutes to the nearest 10, at least 30, 75 without history; counted days 5).
+  The challenge target is the sum of the shares.
+- It completes when every person has reached their own share, so neither carries the other. Combined progress adds each person's progress capped at their own share. The 50-point award is unchanged.
+- A person who joins mid-week gets a share and the combined target grows by it. Challenges from before v7 keep their combined target and are measured on the pair's total.
+
+### Health soundness
+
+- Protein: new people have `protein_auto`; with no chosen target the snapshot takes 1.6 g/kg of the latest weight on or before the day, rounded to 5 g, else 100 g. A proposal appears when the current target is 20% or more away from that. Existing people keep their target.
+- Existing people get `enable` proposals for sleep and exercise; a dismissed offer stays quiet for four weeks.
+- Smoothed weight is an EWMA with alpha 0.1 per weigh-in; the weekly rate compares the latest trend with the newest weigh-in at least 28 days earlier, or the first one when the history is between 7 and 28 days.
+
+### Look-backs
+
+- Averages: reading and push-ups and habits kept count empty days as zero; steps, sleep, protein and the body measurements average the days that have a reading; workouts are events per seven days. Windows are clipped to the days since joining; the first window is shown once it is over.
+- `better` is nil for a change under 1% and for weight, which has no good direction. The monthly look-back ranks improvements by relative change against the previous month (from zero ranks as 100%); the couple's metrics are the average of the two people.

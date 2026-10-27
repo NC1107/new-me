@@ -35,6 +35,11 @@ type dayMarkJSON struct {
 	Percent int        `json:"percent"`
 	Counted bool       `json:"counted"`
 	Rest    bool       `json:"rest"`
+	// Frozen, Away and Repaired say how a day that did not count was forgiven. A repaired day is
+	// also frozen.
+	Frozen   bool `json:"frozen"`
+	Away     bool `json:"away"`
+	Repaired bool `json:"repaired"`
 }
 
 type boardUserJSON struct {
@@ -51,6 +56,14 @@ type boardUserJSON struct {
 	SyncedAt         *string       `json:"syncedAt"`
 	// Highlights are today's Health readings, each omitted when the member has none.
 	Highlights highlightsJSON `json:"highlights"`
+	// Freezes and Away are the person's streak forgiveness state, for the Us screen.
+	Freezes score.Freezes `json:"freezes"`
+	Away    awayJSON      `json:"away"`
+}
+
+type sharedStreakJSON struct {
+	Current int `json:"current"`
+	Best    int `json:"best"`
 }
 
 type highlightsJSON struct {
@@ -105,14 +118,17 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 	})
 
 	entries := make([]boardUserJSON, 0, len(users))
+	results := make(map[int64]score.StreakResult, len(users))
 	for _, u := range users {
-		entry, err := s.boardEntry(ctx, u, seasons)
+		entry, res, err := s.boardEntry(ctx, u, seasons)
 		if err != nil {
 			fail(w, r, err)
 			return
 		}
 		entries = append(entries, entry)
+		results[u.ID] = res
 	}
+	shared := engine.SharedStreakFor(users, results, s.now())
 	// Settling first makes the challenge exist, and completes it or the reward if this read is
 	// the first to see them done.
 	s.together.SettleQuietly(ctx)
@@ -132,13 +148,17 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 		"users":     entries,
 		"challenge": challenge,
 		"reward":    reward,
+
+		"sharedStreak": sharedStreakJSON{Current: shared.Current, Best: shared.Best},
 	})
 }
 
-func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Season) (boardUserJSON, error) {
+// boardEntry builds one person's row and also returns their streak, which the couple streak is
+// derived from.
+func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Season) (boardUserJSON, score.StreakResult, error) {
 	loc, err := u.Location()
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	now := s.now()
 	today := score.LocalToday(now, loc)
@@ -146,11 +166,11 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 
 	streak, err := engine.StreakFor(ctx, s.db.Pool, u, now, loc)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	recent, err := db.ListDayScores(ctx, s.db.Pool, u.ID, today.AddDays(-6), today)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	byDate := make(map[score.Date]db.DayScoreRow, len(recent))
 	for _, row := range recent {
@@ -159,35 +179,43 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	last7 := make([]dayMarkJSON, 0, 7)
 	for d := today.AddDays(-6); !d.After(today); d = d.AddDays(1) {
 		row := byDate[d]
-		last7 = append(last7, dayMarkJSON{Date: d, Percent: row.Percent, Counted: row.Counted, Rest: slices.Contains(streak.RestDays, d)})
+		o := streak.Outcome(d)
+		last7 = append(last7, dayMarkJSON{Date: d, Percent: row.Percent, Counted: row.Counted,
+			Rest:   o.Reason == score.ReasonRest,
+			Frozen: o.Status == score.StatusFrozen, Away: o.Status == score.StatusAway,
+			Repaired: o.Reason == score.ReasonRepair})
 	}
 
 	weekFrom, _ := season.WeekRange(today)
 	week, err := db.SumPoints(ctx, s.db.Pool, u.ID, weekFrom, today)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	total, err := db.SumPoints(ctx, s.db.Pool, u.ID, season.StartsOn, today)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	workouts, err := db.CountWorkouts(ctx, s.db.Pool, u.ID, score.WeekStart(today), today)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	syncedAt, err := db.LastHealthSync(ctx, s.db.Pool, u.ID)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	readings, err := db.HealthDay(ctx, s.db.Pool, u.ID, today)
 	if err != nil {
-		return boardUserJSON{}, err
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	pick := func(key string) *float64 {
 		if v, ok := readings[key]; ok {
 			return &v
 		}
 		return nil
+	}
+	away, err := s.awayFor(ctx, s.db.Pool, u.ID, today)
+	if err != nil {
+		return boardUserJSON{}, score.StreakResult{}, err
 	}
 	todayRow := byDate[today]
 	return boardUserJSON{
@@ -202,5 +230,7 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 		Highlights: highlightsJSON{
 			Steps: pick(db.MetricSteps), ExerciseMinutes: pick(db.MetricExercise), SleepMinutes: pick(db.MetricSleep),
 		},
-	}, nil
+		Freezes: streak.Freezes,
+		Away:    away,
+	}, streak, nil
 }

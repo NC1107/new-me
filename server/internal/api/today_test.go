@@ -36,6 +36,8 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 		"reading":      {target: 20, actual: 12, points: 100, base: 93},
 		"meals_logged": {target: 2, actual: 2, points: 50, base: 50, bonus: 10, done: true},
 		"protein":      {target: 100, actual: 0, points: 50},
+		"exercise":     {target: 30, points: 100},
+		"sleep":        {target: 420, points: 50},
 	}
 	have := questsByKey(got)
 	if len(have) != len(want) {
@@ -133,11 +135,11 @@ func TestTodayUsesTheUsersOwnTimezone(t *testing.T) {
 	}
 }
 
-func TestStreakRestAndBrokenDays(t *testing.T) {
+func TestStreakFreezesAndBrokenDays(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 2, 9, 0))
 	nick := h.joinAdmin("Nick", "green")
-	// Mon-Wed counted, Thu missed (a rest day), Fri counted.
+	// Mon-Wed counted, Thu missed (a freeze covers it), Fri counted.
 	h.storeScore(nick, "2026-11-02", 300, 0, 400)
 	h.storeScore(nick, "2026-11-03", 300, 0, 400)
 	h.storeScore(nick, "2026-11-04", 300, 0, 400)
@@ -145,14 +147,15 @@ func TestStreakRestAndBrokenDays(t *testing.T) {
 
 	h.clock.Set(ny(2026, time.November, 7, 15, 0))
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("streak.current") != 4 || got.flag("streak.restAvailable") || got.str("streak.restUsedOn") != "2026-11-05" {
+	if got.num("streak.current") != 4 || !got.flag("streak.restAvailable") || got.str("streak.restUsedOn") != "2026-11-05" ||
+		got.num("freezes.held") != 1 || got.num("freezes.earnedTowardNext") != 4 {
 		t.Fatalf("streak = %s", got.Body)
 	}
 
-	// Saturday and Sunday are both missed, and the week's rest is already spent.
+	// Saturday spends the last freeze and Sunday has none left, so the streak breaks.
 	h.clock.Set(ny(2026, time.November, 9, 15, 0))
 	got = h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("streak.current") != 0 || got.flag("streak.restAvailable") {
+	if got.num("streak.current") != 0 || got.flag("streak.restAvailable") || got.num("freezes.held") != 0 {
 		t.Fatalf("streak after two misses = %s", got.Body)
 	}
 }

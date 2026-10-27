@@ -63,6 +63,16 @@ func (s *Service) runUser(ctx context.Context, u db.User, now time.Time) error {
 	if !wantsAny(u.Notify) {
 		return nil
 	}
+	spans, err := db.AwaySpansFrom(ctx, s.DB.Pool, u.ID, today)
+	if err != nil {
+		return err
+	}
+	for _, sp := range spans {
+		// An away day is skipped before anything is loaded or claimed.
+		if sp.Contains(today) {
+			return nil
+		}
+	}
 	sent, err := db.NoticesSent(ctx, s.DB.Pool, u.ID, today)
 	if err != nil {
 		return err
@@ -88,7 +98,7 @@ func (s *Service) runUser(ctx context.Context, u db.User, now time.Time) error {
 		return err
 	}
 
-	facts := factsFrom(day, u, now.In(loc), sent)
+	facts := factsFrom(day, u, now.In(loc), today, sent)
 	facts.SentCount = sentCount
 	facts.ReadinessEasy = day.Readiness != nil && day.Readiness.Level == readiness.LevelEasy
 	facts.Morning = func() (string, string) { return s.morningText(ctx, u, today, day) }
@@ -125,14 +135,15 @@ func (s *Service) morningText(ctx context.Context, u db.User, today score.Date, 
 }
 
 // factsFrom turns the loaded day into the plain facts Decide reads.
-func factsFrom(day coach.Day, u db.User, local time.Time, sent map[string]bool) Facts {
+func factsFrom(day coach.Day, u db.User, local time.Time, today score.Date, sent map[string]bool) Facts {
+	first, end := u.Schedule.Window(today)
 	f := Facts{
-		Now: local, Sent: sent,
+		Now: local, Sent: sent, FirstMin: first, EndMin: end, BedMin: u.Schedule.On(today).BedMin,
 		Prefs: Prefs{BehindPace: u.Notify.BehindPace, CloseToDone: u.Notify.CloseToDone,
 			WindDown: u.Notify.WindDown, MorningPlan: u.Notify.MorningPlan},
 		StepsTracked: day.StepsTracked, StepsGoal: day.StepsGoal, Steps: day.Steps, StepsUsual: day.StepsUsual,
 		Counted: day.Counted, BasePts: day.Base, MaxBase: day.Max,
-		SleepTargetMin: day.SleepTargetMin, AvgWakeMin: day.AvgWakeMin, LastNightMin: day.LastNightMin,
+		SleepTargetMin: day.SleepTargetMin, LastNightMin: day.LastNightMin,
 		SleepTracked: day.SleepTracked, SleepQuest: day.SleepQuest,
 	}
 	for _, row := range day.QuestRows {

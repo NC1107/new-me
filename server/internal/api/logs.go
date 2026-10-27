@@ -41,11 +41,15 @@ type createLogRequest struct {
 	Quantity   int     `json:"quantity"`
 	Note       *string `json:"note"`
 	Name       string  `json:"name"`
-	Kcal       int     `json:"kcal"`
-	Protein    float64 `json:"protein"`
-	Carbs      float64 `json:"carbs"`
-	Fat        float64 `json:"fat"`
-	Fiber      float64 `json:"fiber"`
+	// Minutes and Intensity are for type "other": a free-named activity that counts toward
+	// exercise minutes. Moderate and hard count fully, easy counts half.
+	Minutes   int     `json:"minutes"`
+	Intensity string  `json:"intensity"`
+	Kcal      int     `json:"kcal"`
+	Protein   float64 `json:"protein"`
+	Carbs     float64 `json:"carbs"`
+	Fat       float64 `json:"fat"`
+	Fiber     float64 `json:"fiber"`
 }
 
 // logJSON is the tagged union of an activity or a meal entry; fields of the other kind are
@@ -56,9 +60,10 @@ type logJSON struct {
 	LocalDate score.Date `json:"localDate"`
 	LoggedAt  string     `json:"loggedAt"`
 
-	Type     string `json:"type,omitempty"`
-	Quantity int    `json:"quantity,omitempty"`
-	Unit     string `json:"unit,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Quantity  int    `json:"quantity,omitempty"`
+	Unit      string `json:"unit,omitempty"`
+	Intensity string `json:"intensity,omitempty"`
 
 	Name    string   `json:"name,omitempty"`
 	Kcal    *int     `json:"kcal,omitempty"`
@@ -74,6 +79,7 @@ var wireActivity = map[string][2]string{
 	db.ActivityReadingMinutes: {"reading", "minutes"},
 	db.ActivityReadingPages:   {"reading", "pages"},
 	db.ActivityYogaMinutes:    {"yoga", "minutes"},
+	db.ActivityOtherMinutes:   {"other", "minutes"},
 }
 
 // storedActivity resolves the wire's type and unit to a stored type. The stored names are
@@ -89,6 +95,8 @@ func storedActivity(typ, unit string) (string, bool) {
 		return db.ActivityReadingPages, true
 	case typ == "yoga" && (unit == "" || unit == "minutes"):
 		return db.ActivityYogaMinutes, true
+	case typ == "other" && (unit == "" || unit == "minutes"):
+		return db.ActivityOtherMinutes, true
 	}
 	return "", false
 }
@@ -106,7 +114,7 @@ func activityCap(stored string) int {
 func toActivityJSON(l db.ActivityLog) logJSON {
 	wire := wireActivity[l.Type]
 	return logJSON{ID: l.ID, Kind: db.KindActivity, LocalDate: l.LocalDate, LoggedAt: wireTime(l.LoggedAt),
-		Type: wire[0], Quantity: l.Quantity, Unit: wire[1]}
+		Type: wire[0], Quantity: l.Quantity, Unit: wire[1], Name: l.Name, Intensity: l.Intensity}
 }
 
 func toMealJSON(l db.MealLog) logJSON {
@@ -133,12 +141,21 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 	case db.KindActivity:
 		stored, ok := storedActivity(req.Type, req.Unit)
 		if !ok {
-			return v, invalid("type must be pushups, reading (with unit minutes or pages) or yoga")
+			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga or other")
 		}
-		if req.Quantity < 1 || req.Quantity > activityCap(stored) {
+		activity := db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
+		if stored == db.ActivityOtherMinutes {
+			var herr *httpError
+			if activity, herr = otherActivity(req, v.opID); herr != nil {
+				return v, herr
+			}
+		} else if req.Intensity != "" || req.Name != "" || req.Minutes != 0 {
+			return v, invalid("name, minutes and intensity are only for type other")
+		}
+		if activity.Quantity < 1 || activity.Quantity > activityCap(stored) {
 			return v, invalid("quantity is out of range for " + req.Type)
 		}
-		v.activity = &db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
+		v.activity = &activity
 	case db.KindMeal:
 		name := strings.TrimSpace(req.Name)
 		if n := utf8.RuneCountInString(name); n < 1 || n > maxMealName || hasControlChars(name) {
@@ -158,6 +175,32 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 		return v, invalid("kind must be activity or meal")
 	}
 	return v, nil
+}
+
+// intensities are the effort levels of a manual activity.
+var intensities = []string{"easy", "moderate", "hard"}
+
+// maxActivityName mirrors the table check.
+const maxActivityName = 60
+
+// otherActivity validates a generic manual activity: a free name, its minutes (sent as minutes
+// or quantity) and how hard it was.
+func otherActivity(req createLogRequest, opID string) (db.NewActivityLog, *httpError) {
+	name := strings.TrimSpace(req.Name)
+	if n := utf8.RuneCountInString(name); n < 1 || n > maxActivityName || hasControlChars(name) {
+		return db.NewActivityLog{}, invalid("name must be 1 to 60 characters without control characters")
+	}
+	if !slices.Contains(intensities, req.Intensity) {
+		return db.NewActivityLog{}, invalid("intensity must be easy, moderate or hard")
+	}
+	minutes := req.Minutes
+	if minutes == 0 {
+		minutes = req.Quantity
+	} else if req.Quantity != 0 && req.Quantity != minutes {
+		return db.NewActivityLog{}, invalid("send minutes or quantity, not both")
+	}
+	return db.NewActivityLog{Type: db.ActivityOtherMinutes, Quantity: minutes, ClientOpID: opID,
+		Name: name, Intensity: req.Intensity}, nil
 }
 
 // handleCreateLog stores an entry exactly once per clientOpId: 201 the first time, 200 with the

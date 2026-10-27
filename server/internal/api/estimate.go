@@ -22,8 +22,8 @@ var (
 	errEstimateFailed   = newErr(http.StatusBadGateway, codeEstimateFailed, "could not get an estimate right now, try again later")
 )
 
-// handleEstimateMeal asks Claude for the nutrition of a meal described in words or shown in a
-// photo. Nothing is stored: the photo is forwarded and dropped, and the person confirms the
+// handleEstimateMeal sizes a meal described in words (itemized, from food databases) or shown
+// in a photo (one Claude estimate). Nothing is stored: the photo is forwarded and dropped, and the person confirms the
 // numbers before anything reaches the meal log.
 func (s *Server) handleEstimateMeal(w http.ResponseWriter, r *http.Request) {
 	if s.estimator == nil {
@@ -66,13 +66,13 @@ func (s *Server) handleEstimateMeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		est estimate.Estimate
+		out any
 		err error
 	)
 	if hasImage {
-		est, err = s.estimator.FromImage(r.Context(), req.MediaType, image, text)
+		out, err = s.estimator.FromImage(r.Context(), req.MediaType, image, text)
 	} else {
-		est, err = s.estimator.FromText(r.Context(), text)
+		out, err = s.estimator.Meal(r.Context(), text)
 	}
 	if err != nil {
 		if r.Context().Err() == nil {
@@ -81,5 +81,5 @@ func (s *Server) handleEstimateMeal(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, errEstimateFailed)
 		return
 	}
-	writeJSON(w, http.StatusOK, est)
+	writeJSON(w, http.StatusOK, out)
 }

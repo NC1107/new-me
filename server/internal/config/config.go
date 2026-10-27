@@ -43,6 +43,9 @@ type Config struct {
 	// Anthropic configures the Claude features (meal estimates, plan wording); the zero value
 	// turns them off.
 	Anthropic Anthropic
+	// USDAKey is the FoodData Central API key for meal lookups. Empty uses the shared,
+	// rate-limited DEMO_KEY.
+	USDAKey string
 }
 
 // Anthropic is the Claude API access.
@@ -101,6 +104,7 @@ func Load() (Config, error) {
 	if cfg.Anthropic.BaseURL, err = getBaseURL("NEWME_ANTHROPIC_BASE_URL"); err != nil {
 		return cfg, err
 	}
+	cfg.USDAKey = strings.TrimSpace(os.Getenv("NEWME_USDA_API_KEY"))
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf(
 			"NEWME_DATABASE_URL is required, e.g. postgres://user:password@host:5432/newme?sslmode=disable")

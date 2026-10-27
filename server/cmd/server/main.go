@@ -24,6 +24,8 @@ import (
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/lookback"
+	"github.com/nc1107/new-me/server/internal/milestone"
 	"github.com/nc1107/new-me/server/internal/nudge"
 	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/recap"
@@ -83,6 +85,8 @@ func main() {
 	scheduler.Nudges = &nudge.Service{DB: database, Together: scheduler.Together, Now: time.Now,
 		Polisher: &coach.Polisher{DB: database, Client: claude}}
 	scheduler.Recap = &recap.Service{DB: database, Together: scheduler.Together, Now: time.Now}
+	scheduler.Lookback = &lookback.Service{DB: database, Together: scheduler.Together, Now: time.Now}
+	scheduler.Milestones = &milestone.Service{DB: database, Together: scheduler.Together, Now: time.Now}
 	go scheduler.Run(ctx)
 
 	httpServer := &http.Server{

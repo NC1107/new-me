@@ -16,6 +16,8 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/estimate"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/lookback"
+	"github.com/nc1107/new-me/server/internal/milestone"
 	"github.com/nc1107/new-me/server/internal/ratelimit"
 	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/semver"
@@ -69,6 +71,9 @@ type Server struct {
 	// estimates caps meal estimates per person, since each one costs a Claude call.
 	estimates *ratelimit.Window
 	recap     *recap.Service
+	// milestones records and announces streak milestones and firsts.
+	milestones *milestone.Service
+	lookback   *lookback.Service
 }
 
 // estimatesPerHour is how many meal estimates one person may request an hour.
@@ -100,11 +105,13 @@ func New(cfg config.Config, database *db.DB) *Server {
 	var claude *anthropic.Client
 	if cfg.Anthropic.Enabled() {
 		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
-		srv.estimator = &estimate.Estimator{Client: claude}
+		srv.estimator = &estimate.Estimator{Client: claude, Foods: estimate.NewFoods(cfg.USDAKey, srv.version)}
 	}
 	srv.polisher = &coach.Polisher{DB: database, Client: claude}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
+	srv.milestones = &milestone.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
+	srv.lookback = &lookback.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
 	srv.recap = &recap.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
 	return srv
 }
@@ -119,6 +126,9 @@ func (s *Server) WithNotifier(n together.Notifier) *Server {
 // WithVersion sets the build version reported by /api/health.
 func (s *Server) WithVersion(version string) *Server {
 	s.version = version
+	if s.estimator != nil {
+		s.estimator.Foods.SetVersion(version)
+	}
 	return s
 }
 
@@ -189,6 +199,12 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
 		r.Get("/api/recap", s.handleRecap)
+		r.Get("/api/progress", s.handleProgress)
+		r.Get("/api/lookback", s.handleLookback)
+		r.Get("/api/milestones", s.handleListMilestones)
+		r.Post("/api/away", s.handleCreateAway)
+		r.Delete("/api/away/{id}", s.handleDeleteAway)
+		r.Post("/api/streak/cover", s.handleCoverStreak)
 		r.Get("/api/goals/proposals", s.handleGoalProposals)
 		r.Post("/api/goals/proposals/{key}/accept", s.handleAcceptProposal)
 		r.Post("/api/goals/proposals/{key}/dismiss", s.handleDismissProposal)

@@ -112,7 +112,7 @@ func TestBoardBeforeTheFirstSeasonShowsTheUpcomingOne(t *testing.T) {
 	}
 }
 
-func TestBoardMarksTheRestDay(t *testing.T) {
+func TestBoardMarksTheFrozenDay(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 2, 9, 0))
 	nick := h.joinAdmin("Nick", "green")
@@ -128,9 +128,9 @@ func TestBoardMarksTheRestDay(t *testing.T) {
 	marks := map[string]bool{}
 	for i := range got.length("users.0.last7") {
 		p := "users.0.last7." + itoa(i) + "."
-		marks[got.str(p+"date")] = got.flag(p + "rest")
+		marks[got.str(p+"date")] = got.flag(p + "frozen")
 	}
 	if !marks["2026-11-04"] || marks["2026-11-05"] || marks["2026-11-03"] {
-		t.Fatalf("rest marks = %v; the missed Wednesday is the rest day", marks)
+		t.Fatalf("frozen marks = %v; the missed Wednesday is the frozen day", marks)
 	}
 }

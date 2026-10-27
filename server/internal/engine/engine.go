@@ -28,7 +28,7 @@ var healthMetric = map[string]string{
 func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 	results := make([]score.QuestResult, 0, len(quests))
 	for _, q := range quests {
-		if metric, fed := healthMetric[q.Key]; fed && !in.Connected(metric) {
+		if metric, fed := healthMetric[q.Key]; fed && !connected(q.Key, metric, in) {
 			continue
 		}
 		actual, target := progress(q, in)
@@ -37,11 +37,27 @@ func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 	return results
 }
 
+// connected is whether a Health-fed quest has data to be measured against. Manual activity is
+// data for the exercise quest, so someone who logs a run by hand is scored on it before Health
+// has ever reported exercise minutes.
+func connected(key, metric string, in db.DayInputs) bool {
+	return in.Connected(metric) || (key == db.QuestExercise && in.ManualExerciseMinutes() > 0)
+}
+
+// healthUnits is the quest's amount from Health, and for exercise the minutes logged by hand.
+func healthUnits(key string, in db.DayInputs) int {
+	units := wholeUnits(in.Metric(healthMetric[key]))
+	if key == db.QuestExercise {
+		units += in.ManualExerciseMinutes()
+	}
+	return units
+}
+
 // progress returns the quest's actual and target in one shared unit.
 func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	switch q.Key {
 	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
-		return wholeUnits(in.Metric(healthMetric[q.Key])), q.Target
+		return healthUnits(q.Key, in), q.Target
 	case db.QuestPushups:
 		actual, _ = score.PushupsProgress(in.Pushups, q.Target, in.Workouts, in.HIITMinHR)
 		return actual, q.Target
@@ -74,7 +90,7 @@ func tenthsOfGrams(g float64) int { return int(math.Round(g * 10)) }
 func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	switch q.Key {
 	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
-		return wholeUnits(in.Metric(healthMetric[q.Key])), nil
+		return healthUnits(q.Key, in), nil
 	case db.QuestPushups:
 		return in.Pushups, nil
 	case db.QuestReading:
@@ -172,6 +188,11 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 	if err != nil {
 		return Scored{}, err
 	}
+	if date == score.LocalToday(now, loc) && row.Percent == 100 {
+		if err := ApplyRepairTx(ctx, tx, userID, now, loc); err != nil {
+			return Scored{}, err
+		}
+	}
 	return Scored{Row: row, Quests: quests, Inputs: inputs, Score: day}, nil
 }
 
@@ -196,22 +217,4 @@ func withExtraBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Dat
 		return day, err
 	}
 	return day.WithBonus(score.HabitBonus(db.HabitDays(states)) + award), nil
-}
-
-// StreakFor derives the user's current streak from their stored days. A day with no stored
-// row, including the join day if it was never scored, counts as a miss.
-func StreakFor(ctx context.Context, q db.Querier, user db.User, now time.Time, loc *time.Location) (score.StreakResult, error) {
-	today := score.LocalToday(now, loc)
-	rows, err := db.ListDayScores(ctx, q, user.ID, user.JoinedOn, today)
-	if err != nil {
-		return score.StreakResult{}, err
-	}
-	days := make([]score.DayFlag, 0, len(rows)+1)
-	if len(rows) == 0 || rows[0].LocalDate.After(user.JoinedOn) {
-		days = append(days, score.DayFlag{Date: user.JoinedOn})
-	}
-	for _, r := range rows {
-		days = append(days, score.DayFlag{Date: r.LocalDate, Counted: r.Counted})
-	}
-	return score.StreakNow(days, now, loc), nil
 }

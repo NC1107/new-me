@@ -11,17 +11,16 @@
 //	              each hour: 0% at 07:00, 25% at 10:00, 50% at 14:00, 80% at 18:30, 100% at
 //	              22:00, linear in between.
 //	close to done the day has not counted yet and finishing one open quest would make it count
-//	morning plan  at 08:00 or 30 minutes after the average wake time, whichever is later, for
+//	morning plan  at the first notification of the day (wake time plus the person's offset), for
 //	              three hours
-//	wind down     45 minutes before the bedtime that hits the sleep target from the average wake
-//	              time (rounded to 5 minutes), for 90 minutes, only when last night was at least
-//	              30 minutes short, sleep is a quest or tracked, and the nudge falls in the evening
+//	wind down     45 minutes before the person's bedtime, until bedtime, only when last night was at
+//	              least 30 minutes short, sleep is a quest or tracked, and the nudge falls in the evening
 //
-// Budget: at most 2 automatic pushes (these kinds and the Sunday recap) per person per day.
-// When it is tight the order is close to done, then behind pace, then wind down; the morning plan
-// is only sent as the first push of the day. Behind pace and close to done are never sent
-// when readiness is easy. Quiet hours are 21:30 to 07:30; nothing but the wind down is sent
-// inside them.
+// The person's schedule sets the window: nothing is sent before the first notification of the day
+// or from bedtime on. Budget: at most 2 automatic pushes (these kinds, the Sunday recap and the
+// monthly look-back) per person per day. When it is tight the order is close to done, then behind
+// pace, then wind down; the morning plan is only sent as the first push of the day. Behind pace
+// and close to done are never sent when readiness is easy, and nothing is sent on an away day.
 package nudge
 
 import (
@@ -31,23 +30,18 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/plan"
 	"github.com/nc1107/new-me/server/internal/readiness"
+	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/together"
 )
 
 // Clock constants, in minutes after local midnight.
 const (
-	quietStart       = 21*60 + 30
-	quietEnd         = 7*60 + 30
 	afternoonWindow  = 14 * 60
 	eveningWindow    = 18*60 + 30
 	behindWindowLen  = 120
-	morningEarliest  = 8 * 60
-	morningAfterWake = 30
 	morningWindowLen = 180
 	windDownLead     = 45
-	windDownWindow   = 90
 	windDownEarliest = 18 * 60
-	bedtimeRound     = 5
 	// DailyBudget is how many automatic pushes one person gets a day.
 	DailyBudget = 2
 	// behindFraction is how far under the expected steps counts as behind.
@@ -113,10 +107,16 @@ type Facts struct {
 	OpenQuests []OpenQuest
 
 	SleepTargetMin int
-	AvgWakeMin     *int
 	LastNightMin   *int
 	SleepTracked   bool
 	SleepQuest     bool
+
+	// FirstMin and EndMin bound the day's notification window in minutes after midnight: the
+	// first notification, and bedtime (or midnight when bedtime is after it). BedMin is the
+	// bedtime itself as a clock reading.
+	FirstMin, EndMin, BedMin int
+	// Away silences everything on a day inside an away span.
+	Away bool
 
 	// Morning words the morning plan push; it is only called when that push is due.
 	Morning func() (title, body string)
@@ -131,27 +131,30 @@ type Nudge struct {
 
 func minuteOfDay(t time.Time) int { return t.Hour()*60 + t.Minute() }
 
-func inQuietHours(minute int) bool { return minute >= quietStart || minute < quietEnd }
+func (f Facts) quiet(minute int) bool { return minute < f.FirstMin || minute >= f.EndMin }
 
 func inWindow(minute, start, length int) bool { return minute >= start && minute < start+length }
 
 // Decide returns the nudges due now, in the order they should be sent, within the daily budget.
 func Decide(f Facts) []Nudge {
 	room := DailyBudget - f.SentCount
-	if room <= 0 {
+	if room <= 0 || f.Away {
 		return nil
 	}
 	minute := minuteOfDay(f.Now)
-	quiet := inQuietHours(minute)
+	quiet := f.quiet(minute)
+	if quiet {
+		return nil
+	}
 	var out []Nudge
-	if !quiet && f.SentCount == 0 {
+	if f.SentCount == 0 {
 		if n, ok := morningPlan(f, minute); ok {
 			out = append(out, n)
 			room--
 		}
 	}
 	var ranked []Nudge
-	if !quiet && !f.ReadinessEasy {
+	if !f.ReadinessEasy {
 		if n, ok := closeToDone(f); ok {
 			ranked = append(ranked, n)
 		}
@@ -211,14 +214,7 @@ func closeToDone(f Facts) (Nudge, bool) {
 }
 
 func morningPlan(f Facts, minute int) (Nudge, bool) {
-	if !f.Prefs.MorningPlan || f.Sent[together.EventMorningPlan] {
-		return Nudge{}, false
-	}
-	start := morningEarliest
-	if f.AvgWakeMin != nil {
-		start = max(start, *f.AvgWakeMin+morningAfterWake)
-	}
-	if !inWindow(minute, start, morningWindowLen) {
+	if !f.Prefs.MorningPlan || f.Sent[together.EventMorningPlan] || !inWindow(minute, f.FirstMin, morningWindowLen) {
 		return Nudge{}, false
 	}
 	n := Nudge{Kind: together.EventMorningPlan, Title: "Today's plan", Body: "Open New Me to see today's plan."}
@@ -228,32 +224,28 @@ func morningPlan(f Facts, minute int) (Nudge, bool) {
 	return n, true
 }
 
-// WindDownTime is the minute of the evening the wind down nudge starts, and the bedtime it
-// points at. It is false when the numbers do not give an evening bedtime.
-func WindDownTime(avgWakeMin, targetMin int) (nudgeAt, bedtime int, ok bool) {
-	bed := ((avgWakeMin-targetMin)%1440 + 1440) % 1440
-	bed = (bed + bedtimeRound/2) / bedtimeRound * bedtimeRound % 1440
-	at := bed - windDownLead
-	if at < windDownEarliest {
-		return 0, 0, false
-	}
-	return at, bed, true
+// WindDownAt is the minute of the evening the wind down nudge starts, 45 minutes before the
+// bedtime. It is false when that falls before 18:00, which covers a bedtime after midnight: such
+// a nudge is skipped rather than moved to another day.
+func WindDownAt(bedMin int) (int, bool) {
+	at := bedMin - windDownLead
+	return at, at >= windDownEarliest
 }
 
 func windDown(f Facts, minute int) (Nudge, bool) {
-	if !f.Prefs.WindDown || f.Sent[together.EventWindDown] || f.AvgWakeMin == nil || f.LastNightMin == nil ||
+	if !f.Prefs.WindDown || f.Sent[together.EventWindDown] || f.LastNightMin == nil ||
 		!(f.SleepQuest || f.SleepTracked) || f.SleepTargetMin <= 0 {
 		return Nudge{}, false
 	}
 	if f.SleepTargetMin-*f.LastNightMin < ShortNightMin {
 		return Nudge{}, false
 	}
-	at, bed, ok := WindDownTime(*f.AvgWakeMin, f.SleepTargetMin)
-	if !ok || !inWindow(minute, at, windDownWindow) {
+	at, ok := WindDownAt(f.BedMin)
+	if !ok || !inWindow(minute, at, windDownLead) {
 		return Nudge{}, false
 	}
 	return Nudge{Kind: together.EventWindDown, Title: "Wind down",
-		Body: fmt.Sprintf("Bed by %02d:%02d for %s.", bed/60, bed%60, readiness.Duration(f.SleepTargetMin))}, true
+		Body: fmt.Sprintf("Bed by %s for %s.", score.FormatClock(f.BedMin), readiness.Duration(f.SleepTargetMin))}, true
 }
 
 func capitalize(s string) string {

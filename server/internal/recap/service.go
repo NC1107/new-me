@@ -98,11 +98,11 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 	ch, err := db.GetChallenge(ctx, s.DB.Pool, monday)
 	switch {
 	case err == nil:
-		progress, err := s.Together.ChallengeProgress(ctx, ch)
+		status, err := s.Together.ChallengeProgress(ctx, ch)
 		if err != nil {
 			return out, err
 		}
-		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: ch.Target, Progress: progress, Completed: ch.CompletedAt != nil}
+		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress, Completed: ch.CompletedAt != nil}
 	case !errors.Is(err, db.ErrNotFound):
 		return out, err
 	}

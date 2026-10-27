@@ -12,9 +12,13 @@ import (
 	"github.com/nc1107/new-me/server/internal/abs/abstest"
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/dbtest"
+	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/lookback"
+	"github.com/nc1107/new-me/server/internal/milestone"
 	"github.com/nc1107/new-me/server/internal/sched"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 func TestMain(m *testing.M) {
@@ -258,5 +262,95 @@ func TestPollListeningReadsEveryLinkedAccount(t *testing.T) {
 func TestListeningIsPolledEveryFiveMinutes(t *testing.T) {
 	if sched.ListeningInterval != 5*time.Minute {
 		t.Fatalf("ListeningInterval = %v", sched.ListeningInterval)
+	}
+}
+
+func TestFinalizeDueSettlesStreakOutcomesAndRepairsYesterday(t *testing.T) {
+	database := dbtest.Fresh(t)
+	nick := join(t, database, "Nick", "green", "America/New_York", true, "2026-11-02")
+	op := 0
+	// A full day of entries: push-ups, reading minutes and two meals worth 100 g of protein, which
+	// is every quest that is in the day before Health reports anything.
+	fullDay := func(date string) {
+		d := score.MustDate(date)
+		for _, typ := range []string{db.ActivityPushups, db.ActivityReadingMinutes} {
+			op++
+			quantity := 30
+			if typ == db.ActivityReadingMinutes {
+				quantity = 20
+			}
+			if _, _, err := db.InsertActivityLog(ctx, database.Pool, db.NewActivityLog{UserID: nick.ID, LocalDate: d, Type: typ,
+				Quantity: quantity, ClientOpID: fmt.Sprintf("00000000-0000-4000-8000-%012d", op)}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for range 2 {
+			op++
+			if _, _, err := db.InsertMealLog(ctx, database.Pool, db.NewMealLog{UserID: nick.ID, LocalDate: d, Name: "Meal", Kcal: 500,
+				ProteinG: 50, ClientOpID: fmt.Sprintf("00000000-0000-4000-8000-%012d", op)}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// Mon counted, Tue and Wed missed (both freezes), Thu counted, Fri missed (breaks), and today
+	// already at 100% when Friday finalizes at 10:00 on Saturday.
+	for _, d := range []string{"2026-11-02", "2026-11-05", "2026-11-07"} {
+		fullDay(d)
+	}
+	// The person's own entries scored today at 09:00, before Friday had finalized.
+	if err := database.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := engine.RecomputeDayAt(ctx, tx, nick.ID, "2026-11-07", newYork, time.Date(2026, 11, 7, 9, 0, 0, 0, newYork))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 7, 11, 0, 0, 0, newYork)
+	s := &sched.Scheduler{DB: database, Now: func() time.Time { return now }}
+	if err := s.FinalizeDue(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := rows(t, database, nick)
+	wantReason := map[string]string{"2026-11-03": "freeze", "2026-11-04": "freeze", "2026-11-06": "repair", "2026-11-02": "", "2026-11-05": ""}
+	for date, want := range wantReason {
+		r := got[score.MustDate(date)]
+		if r.FinalizedAt == nil || !r.Settled || r.FrozenReason != want {
+			t.Errorf("%s: finalized=%v settled=%v reason=%q, want %q", date, r.FinalizedAt != nil, r.Settled, r.FrozenReason, want)
+		}
+	}
+	if r := got["2026-11-07"]; r.FinalizedAt != nil || r.Settled {
+		t.Errorf("today must stay open: %+v", r)
+	}
+}
+
+func TestPassRecordsMilestonesAndSendsTheLookbackOnTheFirst(t *testing.T) {
+	database := dbtest.Fresh(t)
+	nick := join(t, database, "Nick", "green", "America/New_York", true, "2026-10-20")
+	for i := range 8 {
+		d := score.ScoreDay([]score.QuestResult{{Key: "x", Points: 100, Actual: 100, Target: 100}})
+		if _, err := db.UpsertDayScore(ctx, database.Pool, db.DayScoreRow{UserID: nick.ID, LocalDate: score.MustDate("2026-10-20").AddDays(i),
+			BasePoints: d.BasePoints, MaxBase: d.MaxBase, Percent: d.Percent, Counted: d.Counted, Detail: []byte(`[]`)}, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, newYork)
+	clock := func() time.Time { return now }
+	tg := &together.Service{DB: database, Now: clock}
+	s := &sched.Scheduler{DB: database, Now: clock, Together: tg,
+		Milestones: &milestone.Service{DB: database, Together: tg, Now: clock},
+		Lookback:   &lookback.Service{DB: database, Together: tg, Now: clock}}
+	if err := s.RunOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	have, err := db.MilestoneKinds(ctx, database.Pool, &nick.ID)
+	if err != nil || !have["streak:7"] {
+		t.Fatalf("milestones = %v %v", have, err)
+	}
+	// Running the pass again records nothing new.
+	if err := s.RunOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := db.ListMilestones(ctx, database.Pool, nick.ID)
+	if len(list) != 1 {
+		t.Fatalf("recorded twice: %v", list)
 	}
 }

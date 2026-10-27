@@ -87,7 +87,7 @@ Season and scoring model
 | meals_logged | derived from meal logs | count of meals with `kcal > 0` |
 | protein | derived from meal logs | sum of `protein_g` in tenths of a gram |
 | yoga | manual log, minutes, plus Health workouts (v6) | sum of `quantity` of `yoga` logs plus the whole minutes of that day's `yoga` workouts (pilates and flexibility arrive from Health as `yoga`) |
-| exercise | HealthKit, `health_daily` metric `exercise_minutes` | `floor(value)` |
+| exercise | HealthKit, `health_daily` metric `exercise_minutes`, plus manual `other` activity | `floor(value)` plus manual minutes (moderate and hard in full, easy half) |
 | sleep | HealthKit, `health_daily` metric `sleep_minutes` | `floor(value)` |
 | active_energy | HealthKit, `health_daily` metric `active_energy` | not scored; shown on Today as "burned N" |
 
@@ -112,11 +112,11 @@ Users edit only `enabled` and `target`, and edits take effect from the next loca
 | meals_logged | 2 meals | 50 | enabled |
 | protein | profile protein target, 100 g when unset | 50 | enabled |
 | yoga | 20 minutes | 50 | disabled |
-| exercise | 30 min | 100 | disabled |
-| sleep | 420 min | 50 | disabled |
+| exercise | 30 min | 100 | enabled (v7; off for people who joined earlier) |
+| sleep | 420 min | 50 | enabled (v7; off for people who joined earlier) |
 
 Yoga is a template and an activity log type that ship disabled.
-Exercise and sleep are automatic like steps, take no manual logs, and ship disabled with positions 6 and 7.
+Exercise and sleep are Health-fed like steps and have positions 6 and 7; v7 turns them on for new people (exercise also counts manual activity logs).
 Their target bounds are exercise 5 to 300 minutes and sleep 240 to 720 minutes.
 The Log sheet shows the yoga segment only while the template is enabled.
 Horse and walking quests are deferred; walking is covered by steps.
@@ -163,41 +163,26 @@ Two meals give 50 plus bonus 10, and protein 0.
 
 ### Streak
 
-`internal/score.Streak(days, today, todayCounted)` is a pure function.
-The streak is never stored; it is derived at read time from `day_scores.counted`.
+`internal/score.ComputeStreak` is a pure function.
+The streak is never stored; it is derived at read time from `day_scores` (counted, plus the recorded outcome of finalized days), the person's away spans and the partner covers.
+Under the v7 rules (see `design-v7.md` and its Server decisions):
 
-Input: the user's `first_local_date`, a map of `local_date -> counted` from `day_scores`, `today`, and whether today is already counted.
+1. Walk every date from the first day through today.
+2. Away day (inside an away span): changes nothing, even if the day counted.
+3. Counted day: streak + 1, and one step toward the next freeze.
+4. Today before it has counted is open; yesterday while its grace window is open and not counted is pending. Neither changes the streak.
+5. A recorded outcome wins: a frozen day (reason `freeze`, `readiness`, `repair` or `cover`) keeps the streak and adds no day (a `freeze` also spends one); a settled miss with no reason breaks it.
+6. Otherwise the day is decided now: covered by the partner (frozen, reason `cover`), then rest after an easy readiness morning (frozen, reason `readiness`, no freeze), then a freeze if one is held and the streak is above zero (frozen, reason `freeze`), else the streak resets.
+7. Freezes: start with 2, earn 1 per 7 counted days, hold at most 2. At the maximum the progress waits at 6 of 7. A freeze spent covering the partner is a spend on the coverer's balance at the covered date.
+8. Days before the person's `streak_rules_from` follow the old weekly rest rule (one miss a week forgiven while a streak runs, never right after another miss); that history stays as recorded.
 
-Steps:
+Settling: the scheduler records the decisions (`day_scores.settled`, `frozen_reason`, `away`) for finalized days, oldest first, once; a settled day is never rewritten except by a repair.
+Repair: until 22:00 the next local day, reaching 100% of today's base points (`percent == 100`) turns a missed, settled, unfrozen, non-away yesterday into a frozen day with reason `repair`; no freeze is spent.
+Shared streak (`score.SharedStreak`): a date adds one when every person counted, was frozen or was away and at least one counted; any miss resets it; an undecided day (open, pending, no entry) or a day nobody counted changes nothing.
 
-1.
-   Let `n = 0`, `prevBreak = false`, and an empty set `restUsed` keyed by the Monday date of an ISO week.
-2.
-   Iterate every date `d` from `first_local_date` through `today - 1` ascending.
-   Dates before join are never visited.
-   A date with no `day_scores` row is a miss.
-3.
-   If `d` is counted: `n = n + 1`, `prevBreak = false`.
-4.
-   If `d` is a miss, let `wk` be the Monday of `d`'s ISO week.
-   - If `n > 0` and `wk` is not in `restUsed` and `prevBreak` is false: add `wk` to `restUsed`, flag `d` as a rest day, keep `n` unchanged, set `prevBreak = true`.
-   - Otherwise: set `n = 0` and `prevBreak = true`.
-     A miss when `n == 0` consumes nothing.
-5.
-   Displayed streak is `n`, plus 1 if today is already counted.
-   Today is never treated as a miss.
+Table tests cover the freeze rules, away days, recorded versus decided days, the rule transition from the weekly rest rule, the repair window, covers and the shared streak.
 
-Consequences:
-
-- Two consecutive misses always break the streak, including across the Sunday/Monday boundary.
-- The allowance is one rest day per ISO week and unused rest does not carry over.
-- Backdating a counted day into an open window changes the derived result immediately, since nothing is cached.
-
-Table tests cover: first week, a three-day gap, Sunday plus Monday misses, a backdated fill rescuing a gap, and a DST day.
-
-Presentation: the streak pill reads "Day 1" when the streak is 0.
-Today shows a rest chip, "Rest day ready" or "Rest day used Tue".
-The 7-day strip shows a hollow dot on a rest day.
+Presentation: the streak pill reads "Day 1" when the streak is 0. The 7-day strip marks frozen (snowflake), away and repaired days.
 
 ### Scoreboard
 
@@ -683,6 +668,24 @@ Behaviour rules:
   The binary supports `-healthcheck`, which calls `127.0.0.1:8080/api/health` and exits 0 or 1; the compose healthcheck uses it.
 - Version is built in with `-ldflags -X main.version=$VERSION`.
 
+### Endpoints, v7 additions
+
+All additive.
+
+- `GET /today` gains `freezes {held, earnedTowardNext}`, `repair {date, until, progressPercent}` or null (only on the caller's local today, while yesterday is a missed unfrozen day and before 22:00), `away {today, current, upcoming}` and `newMilestones` (milestones reached yesterday or today). `streak.restAvailable` now means a freeze is held and `restUsedOn` the last frozen day of the week.
+- `GET /board` gains `sharedStreak {current, best}` and, per person, `freezes`, `away` and `last7[].frozen|away|repaired`.
+- `POST /away {from, to, note}`: from today to 14 days ahead, 1 to 14 days long, no overlap with an existing span (409 `away_overlap`); `DELETE /away/{id}` (204). Days already settled as away keep that outcome.
+- `POST /streak/cover {date}`: spends one of the caller's freezes on the partner's missed yesterday until 10:00 their next day, when the partner holds no freeze and the day has not counted (422 `cover_closed`, `no_freeze`; 409 when already covered). A cover on a day that ends up counted is deleted at settle time, which refunds the freeze.
+- `GET /me` and `PATCH /me` gain `schedule {workdays: [1..7], workday {wake, bed}, dayOff {wake, bed}, firstNotificationOffsetMin 0..120}` (defaults 07:00, 23:00, Monday to Friday, 10), `protein {perKg, auto, weightKg, suggested, effective}` and the notification switches `milestones` and `lookback`.
+- `POST /logs` accepts `kind activity, type other` with `name` (1 to 60), `minutes` (or `quantity`, 1 to 1440) and `intensity easy|moderate|hard`. Moderate and hard minutes count fully and easy half toward the exercise quest, together with Health's exercise minutes; a logged activity also connects the exercise quest before Health reports anything.
+- `GET /goals/proposals` gains `kind` (`target` or `enable`) and the keys `exercise` (enable only), `sleep` (enable while off, target while on) and `protein` (target, when the current target is 20% or more away from 1.6 g/kg of the latest weight).
+- `GET /insights` gains `weight {latestKg, smoothedKg, weeklyRateKg, points}` (EWMA, alpha 0.1), `activity` (last 7 days against the WHO 2020 guideline: moderate, vigorous and moderate-equivalent minutes, strength days, targets 150 to 300 and 2) and `protein {targetG, perKg, weightKg, suggestedG, daysHit7, days7, hitRate7}`.
+- `GET /progress?window=30` (7 to 365): per person, for 12 metrics, `current`, `previous`, `first`, `changeFromPrevious`, `changeFromFirst` (`abs`, `pct`, `better`), `goodDirection`, a weekly `series` and a plain `summary`.
+- `GET /lookback?month=YYYY-MM` (default the last completed month): per person and for the couple, month value, previous month, first 30 days, changes and `improvements` (the three biggest).
+- `GET /milestones`: the caller's and the couple's milestones, newest first.
+- `challenge` on `/board` gains `people [{userId, name, color, target, progress, done}]`; `target` is the sum of the shares and `progress` adds each person's progress capped at their own share. It completes when every person reached their own share.
+
+
 ### Schema
 
 Migration 0001 already exists and is never edited.
@@ -924,6 +927,13 @@ Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
 - `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
 - The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
 
+#### Migration 0009 (v7)
+
+- `day_scores`: `frozen_reason`, `away`, `settled` (all finalized days at migration time are settled).
+- `users`: `streak_rules_from`, `protein_auto`, `workdays`, `workday_wake_min`, `workday_bed_min`, `dayoff_wake_min`, `dayoff_bed_min`, `first_notification_offset_min`, `notify_milestones`, `notify_lookback`.
+- New tables `away_spans`, `streak_covers`, `challenge_shares`, `milestones`.
+- `activity_logs`: type `other_minutes`, columns `name` and `intensity`; `goal_proposals`: `kind` and the keys `exercise` and `protein`.
+
 ### Scheduler
 
 One goroutine under `recover` and a per-run context timeout runs on boot and every 5 minutes.
@@ -931,7 +941,8 @@ For each live user, in the user's timezone, it finds every `local_date` from `fi
 For each such date, in one transaction with the advisory lock, it runs `ensureSnapshot`, `scoreDay`, and upserts the row with `finalized_at = now()`.
 Catch-up after restarts and deploys is therefore automatic, and no day is skipped.
 It also applies pending timezone switches that have come due.
-Each pass also runs the v6 nudges and the Sunday recap push (see Endpoints, v6 additions), which only do anything while push is on.
+Each pass also settles the streak outcomes of finalized days, applies repairs, sends the monthly look-back push (on the 1st, first), the v6 nudges and the Sunday recap push, and records milestones with their pushes; these only send while push is on.
+Nudges follow each person's schedule: nothing before wake plus the offset or from bedtime on, the morning plan at the first notification, the wind down 45 minutes before bedtime, and nothing on an away day.
 
 When `NEWME_ABS_URL` is set, a second loop under the same guards polls every 5 minutes (and on boot) for each linked account; `POST /me/audiobookshelf/sync` runs the same sync for one person on demand.
 It refreshes the Audiobookshelf session when the access token is within 2 minutes of expiring, or once when Audiobookshelf answers 401, and stores the rotated refresh token before using the new access token.

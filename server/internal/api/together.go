@@ -40,6 +40,7 @@ func (s *Server) settleAfter(next http.Handler) http.Handler {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), settleTimeout)
 		defer cancel()
 		s.together.SettleQuietly(ctx)
+		s.milestones.RunQuietly(ctx)
 	})
 }
 
@@ -119,12 +120,25 @@ var cheerWords = map[string]string{
 }
 
 type challengeJSON struct {
-	Kind     string     `json:"kind"`
-	Title    string     `json:"title"`
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+	// Target is the sum of everyone's share and Progress adds each person's progress capped at
+	// their own share. The challenge is done when every person has reached their own share.
 	Target   int        `json:"target"`
 	Progress int        `json:"progress"`
 	Done     bool       `json:"done"`
 	EndsOn   score.Date `json:"endsOn"`
+	// People holds each person's share and progress.
+	People []challengePersonJSON `json:"people"`
+}
+
+type challengePersonJSON struct {
+	UserID   int64  `json:"userId"`
+	Name     string `json:"name"`
+	Color    string `json:"color"`
+	Target   int    `json:"target"`
+	Progress int    `json:"progress"`
+	Done     bool   `json:"done"`
 }
 
 // challengeFor is the challenge of the week the caller is in, created on first use.
@@ -134,12 +148,17 @@ func (s *Server) challengeFor(ctx context.Context, c caller) (challengeJSON, err
 	if err != nil {
 		return challengeJSON{}, err
 	}
-	progress, err := s.together.ChallengeProgress(ctx, ch)
+	status, err := s.together.ChallengeProgress(ctx, ch)
 	if err != nil {
 		return challengeJSON{}, err
 	}
-	return challengeJSON{Kind: ch.Kind, Title: ch.Title, Target: ch.Target, Progress: progress,
-		Done: ch.CompletedAt != nil, EndsOn: ch.EndsOn()}, nil
+	people := make([]challengePersonJSON, len(status.People))
+	for i, p := range status.People {
+		people[i] = challengePersonJSON{UserID: p.UserID, Name: p.Name, Color: p.Color,
+			Target: p.Target, Progress: p.Progress, Done: p.Done()}
+	}
+	return challengeJSON{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress,
+		Done: ch.CompletedAt != nil, EndsOn: ch.EndsOn(), People: people}, nil
 }
 
 type rewardJSON struct {

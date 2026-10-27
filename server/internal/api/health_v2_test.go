@@ -209,7 +209,7 @@ func TestJoinDayPatchResnapshotsToday(t *testing.T) {
 	nick := h.joinAdmin("Nick", "green")
 	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.length("quests") != 5 || before.num("day.basePoints") != 100 {
+	if before.length("quests") != 7 || before.num("day.basePoints") != 100 {
 		t.Fatalf("defaults = %s", before.Body)
 	}
 
@@ -224,7 +224,7 @@ func TestJoinDayPatchResnapshotsToday(t *testing.T) {
 	for i := 0; i < got.length("quests"); i++ {
 		keys += got.str("quests."+strconv.Itoa(i)+".key") + " "
 	}
-	if keys != "steps reading meals_logged protein yoga " || got.num("quests.3.target") != 150 ||
+	if keys != "steps reading meals_logged protein yoga exercise sleep " || got.num("quests.3.target") != 150 ||
 		got.num("quests.4.target") != 10 {
 		t.Fatalf("join-day quests = %s", got.Body)
 	}
@@ -233,7 +233,7 @@ func TestJoinDayPatchResnapshotsToday(t *testing.T) {
 	h.logActivity(nick, "yoga", "minutes", 10).expect(http.StatusCreated)
 	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "pushups", "enabled": true}}}).expect(http.StatusOK)
 	again := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if again.length("quests") != 6 || again.num("quests.1.actual") != 30 || again.str("quests.1.key") != "pushups" ||
+	if again.length("quests") != 8 || again.num("quests.1.actual") != 30 || again.str("quests.1.key") != "pushups" ||
 		!again.flag("quests.5.done") {
 		t.Fatalf("logs must survive the re-snapshot: %s", again.Body)
 	}
@@ -246,11 +246,11 @@ func TestPatchAfterJoinDayStillAppliesTomorrow(t *testing.T) {
 	h.get("/api/today", nick.Token).expect(http.StatusOK)
 
 	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "pushups", "enabled": false}}}).expect(http.StatusOK)
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 5 {
+	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 7 {
 		t.Fatalf("today must keep its snapshot: %s", got.Body)
 	}
 	h.clock.Set(ny(2026, time.November, 4, 12, 0))
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 4 {
+	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 6 {
 		t.Fatalf("tomorrow must use the edit: %s", got.Body)
 	}
 }

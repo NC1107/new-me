@@ -15,7 +15,10 @@ import (
 )
 
 type proposalJSON struct {
-	Key      string `json:"key"`
+	Key string `json:"key"`
+	// Kind is "target" for a new target of a quest that is on and "enable" for an offer to
+	// switch a quest on; an enable offer carries the target the quest would have.
+	Kind     string `json:"kind"`
 	Title    string `json:"title"`
 	Unit     string `json:"unit"`
 	Current  int    `json:"current"`
@@ -24,7 +27,7 @@ type proposalJSON struct {
 }
 
 // proposalKeys are the quests that get proposals, in display order.
-var proposalKeys = []string{db.QuestSteps, db.QuestSleep}
+var proposalKeys = []string{db.QuestSteps, db.QuestSleep, db.QuestExercise, db.QuestProtein}
 
 // handleGoalProposals lists this week's pending target proposals. A proposal is frozen the
 // first time it is shown and, once accepted or dismissed, does not come back until next week.
@@ -57,12 +60,20 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 	for _, key := range proposalKeys {
 		tmpl, ok := byKey[key]
 		prior, hasPrior := storedByKey[key]
-		if !ok || !tmpl.Enabled || (hasPrior && prior.State != db.ProposalPending) {
+		if !ok || (hasPrior && prior.State != db.ProposalPending) {
+			continue
+		}
+		kind, current, applies, err := s.proposalBasis(r, c, key, tmpl, today)
+		if err != nil {
+			fail(w, r, err)
+			return
+		}
+		if !applies {
 			continue
 		}
 		chosen := prior
-		if !hasPrior || prior.Current != tmpl.Target {
-			fresh, err := s.freshProposal(r, c, key, tmpl, today)
+		if !hasPrior || prior.Current != current || prior.Kind != kind {
+			fresh, err := s.freshProposal(r, c, key, kind, current, tmpl, today)
 			if err != nil {
 				fail(w, r, err)
 				return
@@ -70,21 +81,52 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 			if fresh == nil {
 				continue
 			}
-			chosen = db.GoalProposal{Key: key, Current: fresh.Current, Proposed: fresh.Proposed, Reason: fresh.Reason}
+			chosen = db.GoalProposal{Key: key, Kind: fresh.Kind, Current: fresh.Current, Proposed: fresh.Proposed, Reason: fresh.Reason}
 			if err := db.SaveGoalProposal(ctx, s.db.Pool, c.user.ID, week, chosen); err != nil {
 				fail(w, r, err)
 				return
 			}
 		}
-		out = append(out, proposalJSON{Key: key, Title: titles[key], Unit: tmpl.Unit,
+		out = append(out, proposalJSON{Key: key, Kind: chosen.Kind, Title: titles[key], Unit: tmpl.Unit,
 			Current: chosen.Current, Proposed: chosen.Proposed, Reason: chosen.Reason})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"week": score.ISOWeekLabel(week), "weekStart": week, "proposals": out})
 }
 
+// proposalBasis says what kind of proposal a quest can have right now and the target it would be
+// measured against. applies is false when the quest has nothing to propose.
+func (s *Server) proposalBasis(r *http.Request, c caller, key string, tmpl db.QuestTemplate, today score.Date) (kind string, current int, applies bool, err error) {
+	switch key {
+	case db.QuestSteps:
+		return goals.KindTarget, tmpl.Target, tmpl.Enabled, nil
+	case db.QuestSleep:
+		if tmpl.Enabled {
+			return goals.KindTarget, tmpl.Target, true, nil
+		}
+		return goals.KindEnable, tmpl.Target, true, nil
+	case db.QuestExercise:
+		return goals.KindEnable, tmpl.Target, !tmpl.Enabled, nil
+	case db.QuestProtein:
+		if !tmpl.Enabled {
+			return "", 0, false, nil
+		}
+		protein, err := proteinFor(r.Context(), s.db.Pool, c.user, today, tmpl.Target)
+		return goals.KindTarget, protein.Effective, true, err
+	}
+	return "", 0, false, nil
+}
+
 // freshProposal computes the proposal for one quest from the recent data.
-func (s *Server) freshProposal(r *http.Request, c caller, key string, tmpl db.QuestTemplate, today score.Date) (*goals.Proposal, error) {
+func (s *Server) freshProposal(r *http.Request, c caller, key, kind string, current int, tmpl db.QuestTemplate, today score.Date) (*goals.Proposal, error) {
 	ctx := r.Context()
+	if kind == goals.KindEnable {
+		since := score.WeekStart(today).AddDays(-goals.EnableDismissedDays)
+		dismissed, err := db.EnableDismissedSince(ctx, s.db.Pool, c.user.ID, key, since)
+		if err != nil || dismissed {
+			return nil, err
+		}
+		return goals.Enable(key, tmpl.Target), nil
+	}
 	switch key {
 	case db.QuestSteps:
 		points, err := db.HealthSeries(ctx, s.db.Pool, c.user.ID, db.MetricSteps, today.AddDays(-29), today)
@@ -109,6 +151,16 @@ func (s *Server) freshProposal(r *http.Request, c caller, key string, tmpl db.Qu
 			}
 		}
 		return goals.Sleep(tmpl.Target, asleep), nil
+	case db.QuestProtein:
+		latest, err := db.LatestHealth(ctx, s.db.Pool, c.user.ID, today, []string{db.MetricWeight})
+		if err != nil {
+			return nil, err
+		}
+		w, ok := latest[db.MetricWeight]
+		if !ok {
+			return nil, nil
+		}
+		return goals.Protein(current, w.Value), nil
 	}
 	return nil, nil
 }
@@ -151,7 +203,21 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		}
-		patches := []templatePatch{{Key: key, Target: &p.Proposed}}
+		if key == db.QuestProtein {
+			// The protein target lives on the profile, not on the template.
+			user := c.user
+			user.ProteinTarget = &p.Proposed
+			if err := db.UpdateUser(ctx, tx, user); err != nil {
+				return mapUpdateUserErr(err)
+			}
+			return s.resnapshotJoinDay(ctx, tx, c, user, patchMeRequest{Targets: &targetsPatch{}})
+		}
+		patch := templatePatch{Key: key, Target: &p.Proposed}
+		if p.Kind == goals.KindEnable {
+			on := true
+			patch.Enabled = &on
+		}
+		patches := []templatePatch{patch}
 		if err := applyTemplatePatches(ctx, tx, c.user.ID, patches); err != nil {
 			return err
 		}
@@ -161,7 +227,12 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	me, err := s.buildMe(ctx, s.db.Pool, c.user)
+	fresh, err := db.GetUser(ctx, s.db.Pool, c.user.ID)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	me, err := s.buildMe(ctx, s.db.Pool, fresh)
 	if err != nil {
 		fail(w, r, err)
 		return

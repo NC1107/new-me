@@ -19,12 +19,7 @@ import (
 
 const (
 	// DefaultSleepTargetMin applies while the sleep quest is off.
-	DefaultSleepTargetMin = 420
-	// baselineDays is the history HRV and resting heart rate are compared against.
-	baselineDays = 30
-	// HRV and resting heart rate metric keys.
-	metricHRV       = "hrv_ms"
-	metricRestingHR = "resting_hr"
+	DefaultSleepTargetMin = engine.DefaultSleepTargetMin
 	// minSleepNights is how many recorded nights a bedtime or wake time estimate needs.
 	minSleepNights = 4
 )
@@ -159,36 +154,8 @@ func (d *Day) loadHistory(ctx context.Context, q db.Querier, user db.User, loc *
 		}
 	}
 
-	in := readiness.Input{SleepMin: d.LastNightMin, SleepTargetMin: d.SleepTargetMin}
-	if v, ok := scored.Inputs.Metrics[metricHRV]; ok {
-		in.HRV = &v
-	}
-	if v, ok := scored.Inputs.Metrics[metricRestingHR]; ok {
-		in.RestingHR = &v
-	}
-	if in.HRVBase, err = baseline(ctx, q, user.ID, metricHRV, today); err != nil {
-		return err
-	}
-	if in.RestingBase, err = baseline(ctx, q, user.ID, metricRestingHR, today); err != nil {
-		return err
-	}
-	if res, ok := readiness.Compute(in); ok {
-		d.Readiness = &res
-	}
-	return nil
-}
-
-// baseline lists the metric's readings of the baselineDays before today.
-func baseline(ctx context.Context, q db.Querier, userID int64, metric string, today score.Date) ([]float64, error) {
-	points, err := db.HealthSeries(ctx, q, userID, metric, today.AddDays(-baselineDays), today.AddDays(-1))
-	if err != nil {
-		return nil, err
-	}
-	out := make([]float64, len(points))
-	for i, p := range points {
-		out[i] = p.Value
-	}
-	return out, nil
+	d.Readiness, err = engine.ReadinessFor(ctx, q, user.ID, today, d.LastNightMin, d.SleepTargetMin, scored.Inputs.Metrics)
+	return err
 }
 
 func planHabit(st db.HabitState) plan.Habit {

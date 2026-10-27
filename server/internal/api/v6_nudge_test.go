@@ -144,11 +144,11 @@ func TestMorningPlanPushCarriesReadinessAndThePlan(t *testing.T) {
 	nick := h.joinAdmin("Nick", "green")
 	putSleep(h, nick, sleepNight(2, time.November, 330)).expect(http.StatusOK)
 
-	h.runNudges(ny(2026, time.November, 2, 7, 59))
+	h.runNudges(ny(2026, time.November, 2, 7, 9))
 	if push.count() != 0 {
-		t.Fatal("too early")
+		t.Fatal("too early: the first notification is 10 minutes after the 07:00 default wake time")
 	}
-	h.runNudges(ny(2026, time.November, 2, 8, 0))
+	h.runNudges(ny(2026, time.November, 2, 7, 10))
 	got := push.of(together.EventMorningPlan, nick.ID)
 	if len(got) != 1 || got[0].Title != "Take it easy today" ||
 		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 4 quests done.") {
@@ -160,43 +160,67 @@ func TestMorningPlanPushCarriesReadinessAndThePlan(t *testing.T) {
 	}
 
 	h.patch("/api/me", nick.Token, obj{"notifications": obj{"morningPlan": false}}).expect(http.StatusOK)
-	h.runNudges(ny(2026, time.November, 3, 8, 0))
+	h.runNudges(ny(2026, time.November, 3, 7, 10))
 	if len(push.of(together.EventMorningPlan, nick.ID)) != 1 {
 		t.Fatal("preference off")
 	}
 }
 
-func TestMorningPlanWaitsForTheUsualWakeTime(t *testing.T) {
+func TestMorningPlanFollowsTheScheduleWakeTimeAndOffset(t *testing.T) {
 	push := &capture{}
 	h := newHarness(t, withPush(push))
 	nick := h.joinAdmin("Nick", "green")
-	// In bed at 23:00 for 9 h 30 asleep, so awake at 09:00 every morning: the push is due at 09:30.
-	var nights []obj
-	for day := 28; day <= 31; day++ {
-		nights = append(nights, sleepNight(day, time.October, 570))
-	}
-	// The night of November 1 is skipped: the clocks went back that night, which moves its wake time.
-	nights = append(nights, sleepNight(2, time.November, 570))
-	putSleep(h, nick, nights...).expect(http.StatusOK)
+	// Mondays are workdays; waking at 09:00 with a 30 minute offset puts the first push at 09:30.
+	h.patch("/api/me", nick.Token, obj{"schedule": obj{
+		"workday": obj{"wake": "09:00"}, "firstNotificationOffsetMin": 30}}).expect(http.StatusOK)
 
 	h.runNudges(ny(2026, time.November, 2, 9, 29))
 	if push.count() != 0 {
-		t.Fatalf("before wake plus 30: %+v", push.msgs)
+		t.Fatalf("before wake plus the offset: %+v", push.msgs)
 	}
 	h.runNudges(ny(2026, time.November, 2, 9, 30))
 	if len(push.of(together.EventMorningPlan, nick.ID)) != 1 {
-		t.Fatalf("at wake plus 30: %+v", push.msgs)
+		t.Fatalf("at wake plus the offset: %+v", push.msgs)
+	}
+
+	// Tuesday is a workday too; a day off (Saturday) uses its own wake time.
+	h.patch("/api/me", nick.Token, obj{"schedule": obj{"dayOff": obj{"wake": "10:00"}}}).expect(http.StatusOK)
+	h.runNudges(ny(2026, time.November, 7, 10, 29))
+	if len(push.of(together.EventMorningPlan, nick.ID)) != 1 {
+		t.Fatalf("Saturday before 10:30: %+v", push.msgs)
+	}
+	h.runNudges(ny(2026, time.November, 7, 10, 30))
+	if len(push.of(together.EventMorningPlan, nick.ID)) != 2 {
+		t.Fatalf("Saturday at 10:30: %+v", push.msgs)
 	}
 }
 
-func TestWindDownNudgeOnlyAfterAShortNightAndEvenInQuietHours(t *testing.T) {
+func TestNothingIsSentOnAnAwayDay(t *testing.T) {
 	push := &capture{}
 	h := newHarness(t, withPush(push))
 	nick := h.joinAdmin("Nick", "green")
 	h.enableAllNudges(nick)
-	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "sleep", "enabled": true, "target": 450}}}).expect(http.StatusOK)
-	// Every night is 6 h 20 asleep, in bed at 23:00 and awake at 05:50: the target of 7 h 30
-	// means bed by 22:20, so the nudge comes at 21:35.
+	h.post("/api/away", nick.Token, obj{"from": "2026-11-02", "to": "2026-11-03", "note": "flu"}).expect(http.StatusCreated)
+	h.runNudges(ny(2026, time.November, 2, 7, 30))
+	h.runNudges(ny(2026, time.November, 3, 7, 30))
+	if push.count() != 0 {
+		t.Fatalf("away days send nothing: %+v", push.msgs)
+	}
+	h.runNudges(ny(2026, time.November, 4, 7, 30))
+	if len(push.of(together.EventMorningPlan, nick.ID)) != 1 {
+		t.Fatalf("the day after: %+v", push.msgs)
+	}
+}
+
+func TestWindDownNudgeOnlyAfterAShortNightAndBeforeBedtime(t *testing.T) {
+	push := &capture{}
+	h := newHarness(t, withPush(push))
+	nick := h.joinAdmin("Nick", "green")
+	h.enableAllNudges(nick)
+	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "sleep", "enabled": true, "target": 450}},
+		"schedule": obj{"workday": obj{"bed": "22:20"}, "dayOff": obj{"bed": "22:20"}}}).expect(http.StatusOK)
+	// Every night is 6 h 20 asleep. The bedtime of 22:20 comes from the schedule, so the nudge
+	// comes at 21:35 and stops at bedtime.
 	var nights []obj
 	for day := 28; day <= 31; day++ {
 		nights = append(nights, sleepNight(day, time.October, 380))
@@ -216,6 +240,11 @@ func TestWindDownNudgeOnlyAfterAShortNightAndEvenInQuietHours(t *testing.T) {
 	h.runNudges(ny(2026, time.November, 2, 21, 50))
 	if len(push.of(together.EventWindDown, nick.ID)) != 1 {
 		t.Fatal("once a day")
+	}
+	// Nothing at all is sent from bedtime on, not even a wind down that was missed.
+	h.runNudges(ny(2026, time.November, 3, 22, 20))
+	if len(push.of(together.EventWindDown, nick.ID)) != 1 {
+		t.Fatalf("at bedtime: %+v", push.msgs)
 	}
 
 	// A good night means no wind down the next evening.

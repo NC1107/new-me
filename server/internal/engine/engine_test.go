@@ -228,7 +228,7 @@ func TestRecomputeDayScoresAndStores(t *testing.T) {
 		t.Fatalf("stored = %+v %v", stored, err)
 	}
 	quests, err := db.GetDayQuests(ctx, database.Pool, u.ID, day)
-	if err != nil || len(quests) != 5 {
+	if err != nil || len(quests) != 7 {
 		t.Fatalf("snapshot = %d quests, %v", len(quests), err)
 	}
 }
@@ -308,7 +308,7 @@ func TestRecomputeDayIsSafeUnderConcurrentWriters(t *testing.T) {
 	}
 }
 
-func TestStreakForReadsStoredDays(t *testing.T) {
+func TestStreakForFreezesAMissedStoredDay(t *testing.T) {
 	database := dbtest.Fresh(t)
 	start := score.MustDate("2026-10-26")
 	u := join(t, database, "Nick", "green", true, start)
@@ -334,8 +334,8 @@ func TestStreakForReadsStoredDays(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Count != 3 || len(got.RestDays) != 1 || got.RestDays[0] != start.AddDays(2) {
-		t.Fatalf("streak = %+v, want 3 (the rest day adds nothing) with the rest on %s", got, start.AddDays(2))
+	if o := got.Outcome(start.AddDays(2)); got.Count != 3 || o.Status != score.StatusFrozen || got.Freezes.Held != 1 {
+		t.Fatalf("streak = %+v, want 3 (the frozen day adds nothing) with %s frozen and one freeze left", got, start.AddDays(2))
 	}
 }
 

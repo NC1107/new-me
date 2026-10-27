@@ -1,6 +1,8 @@
 // Package estimate turns a photo or a sentence about a meal into the numbers of a meal log
-// entry. Claude does the guessing; everything it returns is validated and clamped here to the
-// bounds the meal log enforces, so a wild answer can never reach the form unchecked.
+// entry. A sentence is split into items by Claude and each item is looked up in a real food
+// database; Claude only estimates what no database knows, and a photo is a pure Claude
+// estimate. Everything is validated and clamped here to the bounds the meal log enforces, so a
+// wild answer can never reach the form unchecked.
 package estimate
 
 import (
@@ -174,14 +176,17 @@ func cleanText(s string, maxRunes int) string {
 	return s
 }
 
-// Estimator asks Claude for estimates.
+// Estimator asks Claude for estimates. Typed text goes through the itemized pipeline in
+// meal.go; photos stay a single Claude estimate.
 type Estimator struct {
 	Client *anthropic.Client
+	// Foods is nil in tests that only need the Claude steps; every item is then estimated.
+	Foods *Foods
 }
 
-func (e *Estimator) run(ctx context.Context, user []anthropic.Block) (Estimate, error) {
+func (e *Estimator) run(ctx context.Context, system string, user []anthropic.Block) (Estimate, error) {
 	raw, err := e.Client.ToolInput(ctx, anthropic.Request{
-		System: systemPrompt, User: user, MaxTokens: 600,
+		System: system, User: user, MaxTokens: 600,
 		Tool: &anthropic.Tool{
 			Name: "report_meal_estimate", Description: "Report the estimated nutrition of the meal.", Schema: schema()},
 	})
@@ -189,11 +194,6 @@ func (e *Estimator) run(ctx context.Context, user []anthropic.Block) (Estimate, 
 		return Estimate{}, err
 	}
 	return Parse(raw)
-}
-
-// FromText estimates a meal described in words.
-func (e *Estimator) FromText(ctx context.Context, text string) (Estimate, error) {
-	return e.run(ctx, []anthropic.Block{{Text: "Meal description: " + text}})
 }
 
 // FromImage estimates the meal in a photo; the optional hint is the person's own words about it.
@@ -204,5 +204,5 @@ func (e *Estimator) FromImage(ctx context.Context, mediaType, b64, hint string) 
 	if hint != "" {
 		text += " The person says: " + hint
 	}
-	return e.run(ctx, append(blocks, anthropic.Block{Text: text}))
+	return e.run(ctx, systemPrompt, append(blocks, anthropic.Block{Text: text}))
 }

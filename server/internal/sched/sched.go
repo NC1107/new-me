@@ -14,6 +14,8 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/listening"
+	"github.com/nc1107/new-me/server/internal/lookback"
+	"github.com/nc1107/new-me/server/internal/milestone"
 	"github.com/nc1107/new-me/server/internal/nudge"
 	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/score"
@@ -43,6 +45,10 @@ type Scheduler struct {
 	Nudges *nudge.Service
 	// Recap sends the Sunday recap push. Nil skips it.
 	Recap *recap.Service
+	// Lookback sends the monthly look-back push on the 1st. Nil skips it.
+	Lookback *lookback.Service
+	// Milestones records streak milestones and sends their pushes. Nil skips it.
+	Milestones *milestone.Service
 }
 
 // New builds a scheduler on the wall clock.
@@ -84,12 +90,17 @@ func (s *Scheduler) runListening(ctx context.Context) {
 	}
 }
 
-// pass finalizes due days, settles what the pair shares, then sends the nudges and the weekly
-// recap that have come due.
+// pass finalizes due days, settles what the pair shares, then sends the look-back, nudges and
+// weekly recap that have come due and records the milestones reached.
 func (s *Scheduler) pass(ctx context.Context) error {
 	err := s.FinalizeDue(ctx)
 	if s.Together != nil {
 		err = errors.Join(err, s.Together.Settle(ctx))
+	}
+	// The look-back goes before the nudges: it is the first push of the 1st, so the morning plan
+	// finds the first slot taken and steps aside.
+	if s.Lookback != nil {
+		err = errors.Join(err, s.Lookback.PushDue(ctx, s.Now()))
 	}
 	if s.Nudges != nil {
 		err = errors.Join(err, s.Nudges.Run(ctx))
@@ -97,8 +108,15 @@ func (s *Scheduler) pass(ctx context.Context) error {
 	if s.Recap != nil {
 		err = errors.Join(err, s.Recap.PushDue(ctx, s.Now()))
 	}
+	if s.Milestones != nil {
+		err = errors.Join(err, s.Milestones.Run(ctx))
+	}
 	return err
 }
+
+// RunOnce does one full pass of everything the scheduler does apart from listening, without
+// the timeout guard of the loop. Tests drive it with their own clock.
+func (s *Scheduler) RunOnce(ctx context.Context) error { return s.pass(ctx) }
 
 // PollListening reads every linked Audiobookshelf account once.
 func (s *Scheduler) PollListening(ctx context.Context) error {
@@ -163,7 +181,15 @@ func (s *Scheduler) finalizeUser(ctx context.Context, u db.User, now time.Time) 
 			return fmt.Errorf("finalize %s: %w", date, err)
 		}
 	}
-	return nil
+	// Settling records which finalized days were frozen, away or missed, and a repair applies
+	// once yesterday is final, so both belong right behind the finalizing.
+	return s.DB.WithTx(ctx, func(tx pgx.Tx) error {
+		if err := engine.SettleStreaks(ctx, tx, u, now, loc); err != nil {
+			return fmt.Errorf("settle streak: %w", err)
+		}
+		_, err := engine.ApplyRepair(ctx, tx, u, now, loc)
+		return err
+	})
 }
 
 // lastFinalizable is the newest local date whose grace window has ended: yesterday once it is

@@ -1,0 +1,9 @@
+# Keep the build context minimal. Do NOT exclude *.sql: migrations/*.sql are go:embed-ed.
+.git
+.gitignore
+*.md
+server
+*.out
+.env
+*.env
+*.env.*

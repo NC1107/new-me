@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#0A0A0A"/>
+  <!-- the Today score ring, three quarters full -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#242424" stroke-width="76"/>
+  <path d="M 512 212 A 300 300 0 1 1 212 512" fill="none" stroke="#37E07E" stroke-width="76" stroke-linecap="round"/>
+</svg>

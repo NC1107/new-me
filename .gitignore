@@ -1,0 +1,24 @@
+# Secrets / local config
+.env
+*.env.local
+
+# Credentials: these must never be committed
+*.p8
+AuthKey_*.p8
+*.p12
+*.mobileprovision
+
+# Server build output
+server/server
+server/newme-server*
+*.out
+
+node_modules/
+
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+
+# Tooling / session data
+.claude/

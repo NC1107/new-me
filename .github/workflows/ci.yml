@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+# Least privilege per job rather than whatever the repository default happens to be.
+jobs:
+  server:
+    name: Server (Go)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: server
+    # DB-backed handler tests refuse to run without TESTDB_URL, so this service is what
+    # makes the job meaningful rather than merely green.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: newme
+          # Per-run value: the database lives and dies inside this job, and a literal
+          # would trip secret scanners on every future edit.
+          POSTGRES_PASSWORD: ci-${{ github.run_id }}
+          POSTGRES_DB: newme_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: server/go.sum
+      - name: Check formatting (gofmt)
+        run: test -z "$(gofmt -l .)" || { echo 'These files need gofmt:'; gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./... -race
+        env:
+          TESTDB_URL: postgres://newme:ci-${{ github.run_id }}@localhost:5432/newme_test?sslmode=disable
+          NEWME_APP_KEY: ci-test-key-0123456789
+
+  app:
+    name: App (Flutter)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # Pinned exactly: "stable" moves, and an upstream release could change what ships.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+      - run: flutter pub get --enforce-lockfile
+      - name: Check formatting (dart format)
+        run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test

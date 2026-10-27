@@ -1,104 +1,103 @@
 {
   "plan": {
-    "id": 1,
-    "startsOn": "2026-11-02",
-    "endsOn": "2026-11-29",
-    "weeks": 4,
-    "notes": "Two full-body days.",
     "days": [
       {
-        "label": "Full body A",
-        "weekday": 1,
         "exercises": [
           {
             "exercise": "push_up",
-            "sets": 2,
-            "min": 6,
             "max": 12,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "pull_up",
-            "sets": 2,
-            "min": 3,
             "max": 8,
+            "min": 3,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_row",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_overhead_press",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "split_squat",
-            "sets": 2,
-            "min": 8,
             "max": 12,
+            "min": 8,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           }
-        ]
+        ],
+        "label": "Full body A",
+        "weekday": 1
       },
       {
-        "label": "Full body B",
-        "weekday": 4,
         "exercises": [
           {
             "exercise": "push_up",
-            "sets": 2,
-            "min": 6,
             "max": 12,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "pull_up",
-            "sets": 2,
-            "min": 3,
             "max": 8,
+            "min": 3,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_row",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_overhead_press",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "split_squat",
-            "sets": 2,
-            "min": 8,
             "max": 12,
+            "min": 8,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           }
-        ]
+        ],
+        "label": "Full body B",
+        "weekday": 4
       }
-    ]
+    ],
+    "endsOn": "2026-11-29",
+    "id": 1,
+    "notes": "Two full-body days.",
+    "startsOn": "2026-11-02",
+    "weeks": 4
   }
 }
-

@@ -129,8 +129,9 @@ void main() {
         fail('expected a 422');
       } on ApiException catch (e) {
         expect(e.code, 'plan_invalid');
-        expect(parseViolations(e.body), hasLength(4));
-        expect(parseViolations(e.body).first.message, contains('Schoenfeld 2017'));
+        expect(parseViolations(e.body), hasLength(5));
+        expect(parseViolations(e.body).first.message, 'the block must last 4 to 6 weeks, not 9');
+        expect(parseViolations(e.body).last.message, contains('2 short of the 4 minimum'));
       }
     });
   });
@@ -333,8 +334,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Design my plan'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('broke the training rules twice'), findsOneWidget);
-      expect(find.textContaining('chest gets 2 weekly sets'), findsOneWidget);
+      expect(find.textContaining('still broke the training rules after repair'), findsOneWidget);
+      expect(find.textContaining('chest gets 2 weekly sets, 2 short'), findsOneWidget);
     });
 
     testWidgets('a change sends its kind and detail', (tester) async {

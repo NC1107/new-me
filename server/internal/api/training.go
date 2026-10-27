@@ -21,7 +21,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/training"
 )
 
-// plansPerDay caps plan generation and changes per person, since each costs one or two Claude
+// plansPerDay caps plan generation and changes per person, since each costs up to three Claude
 // calls.
 const plansPerDay = 10
 
@@ -270,7 +270,7 @@ func (s *Server) planAndSave(w http.ResponseWriter, r *http.Request, weeks int, 
 	var invalidPlan *planner.InvalidPlan
 	if errors.As(err, &invalidPlan) {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"code": codePlanInvalid,
-			"error":      "the designed plan broke the training rules twice; try again or change the profile",
+			"error":      "the designed plan still broke the training rules after repair; try again or change the profile",
 			"violations": invalidPlan.Violations})
 		return
 	}

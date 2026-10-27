@@ -60,7 +60,7 @@ class _TrainingPageState extends ConsumerState<TrainingPage> {
       if (!mounted) return;
       setState(() {
         _error = e.code == 'plan_invalid'
-            ? 'The designed plan broke the training rules twice, so it was not saved.'
+            ? 'The designed plan still broke the training rules after repair, so it was not saved.'
             : errorCopy(e);
         _violations = parseViolations(e.body);
       });

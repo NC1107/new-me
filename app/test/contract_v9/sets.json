@@ -1,27 +1,26 @@
 {
   "sets": [
     {
-      "id": 1,
       "exercise": "db_row",
-      "localDate": "2026-11-02",
-      "loggedAt": "2026-10-27T22:20:06Z",
-      "reps": 10,
-      "seconds": null,
+      "id": 1,
       "loadKg": 20,
+      "localDate": "2026-11-02",
+      "loggedAt": "2026-11-02T17:00:00Z",
+      "reps": 10,
       "rir": 2,
+      "seconds": null,
       "sessionId": 1
     },
     {
-      "id": 2,
       "exercise": "plank",
-      "localDate": "2026-11-02",
-      "loggedAt": "2026-10-27T22:20:06Z",
-      "reps": null,
-      "seconds": 45,
+      "id": 2,
       "loadKg": null,
+      "localDate": "2026-11-02",
+      "loggedAt": "2026-11-02T17:00:00Z",
+      "reps": null,
       "rir": null,
+      "seconds": 45,
       "sessionId": null
     }
   ]
 }
-

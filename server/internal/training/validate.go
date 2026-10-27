@@ -91,6 +91,19 @@ const (
 	MinStrengthDays = 2
 )
 
+// WeeklySets counts each primary muscle's sets across the plan's days, the way Validate does.
+func WeeklySets(p Plan, catalog map[string]CatalogEntry) map[string]int {
+	weekly := map[string]int{}
+	for _, d := range p.Days {
+		for _, e := range d.Exercises {
+			for _, m := range catalog[e.Exercise].PrimaryMuscles {
+				weekly[m] += e.Sets
+			}
+		}
+	}
+	return weekly
+}
+
 // Validate checks a plan against the profile, the catalog and the evidence limits.
 func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violation {
 	var out []Violation
@@ -105,7 +118,7 @@ func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violat
 	}
 	weekdays := map[int]bool{}
 	strengthDays := 0
-	weekly := map[string]int{}
+	weekly := WeeklySets(p, catalog)
 	for _, d := range p.Days {
 		if d.Weekday < 1 || d.Weekday > 7 || weekdays[d.Weekday] {
 			add("weekday", "%q needs its own weekday from 1 (Monday) to 7", d.Label)
@@ -125,9 +138,6 @@ func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violat
 				add("equipment", "%q needs equipment the person does not have", e.Exercise)
 			}
 			out = append(out, checkPrescription(e, entry)...)
-			for _, m := range entry.PrimaryMuscles {
-				weekly[m] += e.Sets
-			}
 			seconds += e.Sets * (WorkSecondsPerSet + e.RestSec)
 		}
 		if limit := float64(profile.SessionMinutes*60) * TimeSlack; float64(seconds) > limit {
@@ -144,7 +154,8 @@ func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violat
 			sets = max(sets, weekly[m])
 		}
 		if sets < r.Min {
-			add("volume_low", "%s gets %d weekly sets, under the %d minimum (%s)", groupName(group), sets, r.Min, r.Label)
+			add("volume_low", "%s gets %d weekly sets, %d short of the %d minimum (%s)", groupName(group), sets,
+				r.Min-sets, r.Min, r.Label)
 		}
 	}
 	muscles := make([]string, 0, len(weekly))
@@ -154,7 +165,8 @@ func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violat
 	sort.Strings(muscles)
 	for _, m := range muscles {
 		if weekly[m] > r.Max {
-			add("volume_high", "%s gets %d weekly sets, over the %d maximum (%s)", m, weekly[m], r.Max, r.Label)
+			add("volume_high", "%s gets %d weekly sets, %d over the %d maximum (%s)", m, weekly[m], weekly[m]-r.Max,
+				r.Max, r.Label)
 		}
 	}
 	return out

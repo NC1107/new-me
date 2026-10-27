@@ -14,7 +14,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/training"
 )
 
-// ErrInvalid means the model's plan still broke the rules after the repair round.
+// ErrInvalid means the model's plan still broke the rules after the repair rounds.
 var ErrInvalid = errors.New("planner: plan breaks the training rules")
 
 // InvalidPlan carries the violations of a rejected plan.
@@ -61,13 +61,22 @@ const systemPrompt = `You design resistance-training plans for a personal habit 
 Answer only by calling the tool. Use only exercise keys from the catalog given. Build a weekly
 template that repeats for the block. Respect every limit you are given exactly: they come from
 published guidelines and the server rejects plans that break them. Prefer compound exercises,
-balance pushing and pulling, and match the person's focus. Keep notes to one or two short
-sentences in plain words.`
+balance pushing and pulling, and match the person's focus. Before submitting, count the weekly
+sets for every muscle group exactly as the limits describe, report the counts in weeklySets, and
+fix the plan until every count is inside the range. Name each day in two or three plain words,
+such as "Pull focus". Keep notes to one or two short sentences in plain words.`
 
 var toolSchema = map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"weeks": map[string]any{"type": "integer"},
+		// The model's own tally; asking for it makes the volume limits far more likely to hold.
+		// The server ignores it and counts for itself.
+		"weeklySets": map[string]any{
+			"type":                 "object",
+			"description":          "weekly sets per muscle group, counted from the days",
+			"additionalProperties": map[string]any{"type": "integer"},
+		},
 		"notes": map[string]any{"type": "string"},
 		"days": map[string]any{
 			"type": "array",
@@ -96,7 +105,7 @@ var toolSchema = map[string]any{
 			},
 		},
 	},
-	"required": []string{"weeks", "notes", "days"},
+	"required": []string{"weeks", "notes", "days", "weeklySets"},
 }
 
 type wirePlan struct {
@@ -129,8 +138,13 @@ func (w wirePlan) plan() training.Plan {
 	return p
 }
 
-// Generate asks for a plan, validates it, sends the violations back once, and returns a valid
-// plan or an *InvalidPlan.
+// RepairRounds is how many times a rejected plan goes back with its violations. Live runs showed
+// a dense profile (experienced, 3 days of 45 minutes) often needs a second round to reach every
+// weekly minimum.
+const RepairRounds = 2
+
+// Generate asks for a plan, validates it, sends the plan back with its violations up to
+// RepairRounds times, and returns a valid plan or an *InvalidPlan.
 func (p *Planner) Generate(ctx context.Context, in Input) (training.Plan, error) {
 	catalog := map[string]training.CatalogEntry{}
 	for _, e := range in.Catalog {
@@ -145,12 +159,18 @@ func (p *Planner) Generate(ctx context.Context, in Input) (training.Plan, error)
 	if len(violations) == 0 {
 		return plan, nil
 	}
-	repair := prompt + "\n\nYour previous plan broke these rules; return a corrected plan:\n" + listViolations(violations)
-	if plan, err = p.ask(ctx, repair); err != nil {
-		return training.Plan{}, err
+	for range RepairRounds {
+		counts := training.WeeklySets(plan, catalog)
+		if plan, err = p.ask(ctx, repairPrompt(prompt, plan, counts, violations)); err != nil {
+			return training.Plan{}, err
+		}
+		if violations = training.Validate(plan, in.Profile, catalog); len(violations) == 0 {
+			return plan, nil
+		}
 	}
-	if violations = training.Validate(plan, in.Profile, catalog); len(violations) == 0 {
-		return plan, nil
+	// A plan short only of weekly sets gets them added on days with spare time, within every limit.
+	if topped, ok := training.TopUp(plan, in.Profile, catalog); ok {
+		return topped, nil
 	}
 	return training.Plan{}, &InvalidPlan{Violations: violations}
 }
@@ -203,6 +223,9 @@ func Prompt(in Input) string {
 	fmt.Fprintf(&b, "- Muscle-strengthening work on at least %d days (WHO 2020).\n", training.MinStrengthDays)
 	fmt.Fprintf(&b, "- Weekly sets per muscle group (count each exercise's sets for every primary muscle): between %d and %d; chest, back, shoulders, quads, and hamstrings or glutes must each reach %d (%s).\n",
 		r.Min, r.Max, r.Min, r.Label)
+	groups := 5
+	fmt.Fprintf(&b, "- Arithmetic: the %d groups need at least %d group-sets a week, about %d a training day; an exercise whose primary muscles span two groups counts for both, so choose those to save time.\n",
+		groups, groups*r.Min, (groups*r.Min+in.Profile.DaysPerWeek-1)/max(in.Profile.DaysPerWeek, 1))
 	fmt.Fprintf(&b, "- Reps in reserve 0 to %d; 1 to %d sets per exercise; rep ranges within 1 to %d, or %d to %d seconds for timed exercises; rest %d to %d seconds.\n",
 		training.MaxRIR, training.MaxSetsPerExercise, training.MaxRepsInRange, training.MinSeconds, training.MaxSeconds,
 		training.MinRestSec, training.MaxRestSec)
@@ -224,6 +247,25 @@ func Prompt(in Input) string {
 			strings.Join(orNone(e.Equipment), "+"))
 	}
 	return b.String()
+}
+
+// repairPrompt sends the rejected plan back with what it broke, so the model fixes that plan
+// instead of designing a new one from scratch.
+func repairPrompt(prompt string, rejected training.Plan, counts map[string]int, v []training.Violation) string {
+	previous, _ := json.Marshal(rejected)
+	muscles := make([]string, 0, len(counts))
+	for m := range counts {
+		muscles = append(muscles, m)
+	}
+	sort.Strings(muscles)
+	tally := make([]string, len(muscles))
+	for i, m := range muscles {
+		tally[i] = fmt.Sprintf("%s %d", m, counts[m])
+	}
+	return prompt + "\n\nYour previous plan:\n" + string(previous) +
+		"\n\nIts weekly sets per muscle, counted by the server: " + strings.Join(tally, ", ") + "." +
+		"\n\nIt broke these rules. Change it as little as needed so every rule holds: add or remove exactly the sets " +
+		"each message names, on days with spare time, and return the corrected plan:\n" + listViolations(v)
 }
 
 func listViolations(v []training.Violation) string {

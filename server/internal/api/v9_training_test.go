@@ -21,6 +21,13 @@ func planReply(sets int) obj {
 	return obj{"weeks": 4, "notes": "Two full-body days.", "days": []obj{day("Full body A", 1), day("Full body B", 4)}}
 }
 
+// brokenPlan breaks a rule the weekly-set top-up never repairs: the block is too long.
+func brokenPlan() obj {
+	p := planReply(1)
+	p["weeks"] = 9
+	return p
+}
+
 // plansFrom answers submit_plan calls with the queued plans in order, repeating the last.
 func plansFrom(plans ...obj) func(map[string]any) any {
 	n := 0
@@ -191,7 +198,7 @@ func TestPlanRepairAndRejection(t *testing.T) {
 		t.Fatalf("one repair round expected, got %d calls", f.count())
 	}
 
-	h2, _, nadia := trainingHarness(t, planReply(1))
+	h2, _, nadia := trainingHarness(t, brokenPlan())
 	h2.put("/api/training/profile", nadia.Token, beginnerProfile).expect(http.StatusOK)
 	bad := h2.post("/api/training/plan", nadia.Token, obj{}).code("plan_invalid")
 	if bad.length("violations") == 0 || !h2.get("/api/training/plan", nadia.Token).isNull("plan") {

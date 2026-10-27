@@ -20,10 +20,16 @@ func TestWriteV9Contract(t *testing.T) {
 	}
 	write := func(name string, r *response) {
 		t.Helper()
-		var out bytes.Buffer
-		if err := json.Indent(&out, r.Body, "", "  "); err != nil {
+		var body any
+		if err := json.Unmarshal(r.Body, &body); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
+		pinLoggedAt(body)
+		raw, err := json.MarshalIndent(body, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := bytes.NewBuffer(raw)
 		out.WriteByte('\n')
 		if err := os.WriteFile(filepath.Join(dir, name+".json"), out.Bytes(), 0o644); err != nil {
 			t.Fatal(err)
@@ -33,7 +39,7 @@ func TestWriteV9Contract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h, _, nick := trainingHarness(t, planReply(1), planReply(1), planReply(2))
+	h, _, nick := trainingHarness(t, brokenPlan(), brokenPlan(), brokenPlan(), planReply(2))
 	write("training_today_none", h.get("/api/training/today", nick.Token).expect(http.StatusOK))
 	write("training_profile_empty", h.get("/api/training/profile", nick.Token).expect(http.StatusOK))
 	write("training_profile", h.put("/api/training/profile", nick.Token, beginnerProfile).expect(http.StatusOK))
@@ -57,4 +63,23 @@ func TestWriteV9Contract(t *testing.T) {
 
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	write("training_today_rest", h.get("/api/training/today", nick.Token).expect(http.StatusOK))
+}
+
+// pinLoggedAt replaces the database clock's loggedAt with a fixed instant, so re-recording only
+// changes a fixture when its shape or content does.
+func pinLoggedAt(v any) {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, child := range x {
+			if k == "loggedAt" {
+				x[k] = "2026-11-02T17:00:00Z"
+				continue
+			}
+			pinLoggedAt(child)
+		}
+	case []any:
+		for _, child := range x {
+			pinLoggedAt(child)
+		}
+	}
 }

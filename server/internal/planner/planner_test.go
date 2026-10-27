@@ -100,14 +100,36 @@ func TestGenerateRepairsOnce(t *testing.T) {
 	if plan.Days[0].Exercises[0].Sets != 2 {
 		t.Fatalf("expected the repaired plan, got %+v", plan)
 	}
-	if len(f.prompts) != 2 || !strings.Contains(f.prompts[1], "broke these rules") || !strings.Contains(f.prompts[1], "under the 4 minimum") {
+	if len(f.prompts) != 2 || !strings.Contains(f.prompts[1], "broke these rules") || !strings.Contains(f.prompts[1], "2 short of the 4 minimum") ||
+		!strings.Contains(f.prompts[1], "Your previous plan:") ||
+		!strings.Contains(f.prompts[1], "counted by the server: back 2, chest 2, glutes 2, quads 2, shoulders 2.") || !strings.Contains(f.prompts[1], `"Exercise":"pull_up","Sets":1`) {
 		t.Fatalf("the repair prompt should list the violations: %v", f.prompts)
 	}
 }
 
-func TestGenerateRejectsAfterTheRepairRound(t *testing.T) {
-	_, p := newFake(t, planJSON(1), planJSON(1))
+func TestGenerateTopsUpAPlanShortOnlyOfWeeklySets(t *testing.T) {
+	_, p := newFake(t, planJSON(1), planJSON(1), planJSON(1))
+	plan, err := p.Generate(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range plan.Days {
+		for _, e := range d.Exercises {
+			if e.Sets != 2 {
+				t.Fatalf("every group was 2 short, so each exercise gains one set a day: %+v", plan)
+			}
+		}
+	}
+}
+
+func TestGenerateRejectsAfterTheRepairRounds(t *testing.T) {
+	bad := planJSON(1)
+	bad["weeks"] = 9
+	f, p := newFake(t, bad, bad, bad)
 	_, err := p.Generate(context.Background(), input)
+	if len(f.prompts) != 1+RepairRounds {
+		t.Fatalf("expected %d calls, got %d", 1+RepairRounds, len(f.prompts))
+	}
 	var invalid *InvalidPlan
 	if !errors.As(err, &invalid) || !errors.Is(err, ErrInvalid) || len(invalid.Violations) == 0 {
 		t.Fatalf("err = %v", err)

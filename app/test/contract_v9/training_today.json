@@ -2,241 +2,240 @@
   "blockEnded": false,
   "date": "2026-11-02",
   "plan": {
-    "id": 1,
-    "startsOn": "2026-11-02",
-    "endsOn": "2026-11-29",
-    "weeks": 4,
-    "notes": "Two full-body days.",
     "days": [
       {
-        "label": "Full body A",
-        "weekday": 1,
         "exercises": [
           {
             "exercise": "push_up",
-            "sets": 2,
-            "min": 6,
             "max": 12,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "pull_up",
-            "sets": 2,
-            "min": 3,
             "max": 8,
+            "min": 3,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_row",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_overhead_press",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "split_squat",
-            "sets": 2,
-            "min": 8,
             "max": 12,
+            "min": 8,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           }
-        ]
+        ],
+        "label": "Full body A",
+        "weekday": 1
       },
       {
-        "label": "Full body B",
-        "weekday": 4,
         "exercises": [
           {
             "exercise": "push_up",
-            "sets": 2,
-            "min": 6,
             "max": 12,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "pull_up",
-            "sets": 2,
-            "min": 3,
             "max": 8,
+            "min": 3,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_row",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "db_overhead_press",
-            "sets": 2,
-            "min": 6,
             "max": 10,
+            "min": 6,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           },
           {
             "exercise": "split_squat",
-            "sets": 2,
-            "min": 8,
             "max": 12,
+            "min": 8,
+            "restSec": 90,
             "rir": 2,
-            "restSec": 90
+            "sets": 2
           }
-        ]
+        ],
+        "label": "Full body B",
+        "weekday": 4
       }
-    ]
+    ],
+    "endsOn": "2026-11-29",
+    "id": 1,
+    "notes": "Two full-body days.",
+    "startsOn": "2026-11-02",
+    "weeks": 4
   },
   "restDay": false,
   "session": {
-    "id": 1,
-    "date": "2026-11-02",
-    "label": "Full body A",
     "completed": false,
+    "date": "2026-11-02",
     "exercises": [
       {
         "exercise": "push_up",
-        "name": "Push-up",
-        "measure": "reps",
         "load": "bodyweight",
+        "logged": [],
+        "measure": "reps",
+        "name": "Push-up",
         "plan": {
           "exercise": "push_up",
-          "sets": 2,
-          "min": 6,
           "max": 12,
+          "min": 6,
+          "restSec": 90,
           "rir": 2,
-          "restSec": 90
+          "sets": 2
         },
         "planName": "Push-up",
-        "target": {
-          "exercise": "push_up",
-          "sets": 2,
-          "amount": 6,
-          "loadKg": null
-        },
         "reason": "First time in this plan: start at 6 reps, the bottom of the range.",
-        "logged": []
+        "target": {
+          "amount": 6,
+          "exercise": "push_up",
+          "loadKg": null,
+          "sets": 2
+        }
       },
       {
         "exercise": "pull_up",
-        "name": "Pull-up",
-        "measure": "reps",
         "load": "bodyweight",
+        "logged": [],
+        "measure": "reps",
+        "name": "Pull-up",
         "plan": {
           "exercise": "pull_up",
-          "sets": 2,
-          "min": 3,
           "max": 8,
+          "min": 3,
+          "restSec": 90,
           "rir": 2,
-          "restSec": 90
+          "sets": 2
         },
         "planName": "Pull-up",
-        "target": {
-          "exercise": "pull_up",
-          "sets": 2,
-          "amount": 3,
-          "loadKg": null
-        },
         "reason": "First time in this plan: start at 3 reps, the bottom of the range.",
-        "logged": []
+        "target": {
+          "amount": 3,
+          "exercise": "pull_up",
+          "loadKg": null,
+          "sets": 2
+        }
       },
       {
         "exercise": "db_row",
-        "name": "Dumbbell row",
-        "measure": "reps",
         "load": "external",
-        "plan": {
-          "exercise": "db_row",
-          "sets": 2,
-          "min": 6,
-          "max": 10,
-          "rir": 2,
-          "restSec": 90
-        },
-        "planName": "Dumbbell row",
-        "target": {
-          "exercise": "db_row",
-          "sets": 2,
-          "amount": 6,
-          "loadKg": null
-        },
-        "reason": "First time in this plan: start at 6 reps, the bottom of the range.",
         "logged": [
           {
-            "id": 1,
             "exercise": "db_row",
-            "localDate": "2026-11-02",
-            "loggedAt": "2026-10-27T22:20:06Z",
-            "reps": 10,
-            "seconds": null,
+            "id": 1,
             "loadKg": 20,
+            "localDate": "2026-11-02",
+            "loggedAt": "2026-11-02T17:00:00Z",
+            "reps": 10,
             "rir": 2,
+            "seconds": null,
             "sessionId": 1
           }
-        ]
+        ],
+        "measure": "reps",
+        "name": "Dumbbell row",
+        "plan": {
+          "exercise": "db_row",
+          "max": 10,
+          "min": 6,
+          "restSec": 90,
+          "rir": 2,
+          "sets": 2
+        },
+        "planName": "Dumbbell row",
+        "reason": "First time in this plan: start at 6 reps, the bottom of the range.",
+        "target": {
+          "amount": 6,
+          "exercise": "db_row",
+          "loadKg": null,
+          "sets": 2
+        }
       },
       {
         "exercise": "db_overhead_press",
-        "name": "Dumbbell overhead press",
-        "measure": "reps",
         "load": "external",
+        "logged": [],
+        "measure": "reps",
+        "name": "Dumbbell overhead press",
         "plan": {
           "exercise": "db_overhead_press",
-          "sets": 2,
-          "min": 6,
           "max": 10,
+          "min": 6,
+          "restSec": 90,
           "rir": 2,
-          "restSec": 90
+          "sets": 2
         },
         "planName": "Dumbbell overhead press",
-        "target": {
-          "exercise": "db_overhead_press",
-          "sets": 2,
-          "amount": 6,
-          "loadKg": null
-        },
         "reason": "First time in this plan: start at 6 reps, the bottom of the range.",
-        "logged": []
+        "target": {
+          "amount": 6,
+          "exercise": "db_overhead_press",
+          "loadKg": null,
+          "sets": 2
+        }
       },
       {
         "exercise": "split_squat",
-        "name": "Split squat",
-        "measure": "reps",
         "load": "bodyweight",
+        "logged": [],
+        "measure": "reps",
+        "name": "Split squat",
         "plan": {
           "exercise": "split_squat",
-          "sets": 2,
-          "min": 8,
           "max": 12,
+          "min": 8,
+          "restSec": 90,
           "rir": 2,
-          "restSec": 90
+          "sets": 2
         },
         "planName": "Split squat",
-        "target": {
-          "exercise": "split_squat",
-          "sets": 2,
-          "amount": 8,
-          "loadKg": null
-        },
         "reason": "First time in this plan: start at 8 reps, the bottom of the range.",
-        "logged": []
+        "target": {
+          "amount": 8,
+          "exercise": "split_squat",
+          "loadKg": null,
+          "sets": 2
+        }
       }
-    ]
+    ],
+    "id": 1,
+    "label": "Full body A"
   }
 }
-

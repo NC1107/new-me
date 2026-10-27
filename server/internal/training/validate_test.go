@@ -114,3 +114,10 @@ func TestWeeklySetRangeByExperience(t *testing.T) {
 		t.Fatalf("new = %+v", r)
 	}
 }
+
+func TestWeeklySetsCountsEveryPrimaryMuscle(t *testing.T) {
+	got := WeeklySets(validPlan(), testCatalog)
+	if got["chest"] != 6 || got["quads"] != 6 || got["glutes"] != 6 || got["core"] != 0 {
+		t.Fatalf("weekly = %v", got)
+	}
+}

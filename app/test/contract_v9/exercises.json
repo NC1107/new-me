@@ -11,7 +11,15 @@
   ],
   "exercises": [
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": "push_up",
       "key": "incline_push_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Incline push-up",
       "primaryMuscles": [
         "chest"
@@ -19,18 +27,18 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": "push_up",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "incline_push_up",
+      "equipment": [],
+      "harderKey": "decline_push_up",
       "key": "push_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Push-up",
       "primaryMuscles": [
         "chest"
@@ -39,18 +47,18 @@
         "triceps",
         "shoulders",
         "core"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": "incline_push_up",
-      "harderKey": "decline_push_up",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "push_up",
+      "equipment": [],
+      "harderKey": null,
       "key": "decline_push_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Decline push-up",
       "primaryMuscles": [
         "chest",
@@ -59,39 +67,41 @@
       "secondaryMuscles": [
         "triceps",
         "core"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": "push_up",
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "pullup_bar",
+        "bands"
+      ],
+      "harderKey": "negative_pull_up",
       "key": "band_pull_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Band-assisted pull-up",
       "primaryMuscles": [
         "back"
       ],
       "secondaryMuscles": [
         "biceps"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "pullup_bar",
-        "bands"
-      ],
-      "easierKey": null,
-      "harderKey": "negative_pull_up",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "band_pull_up",
+      "equipment": [
+        "pullup_bar"
+      ],
+      "harderKey": "pull_up",
       "key": "negative_pull_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Negative pull-up",
       "primaryMuscles": [
         "back"
@@ -99,20 +109,24 @@
       "secondaryMuscles": [
         "biceps",
         "forearms"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": "negative_pull_up",
       "equipment": [
         "pullup_bar"
       ],
-      "easierKey": "band_pull_up",
-      "harderKey": "pull_up",
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
+      "harderKey": null,
       "key": "pull_up",
+      "load": "bodyweight",
+      "maxTest": {
+        "date": "2026-11-02",
+        "reps": 6,
+        "seconds": null
+      },
+      "measure": "reps",
       "name": "Pull-up",
       "primaryMuscles": [
         "back"
@@ -120,24 +134,20 @@
       "secondaryMuscles": [
         "biceps",
         "forearms"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": "negative_pull_up",
       "equipment": [
         "pullup_bar"
       ],
-      "easierKey": "negative_pull_up",
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": {
-        "date": "2026-11-02",
-        "reps": 6,
-        "seconds": null
-      }
-    },
-    {
       "key": "chin_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Chin-up",
       "primaryMuscles": [
         "back",
@@ -145,38 +155,38 @@
       ],
       "secondaryMuscles": [
         "forearms"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "pullup_bar"
-      ],
-      "easierKey": "negative_pull_up",
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": "pull_up",
       "key": "inverted_row",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Inverted row",
       "primaryMuscles": [
         "back"
       ],
       "secondaryMuscles": [
         "biceps"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": "pull_up",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "pullup_bar"
+      ],
+      "harderKey": null,
       "key": "dead_hang",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
       "name": "Dead hang",
       "primaryMuscles": [
         "forearms"
@@ -184,20 +194,20 @@
       "secondaryMuscles": [
         "back",
         "shoulders"
-      ],
-      "measure": "seconds",
-      "load": "bodyweight",
-      "equipment": [
-        "pullup_bar"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "bench"
+      ],
+      "harderKey": "dip",
       "key": "bench_dip",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Bench dip",
       "primaryMuscles": [
         "triceps"
@@ -205,20 +215,20 @@
       "secondaryMuscles": [
         "chest",
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "bench"
-      ],
-      "easierKey": null,
-      "harderKey": "dip",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "bench_dip",
+      "equipment": [
+        "dip_bars"
+      ],
+      "harderKey": null,
       "key": "dip",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Dip",
       "primaryMuscles": [
         "triceps",
@@ -226,38 +236,36 @@
       ],
       "secondaryMuscles": [
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "dip_bars"
-      ],
-      "easierKey": "bench_dip",
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": "split_squat",
       "key": "air_squat",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Air squat",
       "primaryMuscles": [
         "quads"
       ],
       "secondaryMuscles": [
         "glutes"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": "split_squat",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "air_squat",
+      "equipment": [],
+      "harderKey": "bulgarian_split_squat",
       "key": "split_squat",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Split squat",
       "primaryMuscles": [
         "quads",
@@ -265,18 +273,20 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": "air_squat",
-      "harderKey": "bulgarian_split_squat",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "split_squat",
+      "equipment": [
+        "bench"
+      ],
+      "harderKey": null,
       "key": "bulgarian_split_squat",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Bulgarian split squat",
       "primaryMuscles": [
         "quads",
@@ -284,20 +294,18 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "bench"
-      ],
-      "easierKey": "split_squat",
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "lunge",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Lunge",
       "primaryMuscles": [
         "quads",
@@ -305,55 +313,55 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "bench"
+      ],
+      "harderKey": null,
       "key": "step_up",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Step-up",
       "primaryMuscles": [
         "quads",
         "glutes"
       ],
-      "secondaryMuscles": [],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [
-        "bench"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      "secondaryMuscles": []
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": "single_leg_glute_bridge",
       "key": "glute_bridge",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Glute bridge",
       "primaryMuscles": [
         "glutes"
       ],
       "secondaryMuscles": [
         "hamstrings"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": "single_leg_glute_bridge",
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": "glute_bridge",
+      "equipment": [],
+      "harderKey": null,
       "key": "single_leg_glute_bridge",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Single-leg glute bridge",
       "primaryMuscles": [
         "glutes"
@@ -361,18 +369,18 @@
       "secondaryMuscles": [
         "hamstrings",
         "core"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": "glute_bridge",
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "good_morning",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Good morning",
       "primaryMuscles": [
         "hamstrings"
@@ -380,92 +388,92 @@
       "secondaryMuscles": [
         "glutes",
         "back"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "calf_raise",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Calf raise",
       "primaryMuscles": [
         "calves"
       ],
-      "secondaryMuscles": [],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      "secondaryMuscles": []
     },
     {
+      "best": {
+        "date": "2026-11-02",
+        "e1rmKg": null,
+        "loadKg": null,
+        "reps": null,
+        "seconds": 45
+      },
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "plank",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
       "name": "Plank",
       "primaryMuscles": [
         "core"
       ],
       "secondaryMuscles": [
         "shoulders"
-      ],
-      "measure": "seconds",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": {
-        "date": "2026-11-02",
-        "reps": null,
-        "seconds": 45,
-        "loadKg": null,
-        "e1rmKg": null
-      },
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "side_plank",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
       "name": "Side plank",
       "primaryMuscles": [
         "core"
       ],
       "secondaryMuscles": [
         "shoulders"
-      ],
-      "measure": "seconds",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "hollow_hold",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
       "name": "Hollow hold",
       "primaryMuscles": [
         "core"
       ],
-      "secondaryMuscles": [],
-      "measure": "seconds",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      "secondaryMuscles": []
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
       "key": "burpee",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Burpee",
       "primaryMuscles": [
         "quads",
@@ -474,18 +482,20 @@
       "secondaryMuscles": [
         "core",
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "bodyweight",
-      "equipment": [],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "dumbbells"
+      ],
+      "harderKey": null,
       "key": "goblet_squat",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Goblet squat",
       "primaryMuscles": [
         "quads",
@@ -493,20 +503,20 @@
       ],
       "secondaryMuscles": [
         "core"
-      ],
-      "measure": "reps",
-      "load": "external",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
       "key": "db_romanian_deadlift",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Dumbbell Romanian deadlift",
       "primaryMuscles": [
         "hamstrings",
@@ -514,20 +524,21 @@
       ],
       "secondaryMuscles": [
         "back"
-      ],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "dumbbells"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "dumbbells",
+        "bench"
+      ],
+      "harderKey": null,
       "key": "db_bench_press",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Dumbbell bench press",
       "primaryMuscles": [
         "chest"
@@ -535,123 +546,122 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "dumbbells",
-        "bench"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": {
+        "date": "2026-11-02",
+        "e1rmKg": 26.7,
+        "loadKg": 20,
+        "reps": 10,
+        "seconds": null
+      },
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "dumbbells"
+      ],
+      "harderKey": null,
       "key": "db_row",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Dumbbell row",
       "primaryMuscles": [
         "back"
       ],
       "secondaryMuscles": [
         "biceps"
-      ],
-      "measure": "reps",
-      "load": "external",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": {
-        "date": "2026-11-02",
-        "reps": 10,
-        "seconds": null,
-        "loadKg": 20,
-        "e1rmKg": 26.7
-      },
-      "maxTest": null
-    },
-    {
       "key": "db_overhead_press",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Dumbbell overhead press",
       "primaryMuscles": [
         "shoulders"
       ],
       "secondaryMuscles": [
         "triceps"
-      ],
-      "measure": "reps",
-      "load": "external",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
       "key": "lateral_raise",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Lateral raise",
       "primaryMuscles": [
         "shoulders"
       ],
-      "secondaryMuscles": [],
-      "measure": "reps",
-      "load": "external",
+      "secondaryMuscles": []
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
       "key": "biceps_curl",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Biceps curl",
       "primaryMuscles": [
         "biceps"
       ],
       "secondaryMuscles": [
         "forearms"
-      ],
-      "measure": "reps",
-      "load": "external",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
       "key": "triceps_extension",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Triceps extension",
       "primaryMuscles": [
         "triceps"
       ],
-      "secondaryMuscles": [],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "dumbbells"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      "secondaryMuscles": []
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "barbell"
+      ],
+      "harderKey": null,
       "key": "back_squat",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Barbell back squat",
       "primaryMuscles": [
         "quads",
@@ -660,20 +670,20 @@
       "secondaryMuscles": [
         "hamstrings",
         "core"
-      ],
-      "measure": "reps",
-      "load": "external",
+      ]
+    },
+    {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
       "equipment": [
         "barbell"
       ],
-      "easierKey": null,
       "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
-    },
-    {
       "key": "deadlift",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Barbell deadlift",
       "primaryMuscles": [
         "hamstrings",
@@ -683,20 +693,21 @@
       "secondaryMuscles": [
         "quads",
         "forearms"
-      ],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "barbell"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "barbell",
+        "bench"
+      ],
+      "harderKey": null,
       "key": "bench_press",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Barbell bench press",
       "primaryMuscles": [
         "chest"
@@ -704,21 +715,20 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
-      ],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "barbell",
-        "bench"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "barbell"
+      ],
+      "harderKey": null,
       "key": "overhead_press",
+      "load": "external",
+      "maxTest": null,
+      "measure": "reps",
       "name": "Barbell overhead press",
       "primaryMuscles": [
         "shoulders"
@@ -726,37 +736,27 @@
       "secondaryMuscles": [
         "triceps",
         "core"
-      ],
-      "measure": "reps",
-      "load": "external",
-      "equipment": [
-        "barbell"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     },
     {
+      "best": null,
+      "custom": false,
+      "easierKey": null,
+      "equipment": [
+        "hangboard"
+      ],
+      "harderKey": null,
       "key": "hangboard_hang",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
       "name": "Hangboard hang",
       "primaryMuscles": [
         "forearms"
       ],
       "secondaryMuscles": [
         "back"
-      ],
-      "measure": "seconds",
-      "load": "bodyweight",
-      "equipment": [
-        "hangboard"
-      ],
-      "easierKey": null,
-      "harderKey": null,
-      "custom": false,
-      "best": null,
-      "maxTest": null
+      ]
     }
   ],
   "muscles": [
@@ -773,4 +773,3 @@
     "core"
   ]
 }
-

@@ -90,7 +90,8 @@ class AppTextField extends StatelessWidget {
         ),
       ),
     );
-    final field = semanticLabel == null
+    // The hint is already announced, so a label repeating it would be read twice.
+    final field = semanticLabel == null || semanticLabel == hint
         ? textField
         : Semantics(label: semanticLabel, child: textField);
     // Keep the bare field when there's no error so existing layouts are unchanged.

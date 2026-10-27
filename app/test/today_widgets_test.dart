@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
+import 'package:newme/features/log/big_number_stepper.dart';
 import 'package:newme/features/today/body_card.dart';
 import 'package:newme/theme/accent.dart';
 import 'package:newme/theme/tokens.dart';
@@ -14,6 +15,26 @@ double _contrast(Color a, Color b) {
 }
 
 void main() {
+  testWidgets('the stepper number is named for screen readers', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: themeFor(kAccentPresets.first),
+        home: Scaffold(
+          body: BigNumberStepper(
+            controller: TextEditingController(text: '15'),
+            unitLabel: 'minutes',
+            onMinus: () {},
+            onPlus: () {},
+            onChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel(RegExp('Amount in minutes')), findsOneWidget);
+    handle.dispose();
+  });
+
   test('every person colour has a text shade that clears AA on the canvas and its tint', () {
     for (final p in kAccentPresets) {
       final ink = readableAccent(p);

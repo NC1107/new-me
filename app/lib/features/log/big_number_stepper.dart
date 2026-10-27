@@ -49,31 +49,38 @@ class BigNumberStepper extends StatelessWidget {
             Expanded(
               // The number is already huge, so it does not grow again with Dynamic Type.
               child: MediaQuery.withNoTextScaling(
-                child: TextField(
-                  controller: controller,
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  onChanged: onChanged,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(5),
-                  ],
-                  cursorColor: context.accent,
-                  style: AppText.tabular(
-                    AppText.display.copyWith(
-                      fontSize: 56,
-                      height: 1.1,
-                      color: hasError ? kDangerText : kInk,
+                child: Semantics(
+                  label: 'Amount in $unitLabel',
+                  child: TextField(
+                    controller: controller,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    onChanged: onChanged,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(5),
+                    ],
+                    cursorColor: context.accent,
+                    style: AppText.tabular(
+                      AppText.display.copyWith(
+                        fontSize: 56,
+                        height: 1.1,
+                        color: hasError ? kDangerText : kInk,
+                      ),
                     ),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    hintStyle: AppText.display.copyWith(fontSize: 56, color: kBorder, height: 1.1),
-                    isCollapsed: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
+                    decoration: InputDecoration(
+                      hintText: '0',
+                      hintStyle: AppText.display.copyWith(
+                        fontSize: 56,
+                        color: kBorder,
+                        height: 1.1,
+                      ),
+                      isCollapsed: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
                   ),
                 ),
               ),

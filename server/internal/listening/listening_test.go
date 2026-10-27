@@ -312,3 +312,29 @@ func TestOpenDates(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionsAreBucketedByTheStartDayInThePersonsZone(t *testing.T) {
+	e := newEnv(t, at(3, 8, 0))
+	// 21:30 in New York on the 2nd is 02:30 UTC on the 3rd, which Audiobookshelf's UTC day would
+	// have counted for the wrong date.
+	e.fake.AddSession("nick", at(2, 21, 30), at(2, 22, 0), 30*60)
+	// Crosses midnight: it counts wholly toward the day it started.
+	e.fake.AddSession("nick", at(2, 23, 50), at(3, 0, 20), 30*60)
+	e.fake.AddSession("nick", at(3, 6, 0), at(3, 6, 45), 45*60+30)
+	e.fake.AddSession("nick", at(3, 7, 0), at(3, 7, 10), 10*60)
+	e.link()
+
+	if e.minutes("2026-11-02") != 60 || e.minutes("2026-11-03") != 55 {
+		t.Fatalf("minutes = %d, %d; want 60 and 55", e.minutes("2026-11-02"), e.minutes("2026-11-03"))
+	}
+}
+
+func TestSessionsOlderThanTheOpenWindowAreIgnored(t *testing.T) {
+	e := newEnv(t, at(3, 11, 0))
+	e.fake.AddSession("nick", at(2, 21, 30), at(2, 22, 0), 30*60)
+	e.fake.AddSession("nick", at(3, 9, 0), at(3, 9, 20), 20*60)
+	e.link()
+	if e.minutes("2026-11-02") != 0 || e.minutes("2026-11-03") != 20 {
+		t.Fatalf("minutes = %d, %d", e.minutes("2026-11-02"), e.minutes("2026-11-03"))
+	}
+}

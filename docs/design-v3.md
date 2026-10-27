@@ -33,8 +33,8 @@ Both people use Audiobookshelf at `books.npc-server.top` (version 2.37.1).
 - `PUT /api/me/audiobookshelf` with `{username, password}`: the server logs in to Audiobookshelf once, keeps only the tokens it needs to stay signed in (refreshing them as Audiobookshelf requires), never the password, and answers with the linked account name.
   `DELETE /api/me/audiobookshelf` unlinks.
   `GET /api/me` gains `audiobookshelf: {linked, username, syncedAt}` (null when the feature is off).
-- The scheduler polls each linked account every 15 minutes, reads listening time per day for the last 2 days from the listening stats, and stores it in a new `listening_daily (user_id, local_date, minutes, synced_at)` table.
-  Audiobookshelf buckets days in its own server time zone; this is accepted because everyone lives in one zone, and the doc says so.
+- The scheduler polls each linked account every 15 minutes, reads playback sessions, sums listening time per local day for the open days, and stores it in a new `listening_daily (user_id, local_date, minutes, synced_at)` table.
+  Days are bucketed on our side in each person's own time zone, by session start, so the Audiobookshelf container's `TZ` does not matter.
 - The reading quest's minutes become manual reading minutes plus listening minutes for the day.
   Pages still count on their own as before.
   Finalized days never change.
@@ -56,10 +56,12 @@ Read from the `v2.37.1` tag of `advplyr/audiobookshelf`; the instance's `GET /st
   An invalid or expired token is a 401 `{"error": "..."}`.
 - Lifetimes (`server/auth/TokenManager.js`): access token 1 hour (`ACCESS_TOKEN_EXPIRY`), refresh token 30 days (`REFRESH_TOKEN_EXPIRY`), the session expiry sliding forward on each rotation.
   The access token is a JWT whose `exp` claim the server reads to schedule a refresh; the login response has no separate expiry field.
-- `GET /api/me/listening-stats` (`MeController.getListeningStats`, `ApiRouter.getUserListeningStatsHelpers`) answers `{totalTime, items, days, dayOfWeek, today, recentSessions}`.
-  `days` maps `YYYY-MM-DD` to seconds listened (float), summed from playback sessions' `timeListening`, and omits days with none.
-- Dates are formatted with the Audiobookshelf process's local time (`date.format(new Date(), 'YYYY-MM-DD')`), so they follow that container's `TZ`, not the person's zone.
-  Plan unchanged: this is accepted, and `deploy/README.md` tells the operator to keep both `TZ` values equal.
+- `GET /api/me/listening-stats` answers `days` as `YYYY-MM-DD` to seconds, but formats the dates with the Audiobookshelf process's local time (`date.format(new Date(), 'YYYY-MM-DD')`), i.e. that container's `TZ`.
+  Production runs with `TZ=Etc/UTC`, so evening listening in New York would land on the next day, and `days` is not used.
+- `GET /api/me/listening-sessions?itemsPerPage=&page=` (`MeController.getListeningSessions`) answers `{total, numPages, page, itemsPerPage, sessions}` with `sessions` sorted by `updatedAt`, newest first.
+  Each session carries `startedAt` and `updatedAt` (milliseconds since the epoch, from the row's `createdAt` and `updatedAt`), `timeListening` (whole seconds) and `date` (server-zone string, unused).
+  The server pages (50 at a time) until a session was last updated before the start of the earliest open local day, and attributes each session's `timeListening` to the local date of its `startedAt` in the person's own zone.
+  A session that runs past midnight therefore counts wholly toward the day it started.
 
 Choices made while building it that the plan left open:
 

@@ -46,18 +46,29 @@ func TestRefreshRotatesTheRefreshToken(t *testing.T) {
 	}
 }
 
-func TestListeningSecondsReadsTheDaysMap(t *testing.T) {
+func TestListeningSessionsPagesUntilItReachesBackPastSince(t *testing.T) {
 	fake := abstest.New(t, func() time.Time { return now })
 	fake.AddUser("nick", "pw")
-	fake.SetListening("nick", "2026-11-02", 90)
+	// 120 sessions an hour apart, newest first by update: three pages of 50.
+	for i := 0; i < 120; i++ {
+		at := now.Add(-time.Duration(i) * time.Hour)
+		fake.AddSession("nick", at, at, 60)
+	}
 	c := abs.New(fake.URL)
 	sess, _ := c.Login(context.Background(), "nick", "pw")
 
-	days, err := c.ListeningSeconds(context.Background(), sess.AccessToken)
-	if err != nil || days["2026-11-02"] != 90 {
-		t.Fatalf("days = %v, %v", days, err)
+	got, err := c.ListeningSessions(context.Background(), sess.AccessToken, now.Add(-60*time.Hour))
+	if err != nil || len(got) != 61 {
+		t.Fatalf("sessions = %d, %v; want the 61 within 60 hours", len(got), err)
 	}
-	if _, err := c.ListeningSeconds(context.Background(), "bad"); !errors.Is(err, abs.ErrAuth) {
+	if _, _, stats := fake.Counts(); stats != 2 {
+		t.Fatalf("requests = %d, want 2 pages", stats)
+	}
+	all, err := c.ListeningSessions(context.Background(), sess.AccessToken, time.Time{})
+	if err != nil || len(all) != 120 {
+		t.Fatalf("all = %d, %v", len(all), err)
+	}
+	if _, err := c.ListeningSessions(context.Background(), "bad", time.Time{}); !errors.Is(err, abs.ErrAuth) {
 		t.Fatalf("err = %v, want ErrAuth", err)
 	}
 }

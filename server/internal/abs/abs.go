@@ -114,16 +114,57 @@ func (c *Client) accessExpiry(token string) time.Time {
 	return c.now().Add(fallbackAccessLife)
 }
 
-// ListeningSeconds returns seconds listened per local date (YYYY-MM-DD in the Audiobookshelf
-// server's own time zone) from GET /api/me/listening-stats.
-func (c *Client) ListeningSeconds(ctx context.Context, accessToken string) (map[string]float64, error) {
-	var out struct {
-		Days map[string]float64 `json:"days"`
+// ListeningSession is one playback session from GET /api/me/listening-sessions. StartedAt and
+// UpdatedAt are the session row's creation and last update (milliseconds since the epoch on the
+// wire) and Seconds is the time actually listened.
+type ListeningSession struct {
+	StartedAt time.Time
+	UpdatedAt time.Time
+	Seconds   float64
+}
+
+const (
+	sessionsPerPage = 50
+	// maxSessionPages bounds one poll if the server keeps answering sessions newer than since.
+	maxSessionPages = 40
+)
+
+// ListeningSessions returns the sessions updated at or after since, newest first. Audiobookshelf
+// lists a user's sessions by last update, newest first, so paging stops at the first page that
+// reaches back past since.
+func (c *Client) ListeningSessions(ctx context.Context, accessToken string, since time.Time) ([]ListeningSession, error) {
+	var out []ListeningSession
+	for page := 0; page < maxSessionPages; page++ {
+		var body struct {
+			NumPages int `json:"numPages"`
+			Sessions []struct {
+				StartedAt     int64   `json:"startedAt"`
+				UpdatedAt     int64   `json:"updatedAt"`
+				TimeListening float64 `json:"timeListening"`
+			} `json:"sessions"`
+		}
+		path := fmt.Sprintf("/api/me/listening-sessions?itemsPerPage=%d&page=%d", sessionsPerPage, page)
+		if err := c.do(ctx, http.MethodGet, path, nil, accessToken, nil, &body); err != nil {
+			return nil, err
+		}
+		reachedBack := false
+		for _, s := range body.Sessions {
+			updated := time.UnixMilli(s.UpdatedAt)
+			if updated.Before(since) {
+				reachedBack = true
+				continue
+			}
+			started := time.UnixMilli(s.StartedAt)
+			if s.StartedAt == 0 {
+				started = updated
+			}
+			out = append(out, ListeningSession{StartedAt: started, UpdatedAt: updated, Seconds: s.TimeListening})
+		}
+		if reachedBack || page+1 >= body.NumPages {
+			break
+		}
 	}
-	if err := c.do(ctx, http.MethodGet, "/api/me/listening-stats", nil, accessToken, nil, &out); err != nil {
-		return nil, err
-	}
-	return out.Days, nil
+	return out, nil
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body []byte, bearer string, headers map[string]string, out any) error {

@@ -663,11 +663,11 @@ It also applies pending timezone switches that have come due.
 
 When `NEWME_ABS_URL` is set, a second loop under the same guards polls every 15 minutes (and on boot) for each linked account.
 It refreshes the Audiobookshelf session when the access token is within 2 minutes of expiring, or once when Audiobookshelf answers 401, and stores the rotated refresh token before using the new access token.
-It reads `GET /api/me/listening-stats`, and for the person's still-open local dates (today, and yesterday until its 10:00 grace ends, never before the join date) stores `floor(seconds / 60)` capped at 1440 in `listening_daily`.
+It reads `GET /api/me/listening-sessions` (50 per page, newest update first) until a session predates the earliest open day, sums `timeListening` per local date of each session's `startedAt` in the person's zone, and for the still-open local dates (today, and yesterday until its 10:00 grace ends, never before the join date) stores `floor(seconds / 60)` capped at 1440 in `listening_daily`.
 Only a changed value writes and rescores the day, in one transaction under the day lock; finalized days are never touched.
 A rejected sign-in records `last_error = auth_failed` and keeps the link, a network or server failure records `unreachable`, and the next good poll clears it.
 Linking runs one poll straight away.
-Audiobookshelf dates its days in its own server time zone, which is assumed to be the people's zone.
+A session spanning midnight counts wholly toward the day it started; Audiobookshelf's own `TZ` is irrelevant.
 
 ### Deployment (compose)
 

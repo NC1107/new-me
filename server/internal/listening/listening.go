@@ -76,14 +76,23 @@ func (s *Syncer) SyncUser(ctx context.Context, userID int64) error {
 	if err != nil {
 		return err
 	}
-	days, err := s.fetch(ctx, acct)
+	user, loc, err := s.userZone(ctx, userID)
+	if err != nil {
+		return err
+	}
+	now := s.Now()
+	open := OpenDates(user.JoinedOn, now, loc)
+	var sessions []abs.ListeningSession
+	if len(open) > 0 {
+		sessions, err = s.fetch(ctx, acct, startOfDay(open[0], loc))
+	}
 	switch {
 	case errors.Is(err, abs.ErrAuth):
 		return s.record(ctx, userID, db.ABSErrorAuth, nil)
 	case err != nil:
 		return s.record(ctx, userID, db.ABSErrorUnreachable, err)
 	}
-	if err := s.apply(ctx, userID, days); err != nil {
+	if err := s.apply(ctx, userID, loc, now, open, SecondsByDate(sessions, loc)); err != nil {
 		return err
 	}
 	return db.MarkABSSynced(ctx, s.DB.Pool, userID, s.Now())
@@ -98,7 +107,7 @@ func (s *Syncer) record(ctx context.Context, userID int64, code string, cause er
 
 // fetch reads listening seconds per date, refreshing the session first when it is about to
 // expire and once more if Audiobookshelf still rejects the access token.
-func (s *Syncer) fetch(ctx context.Context, acct db.ABSAccount) (map[string]float64, error) {
+func (s *Syncer) fetch(ctx context.Context, acct db.ABSAccount, since time.Time) ([]abs.ListeningSession, error) {
 	sess := abs.Session{
 		UserID: acct.ABSUserID, Username: acct.Username, AccessToken: acct.AccessToken,
 		RefreshToken: acct.RefreshToken, AccessExpires: acct.AccessExpiresAt,
@@ -118,33 +127,53 @@ func (s *Syncer) fetch(ctx context.Context, acct db.ABSAccount) (map[string]floa
 			return nil, err
 		}
 	}
-	days, err := s.ABS.ListeningSeconds(ctx, sess.AccessToken)
+	sessions, err := s.ABS.ListeningSessions(ctx, sess.AccessToken, since)
 	if errors.Is(err, abs.ErrAuth) && !refreshed {
 		if err := refresh(); err != nil {
 			return nil, err
 		}
-		days, err = s.ABS.ListeningSeconds(ctx, sess.AccessToken)
+		sessions, err = s.ABS.ListeningSessions(ctx, sess.AccessToken, since)
 	}
-	return days, err
+	return sessions, err
+}
+
+// userZone loads the user, applies a timezone switch that has come due, and resolves their zone.
+func (s *Syncer) userZone(ctx context.Context, userID int64) (db.User, *time.Location, error) {
+	user, err := db.GetUser(ctx, s.DB.Pool, userID)
+	if err != nil {
+		return user, nil, err
+	}
+	if user, err = db.SwitchTimezoneIfDue(ctx, s.DB.Pool, user, s.Now()); err != nil {
+		return user, nil, err
+	}
+	loc, err := user.Location()
+	return user, loc, err
+}
+
+func startOfDay(d score.Date, loc *time.Location) time.Time {
+	t, _ := time.ParseInLocation("2006-01-02", string(d), loc)
+	return t
+}
+
+// SecondsByDate sums listening per local date, in the person's own zone, by when each session
+// started. Audiobookshelf's own per-day totals follow its server's zone, which is why they are
+// not used. A session that runs past midnight counts wholly toward the day it started.
+func SecondsByDate(sessions []abs.ListeningSession, loc *time.Location) map[score.Date]float64 {
+	out := map[score.Date]float64{}
+	for _, s := range sessions {
+		if s.Seconds <= 0 {
+			continue
+		}
+		out[score.LocalToday(s.StartedAt, loc)] += s.Seconds
+	}
+	return out
 }
 
 // apply stores minutes for the user's still-open days and rescores the ones that changed.
 // Finalized days are never touched, so history cannot move after the grace window.
-func (s *Syncer) apply(ctx context.Context, userID int64, seconds map[string]float64) error {
-	now := s.Now()
-	user, err := db.GetUser(ctx, s.DB.Pool, userID)
-	if err != nil {
-		return err
-	}
-	if user, err = db.SwitchTimezoneIfDue(ctx, s.DB.Pool, user, now); err != nil {
-		return err
-	}
-	loc, err := user.Location()
-	if err != nil {
-		return err
-	}
-	for _, date := range OpenDates(user.JoinedOn, now, loc) {
-		minutes := MinutesFromSeconds(seconds[string(date)])
+func (s *Syncer) apply(ctx context.Context, userID int64, loc *time.Location, now time.Time, open []score.Date, seconds map[score.Date]float64) error {
+	for _, date := range open {
+		minutes := MinutesFromSeconds(seconds[date])
 		err := s.DB.WithTx(ctx, func(tx pgx.Tx) error {
 			if err := db.LockUserDay(ctx, tx, userID, date); err != nil {
 				return err

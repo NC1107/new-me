@@ -210,6 +210,11 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			fail(w, r, err)
 			return
 		}
+		user, err = db.SwitchTimezoneIfDue(r.Context(), s.db.Pool, user, s.now())
+		if err != nil {
+			fail(w, r, err)
+			return
+		}
 		loc, err := user.Location()
 		if err != nil {
 			fail(w, r, err)

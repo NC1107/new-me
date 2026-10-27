@@ -56,7 +56,7 @@ func (s *Server) checkHealthItem(c caller, item healthItem, now time.Time) (scor
 	if math.IsNaN(item.Value) || item.Value < 0 || item.Value > maxValue {
 		return reject(codeInvalidRequest, fmt.Sprintf("%s must be between 0 and %g", item.Metric, maxValue))
 	}
-	if n := utf8.RuneCountInString(item.Source); n < 1 || n > maxSourceLen {
+	if n := utf8.RuneCountInString(item.Source); n < 1 || n > maxSourceLen || hasControlChars(item.Source) {
 		return reject(codeInvalidRequest, "source must be 1 to 32 characters")
 	}
 	if item.MeasuredAt.IsZero() || item.MeasuredAt.After(now.Add(clockSkew)) {

@@ -41,6 +41,23 @@ type User struct {
 	FatTarget     *int
 	JoinedOn      score.Date
 	CreatedAt     time.Time
+	// PendingTimezone is a zone the user chose that has not taken effect yet; Timezone stays the
+	// zone every date is computed in until it does.
+	PendingTimezone *string
+	PendingFrom     *score.Date
+}
+
+// ChosenTimezone is the zone the user last picked, which is what their profile shows.
+func (u User) ChosenTimezone() string {
+	if u.PendingTimezone != nil {
+		return *u.PendingTimezone
+	}
+	return u.Timezone
+}
+
+// IsZoneStaged reports whether the zone is already waiting to take effect.
+func (u User) IsZoneStaged(zone string) bool {
+	return u.PendingTimezone != nil && *u.PendingTimezone == zone
 }
 
 // Location loads the user's time zone.
@@ -53,13 +70,13 @@ func (u User) Location() (*time.Location, error) {
 }
 
 const userColumns = `u.id, u.name, u.color, u.timezone, u.is_admin, u.kcal_target, u.protein_target,
-	u.carbs_target, u.fat_target, u.joined_on::text, u.created_at`
+	u.carbs_target, u.fat_target, u.joined_on::text, u.created_at, u.pending_timezone, u.pending_from::text`
 
 // scanUser reads userColumns, after any leading columns the query selected first.
 func scanUser(row pgx.Row, leading ...any) (User, error) {
 	var u User
 	dest := append(leading, &u.ID, &u.Name, &u.Color, &u.Timezone, &u.IsAdmin, &u.KcalTarget, &u.ProteinTarget,
-		&u.CarbsTarget, &u.FatTarget, &u.JoinedOn, &u.CreatedAt)
+		&u.CarbsTarget, &u.FatTarget, &u.JoinedOn, &u.CreatedAt, &u.PendingTimezone, &u.PendingFrom)
 	return u, row.Scan(dest...)
 }
 
@@ -152,13 +169,14 @@ func CountUsers(ctx context.Context, q Querier) (int, error) {
 	return n, err
 }
 
-// UpdateUser writes back the editable profile fields: name, color, timezone and targets.
+// UpdateUser writes back the editable profile fields: name, color and targets. The time zone
+// has its own functions, because it changes on a schedule rather than at the moment of the edit.
 func UpdateUser(ctx context.Context, q Querier, u User) error {
 	tag, err := q.Exec(ctx, `
-		UPDATE users SET name = $2, color = $3, timezone = $4,
-			kcal_target = $5, protein_target = $6, carbs_target = $7, fat_target = $8
+		UPDATE users SET name = $2, color = $3,
+			kcal_target = $4, protein_target = $5, carbs_target = $6, fat_target = $7
 		WHERE id = $1 AND deleted_at IS NULL`,
-		u.ID, u.Name, u.Color, u.Timezone, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget)
+		u.ID, u.Name, u.Color, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget)
 	if err != nil {
 		switch violatedConstraint(err) {
 		case "users_name_live":
@@ -185,4 +203,44 @@ func SoftDeleteUser(ctx context.Context, tx pgx.Tx, id int64) error {
 	}
 	_, err = tx.Exec(ctx, `DELETE FROM devices WHERE user_id = $1`, id)
 	return err
+}
+
+// StageTimezone records the zone the user picked to take effect from the given local date of
+// their current zone. Picking the zone already in force cancels any staged change.
+func StageTimezone(ctx context.Context, q Querier, userID int64, zone string, from score.Date) error {
+	_, err := q.Exec(ctx, `
+		UPDATE users SET
+			pending_timezone = CASE WHEN timezone = $2 THEN NULL ELSE $2 END,
+			pending_from = CASE WHEN timezone = $2 THEN NULL ELSE $3::date END
+		WHERE id = $1 AND deleted_at IS NULL`, userID, zone, from)
+	return err
+}
+
+// SwitchTimezoneIfDue puts a staged zone into force and returns the refreshed user. It waits
+// until the current zone has reached the staged date and the new zone's date is not behind the
+// current one's, so no local date is repeated or skipped by the switch.
+func SwitchTimezoneIfDue(ctx context.Context, q Querier, u User, now time.Time) (User, error) {
+	if u.PendingTimezone == nil || u.PendingFrom == nil {
+		return u, nil
+	}
+	current, err := u.Location()
+	if err != nil {
+		return u, err
+	}
+	next, err := time.LoadLocation(*u.PendingTimezone)
+	if err != nil {
+		return u, fmt.Errorf("user %d pending timezone %q: %w", u.ID, *u.PendingTimezone, err)
+	}
+	currentDay := score.LocalToday(now, current)
+	if currentDay.Before(*u.PendingFrom) || score.LocalToday(now, next).Before(currentDay) {
+		return u, nil
+	}
+	// The staged values in the WHERE keep two racing requests from switching twice.
+	if _, err := q.Exec(ctx, `
+		UPDATE users SET timezone = pending_timezone, pending_timezone = NULL, pending_from = NULL
+		WHERE id = $1 AND pending_timezone = $2 AND pending_from = $3::date`,
+		u.ID, *u.PendingTimezone, *u.PendingFrom); err != nil {
+		return u, err
+	}
+	return GetUser(ctx, q, u.ID)
 }

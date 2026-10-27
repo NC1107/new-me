@@ -177,3 +177,28 @@ func TestRunStopsWhenTheContextEnds(t *testing.T) {
 		t.Fatal("Run did not stop after its context ended")
 	}
 }
+
+func TestFinalizeDuePutsAStagedZoneIntoForceForAnInactiveUser(t *testing.T) {
+	database := dbtest.Fresh(t)
+	nick := join(t, database, "Nick", "green", "America/New_York", true, "2026-11-01")
+	if err := db.StageTimezone(ctx, database.Pool, nick.ID, "Asia/Tokyo", "2026-11-03"); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 2, 23, 0, 0, 0, newYork)
+	s := &sched.Scheduler{DB: database, Now: func() time.Time { return now }}
+
+	if err := s.FinalizeDue(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := db.GetUser(ctx, database.Pool, nick.ID); got.Timezone != "America/New_York" {
+		t.Fatalf("zone = %s, the old zone has not reached the staged date", got.Timezone)
+	}
+
+	now = time.Date(2026, 11, 3, 1, 0, 0, 0, newYork)
+	if err := s.FinalizeDue(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := db.GetUser(ctx, database.Pool, nick.ID); got.Timezone != "Asia/Tokyo" || got.PendingTimezone != nil {
+		t.Fatalf("zone = %+v, want Tokyo in force", got)
+	}
+}

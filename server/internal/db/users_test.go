@@ -117,16 +117,12 @@ func TestUpdateAndSoftDeleteUser(t *testing.T) {
 
 	kcal := 2200
 	nick.KcalTarget = &kcal
-	nick.Timezone = "Europe/London"
 	if err := db.UpdateUser(ctx, database.Pool, nick); err != nil {
 		t.Fatal(err)
 	}
 	got, err := db.GetUser(ctx, database.Pool, nick.ID)
-	if err != nil || got.KcalTarget == nil || *got.KcalTarget != 2200 || got.Timezone != "Europe/London" {
+	if err != nil || got.KcalTarget == nil || *got.KcalTarget != 2200 || got.Timezone != "America/New_York" {
 		t.Fatalf("after update: %+v, %v", got, err)
-	}
-	if loc, err := got.Location(); err != nil || loc.String() != "Europe/London" {
-		t.Fatalf("location = %v, %v", loc, err)
 	}
 
 	nadia.Color = "green"
@@ -437,5 +433,69 @@ func TestSnapshotProteinFollowsProfileTarget(t *testing.T) {
 	}
 	if got := proteinTarget("2026-10-28"); got != 150 {
 		t.Fatalf("profile target snapshots %d, want 150", got)
+	}
+}
+
+func TestStagedTimezoneSwitchesOnlyWhenNoDateRepeatsOrIsSkipped(t *testing.T) {
+	database := dbtest.Fresh(t)
+	nick := join(t, database, "Nick", "green", true)
+	london, err := time.LoadLocation("Europe/London")
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := score.MustDate("2026-10-27")
+	if err := db.StageTimezone(ctx, database.Pool, nick.ID, "Europe/London", from); err != nil {
+		t.Fatal(err)
+	}
+	staged, err := db.GetUser(ctx, database.Pool, nick.ID)
+	if err != nil || staged.Timezone != "America/New_York" || staged.ChosenTimezone() != "Europe/London" {
+		t.Fatalf("staged user = %+v, %v", staged, err)
+	}
+
+	// New York is still on the 26th, so the switch must wait.
+	early := time.Date(2026, 10, 26, 23, 0, 0, 0, london)
+	if got, err := db.SwitchTimezoneIfDue(ctx, database.Pool, staged, early); err != nil || got.Timezone != "America/New_York" {
+		t.Fatalf("switched early: %+v, %v", got, err)
+	}
+	// Once New York reaches the 27th, London is on the 27th too.
+	due := time.Date(2026, 10, 27, 6, 0, 0, 0, london)
+	got, err := db.SwitchTimezoneIfDue(ctx, database.Pool, staged, due)
+	if err != nil || got.Timezone != "Europe/London" || got.PendingTimezone != nil || got.PendingFrom != nil {
+		t.Fatalf("not switched when due: %+v, %v", got, err)
+	}
+	// A stale copy of the user, as a racing request holds, switches nothing twice.
+	if again, err := db.SwitchTimezoneIfDue(ctx, database.Pool, staged, due); err != nil || again.Timezone != "Europe/London" {
+		t.Fatalf("second switch: %+v, %v", again, err)
+	}
+
+	if err := db.StageTimezone(ctx, database.Pool, nick.ID, "Asia/Tokyo", score.MustDate("2026-10-30")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.StageTimezone(ctx, database.Pool, nick.ID, "Europe/London", score.MustDate("2026-10-30")); err != nil {
+		t.Fatal(err)
+	}
+	cleared, err := db.GetUser(ctx, database.Pool, nick.ID)
+	if err != nil || cleared.PendingTimezone != nil || cleared.ChosenTimezone() != "Europe/London" {
+		t.Fatalf("choosing the zone in force must cancel the staged one: %+v, %v", cleared, err)
+	}
+}
+
+func TestWithTxReleasesTheConnectionWhenTheBodyPanics(t *testing.T) {
+	database := dbtest.Fresh(t)
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("the panic must still propagate to the recoverer")
+			}
+		}()
+		_ = database.WithTx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(1, 1)`); err != nil {
+				return err
+			}
+			panic("boom")
+		})
+	}()
+	if n := database.Pool.Stat().AcquiredConns(); n != 0 {
+		t.Fatalf("%d connections still held after the panic, with their locks", n)
 	}
 }

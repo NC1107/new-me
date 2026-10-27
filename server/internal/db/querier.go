@@ -22,11 +22,19 @@ type Querier interface {
 var ErrNotFound = errors.New("not found")
 
 // WithTx runs fn in a transaction, committing when it returns nil and rolling back otherwise.
+// A panic in fn also rolls back, so the recoverer above never leaves a connection and its day
+// locks held for good.
 func (d *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	tx, err := d.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback(context.Background())
+			panic(r)
+		}
+	}()
 	if err := fn(tx); err != nil {
 		_ = tx.Rollback(context.Background())
 		return err

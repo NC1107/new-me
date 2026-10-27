@@ -135,6 +135,15 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
+	var zone string
+	if req.Timezone != nil {
+		loc, herr := loadZone(*req.Timezone)
+		if herr != nil {
+			fail(w, r, herr)
+			return
+		}
+		zone = loc.String()
+	}
 
 	ctx := r.Context()
 	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
@@ -146,13 +155,25 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		if err := db.UpdateUser(ctx, tx, user); err != nil {
 			return mapUpdateUserErr(err)
 		}
+		if zone != "" && !c.user.IsZoneStaged(zone) {
+			// Tomorrow in the current zone, so today keeps its date whatever the new zone says.
+			from := score.LocalToday(s.now(), c.loc).AddDays(1)
+			if err := db.StageTimezone(ctx, tx, user.ID, zone, from); err != nil {
+				return err
+			}
+		}
 		return applyTemplatePatches(ctx, tx, user.ID, req.QuestTemplates)
 	})
 	if err != nil {
 		fail(w, r, err)
 		return
 	}
-	me, err := s.buildMe(ctx, s.db.Pool, user)
+	fresh, err := db.GetUser(ctx, s.db.Pool, user.ID)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	me, err := s.buildMe(ctx, s.db.Pool, fresh)
 	if err != nil {
 		fail(w, r, err)
 		return
@@ -174,13 +195,6 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			return err
 		}
 		u.Color = *req.Color
-	}
-	if req.Timezone != nil {
-		loc, err := loadZone(*req.Timezone)
-		if err != nil {
-			return err
-		}
-		u.Timezone = loc.String()
 	}
 	if t := req.Targets; t != nil {
 		for _, step := range []*httpError{

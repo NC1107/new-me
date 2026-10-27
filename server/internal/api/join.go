@@ -22,7 +22,7 @@ type userJSON struct {
 }
 
 func toUserJSON(u db.User) userJSON {
-	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.Timezone, IsAdmin: u.IsAdmin}
+	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin}
 }
 
 type joinRequest struct {

@@ -84,6 +84,10 @@ func (s *Scheduler) FinalizeDue(ctx context.Context) error {
 }
 
 func (s *Scheduler) finalizeUser(ctx context.Context, u db.User, now time.Time) error {
+	u, err := db.SwitchTimezoneIfDue(ctx, s.DB.Pool, u, now)
+	if err != nil {
+		return err
+	}
 	loc, err := u.Location()
 	if err != nil {
 		return err

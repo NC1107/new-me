@@ -141,8 +141,8 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 		v.activity = &db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
 	case db.KindMeal:
 		name := strings.TrimSpace(req.Name)
-		if n := utf8.RuneCountInString(name); n < 1 || n > maxMealName {
-			return v, invalid("name must be 1 to 80 characters")
+		if n := utf8.RuneCountInString(name); n < 1 || n > maxMealName || hasControlChars(name) {
+			return v, invalid("name must be 1 to 80 characters without control characters")
 		}
 		if req.Kcal < 1 || req.Kcal > maxKcal {
 			return v, invalid("kcal must be between 1 and 10000")

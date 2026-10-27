@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -163,11 +164,15 @@ var validColors = map[string]bool{
 	"green": true, "sky": true, "violet": true, "amber": true, "rose": true, "teal": true,
 }
 
+// hasControlChars is true for text with a control character. NUL in particular makes Postgres
+// fail the insert, which would otherwise surface as a server error.
+func hasControlChars(s string) bool { return strings.ContainsFunc(s, unicode.IsControl) }
+
 // cleanName trims and bounds a display name.
 func cleanName(raw string) (string, *httpError) {
 	name := strings.TrimSpace(raw)
-	if n := len([]rune(name)); n < 1 || n > 40 {
-		return "", invalid("name must be 1 to 40 characters")
+	if n := len([]rune(name)); n < 1 || n > 40 || hasControlChars(name) {
+		return "", invalid("name must be 1 to 40 characters without control characters")
 	}
 	return name, nil
 }

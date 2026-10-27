@@ -44,7 +44,7 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	case db.QuestMealsLogged:
 		return in.Meals, q.Target
 	case db.QuestProtein:
-		return wholeUnits(in.ProteinG), q.Target
+		return tenthsOfGrams(in.ProteinG), q.Target * 10
 	case db.QuestYoga:
 		return in.YogaMinutes, q.Target
 	}
@@ -53,6 +53,10 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 
 // wholeUnits rounds down so a fractional reading never earns a unit it has not reached.
 func wholeUnits(v float64) int { return int(math.Floor(v)) }
+
+// tenthsOfGrams is the amount in the tenths of a gram that meals are stored in, so protein is
+// scored on exactly what was logged.
+func tenthsOfGrams(g float64) int { return int(math.Round(g * 10)) }
 
 // Actuals is how far the user got on a quest in the quest's own units: for reading, minutes and
 // pages separately. It is what the Today screen shows beside the target.

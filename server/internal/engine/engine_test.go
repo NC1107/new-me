@@ -59,7 +59,7 @@ func TestQuestResultsMapInputsToQuests(t *testing.T) {
 		db.QuestPushups:     {35, 30},
 		db.QuestReading:     {10*15 + 5*20, 20 * 15},
 		db.QuestMealsLogged: {2, 2},
-		db.QuestProtein:     {79, 100},
+		db.QuestProtein:     {799, 1000},
 	}
 	if len(results) != len(want) {
 		t.Fatalf("results = %d, want %d", len(results), len(want))

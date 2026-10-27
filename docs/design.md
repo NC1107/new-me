@@ -72,6 +72,7 @@ Season and scoring model
 - A timezone change never rewrites existing `local_date` values.
   `PATCH /me` stores it as `pending_timezone` with `pending_from = localToday + 1`.
   The switch is applied inside the next transaction that resolves the user's day once the old zone's date is at least `pending_from` and the new zone's date is at least the old zone's date, so a date is never repeated or skipped.
+  `GET /me` and `PATCH /me` report the chosen zone as `user.timezone` while the old one stays in force for date arithmetic.
 - `time.LoadLocation` validates timezone names (`PATCH /me` and join return 422 `invalid_timezone` otherwise).
   The server imports `_ "time/tzdata"` so zones resolve in the distroless image.
   All day arithmetic uses `time.Date(y, m, d+n, h, 0, 0, 0, loc)` so DST days are 23 or 25 hours without special cases.
@@ -283,7 +284,7 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 - **Names and colors**: unique case-insensitive name among live users, distinct colors, otherwise 409 (`name_taken`, `color_taken`).
 - **Re-pair**: `{code, userId}` issues a fresh device token and revokes that user's other devices, since the code proves control of the account.
 - **Rate limits**, using check-in's `ratelimit.go` with trusted-proxy client IP (not RealIP):
-  - `POST /join` and `POST /join/check`: 5 per minute per IP, one shared bucket.
+  - `POST /join` and `POST /invites/check`: 5 per minute per IP, one shared bucket.
   - Authenticated routes: 120 per minute per device, applied immediately after token auth resolves the device.
   - `PUT /health/daily`: an additional 30 per minute per device.
   - Exceeded limits return 429 with `Retry-After` and `{"code": "rate_limited"}`.
@@ -300,36 +301,42 @@ Middleware order: recoverer, request id, `Timeout(30s)`, 1 MB `MaxBytesReader`, 
 | 403 | `bad_app_key` | missing or wrong app key |
 | 403 | `invalid_code` | unknown, used, expired or locked invite code |
 | 403 | `forbidden` | admin-only route |
-| 404 | `not_found` | unknown or deleted resource |
-| 409 | `name_taken`, `color_taken`, `server_full` | join conflicts |
+| 400 | `invalid_json` | malformed body or a field the endpoint does not know |
+| 404 | `not_found` | unknown route or resource |
+| 405 | `method_not_allowed` | wrong method on a known route |
+| 409 | `name_taken`, `color_taken`, `server_full`, `server_initialized` | join conflicts |
+| 413 | `payload_too_large` | body over 1 MB |
 | 422 | `date_closed` | date outside the day window |
 | 422 | `invalid_timezone`, `invalid_request` | validation, with per-item errors where relevant |
-| 426 | `update_required` | client older than `minClientVersion` |
-| 429 | `rate_limited` | limiter |
+| 426 | `update_required` | client older than `minClientVersion`, which the body repeats |
+| 429 | `rate_limited` | limiter, with `Retry-After` |
+| 500 | `internal` | anything unexpected |
 
 ### Endpoints
 
 All routes are under `/api`.
-Groups: public (`health`, `server-info`), authLimited (`join`, `join/check`), requireAuth, requireAdmin.
+Groups: public (`health`, `server-info`), authLimited (`join`, `invites/check`), requireAuth, requireAdmin.
 Caps enforced with 422: reps at most 500 per set, pages at most 2000, minutes at most 1440, kcal at most 10000.
 
 ```
 GET    /health
   200 {status: "ok", version}                        cached DB ping, exempt from the app key
+  503 {status: "unavailable", version}
 
 GET    /server-info
   200 {name, initialized, joinOpen, minClientVersion}
   joinOpen = !initialized || liveUsers < maxUsers; no user list is ever returned here
 
-POST   /join/check
+POST   /invites/check
   req {code}
-  200 {users: [{id, name, color}], canJoinNew}       valid code only; counts wrong attempts
+  200 {valid, users: [{id, name, color}], canJoinNew}   never spends the code
+  an unusable code is 200 with valid false, no users and canJoinNew false, and counts as a wrong attempt
 
 POST   /join
   first install (initialized = false), no code:   {name, color, timezone}
   new member:                                     {code, name, color, timezone}
-  re-pair:                                        {code, userId}
-  201 {user: {id, name, color, isAdmin}, token}
+  re-pair:                                        {code, userId}, no other field
+  201 {user: {id, name, color, timezone, isAdmin}, token}
 
 DELETE /devices/me                                  204, revokes the calling device
 
@@ -337,68 +344,73 @@ POST   /invites                                     admin
   201 {code, expiresAt}
 
 GET    /me
-  200 {user: {id, name, color, timezone, pendingTimezone, isAdmin,
-              targets: {kcal, proteinG, carbsG, fatG}},        targets are integers or null
-       quests: [{key, target, unit, targetAlt, unitAlt, points, enabled, position}],
+  200 {user: {id, name, color, timezone, isAdmin},
+       targets: {kcal, protein, carbs, fat},          integers or null
+       questTemplates: [{key, title, enabled, target, unit, targetAlt, unitAlt, points, position}],
        localToday, backdateUntil, serverNow}
 
 PATCH  /me
   req any of {name, color, timezone,
-              targets: {kcal, proteinG, carbsG, fatG},          null clears a target
-              quests: [{key, enabled, target, targetAlt}]}
+              targets: {kcal, protein, carbs, fat},      null clears a target
+              questTemplates: [{key, enabled, target, targetAlt}]}
   200 same body as GET /me
-  quest edits are snapshot-first and apply from the next local day
+  template edits are snapshot-first and apply from the next local day
 
-GET    /today
-  200 {localToday, backdateUntil, serverNow,
-       day: DayScore,
+GET    /today?date=YYYY-MM-DD
+  200 {date, localToday, backdateUntil, serverNow,
+       quests: [QuestScore],
+       day: {basePoints, bonusPoints, points, maxBase, percent, counted, streakLine},
        streak: {current, restAvailable, restUsedOn},
-       food: {kcal, proteinG, carbsG, fatG, fiberG, mealCount,
-              targets: {kcal, proteinG, carbsG, fatG}, burned},
-       health: {hasSteps, stepsToday, activeEnergy, syncedAt}}
-  backdateUntil is today 10:00 local as an instant while before it, otherwise null
-  stepsToday is null when there is no row for today; burned mirrors activeEnergy
+       food: {kcal, protein, carbs, fat, fiber, burned,
+              targets: {kcal, protein, carbs, fat}},
+       health: {stepsEverSynced, syncedAt}}
+  date defaults to localToday and must fall between the join date and today
+  backdateUntil is the instant yesterday closes while it is open, otherwise null
+  burned is the day's active energy; reads rescore, so they are never stale
 
 GET    /board
-  200 {season: {id, name, startsOn, endsOn}, serverNow,
+  200 {season: {name, startsOn, endsOn}, serverNow,
        users: [{id, name, color,
                 today: {points, percent, counted},
-                week, season, streak,
-                last7: [{date, percent, rest}],
-                syncedAt}]}                              the caller first; one entry until the partner joins
+                week: {points}, season: {points}, streak: {current},
+                last7: [{date, percent, counted, rest}],
+                syncedAt}]}                              the caller first, each person on their own local today
 
 POST   /logs                                            201 first time, 200 with the same body on replay
   req {clientOpId, kind: "activity", type: "pushups"|"reading"|"yoga",
        quantity, unit: "reps"|"minutes"|"pages", date}
-   or {clientOpId, kind: "meal", name, kcal, proteinG, carbsG, fatG, fiberG, date}
+   or {clientOpId, kind: "meal", name, kcal, protein, carbs, fat, fiber, date}
   date is optional and defaults to localToday
-  200/201 {log: Log, day: DayScore}
+  200/201 {log: Log, day: DayDetail}
 
 GET    /logs?date=YYYY-MM-DD
   200 {date, logs: [Log]}                                the caller's logs, oldest first
 
 DELETE /logs/{id}
-  200 {day: DayScore}                                    obeys the day window
+  200 {day: DayDetail}                                   obeys the day window; takes no other parameter
 
 GET    /meals/recent?limit=20
-  200 {meals: [{name, kcal, proteinG, carbsG, fatG, fiberG}]}
-  distinct over lower(name), kcal, protein, carbs, fat across both users, newest first
+  200 {meals: [{name, kcal, protein, carbs, fat, fiber}]}
+  distinct across both users, newest first
 
 PUT    /health/daily
-  req {items: [{date, metric: "steps"|"active_energy", value, source: "healthkit"|"fake", measuredAt}]}
-  200 {days: [DayScore]}                                 every affected date, so the app skips GET /today
-  422 {code: "invalid_request", items: [{index, code, error}]}
+  req {items: [{date, metric: "steps"|"active_energy", value, source, measuredAt}]}
+  200 {days: [DayDetail]}                                every affected date, oldest first, so the app skips GET /today
+  422 {code, error, items: [{index, code, error}]}       code is date_closed when every bad item is, else invalid_request
 ```
 
 Wire types:
 
 - `Log` is a tagged union.
   Activity: `{id, kind: "activity", type, quantity, unit, localDate, loggedAt}`.
-  Meal: `{id, kind: "meal", name, kcal, proteinG, carbsG, fatG, fiberG, localDate, loggedAt}`.
-- `DayScore`: `{date, points, basePoints, bonusPoints, maxPoints, percent, counted, quests: [QuestScore]}`.
-- `QuestScore`: `{key, state: "active"|"needs_health", target, unit, targetAlt, unitAlt, actual, actualAlt, pointsMax, points, bonus, done, progressPercent}`.
-  `progressPercent` is `num * 100 / den` floored, for the bar only.
+  Meal: `{id, kind: "meal", name, kcal, protein, carbs, fat, fiber, localDate, loggedAt}`.
+- `DayDetail`: `{date, basePoints, bonusPoints, points, maxBase, percent, counted, streakLine, quests: [QuestScore]}`.
+  `points` is base plus bonus, `percent` is on base points, and `streakLine` is the percent a day needs to count.
+- `QuestScore`: `{key, title, target, unit, targetAlt, unitAlt, actual, actualAlt, points, basePoints, bonusPoints, done}`.
+  `points` is the quest's full base value; `basePoints` and `bonusPoints` are what has been earned.
+  Steps are listed before Health connects, with nothing earned and outside `maxBase`.
 - Log ids come from one shared sequence across both log tables, so `DELETE /logs/{id}` is unambiguous.
+- The app's contract tests replay recordings of these bodies, captured by `app/tool/capture_contract.mjs` into `app/test/contract`.
 
 Behaviour rules:
 
@@ -691,7 +703,7 @@ Plain `Navigator` for pushes, no router package.
 - On launch the prefilled `new-me.npc-server.top` is probed silently.
 - The server field appears only behind a "Change server" link or when the probe fails, with distinct copy for unreachable, wrong address, and "update required".
 - If `initialized` is false: "What should we call you?" with name, then color.
-- Otherwise: invite code entry, validated with `POST /join/check`, then "I'm new" (name and color) or a row of existing-user chips for re-pair.
+- Otherwise: invite code entry, validated with `POST /invites/check`, then "I'm new" (name and color) or a row of existing-user chips for re-pair.
 - A full server (`canJoinNew` false) shows only the chips.
 - The last step is an optional, skippable "Connect Health".
 - Timezone is sent from `flutter_timezone`.
@@ -719,7 +731,7 @@ No other navigation.
 - Empty (day with nothing logged): ring at 0, cards at zero, copy "Nothing yet today."
 - Unset targets: the Food card hides those rows and shows "Set your targets" linking to Me.
 - Health states:
-  - If `health.hasSteps` is false the steps card is a "Connect Health" card, excluded from the day max until the first sync.
+  - If `health.stepsEverSynced` is false the steps card is a "Connect Health" card, excluded from the day max until the first sync.
   - After `healthPrompted` is set, a day with `stepsToday == null` shows "No steps yet.
     Open Health > Sharing > Apps > New Me and allow Steps."
   - There is no re-request button after the first prompt.

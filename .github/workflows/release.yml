@@ -123,7 +123,13 @@ jobs:
             echo "rebuilding $last"
             exit 0
           fi
-          log=$(git log --format='%s%n%b' "$last"..HEAD)
+          # The first release has no tag to diff against, so read the whole history.
+          if git rev-parse -q --verify "refs/tags/$last" >/dev/null; then
+            range="$last..HEAD"
+          else
+            range=HEAD
+          fi
+          log=$(git log --format='%s%n%b' "$range")
           major=$(echo "$last" | sed 's/^v//' | cut -d. -f1)
           minor=$(echo "$last" | sed 's/^v//' | cut -d. -f2)
           patch=$(echo "$last" | sed 's/^v//' | cut -d. -f3)

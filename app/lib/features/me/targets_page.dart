@@ -20,9 +20,10 @@ import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
+import '../setup/about_you.dart';
+import '../setup/about_you_page.dart';
 import 'apple_health_page.dart';
 import 'me_support.dart';
-import 'profile_page.dart';
 import 'target_card.dart';
 import 'targets_logic.dart';
 
@@ -81,10 +82,10 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
     }
   }
 
-  Future<void> _fix(FixAt fix) async {
-    switch (fix) {
-      case FixAt.profile:
-        await pushPage(context, const ProfilePage());
+  Future<void> _fix(MissingItem item) async {
+    switch (item.fix) {
+      case FixAt.aboutYou:
+        await pushPage(context, AboutYouPage(start: item.question ?? AboutQuestion.birthYear));
       case FixAt.health:
         await pushPage(context, const AppleHealthPage());
       case FixAt.pushupMax:
@@ -180,7 +181,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
           estimate: t.key == 'maintenance' && estimate?.value != null ? estimate : null,
           busy: !enabled || _busy.isNotEmpty,
           onUse: () => _apply([t]),
-          onMaxTest: () => _fix(FixAt.pushupMax),
+          onMaxTest: () => _fix(kPushupMaxItem),
         ),
       ],
     ];
@@ -191,7 +192,7 @@ class _MissingCard extends StatelessWidget {
   const _MissingCard({required this.items, required this.onFix, required this.enabled});
 
   final List<MissingItem> items;
-  final void Function(FixAt fix) onFix;
+  final void Function(MissingItem item) onFix;
   final bool enabled;
 
   @override
@@ -212,10 +213,10 @@ class _MissingCard extends StatelessWidget {
             button: true,
             excludeSemantics: true,
             label: '${item.label}. ${item.hint}',
-            onTap: () => onFix(item.fix),
+            onTap: () => onFix(item),
             child: Pressable(
               scale: 0.99,
-              onTap: () => onFix(item.fix),
+              onTap: () => onFix(item),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 56),
                 child: Row(

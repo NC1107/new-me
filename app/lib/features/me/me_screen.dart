@@ -36,6 +36,7 @@ import 'pairing_page.dart';
 import 'profile_page.dart';
 import 'reminders_page.dart';
 import 'schedule_page.dart';
+import '../setup/about_you_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
 import 'targets_page.dart';
@@ -138,6 +139,13 @@ class _MeBody extends ConsumerWidget {
               title: 'My foods',
               subtitle: 'Saved foods with exact numbers',
               onTap: () => pushPage(context, const MyFoodsPage()),
+            ),
+            SettingsRow(
+              icon: Icons.person_rounded,
+              palette: accentById('teal'),
+              title: 'About you',
+              subtitle: 'Birth year, sex, height, weight and goal',
+              onTap: () => pushPage(context, const AboutYouPage()),
             ),
             SettingsRow(
               icon: Icons.palette_rounded,

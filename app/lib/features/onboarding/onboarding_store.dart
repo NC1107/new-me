@@ -19,6 +19,7 @@ class OnboardingProgress {
     this.planSaved = false,
     this.scheduleAnswered = false,
     this.healthAnswered = false,
+    this.aboutDone = 0,
     this.reminderAnswered = false,
   });
 
@@ -35,6 +36,7 @@ class OnboardingProgress {
     planSaved: j['planSaved'] as bool? ?? false,
     scheduleAnswered: j['scheduleAnswered'] as bool? ?? false,
     healthAnswered: j['healthAnswered'] as bool? ?? false,
+    aboutDone: (j['aboutDone'] as num?)?.toInt() ?? 0,
     reminderAnswered: j['reminderAnswered'] as bool? ?? false,
   );
 
@@ -50,6 +52,9 @@ class OnboardingProgress {
   /// The "When do you usually wake up?" screen, which follows the colour step.
   final bool scheduleAnswered;
   final bool healthAnswered;
+
+  /// How many "About you" screens were passed, so a resume lands on the next one.
+  final int aboutDone;
   final bool reminderAnswered;
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +67,7 @@ class OnboardingProgress {
     'planSaved': planSaved,
     'scheduleAnswered': scheduleAnswered,
     'healthAnswered': healthAnswered,
+    'aboutDone': aboutDone,
     'reminderAnswered': reminderAnswered,
   };
 

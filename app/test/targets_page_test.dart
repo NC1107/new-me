@@ -9,6 +9,7 @@ import 'package:newme/features/log/log_sheet.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/me/profile_page.dart';
 import 'package:newme/features/me/targets_page.dart';
+import 'package:newme/features/setup/about_you_page.dart';
 import 'package:newme/features/today/food_card.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -172,7 +173,8 @@ void main() {
       expect(find.textContaining('Estimated from your logs'), findsNothing);
 
       await app.tap(find.bySemanticsLabel(RegExp('^Height\\.')));
-      expect(find.byType(ProfilePage), findsOneWidget);
+      expect(find.byType(AboutYouPage), findsOneWidget);
+      expect(find.text('How tall are you?'), findsOneWidget);
     });
 
     testWidgets('the push-up max link opens the push-up sheet on Max test', (tester) async {

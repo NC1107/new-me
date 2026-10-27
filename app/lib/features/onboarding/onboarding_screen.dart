@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/step_progress_bar.dart';
+import '../setup/about_you.dart';
 import 'onboarding_controller.dart';
 import 'steps_entry.dart';
+import 'steps_about.dart';
 import 'steps_finish.dart';
 import 'steps_plan.dart';
 import 'steps_profile.dart';
@@ -46,6 +48,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep.goals => const GoalStep(),
     OnboardingStep.food => const FoodStep(),
     OnboardingStep.health => const HealthStep(),
+    OnboardingStep.about => AboutStep(
+      question: AboutQuestion.values[state.goalIndex],
+      onNext: ref.read(onboardingProvider.notifier).advanceAbout,
+    ),
     OnboardingStep.reminders => const ReminderStep(),
     OnboardingStep.done => const DoneStep(),
   };

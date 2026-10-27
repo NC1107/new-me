@@ -175,6 +175,23 @@ Where this document left a choice open, the server does the following.
 - The protein rule of v7 (the target is 20% or more away from the formula) stays, now measured against the goal-aware protein formula.
 - Dismissing a proposal makes the current formula value the new baseline, so it is not offered again until the value moves another 5%.
 
+## About you setup
+
+A guided flow collects the inputs Apple Health may not provide, one question per screen: birth year, sex, height, weight, goal (lose 0.25 or 0.5 kg a week, maintain, gain 0.1, 0.25 or 0.5), then a screen with the resulting calories, protein, fat, carbohydrate, fiber and sleep targets and "Use all" or "Not now".
+Every screen but the last has Skip, and a skipped question saves nothing.
+Each question carries a one-line reason, for example that the Mifflin-St Jeor equation uses it for resting energy.
+
+- **Onboarding order:** after the plan steps and Apple Health, before reminders.
+  Health is asked first so a height or weight it shared is already on the server (the sync finishes before the step ends) and can be prefilled, marked "From Apple Health".
+  Re-paired people are not asked; their answers exist.
+  The number of screens passed is stored with the other onboarding progress, so a relaunch resumes at the next one.
+- **Height and weight:** a prefilled Health value that is kept is not copied anywhere, so Health keeps supplying it; an edited height goes to the profile.
+  A weight typed by hand is saved as a manual `weight_kg` reading dated today.
+- **Existing people:** a "Finish your setup" card sits in the Today right-now slot while birth year, sex, height or weight is missing.
+  It ranks below repair, cover, cheers, look-back, readiness and Monday goals and above the recap, and can be dismissed for 7 days.
+  It opens the flow at the first missing question.
+  The Targets page rows under "Needed to work these out" open it at their question, and Me has an "About you" row that opens it at the start.
+
 ## Meal estimate and the food library
 
 Nick's complaint: "an apple, a chomp meat stick, and a hotpocket" came back as one blended meal with numbers the model made up.

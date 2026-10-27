@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
 import '../../state/right_now.dart';
+import '../../state/targets.dart';
 import '../../state/together.dart';
 import '../../state/v7.dart';
 import '../../theme/tokens.dart';
@@ -14,6 +15,9 @@ import '../../widgets/pop_in.dart';
 import '../progress/lookback_card.dart';
 import '../progress/lookback_screen.dart';
 import '../recap/recap_cards.dart';
+import '../setup/about_you.dart';
+import '../setup/about_you_page.dart';
+import '../setup/setup_card.dart';
 import '../recap/recap_screen.dart';
 import '../streaks/cover_card.dart';
 import '../streaks/repair_card.dart';
@@ -69,6 +73,13 @@ class RightNowGoals extends RightNow {
   final List<GoalProposal> proposals;
 }
 
+/// Height, weight, sex or birth year is still missing, so targets cannot be worked out.
+class RightNowSetup extends RightNow {
+  const RightNowSetup(this.missing);
+
+  final List<AboutQuestion> missing;
+}
+
 class RightNowRecap extends RightNow {
   const RightNowRecap(this.recap);
 
@@ -78,7 +89,8 @@ class RightNowRecap extends RightNow {
 /// The one card Today shows under the day card, or null for none. The first match wins:
 /// the repair window of a missed yesterday, a cover for the partner, a cheer that just arrived,
 /// the look-back on the 1st, then readiness until noon, then Monday's goal proposals, then the
-/// recap on Sunday evening and Monday. A dismissed card falls through to the next.
+/// setup card while an input of the targets is missing, then the recap on Sunday evening and
+/// Monday. A dismissed card falls through to the next.
 ///
 /// [cheers] are the ones not yet dismissed. [now] is the phone's local time.
 RightNow? pickRightNow({
@@ -92,6 +104,8 @@ RightNow? pickRightNow({
   Readiness? readiness,
   bool readinessDismissed = false,
   List<GoalProposal> proposals = const [],
+  List<AboutQuestion> setupMissing = const [],
+  bool setupDismissed = false,
   Recap? recap,
   bool recapDismissed = false,
 }) {
@@ -105,6 +119,7 @@ RightNow? pickRightNow({
     return RightNowReadiness(readiness);
   }
   if (isMonday(now) && proposals.isNotEmpty) return RightNowGoals(proposals);
+  if (setupMissing.isNotEmpty && !setupDismissed) return RightNowSetup(setupMissing);
   if (recap != null && !recapDismissed && recapWindow(now)) return RightNowRecap(recap);
   return null;
 }
@@ -121,6 +136,8 @@ class RightNowSlot extends ConsumerWidget {
     final memory = ref.watch(rightNowMemoryProvider);
     final cheerMemory = ref.watch(cheerMemoryProvider);
     final proposals = ref.watch(goalProposalsProvider).value?.proposals ?? const [];
+    final report = ref.watch(targetsProvider).value?.data;
+    final setupOpen = report == null ? const <AboutQuestion>[] : _openQuestions(report);
     final recap = recapWindow(now) ? ref.watch(recapProvider(null)).value : null;
     final lookback = now.day == 1 ? ref.watch(lookbackProvider(null)).value : null;
     final me = ref.watch(ownBoardUserProvider);
@@ -145,6 +162,8 @@ class RightNowSlot extends ConsumerWidget {
       readiness: today.readiness,
       readinessDismissed: !memory.loaded || memory.has(readinessDismissKey(today.localToday)),
       proposals: proposals,
+      setupMissing: memory.loaded ? setupOpen : const [],
+      setupDismissed: setupDismissed(memory.dismissed, now),
       recap: recap,
       recapDismissed: !memory.loaded || (recap != null && memory.has(recapDismissKey(recap.week))),
     );
@@ -173,6 +192,12 @@ class RightNowSlot extends ConsumerWidget {
         onDismiss: (p) =>
             _decide(context, ref, () => ref.read(goalProposalsProvider.notifier).dismiss(p.key)),
       ),
+      RightNowSetup(:final missing) => SetupNowCard(
+        missing: missing,
+        onTap: () => pushPage(context, AboutYouPage(start: missing.first)),
+        onDismiss: () =>
+            ref.read(rightNowMemoryProvider.notifier).dismiss(setupDismissKey(today.localToday)),
+      ),
       RightNowRecap(:final recap) => RecapNowCard(
         recap: recap,
         onTap: () => pushPage(context, RecapScreen(week: recap.week)),
@@ -184,6 +209,14 @@ class RightNowSlot extends ConsumerWidget {
       padding: const EdgeInsets.only(top: kCardGap),
       child: PopIn(key: ValueKey(picked.runtimeType), child: card),
     );
+  }
+
+  List<AboutQuestion> _openQuestions(TargetsReport report) {
+    final open = missingQuestions(report);
+    return [
+      for (final q in AboutQuestion.values)
+        if (open.contains(q)) q,
+    ];
   }
 
   void _openReadiness(BuildContext context, Readiness readiness) {

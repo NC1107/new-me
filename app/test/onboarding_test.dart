@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,6 +87,14 @@ class _App {
   Map<String, dynamic> lastBody(String route) =>
       (adapter.to(route).last.data as Map).cast<String, dynamic>();
 
+  /// Skips the five questions of About you and leaves its targets screen.
+  Future<void> skipAbout() async {
+    for (var i = 0; i < 5; i++) {
+      await tapButton('Skip');
+    }
+    await tapButton(find.text('NOT NOW').evaluate().isEmpty ? 'Done' : 'Not now');
+  }
+
   Future<void> expectSignedIn() async {
     expect(find.text('Today'), findsWidgets);
   }
@@ -170,6 +180,8 @@ void main() {
       expect(find.text('NOT NOW'), findsOneWidget);
       await app.tapButton('Not now');
       expect(app.health.accessRequests, 0);
+      expect(find.text('What year were you born?'), findsOneWidget);
+      await app.skipAbout();
       expect(find.text('Want a nudge in the evening?'), findsOneWidget);
       await app.tapButton('Not now');
       expect(app.reminders.permissionRequests, 0, reason: 'NOT NOW never asks the system');
@@ -272,6 +284,7 @@ void main() {
     await app.tapButton('Continue');
     await app.tapButton('Connect Apple Health');
     expect(app.health.accessRequests, 1);
+    await app.skipAbout();
 
     expect(find.text('Want a nudge in the evening?'), findsOneWidget);
     expect(find.text('8:00 PM'), findsOneWidget);
@@ -481,6 +494,7 @@ void main() {
     await first.tapButton('Continue');
     await first.tapButton('Continue');
     await first.tapButton('Not now');
+    await first.skipAbout();
     expect(find.text('Want a nudge in the evening?'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
@@ -510,6 +524,178 @@ void main() {
       findsOneWidget,
       reason: 'a denial does not block the flow',
     );
+  });
+
+  group('the About you steps', () {
+    Map<String, dynamic> targets(String name) =>
+        (jsonDecode(File('test/contract_v8/$name.json').readAsStringSync()) as Map)['body']!
+            as Map<String, dynamic>;
+
+    StubAdapter aboutServer() => _server(info: {..._info, 'initialized': false})
+      ..on('GET /api/me', StubResponse(200, meJson()))
+      ..on('GET /api/targets', StubResponse(200, targets('targets_missing')));
+
+    Future<_App> toHealth(WidgetTester tester, StubAdapter adapter) async {
+      final app = _App(tester, adapter);
+      await app.launch();
+      await app.tapButton('Get started');
+      await app.enter('Ana');
+      await app.tapButton('Continue');
+      await app.tapButton('Continue');
+      await app.tapButton('Use 7:00 AM and 11:00 PM');
+      await app.tapText('Read more');
+      await app.tapButton('Continue');
+      await app.tapButton('Continue');
+      expect(find.text('Connect Apple Health'), findsWidgets);
+      return app;
+    }
+
+    testWidgets('follow Health and come before reminders, in the order of the formulas', (
+      tester,
+    ) async {
+      final app = await toHealth(tester, aboutServer());
+      await app.tapButton('Connect Apple Health');
+      expect(app.health.accessRequests, 1);
+
+      const titles = [
+        'What year were you born?',
+        'What is your sex?',
+        'How tall are you?',
+        'What do you weigh?',
+        'What is your weight goal?',
+        'Your daily targets',
+      ];
+      for (final (i, title) in titles.indexed) {
+        expect(find.text(title), findsOneWidget, reason: title);
+        expect(find.text('Want a nudge in the evening?'), findsNothing);
+        if (i < 5) {
+          expect(find.text('SKIP'), findsOneWidget, reason: '$title has Skip');
+          await app.tapButton('Skip');
+        } else {
+          expect(find.text('SKIP'), findsNothing, reason: 'the last screen has no Skip');
+          expect(find.text('USE ALL'), findsOneWidget);
+          expect(find.text('NOT NOW'), findsOneWidget);
+          await app.tapButton('Not now');
+        }
+      }
+      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+      expect(
+        app.adapter.to('PATCH /api/me').length,
+        1,
+        reason: 'skipping every question saves nothing beyond the schedule and plan',
+      );
+    });
+
+    testWidgets('Health is asked first so its height is prefilled and kept off the profile', (
+      tester,
+    ) async {
+      final adapter = aboutServer()..on('GET /api/targets', StubResponse(200, targets('targets')));
+      final app = await toHealth(tester, adapter);
+      await app.tapButton('Connect Apple Health');
+      await app.tapButton('Skip');
+      await app.tapButton('Skip');
+
+      expect(find.text('How tall are you?'), findsOneWidget);
+      expect(find.text('From Apple Health'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '180');
+      final patches = adapter.to('PATCH /api/me').length;
+      await app.tapButton('Continue');
+      expect(adapter.to('PATCH /api/me').length, patches, reason: 'Health keeps supplying it');
+      expect(find.text('What do you weigh?'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '82.4');
+    });
+
+    testWidgets('the back arrow returns to the previous question', (tester) async {
+      final app = await toHealth(tester, aboutServer());
+      await app.tapButton('Not now');
+      await app.tapButton('Skip');
+      expect(find.text('What is your sex?'), findsOneWidget);
+      await app.tap(find.bySemanticsLabel('Back'));
+      expect(find.text('What year were you born?'), findsOneWidget);
+    });
+
+    testWidgets('leaving midway resumes at the first question not passed', (tester) async {
+      final adapter = aboutServer();
+      final first = await toHealth(tester, adapter);
+      await first.tapButton('Not now');
+      await first.tapButton('Skip');
+      await first.tapButton('Skip');
+      expect(find.text('How tall are you?'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
+            deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
+            healthSourceProvider.overrideWithValue(relaunch.health),
+            reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
+          ],
+          child: const NewMeApp(),
+        ),
+      );
+      await relaunch.settle();
+
+      expect(find.text('How tall are you?'), findsOneWidget);
+      expect(relaunch.health.accessRequests, 0, reason: 'Health was already answered');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('onboardingProgress'), contains('"aboutDone":2'));
+
+      for (var i = 0; i < 3; i++) {
+        await relaunch.tapButton('Skip');
+      }
+      await relaunch.tapButton('Not now');
+      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+      expect(prefs.getString('onboardingProgress'), contains('"aboutDone":6'));
+    });
+
+    testWidgets('a person who finished About you resumes at reminders', (tester) async {
+      final adapter = aboutServer();
+      final first = await toHealth(tester, adapter);
+      await first.tapButton('Not now');
+      await first.skipAbout();
+      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
+            deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
+            healthSourceProvider.overrideWithValue(relaunch.health),
+            reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
+          ],
+          child: const NewMeApp(),
+        ),
+      );
+      await relaunch.settle();
+      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+    });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('every screen fits 390 wide at text scale $scale with 44pt buttons', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final app = await toHealth(tester, aboutServer());
+        await app.tapButton('Not now');
+        for (var i = 0; i < 6; i++) {
+          expect(tester.takeException(), isNull, reason: 'screen $i');
+          for (final b in tester.widgetList<ChunkyButton>(find.byType(ChunkyButton))) {
+            expect(tester.getSize(find.byWidget(b)).height, greaterThanOrEqualTo(44));
+          }
+          await app.tapButton(i < 5 ? 'Skip' : 'Not now');
+        }
+      });
+    }
   });
 
   group('the schedule step', () {

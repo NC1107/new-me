@@ -1,6 +1,7 @@
 import '../../api/models.dart';
 import '../../util/format.dart';
 import '../health/health_metrics.dart';
+import '../setup/about_you.dart';
 
 /// A page section and the targets it lists, in the order the research doc presents them.
 class TargetGroup {
@@ -47,32 +48,49 @@ String formatTargetValue(int value, String unit) {
 }
 
 /// Where a missing input is fixed.
-enum FixAt { profile, health, pushupMax }
+enum FixAt { aboutYou, health, pushupMax }
 
 class MissingItem {
-  const MissingItem(this.key, this.label, this.hint, this.fix);
+  const MissingItem(this.key, this.label, this.hint, this.fix, {this.question});
 
   final String key;
   final String label;
   final String hint;
   final FixAt fix;
+
+  /// The About you question that supplies this input, for [FixAt.aboutYou].
+  final AboutQuestion? question;
 }
 
 const _missingCopy = {
   'weightKg': MissingItem(
     'weightKg',
     'Weight',
-    'Log a weigh-in, or let Apple Health share one',
-    FixAt.health,
+    'Enter it, or let Apple Health share one',
+    FixAt.aboutYou,
+    question: AboutQuestion.weight,
   ),
   'heightCm': MissingItem(
     'heightCm',
     'Height',
-    'Add it in Profile, or let Apple Health share it',
-    FixAt.profile,
+    'Enter it, or let Apple Health share it',
+    FixAt.aboutYou,
+    question: AboutQuestion.height,
   ),
-  'age': MissingItem('age', 'Birth year', 'Add it in Profile', FixAt.profile),
-  'sex': MissingItem('sex', 'Sex', 'Choose it in Profile', FixAt.profile),
+  'age': MissingItem(
+    'age',
+    'Birth year',
+    'Add it in About you',
+    FixAt.aboutYou,
+    question: AboutQuestion.birthYear,
+  ),
+  'sex': MissingItem(
+    'sex',
+    'Sex',
+    'Choose it in About you',
+    FixAt.aboutYou,
+    question: AboutQuestion.sex,
+  ),
   'steps14': MissingItem(
     'steps14',
     'Steps',
@@ -86,6 +104,9 @@ const _missingCopy = {
     FixAt.pushupMax,
   ),
 };
+
+/// The push-up card's own way to the max test.
+final kPushupMaxItem = _missingCopy['pushupMax']!;
 
 /// The inputs and data that keep a target empty, once each, in the order they are needed.
 /// Reasons the server words itself (the log estimate's thresholds) stay on their own row.

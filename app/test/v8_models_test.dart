@@ -230,8 +230,8 @@ void main() {
       expect(missingItems(full), isEmpty);
       expect(missingItems(missing).map((m) => m.key), ['heightCm', 'sex', 'pushupMax']);
       expect(missingItems(missing).map((m) => m.fix), [
-        FixAt.profile,
-        FixAt.profile,
+        FixAt.aboutYou,
+        FixAt.aboutYou,
         FixAt.pushupMax,
       ]);
     });

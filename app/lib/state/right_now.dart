@@ -21,6 +21,21 @@ String recapDismissKey(String week) => 'recap|$week';
 
 String lookbackDismissKey(String month) => 'lookback|$month';
 
+/// The setup card stays away for [kSetupDismissDays] days from the day it was dismissed.
+String setupDismissKey(String date) => 'setup|$date';
+
+const kSetupDismissDays = 7;
+
+bool setupDismissed(Set<String> dismissed, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  for (final key in dismissed) {
+    if (!key.startsWith('setup|')) continue;
+    final day = DateTime.tryParse(key.substring('setup|'.length));
+    if (day != null && today.difference(day).inDays < kSetupDismissDays) return true;
+  }
+  return false;
+}
+
 /// A milestone celebration plays once per phone, so its id is the memory.
 String milestoneSeenKey(int id) => 'milestone|$id';
 

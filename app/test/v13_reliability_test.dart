@@ -313,6 +313,28 @@ void main() {
       health = FakeHealthSource()..dataSince = DateTime(2026, 10, 30);
     });
 
+    test('a Retry-After of 0 still waits the minimum pause', () async {
+      var puts = 0;
+      final server = fullServer()
+        ..routes['PUT /api/health/history'] = (req) {
+          if (++puts == 1) {
+            return const StubResponse.withHeaders(
+              429,
+              {'error': 'too many requests, slow down', 'code': 'rate_limited'},
+              {'retry-after': '0'},
+            );
+          }
+          final items = (req.data as Map)['items'] as List;
+          return StubResponse(200, {'stored': items.length, 'received': items.length});
+        };
+      final c = build(server)..read(healthSyncProvider);
+      await Future<void>.delayed(Duration.zero);
+
+      await c.read(healthHistoryProvider.notifier).run();
+
+      expect(waits, [kHistoryBackoffStart]);
+    });
+
     test('a 429 backs off by Retry-After, then by doubling, and carries on', () async {
       var puts = 0;
       final server = fullServer()

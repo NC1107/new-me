@@ -77,6 +77,8 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
     state = HealthHistoryState(running: true, reached: restart ? null : saved.reached);
     try {
       await _import(client, restart ? null : saved.reached);
+    } on _Stopped {
+      return;
     } on ApiException catch (e) {
       debugPrint('[NEWME] health history stopped: $e');
       state = HealthHistoryState(
@@ -86,7 +88,9 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
             : e.message,
       );
     } finally {
-      if (state.running) state = HealthHistoryState(reached: state.reached, done: state.done);
+      if (ref.mounted && state.running) {
+        state = HealthHistoryState(reached: state.reached, done: state.done);
+      }
     }
   }
 
@@ -101,11 +105,16 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
       } on ApiException catch (e) {
         if (!e.isRateLimited || attempt >= kHistoryRateLimitRetries || _stop) rethrow;
         final asked = e.retryAfter;
+        // A Retry-After of 0 would otherwise resend at once, in a tight loop.
         final pause = asked == null
             ? wait
+            : asked < kHistoryBackoffStart
+            ? kHistoryBackoffStart
             : (asked > kHistoryBackoffMax ? kHistoryBackoffMax : asked);
         wait = wait * 2 > kHistoryBackoffMax ? kHistoryBackoffMax : wait * 2;
         await ref.read(historyBackoffWaitProvider)(pause);
+        // Signing out or leaving during a long wait must not send with the old client.
+        if (_stop || !ref.mounted) throw const _Stopped();
       }
     }
   }
@@ -151,3 +160,8 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
 final healthHistoryProvider = NotifierProvider<HealthHistoryImporter, HealthHistoryState>(
   HealthHistoryImporter.new,
 );
+
+/// The importer was disposed mid-wait; nothing is reported, the next launch resumes.
+class _Stopped implements Exception {
+  const _Stopped();
+}

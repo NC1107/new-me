@@ -140,7 +140,7 @@ void main() {
         ..on('POST /api/habits', StubResponse(201, {'habit': habitJson(9, 'Brush teeth')}));
       final app = await open(tester, adapter, const HabitEditorPage());
       await app.tap(find.bySemanticsLabel('Brush teeth'));
-      await app.tap(find.bySemanticsLabel('Only track'));
+      await app.tap(find.bySemanticsLabel('No minutes, only track'));
       expect(find.text('Only tracked, no gems'), findsOneWidget);
       await app.tap(_button('Save'));
       final body = app.body('POST /api/habits');

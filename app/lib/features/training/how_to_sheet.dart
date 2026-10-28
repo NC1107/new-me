@@ -76,7 +76,7 @@ class HowToSheet extends ConsumerWidget {
   }
 
   List<Widget> _content(BuildContext context, Exercise e) {
-    final muscles = e.primaryMuscles.map(muscleLabel).join(', ');
+    final muscles = e.primaryMuscles.map((m) => muscleLabel(m).toLowerCase()).join(', ');
     return [
       if (muscles.isNotEmpty) ...[
         const SizedBox(height: 4),
@@ -153,27 +153,34 @@ class _Photo extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(kRadiusField),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: ColoredBox(
-                color: kSunken,
-                child: switch (image) {
-                  AsyncValue(:final value?) => Image.memory(
-                    value,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                    frameBuilder: (context, child, frame, sync) => AnimatedOpacity(
-                      opacity: frame == null && !sync ? 0 : 1,
-                      duration: instant ? Duration.zero : kMotionDuration,
-                      child: child,
+          // The border is drawn over the photo, as every card in the app is outlined.
+          Container(
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(kRadiusField),
+              border: Border.all(color: kBorder, width: kBorderWidth),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(kRadiusField),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: ColoredBox(
+                  color: kSunken,
+                  child: switch (image) {
+                    AsyncValue(:final value?) => Image.memory(
+                      value,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      frameBuilder: (context, child, frame, sync) => AnimatedOpacity(
+                        opacity: frame == null && !sync ? 0 : 1,
+                        duration: instant ? Duration.zero : kMotionDuration,
+                        child: child,
+                      ),
+                      errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                     ),
-                    errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
-                  ),
-                  AsyncValue(hasError: true) => const _PhotoPlaceholder(),
-                  _ => const SizedBox.shrink(),
-                },
+                    AsyncValue(hasError: true) => const _PhotoPlaceholder(),
+                    _ => const SizedBox.shrink(),
+                  },
+                ),
               ),
             ),
           ),

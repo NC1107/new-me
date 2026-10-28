@@ -349,9 +349,9 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
         const FieldLabel('Minutes it takes'),
         // A habit from before minutes has none chosen, so -1 selects no segment until one is.
         Segmented<int>(
-          options: [for (final m in kHabitMinuteChoices) (m ?? 0, m == null ? 'Track' : '$m')],
+          options: [for (final m in kHabitMinuteChoices) (m ?? 0, m == null ? 'None' : '$m')],
           selected: _minutesChosen ? (_minutes ?? 0) : -1,
-          spokenLabel: (m) => m == 0 ? 'Only track' : '$m minutes',
+          spokenLabel: (m) => m == 0 ? 'No minutes, only track' : '$m minutes',
           onChanged: (m) {
             setState(() {
               _minutes = m == 0 ? null : m;

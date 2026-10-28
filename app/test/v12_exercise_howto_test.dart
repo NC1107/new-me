@@ -116,7 +116,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final push = ExerciseCatalog.parse(_load('exercises')).byKey('push_up')!;
-      expect(find.text('Works Chest'), findsOneWidget);
+      expect(find.text('Works chest'), findsOneWidget);
       expect(find.text('Steps'), findsOneWidget);
       expect(find.text(push.steps.first), findsOneWidget);
       expect(find.text(push.steps.last), findsOneWidget);

@@ -302,17 +302,24 @@ class _MobilityCard extends StatelessWidget {
         onTap: () => pushPage(context, const MobilityPage()),
         child: Row(
           children: [
-            Icon(Icons.self_improvement_rounded, color: accent.lip, size: 28),
-            const SizedBox(width: 14),
-            const Expanded(
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: accent.tint,
+                borderRadius: BorderRadius.circular(kRadiusField),
+              ),
+              child: Icon(Icons.self_improvement_rounded, color: accent.lip, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mobility', style: AppText.headline),
-                  SizedBox(height: 2),
+                  const Text('Mobility', style: AppText.headline),
                   Text(
                     '10 guided stretches, about 11 minutes. Counts toward yoga.',
-                    style: AppText.caption,
+                    style: AppText.caption.copyWith(color: kInkSecondary),
                   ),
                 ],
               ),

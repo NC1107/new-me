@@ -3,7 +3,7 @@ module github.com/nc1107/new-me/server
 go 1.26
 
 require (
-	github.com/go-chi/chi/v5 v5.3.2
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/jackc/pgx/v5 v5.11.0
 	golang.org/x/sync v0.17.0
 )

@@ -191,7 +191,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             partner: partner,
             onOpenMe: () => tabs.select(HomeTab.me),
             onOpenUs: () => tabs.select(HomeTab.board),
-            freezes: today.freezes.held,
             onStreak: () => showStreakSheet(
               context,
               streak: today.streak,

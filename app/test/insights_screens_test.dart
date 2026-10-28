@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/board/person_card.dart';
 import 'package:newme/features/insights/insight_charts.dart';
 import 'package:newme/features/insights/insights_screen.dart';
 import 'package:newme/features/insights/sleep_insight_screen.dart';
@@ -473,8 +474,9 @@ void main() {
         ),
       );
       await app.pump(const BoardScreen());
+      await app.tap(find.byType(PersonCard).first);
       expect(find.text('Workouts'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('3 workouts'), findsOneWidget);
     });
   });
 

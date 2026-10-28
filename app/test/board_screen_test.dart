@@ -77,12 +77,13 @@ void main() {
     expect(find.text('2,400'), findsOneWidget);
     expect(find.text('42%'), findsOneWidget);
     expect(find.text('125%'), findsOneWidget);
-    expect(find.text('1,200'), findsOneWidget);
-    expect(find.text('8,000'), findsOneWidget);
     expect(find.text('4-day streak'), findsNWidgets(2));
-    expect(find.text('synced 3h ago'), findsNWidgets(2));
+    expect(find.textContaining('synced'), findsNothing);
+    expect(find.text('Week'), findsNothing);
     expect(find.text('Preseason - ends Dec 31'), findsOneWidget);
-    expect(find.text('Together: 1,500 points this week'), findsOneWidget);
+    expect(find.textContaining('Together:'), findsNothing);
+    expect(find.text('Weekly recap'), findsOneWidget);
+    expect(find.text('Progress'), findsOneWidget);
     expect(find.textContaining('Nobody has moved yet'), findsNothing);
     expect(find.textContaining(RegExp('win|lead|behind|rank', caseSensitive: false)), findsNothing);
 
@@ -141,11 +142,61 @@ void main() {
     expect(find.text('-'), findsNWidgets(3));
   });
 
-  testWidgets('a user with no sync yet says so', (tester) async {
+  testWidgets('tapping a card opens week, season and last sync', (tester) async {
+    final app = TestApp(
+      tester,
+      _server([
+        boardUser(2, 'Sam', 'violet', week: 300, season: 900),
+        boardUser(1, 'Ana', 'amber', week: 1200, season: 8000),
+      ]),
+    );
+    await app.pump(const BoardScreen());
+    await app.tap(find.byType(PersonCard).at(1));
+    expect(find.text('Week'), findsOneWidget);
+    expect(find.text('1,200 points'), findsOneWidget);
+    expect(find.text('Season'), findsOneWidget);
+    expect(find.text('8,000 points'), findsOneWidget);
+    expect(find.text('Freezes'), findsOneWidget);
+    expect(find.text('Synced 3h ago'), findsOneWidget);
+  });
+
+  testWidgets('the details sheet fits at large text', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final user = boardUser(1, 'Ana', 'amber')..['workoutsThisWeek'] = 3;
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet'), user]));
+    await app.pump(const BoardScreen());
+    await app.tap(find.byType(PersonCard).at(1));
+    expect(find.text('3 workouts'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the Cheer button opens the cheer sheet, not the details', (tester) async {
+    final app = TestApp(
+      tester,
+      _server([boardUser(2, 'Sam', 'violet'), boardUser(1, 'Ana', 'amber')]),
+    );
+    await app.pump(const BoardScreen());
+    await app.tap(find.text('Cheer'));
+    expect(find.text('Cheer Ana'), findsOneWidget);
+    expect(find.text('Season'), findsNothing);
+  });
+
+  testWidgets('a counted day shows a check and no word, an uncounted one no check', (tester) async {
+    final counted = boardUser(1, 'Ana', 'amber', points: 2400, percent: 88);
+    (counted['today'] as Map)['counted'] = true;
+    final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet'), counted]));
+    await app.pump(const BoardScreen());
+    expect(find.textContaining('counted'), findsNothing);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+  });
+
+  testWidgets('a user with no sync yet says so in the details', (tester) async {
     final user = boardUser(2, 'Sam', 'violet')..['syncedAt'] = null;
     final app = TestApp(tester, _server([user]));
     await app.pump(const BoardScreen());
-    expect(find.text('Health not synced'), findsOneWidget);
+    await app.tap(find.byType(PersonCard).first);
+    expect(find.text('Not synced'), findsOneWidget);
   });
 
   testWidgets('day one reads as a fresh start, not broken', (tester) async {

@@ -20,13 +20,12 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../habits/habit_proposals_card.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
-import '../progress/progress_entry_card.dart';
 import '../progress/progress_screen.dart';
-import '../recap/recap_cards.dart';
 import '../recap/recap_screen.dart';
 import '../streaks/cover_card.dart';
 import '../streaks/shared_streak_card.dart';
@@ -131,11 +130,10 @@ class _UsBody extends ConsumerWidget {
         ),
         if (paired) ...[
           const SizedBox(height: kCardGap),
-          _Together(users: users),
-          const SizedBox(height: kCardGap),
-          RecapEntryCard(onTap: () => pushPage(context, const RecapScreen())),
-          const SizedBox(height: kCardGap),
-          ProgressEntryCard(onTap: () => openProgress(context)),
+          _ReviewCard(
+            onRecap: () => pushPage(context, const RecapScreen()),
+            onProgress: () => openProgress(context),
+          ),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),
@@ -174,30 +172,89 @@ class _SectionTitle extends StatelessWidget {
       Semantics(header: true, child: Text(text, style: AppText.headline));
 }
 
-class _Together extends StatelessWidget {
-  const _Together({required this.users});
+/// Weekly recap and Progress in one card: two rows, one line each.
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({required this.onRecap, required this.onProgress});
 
-  final List<BoardUser> users;
+  final VoidCallback onRecap;
+  final VoidCallback onProgress;
 
   @override
   Widget build(BuildContext context) {
-    final points = users.fold<int>(0, (sum, u) => sum + u.week);
+    final recap = accentById('violet');
+    final progress = accentById('teal');
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Column(
         children: [
-          const Icon(Icons.favorite_rounded, size: 22, color: kFlame),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Together: ${points.formatted} points this week',
-              style: AppText.label.copyWith(fontWeight: FontWeight.w800),
-            ),
+          _ReviewRow(
+            icon: Icons.insights_rounded,
+            palette: recap,
+            title: 'Weekly recap',
+            semanticLabel: 'Weekly recap, this week against last',
+            onTap: onRecap,
+          ),
+          const Divider(height: 2, thickness: 2, color: kBorder),
+          _ReviewRow(
+            icon: Icons.show_chart_rounded,
+            palette: progress,
+            title: 'Progress',
+            semanticLabel: 'Progress, months of change, you and your partner',
+            onTap: onProgress,
           ),
         ],
       ),
     );
   }
+}
+
+class _ReviewRow extends StatelessWidget {
+  const _ReviewRow({
+    required this.icon,
+    required this.palette,
+    required this.title,
+    required this.semanticLabel,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final AccentPalette palette;
+  final String title;
+  final String semanticLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: semanticLabel,
+    excludeSemantics: true,
+    onTap: onTap,
+    child: Pressable(
+      onTap: onTap,
+      scale: 0.98,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+                child: Icon(icon, size: 20, color: palette.lip),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _WaitingCard extends StatelessWidget {

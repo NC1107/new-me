@@ -242,12 +242,11 @@ void main() {
       return app;
     }
 
-    testWidgets('Today: the snowflakes, the away link and the repair card', (tester) async {
+    testWidgets('Today: the streak, the away link and the repair card', (tester) async {
       final handle = tester.ensureSemantics();
       await open(tester, const TodayScreen());
-      final flakes = find.bySemanticsLabel('2 streak freezes');
-      expect(tester.getSize(flakes).height, greaterThanOrEqualTo(44));
-      expect(tester.getSize(flakes).width, greaterThanOrEqualTo(44));
+      final streak = find.bySemanticsLabel(RegExp('day streak'));
+      expect(tester.getSize(streak).height, greaterThanOrEqualTo(44));
       expect(tester.getSize(find.text('You are away')).height, greaterThan(0));
       handle.dispose();
     });

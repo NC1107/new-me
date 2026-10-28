@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/board/person_card.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/streaks/away_line.dart';
 import 'package:newme/features/streaks/away_page.dart';
@@ -121,27 +122,37 @@ void main() {
   });
 
   group('freezes on Today', () {
-    testWidgets('the top bar shows the freezes as snowflakes beside the streak', (tester) async {
+    testWidgets('the top bar leaves the freezes to the streak sheet', (tester) async {
       final handle = tester.ensureSemantics();
-      await _openToday(tester, _server());
-      expect(find.bySemanticsLabel('2 streak freezes'), findsOneWidget);
+      final app = await _openToday(tester, _server());
+      expect(find.bySemanticsLabel(RegExp('streak freeze')), findsNothing);
+      expect(find.byIcon(Icons.ac_unit_rounded), findsNothing);
+
+      await app.tap(find.bySemanticsLabel(RegExp('day streak')));
+      expect(find.text('2 of 2 freezes'), findsOneWidget);
       final flakes = tester.widgetList<Icon>(find.byIcon(Icons.ac_unit_rounded));
       expect(flakes.take(2).map((i) => i.color), [kFreezeFill, kFreezeFill]);
       handle.dispose();
     });
 
-    testWidgets('one freeze left leaves the second snowflake dim', (tester) async {
-      await _openToday(tester, _server(today: _today(freezes: {'held': 1, 'earnedTowardNext': 5})));
+    testWidgets('one freeze left leaves the second snowflake dim in the streak sheet', (
+      tester,
+    ) async {
+      final app = await _openToday(
+        tester,
+        _server(today: _today(freezes: {'held': 1, 'earnedTowardNext': 5})),
+      );
+      await app.tap(find.bySemanticsLabel(RegExp('day streak')));
       final flakes = tester.widgetList<Icon>(find.byIcon(Icons.ac_unit_rounded)).take(2).toList();
       expect(flakes.map((i) => i.color), [kFreezeFill, isNot(kFreezeFill)]);
     });
 
-    testWidgets('tapping the snowflakes explains earning and using them', (tester) async {
+    testWidgets('tapping the flame explains earning and using freezes', (tester) async {
       final app = await _openToday(
         tester,
         _server(today: _today(freezes: {'held': 1, 'earnedTowardNext': 4})),
       );
-      await app.tap(find.bySemanticsLabel('1 streak freeze'));
+      await app.tap(find.bySemanticsLabel(RegExp('day streak')));
       expect(find.text('1 of 2 freezes'), findsOneWidget);
       expect(find.text('4 of 7 counted days to your next freeze - 3 to go'), findsOneWidget);
       expect(find.text('Earning and using freezes'), findsOneWidget);
@@ -438,10 +449,11 @@ void main() {
       expect(find.byType(SharedStreakCard), findsNothing);
     });
 
-    testWidgets('each person shows their freezes, and away shows instead of a percent', (
+    testWidgets('freezes sit in the person sheet, and away shows instead of a percent', (
       tester,
     ) async {
-      await openUs(
+      final handle = tester.ensureSemantics();
+      final app = await openUs(
         tester,
         _server(
           users: [
@@ -459,9 +471,16 @@ void main() {
           ],
         ),
       );
-      expect(find.text('1 freeze'), findsOneWidget);
-      expect(find.text('0 freezes'), findsOneWidget);
+      expect(find.text('1 freeze'), findsNothing);
       expect(find.text('Away today'), findsOneWidget);
+
+      await app.tap(find.byType(PersonCard).at(0));
+      expect(find.text('Freezes'), findsOneWidget);
+      expect(find.bySemanticsLabel('1 streak freeze'), findsOneWidget);
+      await app.closeSheet();
+      await app.tap(find.byType(PersonCard).at(1));
+      expect(find.bySemanticsLabel('0 streak freezes'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('the week chart marks frozen, away and repaired days with a legend', (

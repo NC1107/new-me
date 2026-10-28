@@ -12,7 +12,8 @@ PORT=${NEWME_TEST_PG_PORT:-55433}
 PASSWORD=test-$$
 
 cleanup() {
-  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  # -v drops the anonymous data volume the postgres image declares, which would otherwise leak.
+  docker rm -f -v "$CONTAINER" >/dev/null 2>  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true1 || true
 }
 trap cleanup EXIT INT TERM
 

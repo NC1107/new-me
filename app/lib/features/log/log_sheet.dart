@@ -378,9 +378,12 @@ class _BackdateToggle extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                'Add to yesterday, open until ${formatClock(hour)}',
-                style: AppText.label.copyWith(color: kInkSecondary),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Log for yesterday', style: AppText.label.copyWith(color: kInk)),
+                  Text('Open until ${formatClock(hour)}', style: AppText.caption),
+                ],
               ),
             ),
             AppSwitch(

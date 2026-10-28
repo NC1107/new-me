@@ -55,7 +55,7 @@ String activitySentence(ActivitySummary a) =>
 
 /// "5 of the last 7 days" for the protein hit rate.
 String proteinHitLabel(ProteinHitRate p) =>
-    '${p.daysHit7} of the last ${p.days7} ${p.days7 == 1 ? 'day' : 'days'}';
+    p.days7 == 1 ? '${p.daysHit7} of 1 logged day' : '${p.daysHit7} of the last ${p.days7} days';
 
 /// "Target 100 g. At 1.6 g per kg and 82.4 kg the default would be 130 g.", or just the target
 /// when it already is the default or there is no weight to work it out from.

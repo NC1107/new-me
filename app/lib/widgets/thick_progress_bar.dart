@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../theme/accent.dart';
@@ -135,7 +137,7 @@ class _BarPainter extends CustomPainter {
     }
     if (value <= 0) return;
     // Never narrower than the bar is tall, so a sliver still reads as a rounded pill.
-    final w = (size.width * value).clamp(size.height, size.width);
+    final w = (size.width * value).clamp(min(size.height, size.width), size.width).toDouble();
     final bar = RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, w, size.height), Radius.circular(r));
     canvas.drawRRect(bar, Paint()..color = fill);
     if (w > size.height) {

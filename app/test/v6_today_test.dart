@@ -486,6 +486,8 @@ void main() {
           await app.settle();
           expect(tester.takeException(), isNull);
         }
+        // Scrolling the last case brings cards into view that start their own loads.
+        await tester.pump(Duration.zero);
       });
     }
 

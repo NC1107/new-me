@@ -48,7 +48,11 @@ class MyFoodsPage extends ConsumerWidget {
         const SizedBox(height: 16),
         ...switch (foods) {
           AsyncData(:final value) when value.isEmpty => [
-            Text('Nothing saved yet.', style: AppText.body.copyWith(color: kInkSecondary)),
+            Text(
+              'Nothing saved yet. Search, scan a barcode or add a new food, and it keeps its '
+              'exact numbers here.',
+              style: AppText.body.copyWith(color: kInkSecondary),
+            ),
           ],
           AsyncData(:final value) => [
             AppCard(

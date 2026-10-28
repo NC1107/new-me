@@ -190,25 +190,10 @@ class _QuestCardState extends State<QuestCard> {
                 if (widget.listeningNote case final note?)
                   _NoteLine(icon: Icons.sync_rounded, color: category.lip, text: note),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ThickProgressBar(
-                        value: questFraction(q),
-                        color: q.done ? person.fill : category.fill,
-                      ),
-                    ),
-                    // The card's spoken label already carries the progress.
-                    if (titleStatesTarget(q) && questActualLabel(q) != null) ...[
-                      const SizedBox(width: 10),
-                      ExcludeSemantics(
-                        child: Text(
-                          questActualLabel(q)!,
-                          style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
-                        ),
-                      ),
-                    ],
-                  ],
+                _BarWithAmount(
+                  value: questFraction(q),
+                  color: q.done ? person.fill : category.fill,
+                  amount: titleStatesTarget(q) ? questActualLabel(q) : null,
                 ),
               ],
             ),
@@ -285,6 +270,39 @@ class _BonusChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The quest bar with the amount so far beside it, or under it when large text leaves no room.
+class _BarWithAmount extends StatelessWidget {
+  const _BarWithAmount({required this.value, required this.color, required this.amount});
+
+  final double value;
+  final Color color;
+  final String? amount;
+
+  @override
+  Widget build(BuildContext context) {
+    final bar = ThickProgressBar(value: value, color: color);
+    final text = amount;
+    if (text == null) return bar;
+    // The card's spoken label already carries the progress.
+    final label = ExcludeSemantics(
+      child: Text(text, style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary))),
+    );
+    if (MediaQuery.textScalerOf(context).scale(10) > 13) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [bar, const SizedBox(height: 4), label],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: bar),
+        const SizedBox(width: 10),
+        label,
+      ],
     );
   }
 }

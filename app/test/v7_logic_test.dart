@@ -571,7 +571,7 @@ void main() {
 
     test('the protein hit rate and its basis', () {
       expect(proteinHitLabel(const ProteinHitRate(daysHit7: 5, days7: 7)), '5 of the last 7 days');
-      expect(proteinHitLabel(const ProteinHitRate(daysHit7: 1, days7: 1)), '1 of the last 1 day');
+      expect(proteinHitLabel(const ProteinHitRate(daysHit7: 1, days7: 1)), '1 of 1 logged day');
       expect(
         proteinBasis(
           const ProteinHitRate(targetG: 100, suggestedG: 130, perKg: 1.6, weightKg: 82.4),

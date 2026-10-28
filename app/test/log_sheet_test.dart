@@ -322,7 +322,7 @@ void main() {
     final adapter = _server();
     final app = await _open(tester, adapter, LogKind.pushups);
 
-    expect(find.textContaining('Add to yesterday'), findsOneWidget);
+    expect(find.text('Log for yesterday'), findsOneWidget);
     await app.tap(find.byType(Switch));
     await app.tap(_save());
     expect(app.body('POST /api/logs')['date'], '2026-10-25');
@@ -333,6 +333,6 @@ void main() {
       ..on('GET /api/today', StubResponse(200, richTodayJson(backdateUntil: null)))
       ..on('GET /api/me', StubResponse(200, {...meJson(), 'backdateUntil': null}));
     await _open(tester, adapter, LogKind.pushups);
-    expect(find.textContaining('Add to yesterday'), findsNothing);
+    expect(find.text('Log for yesterday'), findsNothing);
   });
 }

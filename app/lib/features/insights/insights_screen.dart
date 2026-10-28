@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/insights.dart';
+import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
@@ -36,6 +37,7 @@ class InsightsScreen extends ConsumerWidget {
       onRetry: ref.read(insightsProvider.notifier).refresh,
       builder: (context) {
         final data = insights.value!.data;
+        final today = ref.watch(todayProvider.select((v) => v.value?.data.localToday));
         return [
           ProgressEntryCard(onTap: () => openProgress(context)),
           const SizedBox(height: kCardGap),
@@ -57,7 +59,8 @@ class InsightsScreen extends ConsumerWidget {
             unit: 'a night this week',
             detail: data.sleep.lastNight == null
                 ? null
-                : 'Last night ${durationLabel(data.sleep.lastNight!.asleepMin)}',
+                : '${lastNightTitle(data.sleep.lastNight!.date, today)} '
+                      '${durationLabel(data.sleep.lastNight!.asleepMin)}',
             onTap: () => pushPage(context, const SleepInsightScreen()),
           ),
           const SizedBox(height: kCardGap),

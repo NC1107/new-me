@@ -170,3 +170,10 @@ String workoutCountLabel(int n) => '$n ${n == 1 ? 'workout' : 'workouts'}';
 /// "5.2 km" or "850 m".
 String distanceLabel(int meters, Units units) =>
     healthMetricSpec('distance_m')!.display(meters, units);
+
+/// "Last night" for the night just slept, otherwise "Latest night, Mon 26" so an older record is
+/// never passed off as last night.
+String lastNightTitle(String date, String? today) => switch (relativeDay(date, today)) {
+  'Today' || 'Yesterday' => 'Last night',
+  final other => 'Latest night, $other',
+};

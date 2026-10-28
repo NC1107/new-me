@@ -117,10 +117,7 @@ class _LastNight extends StatelessWidget {
     final bed = night.bedAt == null ? null : timeLabel(inZone(night.bedAt!, zone));
     final wake = night.wakeAt == null ? null : timeLabel(inZone(night.wakeAt!, zone));
     final hasStages = stageTotal(night.stages) > 0;
-    final title = switch (relativeDay(night.date, today)) {
-      'Today' || 'Yesterday' => 'Last night',
-      final other => 'Latest night, $other',
-    };
+    final title = lastNightTitle(night.date, today);
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Column(

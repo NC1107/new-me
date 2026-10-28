@@ -40,6 +40,13 @@ const (
 
 	// EventHabitProposal asks the partner to approve a habit's gems (v11).
 	EventHabitProposal = "habit_proposal"
+
+	// The v13 partner nudges. They are gentle prompts about the other person, on a budget of
+	// their own, see partner.go.
+	EventPartnerCover     = "partner_cover"
+	EventPartnerCheer     = "partner_cheer"
+	EventPartnerChallenge = "partner_challenge"
+	EventRewardProgress   = "reward_progress"
 )
 
 // AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
@@ -61,13 +68,35 @@ type Service struct {
 	Notifier Notifier
 }
 
-// Notify queues a message unless the person turned that event off. It never fails the caller.
-func (s *Service) Notify(to db.User, m push.Message) {
-	if s.Notifier == nil || !wants(to.Notify, m.Kind) {
-		return
+// Delivery is what became of a message handed to Deliver.
+type Delivery int
+
+const (
+	// NotSent means nothing was queued: push is off, the person switched the event off, or it
+	// is quiet hours or an away day. Nothing was lost that should be retried.
+	NotSent Delivery = iota
+	// Queued means the dispatcher accepted the message.
+	Queued
+	// Failed means the dispatcher refused it (its queue was full). The caller may release a
+	// claim so the message is tried again.
+	Failed
+)
+
+// Notify queues a message unless the person turned that event off or it is a quiet moment for
+// them. It never fails the caller.
+func (s *Service) Notify(to db.User, m push.Message) { s.Deliver(to, m) }
+
+// Deliver is Notify for callers that hold a claim on the message and must release it when the
+// message could not be queued.
+func (s *Service) Deliver(to db.User, m push.Message) Delivery {
+	if !s.Wants(to, m.Kind) {
+		return NotSent
 	}
 	m.UserID = to.ID
-	s.Notifier.Enqueue(m)
+	if !s.Notifier.Enqueue(m) {
+		return Failed
+	}
+	return Queued
 }
 
 func wants(n db.Notifications, kind string) bool {
@@ -94,8 +123,12 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Lookback
 	case EventMilestone:
 		return n.Milestones
-	case EventCover, EventHabitProposal:
-		return n.Cheers
+	case EventCover, EventPartnerCover:
+		return n.Cover
+	case EventHabitProposal:
+		return n.Approvals
+	case EventPartnerCheer, EventPartnerChallenge, EventRewardProgress:
+		return n.PartnerNudges
 	}
 	return false
 }
@@ -124,6 +157,11 @@ func (s *Service) Settle(ctx context.Context) error {
 	for _, week := range weeks {
 		if err := s.settleChallenge(ctx, week, users); err != nil {
 			errs = append(errs, fmt.Errorf("challenge %s: %w", week, err))
+		}
+	}
+	if len(weeks) > 0 {
+		if _, err := db.CloseMissedChallenges(ctx, s.DB.Pool, slices.Min(weeks)); err != nil {
+			errs = append(errs, fmt.Errorf("close missed challenges: %w", err))
 		}
 	}
 	if err := s.settleReward(ctx, users); err != nil {
@@ -159,8 +197,11 @@ func (s *Service) EnsureChallenge(ctx context.Context, week score.Date) (db.Chal
 	}
 	ch, err := db.GetChallenge(ctx, s.DB.Pool, week)
 	if errors.Is(err, db.ErrNotFound) {
-		ch, err = db.InsertChallenge(ctx, s.DB.Pool, db.Challenge{WeekStart: week, Kind: KindFor(week),
-			Title: Title(KindFor(week), 0), Target: 1})
+		var pick Pick
+		if pick, err = s.pickKind(ctx, week, users); err == nil {
+			ch, err = db.InsertChallenge(ctx, s.DB.Pool, db.Challenge{WeekStart: week, Kind: pick.Kind,
+				Title: Title(pick.Kind, 0), Target: 1, PickReason: pick.Reason})
+		}
 	}
 	if err != nil {
 		return db.Challenge{}, err
@@ -177,7 +218,7 @@ func (s *Service) EnsureChallenge(ctx context.Context, week score.Date) (db.Chal
 		if _, ok := shares[u.ID]; ok {
 			continue
 		}
-		sizing, err := s.sizing(ctx, u.ID, week)
+		sizing, err := s.sizing(ctx, u.ID, ch.Kind, week)
 		if err != nil {
 			return db.Challenge{}, err
 		}
@@ -201,7 +242,7 @@ func (s *Service) EnsureChallenge(ctx context.Context, week score.Date) (db.Chal
 	return db.GetChallenge(ctx, s.DB.Pool, week)
 }
 
-func (s *Service) sizing(ctx context.Context, userID int64, week score.Date) (Sizing, error) {
+func (s *Service) sizing(ctx context.Context, userID int64, kind string, week score.Date) (Sizing, error) {
 	q := s.DB.Pool
 	var in Sizing
 	total, days, err := db.StepsByUserID(ctx, q, userID, week.AddDays(-weeksOfHistory*daysInWeek), week.AddDays(-1))
@@ -214,8 +255,22 @@ func (s *Service) sizing(ctx context.Context, userID int64, week score.Date) (Si
 	if in.WorkoutsLastWeek, err = db.CountWorkouts(ctx, q, userID, week.AddDays(-daysInWeek), week.AddDays(-1)); err != nil {
 		return in, err
 	}
-	in.ReadingLastTwoWeeks, err = db.ReadingMinutesUser(ctx, q, userID, week.AddDays(-weeksOfHistory*daysInWeek), week.AddDays(-1))
-	return in, err
+	if in.ReadingLastTwoWeeks, err = db.ReadingMinutesUser(ctx, q, userID, week.AddDays(-weeksOfHistory*daysInWeek), week.AddDays(-1)); err != nil {
+		return in, err
+	}
+	if IsMeasured(kind) {
+		recent, err := s.recent(ctx, userID, kind, week)
+		if err != nil {
+			return in, err
+		}
+		in.Recent = map[string]Recent{kind: recent}
+		spans, err := db.AwaySpansBetween(ctx, q, userID, week, week.AddDays(daysInWeek-1))
+		if err != nil {
+			return in, err
+		}
+		in.AwayDays = AwayDaysIn(spans, week, week.AddDays(daysInWeek-1))
+	}
+	return in, nil
 }
 
 // PersonStanding is one person's progress on their share, with who they are.
@@ -319,6 +374,10 @@ func (s *Service) personProgress(ctx context.Context, ch db.Challenge, userID in
 	case KindReading:
 		return db.ReadingMinutesUser(ctx, q, userID, from, to)
 	}
+	if IsMeasured(ch.Kind) {
+		m, err := db.ChallengeMeasure(ctx, q, userID, ch.Kind, from, to)
+		return m.Total, err
+	}
 	n := 0
 	for _, d := range counted {
 		if d.UserID == userID {
@@ -415,15 +474,14 @@ func (s *Service) announcePartnersDone(ctx context.Context, users []db.User, now
 			errs = append(errs, err)
 			continue
 		}
-		first, err := db.ClaimNotice(ctx, s.DB.Pool, EventPartnerDone, u.ID, today)
-		if err != nil || !first {
-			errs = append(errs, err)
-			continue
-		}
 		for _, partner := range users {
-			if partner.ID != u.ID {
-				s.Notify(partner, push.Message{Kind: EventPartnerDone,
-					Title: u.Name + " finished the day", Body: "Their day counted. Your move."})
+			if partner.ID == u.ID {
+				continue
+			}
+			_, err := s.SendClaimed(ctx, Claim{Kind: EventPartnerDone, UserID: u.ID, Date: today}, partner,
+				push.Message{Kind: EventPartnerDone, Title: u.Name + " finished the day", Body: "Their day counted. Your move."})
+			if err != nil {
+				errs = append(errs, err)
 			}
 		}
 	}

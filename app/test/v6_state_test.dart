@@ -328,13 +328,16 @@ void main() {
         expect(find.text(l), findsOneWidget);
       }
       final values = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value).toList();
-      expect(values.skip(5), [false, true, false, true, true, true]);
+      expect(values.skip(8), [false, true, false, true, true, true]);
 
       await app.tap(find.text('Steps to go'));
       expect(app.body('PATCH /api/me'), {
         'notifications': {'behindPace': true},
       });
-      expect(find.text('At most two of these a day, and none late at night.'), findsOneWidget);
+      expect(
+        find.text('At most two of these a day. Quiet from 23:00 to 07:10, and on away days.'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -360,7 +363,7 @@ void main() {
   });
 
   test('the notifications row counts every switch', () {
-    expect(kNotificationSwitches, 11);
-    expect(notificationsOn(const NotificationPrefs()), 9);
+    expect(kNotificationSwitches, 14);
+    expect(notificationsOn(const NotificationPrefs()), 12);
   });
 }

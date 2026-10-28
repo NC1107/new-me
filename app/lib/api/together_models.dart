@@ -76,6 +76,8 @@ class Challenge {
     required this.done,
     required this.endsOn,
     this.people = const [],
+    this.missed = false,
+    this.reason = '',
   });
 
   static Challenge? tryParse(Object? v) {
@@ -92,10 +94,14 @@ class Challenge {
         if (j['people'] is List)
           for (final p in j['people'] as List) ?ChallengeShare.tryParse(p),
       ],
+      missed: j['missed'] as bool? ?? false,
+      reason: _str(j['reason']),
     );
   }
 
-  /// steps, workouts, counted_days or reading; unknown kinds still render with generic copy.
+  /// steps, workouts, counted_days, reading or one of the v13 kinds (sleep_nights, meal_days,
+  /// protein_days, pushup_reps, yoga_minutes, habit_marks, active_days); unknown kinds still
+  /// render with generic copy.
   final String kind;
   final String title;
   final int target;
@@ -109,6 +115,12 @@ class Challenge {
   /// from before them, which are measured on the pair's total.
   final List<ChallengeShare> people;
 
+  /// True once the week ended with the challenge unfinished. It costs nothing.
+  final bool missed;
+
+  /// Why the server picked this kind, empty on servers older than v13.
+  final String reason;
+
   double get fraction => (progress / target).clamp(0.0, 1.0);
 
   Map<String, dynamic> toJson() => {
@@ -119,6 +131,8 @@ class Challenge {
     'done': done,
     'endsOn': endsOn,
     if (people.isNotEmpty) 'people': [for (final p in people) p.toJson()],
+    if (missed) 'missed': true,
+    if (reason.isNotEmpty) 'reason': reason,
   };
 }
 
@@ -204,6 +218,9 @@ class NotificationPrefs {
     this.weeklyRecap = true,
     this.milestones = true,
     this.lookback = true,
+    this.partnerNudges = true,
+    this.cover = true,
+    this.approvals = true,
   });
 
   /// Servers older than v5 send nothing, which reads as everything on.
@@ -222,6 +239,9 @@ class NotificationPrefs {
       weeklyRecap: j['weeklyRecap'] as bool? ?? true,
       milestones: j['milestones'] as bool? ?? true,
       lookback: j['lookback'] as bool? ?? true,
+      partnerNudges: j['partnerNudges'] as bool? ?? true,
+      cover: j['cover'] as bool? ?? true,
+      approvals: j['approvals'] as bool? ?? true,
     );
   }
 
@@ -241,6 +261,12 @@ class NotificationPrefs {
   final bool milestones;
   final bool lookback;
 
+  /// The v13 switches: gentle prompts about the partner (cheer prompt, reward progress, Thursday
+  /// check-in), cover chances and covers, and habit approvals.
+  final bool partnerNudges;
+  final bool cover;
+  final bool approvals;
+
   Map<String, dynamic> toJson() => {
     'partnerDone': partnerDone,
     'cheers': cheers,
@@ -254,6 +280,9 @@ class NotificationPrefs {
     // Left out while on (the default), so an older server's answer re-encodes to what it sent.
     if (!milestones) 'milestones': false,
     if (!lookback) 'lookback': false,
+    if (!partnerNudges) 'partnerNudges': false,
+    if (!cover) 'cover': false,
+    if (!approvals) 'approvals': false,
   };
 }
 
@@ -271,6 +300,9 @@ class NotificationPatch {
     this.weeklyRecap,
     this.milestones,
     this.lookback,
+    this.partnerNudges,
+    this.cover,
+    this.approvals,
   });
 
   final bool? partnerDone;
@@ -284,6 +316,9 @@ class NotificationPatch {
   final bool? weeklyRecap;
   final bool? milestones;
   final bool? lookback;
+  final bool? partnerNudges;
+  final bool? cover;
+  final bool? approvals;
 
   Map<String, dynamic> toJson() => {
     'partnerDone': ?partnerDone,
@@ -297,5 +332,8 @@ class NotificationPatch {
     'weeklyRecap': ?weeklyRecap,
     'milestones': ?milestones,
     'lookback': ?lookback,
+    'partnerNudges': ?partnerNudges,
+    'cover': ?cover,
+    'approvals': ?approvals,
   };
 }

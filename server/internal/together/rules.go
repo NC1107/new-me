@@ -10,15 +10,14 @@ import (
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
-// Challenge kinds, in rotation order.
+// Challenge kinds. The first four predate v13 and are always eligible; the rest are measured
+// from stored data and need history, see kinds.go.
 const (
 	KindSteps       = "steps"
 	KindWorkouts    = "workouts"
 	KindCountedDays = "counted_days"
 	KindReading     = "reading"
 )
-
-var rotation = []string{KindSteps, KindWorkouts, KindCountedDays, KindReading}
 
 const (
 	// stretch is how far above recent form a share is set: reachable, but a push.
@@ -44,6 +43,10 @@ type Sizing struct {
 	WorkoutsLastWeek int
 	// ReadingLastTwoWeeks is the person's reading plus listening minutes over the two weeks before.
 	ReadingLastTwoWeeks int
+	// Recent holds the person's last two weeks of each measured kind (see kinds.go).
+	Recent map[string]Recent
+	// AwayDays is how many days of the challenge week the person has marked away.
+	AwayDays int
 }
 
 // Spec is a generated challenge before it is stored. Target is the sum of the people's shares.
@@ -51,12 +54,6 @@ type Spec struct {
 	Kind   string
 	Title  string
 	Target int
-}
-
-// KindFor rotates through the kinds by ISO week number of the week starting on the Monday.
-func KindFor(weekStart score.Date) string {
-	_, week := weekStart.Time().ISOWeek()
-	return rotation[week%len(rotation)]
 }
 
 // Share is one person's share of a challenge of the kind, sized from their own history.
@@ -68,13 +65,14 @@ func Share(kind string, in Sizing) int {
 		return WorkoutsShare(in.WorkoutsLastWeek)
 	case KindCountedDays:
 		return countedDaysTarget
+	case KindReading:
+		return ReadingShare(in.ReadingLastTwoWeeks)
 	}
-	return ReadingShare(in.ReadingLastTwoWeeks)
+	return MeasuredShare(kind, in.Recent[kind], in.AwayDays)
 }
 
-// Generate sizes the week's challenge from the shares of the people taking part.
-func Generate(weekStart score.Date, shares []int) Spec {
-	kind := KindFor(weekStart)
+// Generate words the challenge from the shares of the people taking part.
+func Generate(kind string, shares []int) Spec {
 	total := 0
 	for _, share := range shares {
 		total += share
@@ -91,8 +89,10 @@ func Title(kind string, combined int) string {
 		return fmt.Sprintf("Do %d workouts together", combined)
 	case KindCountedDays:
 		return fmt.Sprintf("Both count on %d of 7 days", countedDaysTarget)
+	case KindReading:
+		return fmt.Sprintf("Read %d minutes together", combined)
 	}
-	return fmt.Sprintf("Read %d minutes together", combined)
+	return measuredTitle(kind, combined)
 }
 
 // StepsShare is 110 percent of the person's weekly steps over the last two weeks, rounded to the

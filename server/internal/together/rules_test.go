@@ -6,30 +6,6 @@ import (
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
-func TestKindRotatesByISOWeekNumber(t *testing.T) {
-	// 2026-11-02 is Monday of ISO week 45, and 2026-12-28 starts week 53.
-	cases := []struct {
-		monday string
-		kind   string
-	}{
-		{"2026-11-02", KindWorkouts},    // 45 % 4 = 1
-		{"2026-11-09", KindCountedDays}, // 46 % 4 = 2
-		{"2026-11-16", KindReading},     // 47 % 4 = 3
-		{"2026-11-23", KindSteps},       // 48 % 4 = 0
-		{"2026-12-28", KindWorkouts},    // 53 % 4 = 1
-		{"2027-01-04", KindWorkouts},    // ISO week 1 of 2027: 1 % 4 = 1
-	}
-	for _, tc := range cases {
-		if got := KindFor(score.MustDate(tc.monday)); got != tc.kind {
-			t.Errorf("%s: kind = %s, want %s", tc.monday, got, tc.kind)
-		}
-	}
-	seen := map[string]bool{}
-	for d := score.MustDate("2026-11-02"); len(seen) < 4; d = d.AddDays(7) {
-		seen[KindFor(d)] = true
-	}
-}
-
 func TestStepsShareIsTenPercentAboveTheWeeklyAverageRoundedToAThousand(t *testing.T) {
 	cases := []struct {
 		avg  float64
@@ -90,18 +66,25 @@ func TestSharesAreSizedFromEachPersonsOwnHistory(t *testing.T) {
 
 func TestGenerateTitlesAndTargetsPerKind(t *testing.T) {
 	cases := []struct {
-		monday string
+		kind   string
 		shares []int
 		want   Spec
 	}{
-		{"2026-11-23", []int{92000, 39000}, Spec{KindSteps, "Walk 131,000 steps together", 131000}},
-		{"2026-11-02", []int{5, 2}, Spec{KindWorkouts, "Do 7 workouts together", 7}},
-		{"2026-11-09", []int{5, 5}, Spec{KindCountedDays, "Both count on 5 of 7 days", 10}},
-		{"2026-11-16", []int{220, 30}, Spec{KindReading, "Read 250 minutes together", 250}},
+		{KindSteps, []int{92000, 39000}, Spec{KindSteps, "Walk 131,000 steps together", 131000}},
+		{KindWorkouts, []int{5, 2}, Spec{KindWorkouts, "Do 7 workouts together", 7}},
+		{KindCountedDays, []int{5, 5}, Spec{KindCountedDays, "Both count on 5 of 7 days", 10}},
+		{KindReading, []int{220, 30}, Spec{KindReading, "Read 250 minutes together", 250}},
+		{KindSleepNights, []int{5, 6}, Spec{KindSleepNights, "Sleep your target on 11 nights together", 11}},
+		{KindMealDays, []int{5, 6}, Spec{KindMealDays, "Log your meals on 11 days together", 11}},
+		{KindProteinDays, []int{4, 4}, Spec{KindProteinDays, "Hit your protein on 8 days together", 8}},
+		{KindPushupReps, []int{150, 100}, Spec{KindPushupReps, "Do 250 push-ups together", 250}},
+		{KindYogaMinutes, []int{60, 40}, Spec{KindYogaMinutes, "Do 100 minutes of yoga together", 100}},
+		{KindHabitMarks, []int{20, 30}, Spec{KindHabitMarks, "Mark 50 habits together", 50}},
+		{KindActiveDays, []int{4, 5}, Spec{KindActiveDays, "Be active on 9 days together", 9}},
 	}
 	for _, tc := range cases {
-		if got := Generate(score.MustDate(tc.monday), tc.shares); got != tc.want {
-			t.Errorf("%s: %+v, want %+v", tc.monday, got, tc.want)
+		if got := Generate(tc.kind, tc.shares); got != tc.want {
+			t.Errorf("%s: %+v, want %+v", tc.kind, got, tc.want)
 		}
 	}
 }

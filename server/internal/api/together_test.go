@@ -12,6 +12,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 // capture records queued pushes, standing in for the APNs dispatcher.
@@ -139,6 +140,7 @@ func TestNotificationPreferencesDefaultOnAndPatchPartially(t *testing.T) {
 func TestBoardCreatesTheWeeksChallengeLazilyWithAFrozenTarget(t *testing.T) {
 	h := newHarness(t)
 	nick, _ := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	ctx := context.Background()
 	// Nick had four workouts last week, so his share is five; Nadia had none, so hers is two.
 	for i, day := range []string{"2026-10-26", "2026-10-27", "2026-10-28", "2026-10-30"} {
@@ -179,6 +181,7 @@ func TestWorkoutChallengeCompletesOnceAndPaysBothFiftyPoints(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	h.get("/api/board", nick.Token).expect(http.StatusOK)
 
 	start := ny(2026, time.November, 2, 8, 0)
@@ -247,6 +250,7 @@ func TestChallengePushRespectsThePreference(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	h.patch("/api/me", nadia.Token, obj{"notifications": obj{"challenge": false}}).expect(http.StatusOK)
 	start := ny(2026, time.November, 2, 8, 0)
 	putWorkouts(h, nick, workout("a", "running", start, 30), workout("b", "yoga", start.Add(time.Hour), 30)).expect(http.StatusOK)
@@ -264,6 +268,7 @@ func TestStepsChallengeIsSizedFromTheLastTwoWeeks(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 23, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindSteps)
 	for i := range 14 {
 		date := score.MustDate("2026-11-09").AddDays(i)
 		for _, row := range []struct {
@@ -294,6 +299,7 @@ func TestReadingChallengeCountsLoggedMinutesAndListening(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 16, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindReading)
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
 	if got.str("challenge.kind") != "reading" || got.num("challenge.target") != 150 ||
 		got.num("challenge.people.0.target") != 75 {
@@ -319,6 +325,7 @@ func TestCountedDaysChallengeNeedsEachPersonsOwnDays(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 14, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindCountedDays)
 	for _, day := range []string{"2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"} {
 		h.storeScore(nick, day, 300, 0, 400)
 		h.storeScore(nadia, day, 300, 0, 400)
@@ -347,6 +354,7 @@ func TestSettleCompletesAChallengeWithoutAnyRequest(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	start := ny(2026, time.November, 2, 8, 0)
 	for i, id := range []string{"a", "b", "c", "d"} {
 		who := []person{nick, nadia, nick, nadia}[i]

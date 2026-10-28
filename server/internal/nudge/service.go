@@ -43,6 +43,14 @@ func (s *Service) Run(ctx context.Context) error {
 		if err := s.runUser(ctx, u, now); err != nil {
 			errs = append(errs, fmt.Errorf("user %d: %w", u.ID, err))
 		}
+		for _, partner := range users {
+			if partner.ID == u.ID {
+				continue
+			}
+			if err := s.runPartner(ctx, u, partner, now); err != nil {
+				errs = append(errs, fmt.Errorf("partner nudge for user %d: %w", u.ID, err))
+			}
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -81,8 +89,30 @@ func (s *Service) runUser(ctx context.Context, u db.User, now time.Time) error {
 	if err != nil {
 		return err
 	}
+	day, err := s.loadDay(ctx, u, loc, today, now)
+	if err != nil {
+		return err
+	}
+
+	facts := factsFrom(day, u, now.In(loc), today, sent)
+	facts.SentCount = sentCount
+	facts.ReadinessEasy = day.Readiness != nil && day.Readiness.Level == readiness.LevelEasy
+	facts.Morning = func() (string, string) { return s.morningText(ctx, u, today, day) }
+	var errs []error
+	for _, n := range Decide(facts) {
+		_, err := s.Together.SendClaimed(ctx, together.Claim{Kind: n.Kind, UserID: u.ID, Date: today}, u,
+			push.Message{Kind: n.Kind, Title: n.Title, Body: n.Body})
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// loadDay scores the person's local day and gathers what the coach reads of it.
+func (s *Service) loadDay(ctx context.Context, u db.User, loc *time.Location, today score.Date, now time.Time) (coach.Day, error) {
 	var day coach.Day
-	err = s.DB.WithTx(ctx, func(tx pgx.Tx) error {
+	err := s.DB.WithTx(ctx, func(tx pgx.Tx) error {
 		scored, err := engine.ScoreAt(ctx, tx, u.ID, today, loc, now)
 		if err != nil {
 			return err
@@ -94,26 +124,7 @@ func (s *Service) runUser(ctx context.Context, u db.User, now time.Time) error {
 		day, err = coach.Load(ctx, tx, u, loc, scored, habits, now)
 		return err
 	})
-	if err != nil {
-		return err
-	}
-
-	facts := factsFrom(day, u, now.In(loc), today, sent)
-	facts.SentCount = sentCount
-	facts.ReadinessEasy = day.Readiness != nil && day.Readiness.Level == readiness.LevelEasy
-	facts.Morning = func() (string, string) { return s.morningText(ctx, u, today, day) }
-	var errs []error
-	for _, n := range Decide(facts) {
-		first, err := db.ClaimNotice(ctx, s.DB.Pool, n.Kind, u.ID, today)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		if first {
-			s.Together.Notify(u, push.Message{Kind: n.Kind, Title: n.Title, Body: n.Body})
-		}
-	}
-	return errors.Join(errs...)
+	return day, err
 }
 
 func wantsAny(n db.Notifications) bool {

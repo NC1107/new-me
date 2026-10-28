@@ -1165,6 +1165,7 @@ class Board {
     required this.serverNow,
     required this.users,
     this.challenge,
+    this.lastChallenge,
     this.reward,
     this.sharedStreak = const SharedStreak(),
   });
@@ -1174,6 +1175,7 @@ class Board {
     serverNow: _time(j['serverNow']) ?? DateTime.now().toUtc(),
     users: _list(j['users'], BoardUser.fromJson),
     challenge: Challenge.tryParse(j['challenge']),
+    lastChallenge: Challenge.tryParse(j['lastChallenge']),
     reward: Reward.tryParse(j['reward']),
     sharedStreak: SharedStreak.parse(j['sharedStreak']),
   );
@@ -1187,6 +1189,9 @@ class Board {
   /// This week's shared challenge; null from servers older than v5.
   final Challenge? challenge;
 
+  /// Last week's challenge when it ended unfinished; null otherwise and before v13.
+  final Challenge? lastChallenge;
+
   /// The reward being earned, or the newest reached one not yet enjoyed.
   final Reward? reward;
 
@@ -1198,6 +1203,7 @@ class Board {
     serverNow: serverNow,
     users: users,
     challenge: challenge,
+    lastChallenge: lastChallenge,
     reward: clearReward ? null : (reward ?? this.reward),
     sharedStreak: sharedStreak,
   );
@@ -1207,6 +1213,7 @@ class Board {
     'serverNow': _timeJson(serverNow),
     'users': [for (final u in users) u.toJson()],
     'challenge': challenge?.toJson(),
+    if (lastChallenge != null) 'lastChallenge': lastChallenge!.toJson(),
     'reward': reward?.toJson(),
     if (!sharedStreak.isEmpty) 'sharedStreak': sharedStreak.toJson(),
   };

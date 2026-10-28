@@ -128,6 +128,10 @@ type challengeJSON struct {
 	Progress int        `json:"progress"`
 	Done     bool       `json:"done"`
 	EndsOn   score.Date `json:"endsOn"`
+	// Missed is true once the week ended with the challenge unfinished. Reason is why this
+	// kind was picked, empty for challenges from before v13.
+	Missed bool   `json:"missed"`
+	Reason string `json:"reason"`
 	// People holds each person's share and progress.
 	People []challengePersonJSON `json:"people"`
 }
@@ -148,6 +152,24 @@ func (s *Server) challengeFor(ctx context.Context, c caller) (challengeJSON, err
 	if err != nil {
 		return challengeJSON{}, err
 	}
+	return s.toChallengeJSON(ctx, ch)
+}
+
+// lastMissedChallenge is the previous week's challenge when it ended unfinished, or nil.
+func (s *Server) lastMissedChallenge(ctx context.Context, c caller) (*challengeJSON, error) {
+	week := score.WeekStart(score.LocalToday(s.now(), c.loc)).AddDays(-7)
+	ch, err := db.GetChallenge(ctx, s.db.Pool, week)
+	if errors.Is(err, db.ErrNotFound) || (err == nil && ch.MissedAt == nil) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out, err := s.toChallengeJSON(ctx, ch)
+	return &out, err
+}
+
+func (s *Server) toChallengeJSON(ctx context.Context, ch db.Challenge) (challengeJSON, error) {
 	status, err := s.together.ChallengeProgress(ctx, ch)
 	if err != nil {
 		return challengeJSON{}, err
@@ -158,7 +180,8 @@ func (s *Server) challengeFor(ctx context.Context, c caller) (challengeJSON, err
 			Target: p.Target, Progress: p.Progress, Done: p.Done()}
 	}
 	return challengeJSON{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress,
-		Done: ch.CompletedAt != nil, EndsOn: ch.EndsOn(), People: people}, nil
+		Done: ch.CompletedAt != nil, EndsOn: ch.EndsOn(), Missed: ch.MissedAt != nil, Reason: ch.PickReason,
+		People: people}, nil
 }
 
 type rewardJSON struct {

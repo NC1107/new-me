@@ -19,8 +19,36 @@ import (
 
 const (
 	polishTimeout = 8 * time.Second
+	varyTimeout   = 5 * time.Second
 	maxPolishLen  = 600
 )
+
+const varySystem = `You reword one short push notification for a personal habit app, so it does not read the same every time.
+Keep every number exactly as given. Do not add numbers, names, advice, blame or any other fact.
+One plain sentence or two, no emoji, no dashes, under 90 characters. Reply with the text only.`
+
+// Vary rewords a short partner nudge through the same guard as the plan summary: the new text
+// must add no number the original lacks, must be a single line and must pass fits, the caller's
+// wording rules. Without a key, on any failure and on any rejection the original is returned.
+func (p *Polisher) Vary(ctx context.Context, text string, fits func(string) bool) string {
+	if p == nil || p.Client == nil {
+		return text
+	}
+	callCtx, cancel := context.WithTimeout(ctx, varyTimeout)
+	defer cancel()
+	out, err := p.Client.Text(callCtx, anthropic.Request{
+		System: varySystem, MaxTokens: 80, User: []anthropic.Block{{Text: text}}})
+	if err != nil {
+		log.Printf("[NEWME] nudge wording: %v", err)
+		return text
+	}
+	out = strings.TrimSpace(out)
+	if strings.ContainsRune(out, '\n') || !acceptable(out, text) || !fits(out) {
+		log.Printf("[NEWME] nudge wording rejected: adds facts or breaks the wording rules")
+		return text
+	}
+	return out
+}
 
 const polishSystem = `You reword a daily plan for a personal habit app. You are given facts about one person's day.
 Write 2 to 4 short, friendly sentences addressed to the person as "you".

@@ -29,7 +29,7 @@ const (
 var (
 	Muscles = []string{"chest", "back", "shoulders", "biceps", "triceps", "forearms",
 		"quads", "hamstrings", "glutes", "calves", "core"}
-	Equipment = []string{"pullup_bar", "dumbbells", "barbell", "bench", "bands", "dip_bars", "hangboard", "gym"}
+	Equipment = []string{"pullup_bar", "dumbbells", "barbell", "bench", "bands", "dip_bars", "hangboard", "low_bar", "gym"}
 )
 
 // PushupKeys are the catalog exercises whose reps count toward the push-ups quest, so logging a

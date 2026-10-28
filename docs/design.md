@@ -564,6 +564,7 @@ GET    /foods?q=&remote=1                               auth
         source: "usda"|"openfoodfacts"|"manual"|"estimated", sourceId, servings: [{text, grams}], useCount, lastUsedAt}
   foods are the household's saved foods matching every word of q (prefix match), exact names first, then most used; an empty q lists the most used
   candidates are unsaved USDA and Open Food Facts results with id null, only when remote=1 and q is not empty
+  a bare food name puts the FNDDS not-further-specified food first, named "<Food>, any kind" (design-v14)
 POST   /foods                                           auth
   req {name, servingText, kcal, brand?, servingGrams?, protein?, carbs?, fat?, fiber?, source?: default "manual", sourceId?, servings?: [{text, grams}]}
   201 Food; 200 with the saved copy when that source and sourceId are already saved
@@ -728,13 +729,14 @@ All additive; the formulas, labels and citations are in `docs/design-v8.md`.
 - `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
 - `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
 
-### Endpoints, v11 to v13 additions
+### Endpoints, v11 to v14 additions
 
-All additive; the reasons are in `docs/design-v11.md` to `docs/design-v13.md`.
+All additive; the reasons are in `docs/design-v11.md` to `docs/design-v14.md`.
 
 - Days carry `goalPercent` (base points against 70% of the possible points, so 100 is a counted day) beside `percent`.
 - Habits carry `minutes`, `proposedPoints` and `proposedMinutes`; `GET /habits/proposals`, `POST /habits/{id}/approve` and `/decline` answer a partner's proposal.
 - `POST /training/today/full` takes the full session on an eased day; sessions carry `eased` and `easedReason`.
+- `POST /training/today/pull {"dayIndex": n}` starts a plan day as today's session on a rest day (v14); a rest day's `GET /training/today` returns that session with `restDay` true.
 - `GET /exercises/{key}/images/{n}` serves how-to photos; exercises carry `steps`, `cues`, `imageUrls`, `kind` and `perSide`.
 - `GET /training/history?month=YYYY-MM` and `GET /exercises/{key}/history?days=N` back the calendar and the strength chart.
 - `GET /foods/barcode/{code}` looks a product up; food candidates carry `imageUrl` and `sourceUrl`.

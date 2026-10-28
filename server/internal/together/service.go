@@ -37,6 +37,9 @@ const (
 	EventLookback  = "lookback"
 	EventMilestone = "milestone"
 	EventCover     = "cover"
+
+	// EventHabitProposal asks the partner to approve a habit's gems (v11).
+	EventHabitProposal = "habit_proposal"
 )
 
 // AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
@@ -91,7 +94,7 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Lookback
 	case EventMilestone:
 		return n.Milestones
-	case EventCover:
+	case EventCover, EventHabitProposal:
 		return n.Cheers
 	}
 	return false

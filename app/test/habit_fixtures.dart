@@ -44,6 +44,10 @@ Map<String, dynamic> habitJson(
   List<Map<String, dynamic>>? slots,
   int? target,
   bool paused = false,
+  int? points,
+  int? minutes,
+  int? proposedPoints,
+  int? proposedMinutes,
 }) => {
   'id': id,
   'name': name,
@@ -60,6 +64,10 @@ Map<String, dynamic> habitJson(
   'target': target,
   'position': id,
   'paused': paused,
+  'points': ?points,
+  'minutes': minutes,
+  'proposedPoints': proposedPoints,
+  'proposedMinutes': proposedMinutes,
 };
 
 /// Brush teeth twice a day, Huel at noon, floss with no time, water as a count.

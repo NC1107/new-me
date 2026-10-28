@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
@@ -52,8 +54,14 @@ type habitJSON struct {
 	Target   *int       `json:"target"`
 	Position int        `json:"position"`
 	Paused   bool       `json:"paused"`
-	// Points is the habit's worth toward the daily goal: 0, 10, 25 or 50.
-	Points int `json:"points"`
+	// Points is the habit's worth in gems toward the daily goal, 0 to 100. Minutes is how long
+	// it takes, null when it is only tracked. ProposedPoints and ProposedMinutes are a change
+	// that waits for the partner's approval; both are null when nothing is pending, and
+	// proposedMinutes is also null for a proposal to only track.
+	Points          int  `json:"points"`
+	Minutes         *int `json:"minutes"`
+	ProposedPoints  *int `json:"proposedPoints"`
+	ProposedMinutes *int `json:"proposedMinutes"`
 }
 
 func toHabitJSON(h db.Habit) habitJSON {
@@ -62,7 +70,8 @@ func toHabitJSON(h db.Habit) habitJSON {
 		slots[i] = slotJSON{Label: s.Label, Time: s.Time}
 	}
 	return habitJSON{ID: h.ID, Name: h.Name, Icon: h.Icon, Kind: h.Kind, Weekdays: score.ISOWeekdays(h.Weekdays),
-		Slots: slots, Target: h.Target, Position: h.Position, Paused: h.Paused, Points: h.Points}
+		Slots: slots, Target: h.Target, Position: h.Position, Paused: h.Paused, Points: h.Points,
+		Minutes: h.Minutes, ProposedPoints: h.ProposedPoints, ProposedMinutes: h.ProposedMinutes}
 }
 
 type stateSlotJSON struct {
@@ -107,22 +116,35 @@ type habitRequest struct {
 	Slots    *[]slotJSON `json:"slots"`
 	Target   *int        `json:"target"`
 	Paused   *bool       `json:"paused"`
-	Points   *int        `json:"points"`
+	// Points is the pre-v11 field, still accepted from older builds.
+	Points  *int   `json:"points"`
+	Minutes optInt `json:"minutes"`
+}
+
+// optInt tells a missing field from an explicit null, which for minutes means only tracked.
+type optInt struct {
+	Set bool
+	Val *int
+}
+
+func (o *optInt) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	return json.Unmarshal(b, &o.Val)
 }
 
 // apply writes the fields present in the request onto h and then checks the result as a whole,
 // which is what lets a PATCH change a schedule without restating the rest.
-func (req habitRequest) apply(h *db.Habit, creating bool) *httpError {
+func (req habitRequest) apply(h *db.Habit, creating, partner bool, now time.Time) (proposed bool, herr *httpError) {
 	if req.Kind != nil {
 		if !creating && *req.Kind != h.Kind {
-			return invalid("kind cannot be changed")
+			return false, invalid("kind cannot be changed")
 		}
 		h.Kind = *req.Kind
 	}
 	if req.Name != nil {
 		name, herr := cleanName(*req.Name)
 		if herr != nil {
-			return invalid("name must be 1 to 40 characters without control characters")
+			return false, invalid("name must be 1 to 40 characters without control characters")
 		}
 		h.Name = name
 	}
@@ -132,7 +154,7 @@ func (req habitRequest) apply(h *db.Habit, creating bool) *httpError {
 	if req.Weekdays != nil {
 		mask, ok := score.WeekdaysFromISO(*req.Weekdays)
 		if !ok {
-			return invalid("weekdays must list days from 1 (Monday) to 7 (Sunday)")
+			return false, invalid("weekdays must list days from 1 (Monday) to 7 (Sunday)")
 		}
 		h.Weekdays = mask
 	}
@@ -148,13 +170,74 @@ func (req habitRequest) apply(h *db.Habit, creating bool) *httpError {
 	if req.Paused != nil {
 		h.Paused = *req.Paused
 	}
-	if req.Points != nil {
-		if !slices.Contains(score.HabitWorths, *req.Points) {
-			return invalid("points must be 0, 10, 25 or 50")
-		}
-		h.Points = *req.Points
+	prop, herr := req.worth(h, creating, partner, now)
+	if herr != nil {
+		return false, herr
 	}
-	return validateHabit(*h)
+	if herr := validateHabit(*h); herr != nil {
+		return false, herr
+	}
+	return prop, nil
+}
+
+// worth sets the habit's gems from minutes, or from the older points field. With a partner a
+// change is only proposed, so the habit keeps its gems (a new one starts at zero) until it is
+// approved. It reports whether a proposal differing from the pending one was made.
+func (req habitRequest) worth(h *db.Habit, creating, partner bool, now time.Time) (bool, *httpError) {
+	var gems int
+	var minutes *int
+	changed := true
+	switch {
+	case req.Minutes.Set:
+		minutes = req.Minutes.Val
+		if minutes != nil && (*minutes < 1 || *minutes > score.HabitMaxMinutes) {
+			return false, invalid("minutes must be between 1 and 30, or null for a habit that is only tracked")
+		}
+		gems = score.HabitGems(zeroIfNil(minutes))
+		changed = !equalInt(minutes, h.Minutes)
+		if creating && minutes == nil {
+			// A new habit that is only tracked has nothing to approve.
+			h.Points = 0
+			return false, nil
+		}
+	case req.Points != nil:
+		if !slices.Contains(score.HabitWorths, *req.Points) {
+			return false, invalid("points must be 0, 10, 25 or 50")
+		}
+		gems = *req.Points
+		changed = creating || gems != h.Points
+	case creating:
+		gems = score.HabitWorthDefault
+	default:
+		return false, nil
+	}
+	if !changed {
+		if req.Minutes.Set {
+			h.ProposedPoints, h.ProposedMinutes, h.ProposedAt = nil, nil, nil
+		}
+		return false, nil
+	}
+	if !partner {
+		h.Points, h.Minutes = gems, minutes
+		h.ProposedPoints, h.ProposedMinutes, h.ProposedAt = nil, nil, nil
+		return false, nil
+	}
+	fresh := h.ProposedPoints == nil || *h.ProposedPoints != gems || !equalInt(h.ProposedMinutes, minutes)
+	if creating {
+		h.Points, h.Minutes = 0, nil
+	}
+	h.ProposedPoints, h.ProposedMinutes = &gems, minutes
+	if fresh {
+		h.ProposedAt = &now
+	}
+	return fresh, nil
+}
+
+func equalInt(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func validateHabit(h db.Habit) *httpError {
@@ -220,14 +303,20 @@ func (s *Server) handleCreateHabit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := callerFrom(r)
-	h := db.Habit{UserID: c.user.ID, Weekdays: score.AllWeekdays, Slots: []db.HabitSlot{}, Points: score.HabitWorthDefault}
-	if herr := req.apply(&h, true); herr != nil {
+	h := db.Habit{UserID: c.user.ID, Weekdays: score.AllWeekdays, Slots: []db.HabitSlot{}}
+	ctx := r.Context()
+	partner, err := s.partnerOf(ctx, s.db.Pool, c.user.ID)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	proposed, herr := req.apply(&h, true, partner != nil, s.now())
+	if herr != nil {
 		fail(w, r, herr)
 		return
 	}
-	ctx := r.Context()
 	var created db.Habit
-	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := db.LockHabits(ctx, tx, c.user.ID); err != nil {
 			return err
 		}
@@ -246,6 +335,9 @@ func (s *Server) handleCreateHabit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, r, err)
 		return
+	}
+	if proposed {
+		s.notifyProposal(*partner, c.user, created)
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"habit": toHabitJSON(created)})
 }
@@ -285,8 +377,16 @@ func (s *Server) handlePatchHabit(w http.ResponseWriter, r *http.Request) {
 	}
 	c := callerFrom(r)
 	ctx := r.Context()
-	var updated db.Habit
-	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+	partner, err := s.partnerOf(ctx, s.db.Pool, c.user.ID)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	var (
+		updated  db.Habit
+		proposed bool
+	)
+	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		h, err := db.GetHabit(ctx, tx, c.user.ID, id)
 		if errors.Is(err, db.ErrNotFound) {
 			return errNoHabit
@@ -294,7 +394,8 @@ func (s *Server) handlePatchHabit(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		if herr := req.apply(&h, false); herr != nil {
+		var herr *httpError
+		if proposed, herr = req.apply(&h, false, partner != nil, s.now()); herr != nil {
 			return herr
 		}
 		if updated, err = db.UpdateHabit(ctx, tx, h); err != nil {
@@ -305,6 +406,9 @@ func (s *Server) handlePatchHabit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, r, err)
 		return
+	}
+	if proposed {
+		s.notifyProposal(*partner, c.user, updated)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"habit": toHabitJSON(updated)})
 }
@@ -472,4 +576,11 @@ func checkMark(h db.Habit, req markRequest, date score.Date) *httpError {
 		return invalid("slot is out of range for this habit")
 	}
 	return nil
+}
+
+func zeroIfNil(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
 }

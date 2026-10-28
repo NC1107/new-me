@@ -248,6 +248,9 @@ func (s *Server) Router() http.Handler {
 		r.Put("/api/habits/order", s.handleOrderHabits)
 		r.Patch("/api/habits/{id}", s.handlePatchHabit)
 		r.Delete("/api/habits/{id}", s.handleDeleteHabit)
+		r.Get("/api/habits/proposals", s.handleHabitProposals)
+		r.Post("/api/habits/{id}/approve", s.handleApproveHabit)
+		r.Post("/api/habits/{id}/decline", s.handleDeclineHabit)
 		r.With(s.settleAfter).Put("/api/habits/{id}/marks/{date}", s.handlePutHabitMark)
 
 		r.Post("/api/cheers", s.handleCreateCheer)

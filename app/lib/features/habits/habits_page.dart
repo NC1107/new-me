@@ -37,7 +37,8 @@ String habitSummary(Habit h) {
       : h.slots.any((s) => s.minutes != null)
       ? (h.slots.map((s) => s.minutes).nonNulls.toList()..sort()).map(formatReminderTime).join(', ')
       : (h.slots.length > 1 ? '${h.slots.length} times a day' : 'Once a day');
-  return '${daysSummary(h.weekdays)} · $what · ${HabitWorth.of(h.points).points} gems';
+  final pending = h.pending ? ' (${h.proposedPoints} pending)' : '';
+  return '${daysSummary(h.weekdays)} · $what · ${h.points} gems$pending';
 }
 
 /// Every habit, in order: drag to reorder, tap to edit, and a menu to pause or delete.

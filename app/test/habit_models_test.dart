@@ -99,7 +99,7 @@ void main() {
         'slots': [
           {'label': 'Evening', 'time': '22:00'},
         ],
-        'points': 25,
+        'minutes': null,
       });
       expect(check.toPatchJson().containsKey('kind'), isFalse);
       const count = HabitDraft(
@@ -111,8 +111,8 @@ void main() {
       );
       expect(count.toJson().containsKey('slots'), isFalse);
       expect(count.toJson()['target'], 8);
-      expect(HabitWorth.of(0), HabitWorth.track);
-      expect(HabitWorth.of(7), HabitWorth.medium);
+      expect([for (final m in kHabitMinuteChoices) habitGems(m)], [0, 3, 6, 15, 30, 45, 60, 90]);
+      expect(habitGems(40), 100);
     });
   });
 

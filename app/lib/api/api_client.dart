@@ -302,6 +302,15 @@ class ApiClient {
     (data) => Habit.fromJson((data as Json)['habit'] as Json),
   );
 
+  Future<HabitProposals> habitProposals() => _send(
+    () => _dio.get<dynamic>('/api/habits/proposals'),
+    (data) => HabitProposals.fromJson(data as Json),
+  );
+
+  /// Approves or declines the partner's pending change to their habit [id].
+  Future<void> answerHabitProposal(int id, {required bool approve}) =>
+      _send(() => _dio.post<dynamic>('/api/habits/$id/${approve ? 'approve' : 'decline'}'), (_) {});
+
   Future<void> deleteHabit(int id) => _send(() => _dio.delete<dynamic>('/api/habits/$id'), (_) {});
 
   /// [ids] must list every habit once; the answer is the list in its new order.

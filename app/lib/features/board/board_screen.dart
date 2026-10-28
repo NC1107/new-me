@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
+import '../../state/habit_proposals.dart';
 import '../../state/me.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
@@ -18,6 +21,7 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
+import '../habits/habit_proposals_card.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
 import '../progress/progress_entry_card.dart';
@@ -48,7 +52,10 @@ class BoardScreen extends ConsumerWidget {
         builder: (context, board, offline) => RefreshIndicator(
           color: context.accent,
           backgroundColor: kSurface,
-          onRefresh: notifier.refresh,
+          onRefresh: () async {
+            unawaited(ref.read(habitProposalsProvider.notifier).refresh());
+            await notifier.refresh();
+          },
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
@@ -95,6 +102,7 @@ class _UsBody extends ConsumerWidget {
         if (paired) ...[
           SharedStreakCard(streak: board.sharedStreak, names: [for (final u in users) u.name]),
           const SizedBox(height: kCardGap),
+          const HabitProposalsCard(),
           if (coverDate != null) ...[
             CoverCard(partner: users[1], date: coverDate),
             const SizedBox(height: kCardGap),

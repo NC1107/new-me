@@ -493,6 +493,18 @@ class ApiClient {
   Future<TrainingProgress> trainingProgress() =>
       _send(() => _dio.get<dynamic>('/api/training/progress'), TrainingProgress.parse);
 
+  /// The days of a month ("2026-10") with sets, completed sessions, yoga or workouts.
+  Future<TrainingHistoryMonth> trainingHistory(String month) => _send(
+    () => _dio.get<dynamic>('/api/training/history', queryParameters: {'month': month}),
+    TrainingHistoryMonth.parse,
+  );
+
+  /// One exercise's per-day bests in its chart metric, and its max tests.
+  Future<ExerciseHistory> exerciseHistory(String key, {int days = 180}) => _send(
+    () => _dio.get<dynamic>('/api/exercises/$key/history', queryParameters: {'days': days}),
+    ExerciseHistory.parse,
+  );
+
   Future<List<Milestone>> milestones() => _send(
     () => _dio.get<dynamic>('/api/milestones'),
     (data) => parseMilestones((data as Json)['milestones']),

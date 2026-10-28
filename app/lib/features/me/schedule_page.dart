@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../reminders/reminder_plan.dart';
 import '../../state/me.dart';
@@ -13,6 +14,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
+import 'timezone_page.dart';
 
 const _kWeekdayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const _kWeekdayNames = [
@@ -65,6 +67,7 @@ class SchedulePage extends ConsumerStatefulWidget {
 
 class _SchedulePageState extends ConsumerState<SchedulePage> {
   Schedule? _edited;
+  String? _zone;
   bool _busy = false;
   String? _error;
 
@@ -74,7 +77,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// page opens).
   Schedule get _draft => _edited ?? _saved;
 
-  bool get _dirty => _edited != null && _edited != _saved;
+  String get _savedZone => ref.read(meProvider).value?.data.user.timezone ?? '';
+
+  bool get _dirty =>
+      (_edited != null && _edited != _saved) || (_zone != null && _zone != _savedZone);
 
   void _edit(Schedule next) => setState(() {
     _edited = next;
@@ -98,11 +104,24 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       _error = null;
     });
     try {
-      await ref.read(meProvider.notifier).save(MePatch(schedule: _draft));
+      await ref
+          .read(meProvider.notifier)
+          .save(
+            MePatch(
+              schedule: _edited != null && _edited != _saved ? _draft : null,
+              timezone: _zone != null && _zone != _savedZone ? _zone : null,
+            ),
+          );
       HapticFeedback.mediumImpact();
       if (mounted) Navigator.of(context).maybePop();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = errorCopy(e));
+      if (mounted) {
+        setState(
+          () => _error = e is ApiException && e.code == 'invalid_timezone'
+              ? 'The server does not know "$_zone".'
+              : errorCopy(e),
+        );
+      }
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -164,6 +183,21 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         Text(
           '${offsetLabel(offset)}. On days off: ${firstNotificationAt(_draft.dayOff, offset)}.',
           style: AppText.caption,
+        ),
+        const SizedBox(height: 24),
+        Semantics(header: true, child: const Text('Time zone', style: AppText.headline)),
+        const SizedBox(height: 4),
+        Text(
+          'Your day runs on this clock. A new zone applies from the next day.',
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        TimezonePicker(
+          selected: _zone ?? _savedZone,
+          onChanged: (zone) => setState(() {
+            _zone = zone;
+            _error = null;
+          }),
         ),
         if (_error != null) ...[
           const SizedBox(height: 14),

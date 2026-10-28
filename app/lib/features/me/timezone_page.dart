@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../api/models.dart';
-import '../../util/errors.dart';
 import '../../state/timezone.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
-import '../../widgets/chunky_button.dart';
-import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
-import 'me_support.dart';
 
 /// Short list of common zones; anything else goes in the free text field and the server checks it.
 const _kZones = [
@@ -28,14 +23,25 @@ const _kZones = [
   'UTC',
 ];
 
-class TimezonePage extends ConsumerStatefulWidget {
-  const TimezonePage({super.key});
+/// The zones to pick from, with this phone's first and a field for any other. It only reports the
+/// choice; the Schedule page saves it with the rest.
+class TimezonePicker extends ConsumerStatefulWidget {
+  const TimezonePicker({
+    super.key,
+    required this.selected,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final String selected;
+  final ValueChanged<String> onChanged;
+  final bool enabled;
 
   @override
-  ConsumerState<TimezonePage> createState() => _TimezonePageState();
+  ConsumerState<TimezonePicker> createState() => _TimezonePickerState();
 }
 
-class _TimezonePageState extends ConsumerState<TimezonePage> with MeSaving {
+class _TimezonePickerState extends ConsumerState<TimezonePicker> {
   final _custom = TextEditingController();
   String? _device;
 
@@ -53,33 +59,18 @@ class _TimezonePageState extends ConsumerState<TimezonePage> with MeSaving {
     super.dispose();
   }
 
-  Future<void> _use(String zone, String current) async {
-    if (saving) return;
-    if (zone == current) return Navigator.of(context).pop();
-    final ok = await saveMe(
-      MePatch(timezone: zone),
-      copy: (e) =>
-          e.code == 'invalid_timezone' ? 'The server does not know "$zone".' : errorCopy(e),
-    );
-    if (ok && mounted) Navigator.of(context).pop();
+  void _pick(String zone) {
+    setState(_custom.clear);
+    widget.onChanged(zone);
   }
 
   @override
   Widget build(BuildContext context) {
-    final view = readMe(ref, title: 'Time zone');
-    if (view.placeholder != null) return view.placeholder!;
-    final current = view.me!.user.timezone;
-    final editable = view.editable;
     final zones = [?_device, ..._kZones.where((z) => z != _device)];
-    return PageScaffold(
-      title: 'Time zone',
-      banner: view.banner,
+    final custom = _custom.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Your day runs on this clock. A new zone applies from the next day.',
-          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 16),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
@@ -89,31 +80,25 @@ class _TimezonePageState extends ConsumerState<TimezonePage> with MeSaving {
                 _ZoneRow(
                   zone: zone,
                   isDevice: zone == _device,
-                  selected: zone == current,
-                  onTap: editable ? () => _use(zone, current) : null,
+                  selected: custom.isEmpty && zone == widget.selected,
+                  onTap: widget.enabled ? () => _pick(zone) : null,
                 ),
               ],
             ],
           ),
         ),
-        if (saveError != null) ...[const SizedBox(height: 12), SaveError(saveError!)],
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         const FieldLabel('Other (for example Pacific/Auckland)'),
         IgnorePointer(
-          ignoring: !editable,
+          ignoring: !widget.enabled,
           child: AppTextField(
             controller: _custom,
             hint: 'Region/City',
-            onChanged: (_) => setState(() {}),
+            onChanged: (value) {
+              setState(() {});
+              if (value.trim().isNotEmpty) widget.onChanged(value.trim());
+            },
           ),
-        ),
-        const SizedBox(height: 16),
-        ChunkyButton(
-          label: 'Use this zone',
-          busy: saving,
-          onPressed: editable && _custom.text.trim().isNotEmpty
-              ? () => _use(_custom.text.trim(), current)
-              : null,
         ),
       ],
     );

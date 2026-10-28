@@ -479,13 +479,13 @@ void main() {
   });
 
   group('Profile birth year', () {
-    testWidgets('can be set from Profile and cleared again', (tester) async {
+    testWidgets('can be set from About you and cleared again', (tester) async {
       final me = meJson();
       (me['user'] as Map)['birthYear'] = 1962;
       final adapter = _server()..on('GET /api/me', StubResponse(200, me));
       final app = TestApp(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
       expect(find.text('1962'), findsOneWidget);
 
       await app.tap(find.text('1962'));

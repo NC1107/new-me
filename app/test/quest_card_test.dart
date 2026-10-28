@@ -115,9 +115,9 @@ void main() {
     expect(barColor(), kAccentPresets.first.fill);
   });
 
-  testWidgets('automatic quests show an Apple Health chip instead of a plus', (tester) async {
+  testWidgets('automatic quests have no plus and no per-card Health chip', (tester) async {
     await tester.pumpWidget(_host(_quest(completed: false, key: 'steps'), withAdd: false));
-    expect(find.text('Apple Health'), findsOneWidget);
+    expect(find.text('Apple Health'), findsNothing);
     expect(find.byIcon(Icons.add_rounded), findsNothing);
   });
 
@@ -137,7 +137,10 @@ void main() {
       expect(questTitle(q('exercise', {'unit': 'min', 'target': 30})), 'Exercise 30 min');
       expect(questTitle(q('meals_logged', {'unit': 'meals', 'target': 1})), 'Log 1 meal');
       expect(questTitle(q('protein', {'unit': 'g', 'target': 130})), 'Eat 130 g protein');
-      expect(questTitle(q('yoga', {'unit': 'minutes', 'target': 15})), 'Stretch for 15 min');
+      expect(
+        questTitle(q('yoga', {'unit': 'minutes', 'target': 15})),
+        'Yoga or stretching for 15 min',
+      );
     });
 
     test('progress reads as a short phrase', () {

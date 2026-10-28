@@ -34,11 +34,9 @@ import 'pairing_page.dart';
 import 'profile_page.dart';
 import 'reminders_page.dart';
 import 'schedule_page.dart';
-import '../setup/about_you_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
 import 'targets_page.dart';
-import 'timezone_page.dart';
 
 class MeScreen extends ConsumerWidget {
   const MeScreen({super.key});
@@ -125,24 +123,10 @@ class _MeBody extends ConsumerWidget {
             ),
             SettingsRow(
               icon: Icons.person_rounded,
-              palette: accentById('teal'),
-              title: 'About you',
-              subtitle: 'Birth year, sex, height, weight and goal',
-              onTap: () => pushPage(context, const AboutYouPage()),
-            ),
-            SettingsRow(
-              icon: Icons.palette_rounded,
               palette: accent,
-              title: 'Profile',
-              subtitle: '${me.user.name}, ${accent.name}',
+              title: 'About you',
+              subtitle: '${me.user.name}, ${accent.name}, units and body',
               onTap: () => pushPage(context, const ProfilePage()),
-            ),
-            SettingsRow(
-              icon: Icons.public_rounded,
-              palette: accentById('sky'),
-              title: 'Time zone',
-              subtitle: me.user.timezone,
-              onTap: () => pushPage(context, const TimezonePage()),
             ),
             SettingsRow(
               icon: Icons.schedule_rounded,

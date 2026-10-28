@@ -18,6 +18,7 @@ final _mondayMorning = DateTime(2026, 10, 26, 8);
 final _mondayAfternoon = DateTime(2026, 10, 26, 14);
 final _sundayEvening = DateTime(2026, 10, 25, 20);
 
+const _bubble = 'Nice, keep it rolling.';
 const _summary = '1 of 4 quests done. Easiest next: Steps: 5,000 to go.';
 
 Map<String, dynamic> _plan() => {
@@ -211,7 +212,7 @@ void main() {
       await _open(tester, _server(readiness: _readiness(), habits: true));
       final order = [
         find.text('Good morning, Sam'),
-        find.text(_summary),
+        find.text(_bubble),
         find.text('62%'),
         find.text('Take it easy today'),
         find.text('Habits'),
@@ -233,13 +234,17 @@ void main() {
   );
 
   group('the bubble and the plan', () {
-    testWidgets('the bubble carries the plan sentence and opens the plan', (tester) async {
+    testWidgets('the bubble is one short line and opens the plan with the full summary', (
+      tester,
+    ) async {
       final app = await _open(tester, _server());
-      expect(find.text(_summary), findsOneWidget);
+      expect(find.text(_bubble), findsOneWidget);
+      expect(find.text(_summary), findsNothing, reason: 'the bubble does not restate progress');
       expect(find.text("See today's plan"), findsOneWidget);
 
-      await app.tap(find.text(_summary));
+      await app.tap(find.text(_bubble));
       expect(find.byType(PlanSheet), findsOneWidget);
+      expect(find.text(_summary), findsOneWidget);
       expect(find.text('Already done'), findsOneWidget);
       expect(find.text('Push-ups done'), findsOneWidget);
       expect(find.text('Still to do'), findsOneWidget);
@@ -254,7 +259,7 @@ void main() {
       await _open(tester, _server(plan: false));
       expect(find.text(_summary), findsNothing);
       expect(find.text("See today's plan"), findsNothing);
-      expect(find.text('3 quests to go'), findsOneWidget);
+      expect(find.text(_bubble), findsOneWidget);
     });
   });
 

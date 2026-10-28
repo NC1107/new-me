@@ -39,10 +39,17 @@ String questTitle(Quest q) {
     'exercise' => 'Exercise ${t.formatted} min',
     'meals_logged' => 'Log ${t.formatted} ${t == 1 ? 'meal' : 'meals'}',
     'protein' => 'Eat ${t.formatted} g protein',
-    'yoga' => 'Stretch for ${t.formatted} ${shortUnit(q.unit)}',
+    'yoga' => 'Yoga or stretching for ${t.formatted} ${shortUnit(q.unit)}',
     _ => q.title,
   };
 }
+
+/// Whether [questTitle] already names the target, so a progress caption would only repeat it.
+bool titleStatesTarget(Quest q) => switch (q.key) {
+  'pushups' => false,
+  'reading' => q.unitAlt == null,
+  _ => true,
+};
 
 /// "2,000 of 8,000 steps", or "12 min + 5 pages" for the two-part reading quest.
 String questProgress(Quest q) {

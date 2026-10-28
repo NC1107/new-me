@@ -103,7 +103,7 @@ final Map<String, GoalSpec> kGoalSpecs = {
     ),
     GoalSpec(
       questKey: 'yoga',
-      question: 'How long will you stretch?',
+      question: 'How long will you do yoga or stretch?',
       options: _named([10, 15, 20, 30]),
       defaultValue: 15,
       label: _minutes,
@@ -177,8 +177,8 @@ const List<Focus> kFocuses = [
   ),
   Focus(
     id: 'stretch',
-    title: 'Stretch',
-    subtitle: 'A few minutes of yoga',
+    title: 'Yoga or stretching',
+    subtitle: 'Classes, flows or a few minutes at home',
     icon: Icons.self_improvement_rounded,
     questKeys: ['yoga'],
   ),

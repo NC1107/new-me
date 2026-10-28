@@ -20,6 +20,7 @@ void main() {
         'YOGA': 'yoga',
         'PILATES': 'yoga',
         'FLEXIBILITY': 'yoga',
+        'MIND_AND_BODY': 'yoga',
         'SWIMMING': 'swimming',
         'HIKING': 'hiking',
         'SOCIAL_DANCE': 'dance',

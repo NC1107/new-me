@@ -112,7 +112,7 @@ void _layoutSuite(double textScale) {
     for (final (label, name) in [
       ('Add entry for Get stronger', 'push-ups'),
       ('Add entry for Read 20 min or 15 pages', 'reading'),
-      ('Add entry for Stretch for 20 min', 'yoga'),
+      ('Add entry for Yoga or stretching for 20 min', 'yoga'),
     ]) {
       await _tapOnToday(tester, app, _plus(label));
       noOverflow('log $name');
@@ -189,7 +189,7 @@ void main() {
     });
   }
 
-  testWidgets('the waiting placeholder, time zone and empty states fit at 390x844', (tester) async {
+  testWidgets('the waiting placeholder, schedule and empty states fit at 390x844', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -206,7 +206,7 @@ void main() {
     expect(find.text('Waiting for your partner'), findsOneWidget);
 
     await app.tap(find.byKey(const Key('nav-me')));
-    final zone = find.text('Time zone');
+    final zone = find.text('Schedule');
     if (zone.evaluate().isEmpty) {
       await tester.scrollUntilVisible(zone, 300, scrollable: find.byType(Scrollable).at(1));
     }

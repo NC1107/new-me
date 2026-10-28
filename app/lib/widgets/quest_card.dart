@@ -18,8 +18,8 @@ import 'thick_progress_bar.dart';
 
 const _kBurstLifetime = Duration(milliseconds: 1400);
 
-/// One quest: category icon, plain title, progress, a thick bar, and on the right a chunky + for
-/// quests logged by hand or an Apple Health chip for automatic ones. Completing it pops a check
+/// One quest: category icon, plain title, a thick bar, and on the right a chunky + for quests logged by
+/// hand. Progress is spoken, and written only when the title does not state the target. Completing it pops a check
 /// badge, throws confetti from the badge and gives a medium haptic.
 class QuestCard extends StatefulWidget {
   const QuestCard({
@@ -151,7 +151,7 @@ class _QuestCardState extends State<QuestCard> {
                           style: AppText.headline.copyWith(fontSize: 17),
                         ),
                       ),
-                      if (automatic && q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
+                      if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
                       // Exercise is fed by Health but also takes a hand-logged activity.
                       if (widget.onAdd != null && (!automatic || q.key == 'exercise'))
                         Padding(
@@ -167,21 +167,14 @@ class _QuestCardState extends State<QuestCard> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        questProgress(q),
-                        style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
-                      ),
-                    ),
-                    if (automatic)
-                      const Padding(padding: EdgeInsets.only(left: 8), child: HealthChip())
-                    else if (q.bonusPoints > 0)
-                      _BonusChip(bonus: q.bonusPoints),
-                  ],
-                ),
+                if (titleStatesTarget(q))
+                  // Spoken only: the title and bar show the target, a screen reader still hears progress.
+                  Semantics(label: questProgress(q), child: const SizedBox.shrink())
+                else
+                  Text(
+                    questProgress(q),
+                    style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+                  ),
                 if (q.doneBy case final by?)
                   _NoteLine(
                     icon: Icons.fitness_center_rounded,
@@ -237,36 +230,18 @@ class _NoteLine extends StatelessWidget {
   );
 }
 
-/// Marks a quest that Apple Health fills in. Its label stays at a size that fits beside a title.
-class HealthChip extends StatelessWidget {
-  const HealthChip({super.key});
+/// Said once under the quest list: which quests Apple Health fills in.
+class HealthNote extends StatelessWidget {
+  const HealthNote({super.key});
 
   @override
-  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
-    maxScaleFactor: 1.2,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: kSunken,
-        borderRadius: BorderRadius.circular(9999),
-        border: Border.all(color: kBorder, width: kBorderWidth),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.favorite_rounded, size: 13, color: kDanger),
-          const SizedBox(width: 4),
-          Text(
-            'Apple Health',
-            style: AppText.caption.copyWith(
-              color: kInkSecondary,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    ),
+  Widget build(BuildContext context) => const Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(Icons.favorite_rounded, size: 13, color: kDanger),
+      SizedBox(width: 6),
+      Flexible(child: Text('From Apple Health', style: AppText.caption)),
+    ],
   );
 }
 

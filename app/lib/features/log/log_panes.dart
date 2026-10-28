@@ -75,6 +75,7 @@ class UnitSpec {
     required this.start,
     required this.step,
     required this.chips,
+    this.choices = const [],
     this.countLabel,
     this.caption,
     this.saveLabel,
@@ -87,6 +88,9 @@ class UnitSpec {
   final int start;
   final int step;
   final List<int> chips;
+
+  /// Fixed amounts that set the number instead of adding to it, such as class lengths.
+  final List<int> choices;
 
   /// What the number counts when that differs from the toggle's [label].
   final String? countLabel;
@@ -225,6 +229,8 @@ class _QuantityPaneState extends State<QuantityPane> {
           spacing: 10,
           runSpacing: 10,
           children: [
+            for (final v in _spec.choices)
+              LogChip(label: '$v', selected: q == v, enabled: !widget.busy, onTap: () => _set(v)),
             for (final v in _spec.chips)
               LogChip(
                 label: '+$v',

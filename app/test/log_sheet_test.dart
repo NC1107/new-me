@@ -161,6 +161,16 @@ void main() {
     expect(adapter.to('DELETE /api/logs/77').single.queryParameters, isEmpty);
   });
 
+  testWidgets('the Added snack bar goes away on its own after the undo window', (tester) async {
+    final app = await _open(tester, _server(), LogKind.pushups);
+    await app.tap(find.text('+10'));
+    await app.tap(_save());
+    expect(find.text('Undo'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 7));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 20 push-ups'), findsNothing);
+  });
+
   testWidgets('a failed save keeps the sheet open and the retry reuses the client op id', (
     tester,
   ) async {

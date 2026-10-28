@@ -70,6 +70,9 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
       ..showSnackBar(
         SnackBar(
           content: const Text('Deleted'),
+          // An action makes a snack bar stay until tapped; Undo is offered for a while only.
+          persist: false,
+          duration: kUndoWindow,
           action: SnackBarAction(label: 'Undo', onPressed: () => _undo(entry, messenger)),
         ),
       );

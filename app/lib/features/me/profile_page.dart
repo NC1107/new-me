@@ -10,7 +10,6 @@ import '../../theme/accent.dart';
 import '../../theme/accent_picker.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
-import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/avatar.dart';
@@ -19,6 +18,8 @@ import '../../widgets/page_scaffold.dart';
 import '../insights/birth_year_sheet.dart';
 import '../log/log_chip.dart';
 import 'me_support.dart';
+import '../../widgets/height_input.dart';
+import '../../state/units.dart';
 
 const _kMaxName = 40;
 
@@ -33,7 +34,9 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
   final _name = TextEditingController();
   String _color = 'green';
-  final _height = TextEditingController();
+  double? _heightCm;
+  bool _heightValid = true;
+  Units? _units;
   int? _birthYear;
   String? _sex;
   GoalKind _goalKind = GoalKind.maintain;
@@ -52,9 +55,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
       if (before == null || before.name != user.name) _name.text = user.name;
       if (before == null || before.color != user.color) _color = user.color;
       if (before == null || before.birthYear != user.birthYear) _birthYear = user.birthYear;
-      if (before == null || before.heightCm != user.heightCm) {
-        _height.text = user.heightCm == null ? '' : user.heightCm!.formatted;
-      }
+      if (before == null || before.heightCm != user.heightCm) _heightCm = user.heightCm;
+      if (before == null || before.units != user.units) _units = user.units;
       if (before == null || before.sex != user.sex) _sex = user.sex;
       if (before == null || before.goalSetting != user.goalSetting) {
         _goalKind = user.goalSetting.kind;
@@ -67,20 +69,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
   @override
   void dispose() {
     _name.dispose();
-    _height.dispose();
     super.dispose();
   }
 
   String get _trimmed => _name.text.trim();
   bool get _nameChanged => _trimmed != _server?.name;
   bool get _birthChanged => _birthYear != _server?.birthYear;
-  double? get _heightValue => double.tryParse(_height.text.trim().replaceAll(',', '.'));
-  bool get _heightBlank => _height.text.trim().isEmpty;
-  bool get _heightValid =>
-      _heightBlank || (_heightValue != null && _heightValue! >= 100 && _heightValue! <= 250);
-  bool get _heightChanged => _heightBlank
-      ? _server?.heightCm != null
-      : _heightValue != null && _heightValue != _server?.heightCm;
+  bool get _heightChanged => _heightValid && _heightCm != _server?.heightCm;
+  Units get _shownUnits => _units ?? ref.read(unitsProvider);
+  bool get _unitsChanged => _units != null && _units != _server?.units;
   bool get _sexChanged => _sex != _server?.sex;
   GoalSetting get _goal => GoalSetting(kind: _goalKind, paceKgPerWeek: _pace);
   bool get _goalChanged => _goal != _server?.goalSetting;
@@ -90,7 +87,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
       _birthChanged ||
       _heightChanged ||
       _sexChanged ||
-      _goalChanged;
+      _goalChanged ||
+      _unitsChanged;
   bool get _valid => _trimmed.isNotEmpty && _trimmed.length <= _kMaxName && _heightValid;
 
   void _pickGoal(GoalKind kind) {
@@ -98,11 +96,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
     setState(() {
       _goalKind = kind;
       _pace = switch (kind) {
-        GoalKind.lose => kLosePaces.first,
-        GoalKind.gain => kGainPaces[1],
+        GoalKind.lose => _shownUnits.losePaces.first,
+        GoalKind.gain => _shownUnits.gainPaces[1],
         GoalKind.maintain => 0,
       };
     });
+  }
+
+  /// Keeps the chosen pace on the offered menu when the units change.
+  void _pickGoalPaceFor(Units u) {
+    final menu = _goalKind == GoalKind.lose ? u.losePaces : u.gainPaces;
+    if (!menu.contains(_pace)) {
+      _pace = menu.reduce((a, b) => (a - _pace).abs() <= (b - _pace).abs() ? a : b);
+    }
   }
 
   Set<String> get _taken {
@@ -120,11 +126,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
         color: _color != _server?.color ? _color : null,
         birthYear: _birthChanged ? _birthYear : null,
         clearBirthYear: _birthChanged && _birthYear == null,
-        heightCm: _heightChanged && !_heightBlank ? _heightValue : null,
-        clearHeight: _heightChanged && _heightBlank,
+        heightCm: _heightChanged ? _heightCm : null,
+        clearHeight: _heightChanged && _heightCm == null,
         sex: _sexChanged ? _sex : null,
         clearSex: _sexChanged && _sex == null,
         goal: _goalChanged ? _goal : null,
+        units: _unitsChanged ? _units : null,
       ),
     );
     if (ok && mounted) {
@@ -202,18 +209,40 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           style: AppText.caption,
         ),
         const SizedBox(height: 24),
-        const FieldLabel('Height in cm (optional)'),
+        const FieldLabel('Units'),
         IgnorePointer(
           ignoring: !editable,
-          child: AppTextField(
-            controller: _height,
-            hint: 'For example 178',
-            semanticLabel: 'Height in centimetres',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            errorText: _heightValid ? null : 'Between 100 and 250 cm',
-            onChanged: (_) => setState(() {}),
-            inputFormatters: [LengthLimitingTextInputFormatter(5)],
+          child: Row(
+            children: [
+              for (final (i, (u, label)) in const [
+                (Units.imperial, 'Pounds and feet'),
+                (Units.metric, 'Kilograms and cm'),
+              ].indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: LogChip(
+                    label: label,
+                    selected: _shownUnits == u,
+                    onTap: () => setState(() {
+                      _units = u;
+                      if (_goalKind != GoalKind.maintain) _pickGoalPaceFor(u);
+                    }),
+                  ),
+                ),
+              ],
+            ],
           ),
+        ),
+        const SizedBox(height: 24),
+        FieldLabel(_shownUnits.isImperial ? 'Height (optional)' : 'Height in cm (optional)'),
+        HeightInput(
+          units: _shownUnits,
+          initialCm: _server?.heightCm,
+          enabled: editable,
+          onChanged: (cm, {required valid}) => setState(() {
+            _heightCm = cm;
+            _heightValid = valid;
+          }),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -269,9 +298,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final pace in _goalKind == GoalKind.lose ? kLosePaces : kGainPaces)
+                for (final pace
+                    in _goalKind == GoalKind.lose ? _shownUnits.losePaces : _shownUnits.gainPaces)
                   LogChip(
-                    label: '$pace kg a week',
+                    label: _shownUnits.pace(pace),
                     selected: _pace == pace,
                     onTap: () => setState(() => _pace = pace),
                   ),

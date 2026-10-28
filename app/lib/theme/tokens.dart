@@ -54,3 +54,6 @@ const kTapDuration = Duration(milliseconds: 90);
 const kPopDuration = Duration(milliseconds: 250);
 const kPageDuration = Duration(milliseconds: 300);
 const kMotionDuration = Duration(milliseconds: 200);
+
+/// How long an Undo snack bar stays before it goes away on its own.
+const kUndoWindow = Duration(seconds: 6);

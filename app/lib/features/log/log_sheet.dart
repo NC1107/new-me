@@ -151,6 +151,9 @@ class _LogSheetState extends ConsumerState<LogSheet> {
       ..showSnackBar(
         SnackBar(
           content: Text(added),
+          // An action makes a snack bar stay until tapped; Undo is offered for a while only.
+          persist: false,
+          duration: kUndoWindow,
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {

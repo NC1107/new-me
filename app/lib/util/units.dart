@@ -44,9 +44,9 @@ enum Units {
 
   /// A weekly weight-goal pace: "1 lb a week" or "0.5 kg a week".
   String pace(double kgPerWeek) {
-    if (!isImperial) return '${_round(kgPerWeek, 2).formatted} kg a week';
+    if (!isImperial) return '${_plain(_round(kgPerWeek, 2))} kg a week';
     final lb = (kgPerWeek / kKgPerLb * 4).round() / 4;
-    return '${lb.formatted} lb a week';
+    return '${_plain(lb)} lb a week';
   }
 
   /// Paces offered for losing weight, stored in kg: 0.25 and 0.5 kg, or 0.5 and 1 lb.
@@ -75,4 +75,10 @@ double _round(double v, int decimals) {
     f *= 10;
   }
   return (v * f).round() / f;
+}
+
+/// 0.25 as "0.25", 1.0 as "1": up to two decimals without trailing zeros.
+String _plain(double v) {
+  final text = v.toStringAsFixed(2);
+  return text.replaceFirst(RegExp(r'\.?0+$'), '');
 }

@@ -90,8 +90,13 @@ int _upTo(int v, int step) => ((v + step - 1) ~/ step) * step;
 
 /// The daily goals for the chosen focuses, from the v8 formulas where they apply and from a
 /// stated starting point where none does.
-List<PlanGoal> planGoals(List<String> questKeys, bool wantsFood, TargetsReport? report) {
-  String label(String k, int v) => kGoalSpecs[k]?.label(v) ?? '$v';
+List<PlanGoal> planGoals(
+  List<String> questKeys,
+  bool wantsFood,
+  TargetsReport? report, {
+  Units units = Units.metric,
+}) {
+  String label(String k, int v) => kGoalSpecs[k]?.describe(v, units) ?? '$v';
   PlanGoal goal(
     String key,
     String name,
@@ -153,6 +158,14 @@ List<PlanGoal> planGoals(List<String> questKeys, bool wantsFood, TargetsReport? 
           15,
           'Within the 7 to 9 hours recommended for adults (AASM and SRS).',
         ),
+        'water' => goal(
+          k,
+          'Water',
+          _value(report, 'water'),
+          2200,
+          250,
+          'National Academies: 3.0 L of drinks a day for men and 2.2 L for women.',
+        ),
         'yoga' => goal(k, 'Stretching', null, 15, 5, ''),
         _ => goal(k, k, null, kGoalSpecs[k]?.defaultValue ?? 1, 1, ''),
       },
@@ -194,7 +207,12 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
       if (!mounted) return;
       final s = ref.read(onboardingProvider);
       setState(
-        () => _goals = planGoals(s.questKeys, s.wantsFood, ref.read(targetsProvider).value?.data),
+        () => _goals = planGoals(
+          s.questKeys,
+          s.wantsFood,
+          ref.read(targetsProvider).value?.data,
+          units: s.units ?? ref.read(unitsProvider),
+        ),
       );
     });
   }

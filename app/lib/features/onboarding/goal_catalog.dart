@@ -194,6 +194,13 @@ const List<Focus> kFocuses = [
     questKeys: ['sleep'],
   ),
   Focus(
+    id: 'water',
+    title: 'Drink enough water',
+    subtitle: 'Logged here or read from Apple Health',
+    icon: Icons.water_drop_rounded,
+    questKeys: ['water'],
+  ),
+  Focus(
     id: 'stretch',
     title: 'Yoga or stretching',
     subtitle: 'Classes, flows or a few minutes at home',

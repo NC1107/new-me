@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/features/onboarding/goal_catalog.dart';
+import 'package:newme/features/onboarding/steps_plan.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/log/log_kind.dart';
 import 'package:newme/features/log/log_sheet.dart';
@@ -207,6 +209,24 @@ void main() {
       expect(find.textContaining('2.5 L in one go'), findsOneWidget);
       await app.tap(find.text('Log it'));
       expect(app.body('POST /api/logs')['quantity'], 2500);
+    });
+  });
+
+  group('onboarding', () {
+    test('water is a focus of its own', () {
+      expect([for (final f in kFocuses) ...f.questKeys], contains('water'));
+    });
+
+    test('the daily goal takes the target for the person and reads in their units', () {
+      final report = TargetsReport.parse({
+        'targets': [
+          {'key': 'water', 'value': 3000, 'unit': 'ml'},
+        ],
+      });
+      final water = planGoals(['water'], false, report, units: Units.imperial).single;
+      expect(water.value, 3000);
+      expect(water.label(water.value), '101 fl oz');
+      expect(planGoals(['water'], false, null).single.value, 2200);
     });
   });
 }

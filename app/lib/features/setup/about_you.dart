@@ -23,7 +23,7 @@ const kHeightRange = (min: 100.0, max: 250.0);
 const kWeightRange = (min: 20.0, max: 400.0);
 
 /// The targets that make up the final screen, in the order the research doc lists them.
-const kReviewKeys = ['calories', 'protein', 'fat', 'carbs', 'fiber', 'sleep'];
+const kReviewKeys = ['calories', 'protein', 'fat', 'carbs', 'fiber', 'sleep', 'water'];
 
 /// The inputs a targets report is waiting for, as the questions that supply them.
 Set<AboutQuestion> missingQuestions(TargetsReport report) => {

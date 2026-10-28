@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import 'time_format.dart';
+
 final _whole = NumberFormat('#,##0', 'en_US');
 final _tenths = NumberFormat('#,##0.#', 'en_US');
 
@@ -18,6 +20,9 @@ String dayWithWeekday(String date) =>
 
 /// "Wednesday, Oct 28".
 String dayLong(String date) => DateFormat('EEEE, MMM d', 'en_US').format(parseLocalDate(date));
+
+/// "11:00 PM": a time of day, given as minutes after midnight, the way the rest of the app writes it.
+String timeOfDayLabel(int minutes) => formatMinutesOfDay(minutes);
 
 /// "just now", "5m ago", "3h ago" or "2d ago"; a time in the future reads as "just now".
 String relativeTime(DateTime then, DateTime now) {

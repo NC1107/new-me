@@ -78,7 +78,7 @@ void main() {
       expect(find.textContaining('Mifflin-St Jeor'), findsNothing);
       expect(find.text('Guideline'), findsNothing);
       expect(find.textContaining('Sources'), findsNothing);
-      expect(find.text('Needed to work these out'), findsNothing);
+      expect(find.text('Add these to work out your targets'), findsNothing);
     });
 
     testWidgets('the info button explains the formula, its label and full citations', (
@@ -173,7 +173,7 @@ void main() {
     testWidgets('missing inputs lead the page with links to fix them', (tester) async {
       final app = await _open(tester, _server(targets: 'targets_missing'));
 
-      expect(find.text('Needed to work these out'), findsOneWidget);
+      expect(find.text('Add these to work out your targets'), findsOneWidget);
       expect(find.text('Height'), findsOneWidget);
       expect(find.text('Sex'), findsOneWidget);
       expect(find.text('Push-up max test'), findsOneWidget);

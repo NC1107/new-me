@@ -52,13 +52,13 @@ class _WishRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final price = '${reward.price.formatted} gems';
     final (icon, color, detail) = switch (reward) {
-      Reward(declined: true) => (Icons.block_rounded, kDangerText, '$price - declined'),
+      Reward(declined: true) => (Icons.block_rounded, kDangerText, '$price · declined'),
       Reward(pending: true) => (
         Icons.hourglass_top_rounded,
         kInkSecondary,
-        '$price - waiting for ${partner ?? 'an answer'}',
+        '$price · waiting for ${partner ?? 'an answer'}',
       ),
-      Reward(ready: true) => (Icons.emoji_events_rounded, kFlame, '$price - ready'),
+      Reward(ready: true) => (Icons.emoji_events_rounded, kFlame, '$price · ready'),
       _ => (Icons.card_giftcard_rounded, kInkSecondary, price),
     };
     return Semantics(

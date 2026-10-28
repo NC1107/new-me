@@ -124,7 +124,7 @@ class _HeightInputState extends State<HeightInput> {
               Expanded(
                 child: AppTextField(
                   controller: _feet,
-                  hint: '5',
+                  hint: 'e.g. 5',
                   semanticLabel: 'Height, feet',
                   keyboardType: TextInputType.number,
                   onChanged: (_) => _changed(),
@@ -139,7 +139,7 @@ class _HeightInputState extends State<HeightInput> {
               Expanded(
                 child: AppTextField(
                   controller: _inches,
-                  hint: '10',
+                  hint: 'e.g. 10',
                   semanticLabel: 'Height, inches',
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) => _changed(),

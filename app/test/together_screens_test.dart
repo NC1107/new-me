@@ -380,7 +380,7 @@ void main() {
       await _openUs(app);
 
       await app.tap(find.text('ADD A REWARD'));
-      for (final label in ['700 - 1 week', '1,400 - 2 weeks', '3,000 - about a month']) {
+      for (final label in ['700 · 1 week', '1,400 · 2 weeks', '3,000 · about a month']) {
         expect(find.text(label), findsOneWidget);
       }
       expect(
@@ -392,7 +392,7 @@ void main() {
       expect(app.adapter.to('POST /api/rewards'), isEmpty, reason: 'a name is required');
 
       await app.tap(find.text('Date night').last);
-      await app.tap(find.text('3,000 - about a month'));
+      await app.tap(find.text('3,000 · about a month'));
       await app.tap(find.text('PROPOSE REWARD'));
 
       expect(app.body('POST /api/rewards'), {'name': 'Date night', 'price': 3000});
@@ -494,8 +494,8 @@ void main() {
 
       expect(find.text('Movie night'), findsOneWidget);
       expect(find.text('600 gems'), findsOneWidget);
-      expect(find.text('4,000 gems - waiting for Ana'), findsOneWidget);
-      expect(find.text('9,000 gems - declined'), findsOneWidget);
+      expect(find.text('4,000 gems · waiting for Ana'), findsOneWidget);
+      expect(find.text('9,000 gems · declined'), findsOneWidget);
     });
 
     testWidgets('opening my pending proposal edits it and can withdraw it', (tester) async {
@@ -583,7 +583,7 @@ void main() {
       final app = TestApp(tester, server);
       await _openUs(app);
 
-      expect(find.text('600 gems - ready'), findsOneWidget);
+      expect(find.text('600 gems · ready'), findsOneWidget);
       await app.tap(find.text('Movie night'));
       await app.tap(find.text('WE DID IT'));
       expect(app.adapter.to('POST /api/rewards/5/claim'), hasLength(1));
@@ -771,14 +771,17 @@ void main() {
     testWidgets('the quiet hours are read off the schedule', (tester) async {
       final (app, _) = await open(tester);
       await app.tap(find.text('Notifications'));
-      expect(find.textContaining('Quiet from 23:00 to 07:10, and on away days.'), findsOneWidget);
+      expect(
+        find.textContaining('Quiet from 11:00 PM to 7:10 AM, and on away days.'),
+        findsOneWidget,
+      );
     });
 
     test('quiet hours words follow workdays, days off and a bedtime after midnight', () {
       const late = DayTimes(wake: 10 * 60, bed: 60);
       expect(
         quietHoursText(const Schedule(workday: late, dayOff: late, firstNotificationOffsetMin: 30)),
-        'Quiet from 00:00 to 10:30, and on away days.',
+        'Quiet from 12:00 AM to 10:30 AM, and on away days.',
       );
       expect(
         quietHoursText(
@@ -787,7 +790,7 @@ void main() {
             dayOff: DayTimes(wake: 9 * 60, bed: 23 * 60),
           ),
         ),
-        'Quiet from 22:00 to 06:10 on workdays and 23:00 to 09:10 on days off, and on away days.',
+        'Quiet from 10:00 PM to 6:10 AM on workdays and 11:00 PM to 9:10 AM on days off, and on away days.',
       );
     });
 

@@ -18,6 +18,8 @@ import 'habit_chip.dart';
 import 'habit_editor_page.dart';
 import 'habit_items.dart';
 
+const _kChipGap = 8.0;
+
 /// Today's due habit slots as chips near the top of Today. One tap marks a slot, with no sheet
 /// and no confirmation, because friction is what makes a habit not get done.
 class HabitsStrip extends ConsumerStatefulWidget {
@@ -125,23 +127,27 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final item in items)
-                ConstrainedBox(
-                  key: ValueKey(item.key),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.sizeOf(context).width - 2 * kGutter,
-                  ),
-                  child: HabitChip(
-                    item: item,
-                    onTap: () => _tap(item),
-                    onLongPress: item.isCount ? () => _setCount(item) : null,
-                  ),
-                ),
-            ],
+          LayoutBuilder(
+            builder: (context, box) {
+              final columns = MediaQuery.textScalerOf(context).scale(16) > 20 ? 1 : 2;
+              final width = (box.maxWidth - (columns - 1) * _kChipGap) / columns;
+              return Wrap(
+                spacing: _kChipGap,
+                runSpacing: _kChipGap,
+                children: [
+                  for (final item in items)
+                    SizedBox(
+                      key: ValueKey(item.key),
+                      width: width,
+                      child: HabitChip(
+                        item: item,
+                        onTap: () => _tap(item),
+                        onLongPress: item.isCount ? () => _setCount(item) : null,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),

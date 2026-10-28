@@ -14,6 +14,7 @@ import '../../state/together.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
@@ -43,12 +44,12 @@ int notificationsOn(NotificationPrefs p) => [
 ].where((on) => on).length;
 
 String _quietSpan(DayTimes d, int offsetMin) {
-  final until = formatClockWire((d.wake + offsetMin).clamp(0, 1439));
+  final until = timeOfDayLabel((d.wake + offsetMin).clamp(0, 1439));
   // A bedtime after midnight leaves only the hours before the first notification.
-  return d.bed > d.wake ? '${formatClockWire(d.bed)} to $until' : '00:00 to $until';
+  return d.bed > d.wake ? '${timeOfDayLabel(d.bed)} to $until' : '${timeOfDayLabel(0)} to $until';
 }
 
-/// "Quiet from 23:00 to 07:10, and on away days." - the hours no push arrives, from the schedule.
+/// "Quiet from 11:00 PM to 7:10 AM, and on away days." - the hours no push arrives, from the schedule.
 String quietHoursText(Schedule s) {
   final work = _quietSpan(s.workday, s.firstNotificationOffsetMin);
   final off = _quietSpan(s.dayOff, s.firstNotificationOffsetMin);

@@ -599,7 +599,7 @@ void main() {
         final adapter = aboutServer();
         final app = await toAbout(tester, adapter, connect: true);
         expect(app.health.accessRequests, 1);
-        for (final hint in ['For example 1990', '5', '10', 'For example 160']) {
+        for (final hint in ['For example 1990', 'e.g. 5', 'e.g. 10', 'For example 160']) {
           expect(find.widgetWithText(TextField, hint), findsOneWidget, reason: hint);
         }
         await app.tapButton('Skip for now');
@@ -637,8 +637,8 @@ void main() {
     testWidgets('feet, inches and pounds are stored as centimetres and kilograms', (tester) async {
       final adapter = aboutServer();
       final app = await toAbout(tester, adapter);
-      await enterField(tester, '5', '5');
-      await enterField(tester, '10', '6');
+      await enterField(tester, 'e.g. 5', '5');
+      await enterField(tester, 'e.g. 10', '6');
       await enterField(tester, 'For example 160', '150');
       await app.tapButton('Continue');
       expect(app.lastBody('PATCH /api/me'), {'heightCm': 167.6});

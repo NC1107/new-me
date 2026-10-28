@@ -64,6 +64,10 @@ class TrendArrow extends StatelessWidget {
   );
 }
 
+/// A metric nothing was recorded for: no average, or an average of zero from an all-zero series.
+bool _hasNoData(ProgressMetric m) =>
+    m.current == null || (m.current == 0 && m.series.every((p) => p.value == null || p.value == 0));
+
 /// One metric of the Progress screen: its 30-day average, the arrow, a sparkline, the plain
 /// sentence and the two comparisons.
 class MetricCard extends StatelessWidget {
@@ -80,7 +84,8 @@ class MetricCard extends StatelessWidget {
     final m = metric;
     final palette = metricPalette(m.key);
     final trend = trendOf(headlineChange(m));
-    final value = formatMetricValue(m.key, m.current ?? 0);
+    final noData = _hasNoData(m);
+    final value = noData ? 'No data yet' : formatMetricValue(m.key, m.current ?? 0);
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: MergeSemantics(
@@ -107,14 +112,21 @@ class MetricCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style: AppText.tabular(AppText.display.copyWith(color: palette.lip)),
+                      style: noData
+                          ? AppText.title.copyWith(color: kInkMuted)
+                          : AppText.tabular(AppText.display.copyWith(color: palette.lip)),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text('${metricUnit(m.key, m.unit)}, $window days', style: AppText.caption),
-                ),
+                if (!noData) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '${metricUnit(m.key, m.unit)}, $window days',
+                      style: AppText.caption,
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 8),

@@ -17,7 +17,7 @@ class SharedStreakCard extends StatelessWidget {
   final List<String> names;
 
   String get _line {
-    if (streak.current < 1) return 'Count a day together to start it.';
+    if (streak.current < 1) return 'Start a streak today';
     final pair = names.length == 2 ? '${names[0]} and ${names[1]}' : 'You both';
     return '$pair kept it going.';
   }

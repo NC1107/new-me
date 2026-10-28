@@ -441,7 +441,7 @@ void main() {
     testWidgets('a couple with no shared streak is invited to start one', (tester) async {
       await openUs(tester, _server(sharedStreak: {'current': 0, 'best': 0}));
       expect(find.text('0 day streak'), findsOneWidget);
-      expect(find.text('Count a day together to start it.'), findsOneWidget);
+      expect(find.text('Start a streak today'), findsOneWidget);
     });
 
     testWidgets('a person alone has no shared streak', (tester) async {

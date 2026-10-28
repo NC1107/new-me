@@ -437,6 +437,8 @@ class _GemsNote extends StatelessWidget {
     final String text;
     if (habit != null && habit.pending && minutes == habit.proposedMinutes) {
       text = 'Waiting for ${partner ?? 'your partner'} to approve ${habit.proposedPoints} gems';
+    } else if (gems == 0) {
+      text = 'Only tracked, no gems';
     } else if (changed && partner != null) {
       text = '$gems gems, once $partner approves';
     } else {

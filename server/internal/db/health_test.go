@@ -197,3 +197,34 @@ func TestLatestHealthAndSeries(t *testing.T) {
 		t.Fatalf("series = %+v, %v", series, err)
 	}
 }
+
+func TestLastNightsSleepIsTheNightRecordNotTheDailyReading(t *testing.T) {
+	database := dbtest.Fresh(t)
+	u := join(t, database, "Nick", "green", true)
+	at := time.Date(2026, 10, 27, 9, 0, 0, 0, time.UTC)
+	if _, err := db.UpsertHealthDaily(ctx, database.Pool, u.ID, day, db.MetricSleep, 432, "healthkit", at); err != nil {
+		t.Fatal(err)
+	}
+	sleep := func() float64 {
+		metrics, err := db.HealthDay(ctx, database.Pool, u.ID, day)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return metrics[db.MetricSleep]
+	}
+	if got := sleep(); got != 432 {
+		t.Fatalf("without a night record the daily reading stands, got %v", got)
+	}
+	bed := time.Date(2026, 10, 26, 23, 0, 0, 0, time.UTC)
+	night := db.SleepNight{Date: day, BedAt: bed, WakeAt: bed.Add(8 * time.Hour), AsleepMin: 437, Source: "Apple Watch"}
+	if err := db.UpsertSleepNight(ctx, database.Pool, u.ID, night); err != nil {
+		t.Fatal(err)
+	}
+	if got := sleep(); got != 437 {
+		t.Fatalf("the night record is last night's sleep everywhere, got %v", got)
+	}
+	in, err := db.LoadDayInputs(ctx, database.Pool, u.ID, day)
+	if err != nil || in.Metrics[db.MetricSleep] != 437 {
+		t.Fatalf("the quest reads the same value, got %v, err %v", in.Metrics[db.MetricSleep], err)
+	}
+}

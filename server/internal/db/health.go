@@ -168,7 +168,22 @@ func loadHealthDay(ctx context.Context, q Querier, userID int64, date score.Date
 			metrics[key] = *value
 		}
 	}
-	return metrics, synced, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	// The night record is the one definition of "last night": it unions overlapping sources, and
+	// the sleep insights and readiness read it, so Today, Us and the quest must agree with it.
+	var asleep int
+	err = q.QueryRow(ctx, `
+		SELECT asleep_min FROM sleep_nights
+		WHERE user_id = $1 AND local_date = $2::date AND asleep_min > 0`, userID, date).Scan(&asleep)
+	switch {
+	case err == nil:
+		metrics[MetricSleep], synced[MetricSleep] = float64(asleep), true
+	case notFound(err) != ErrNotFound:
+		return nil, nil, err
+	}
+	return metrics, synced, nil
 }
 
 // HealthDay returns the date's readings by metric key.

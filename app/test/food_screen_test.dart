@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/api/models.dart';
 import 'package:newme/features/food/food_screen.dart';
 import 'package:newme/features/log/log_sheet.dart';
 import 'package:newme/features/me/food_targets_page.dart';
@@ -46,8 +47,42 @@ void main() {
     expect(adapter.to('GET /api/logs').single.queryParameters, {'date': '2026-10-26'});
 
     expect(find.text('Food targets'), findsOneWidget);
-    expect(find.text('2,200 kcal a day'), findsOneWidget);
+    expect(find.text('2,200 kcal, 150 g protein'), findsOneWidget);
     expect(find.text('My foods'), findsOneWidget);
+  });
+
+  group('food targets row', () {
+    Today todayWith(Map<String, dynamic> targets, {num? proteinQuest}) {
+      final json = richTodayJson();
+      json['food'] = {...restingFoodJson(), 'targets': targets};
+      json['quests'] = [
+        ...(json['quests'] as List).where((q) => (q as Map)['key'] != 'protein'),
+        if (proteinQuest != null) quest('protein', 'Protein', {'unit': 'g', 'target': proteinQuest}),
+      ];
+      return Today.fromJson(json);
+    }
+
+    const none = {'kcal': null, 'protein': null, 'carbs': null, 'fat': null};
+
+    test('nothing set anywhere reads Not set', () {
+      expect(foodTargetsSummary(todayWith(none)), 'Not set');
+    });
+
+    test('the default protein Today asks for counts as set', () {
+      expect(foodTargetsSummary(todayWith(none, proteinQuest: 130)), '130 g protein');
+      expect(
+        foodTargetsSummary(todayWith({...none, 'kcal': 2050}, proteinQuest: 130)),
+        '2,050 kcal, 130 g protein',
+      );
+    });
+
+    test('a typed protein target wins over the quest, calories alone keep the old wording', () {
+      expect(
+        foodTargetsSummary(todayWith({...none, 'protein': 150}, proteinQuest: 130)),
+        '150 g protein',
+      );
+      expect(foodTargetsSummary(todayWith({...none, 'kcal': 2200})), '2,200 kcal a day');
+    });
   });
 
   testWidgets('the activity line appears once something was burned', (tester) async {
@@ -121,7 +156,7 @@ void main() {
     expect(delete.width, greaterThanOrEqualTo(44));
     expect(delete.height, greaterThanOrEqualTo(44));
     for (final label in [
-      'Food targets, 2,200 kcal a day',
+      'Food targets, 2,200 kcal, 150 g protein',
       'My foods, Saved foods with exact numbers',
     ]) {
       final row = find.bySemanticsLabel(label);

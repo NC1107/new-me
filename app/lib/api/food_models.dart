@@ -183,6 +183,7 @@ class MealItem {
     required this.perGrams,
     required this.saveToLibrary,
     required this.servingText,
+    this.baseAmount = 1,
   });
 
   /// An item from the estimate endpoint.
@@ -211,27 +212,33 @@ class MealItem {
     );
   }
 
-  /// A saved food or a database candidate added with one serving.
-  factory MealItem.fromFood(SavedFood f) => MealItem._(
-    text: f.title,
-    name: f.name,
-    brand: f.brand,
-    quantity: 1,
-    unit: f.unitLabel,
-    source: f.saved ? FoodSource.library : f.source,
-    sourceId: f.saved ? '${f.id}' : f.sourceId,
-    matchedName: f.title,
-    confidence: EstimateConfidence.high,
-    origin: f.saved ? f.source : FoodSource.estimated,
-    perKcal: f.kcal.toDouble(),
-    perProtein: f.protein,
-    perCarbs: f.carbs,
-    perFat: f.fat,
-    perFiber: f.fiber,
-    perGrams: f.servingGrams,
-    saveToLibrary: false,
-    servingText: f.servingText,
-  );
+  /// A saved food or a database candidate added at its base serving: "100 g" starts at 100 and
+  /// counts in grams, "1 medium (182 g)" starts at 1 and counts in mediums. The numbers are the
+  /// serving's, so they scale by quantity over that base amount.
+  factory MealItem.fromFood(SavedFood f) {
+    final base = f.baseAmount;
+    return MealItem._(
+      text: f.title,
+      name: f.name,
+      brand: f.brand,
+      quantity: base,
+      unit: f.unitLabel,
+      source: f.saved ? FoodSource.library : f.source,
+      sourceId: f.saved ? '${f.id}' : f.sourceId,
+      matchedName: f.title,
+      confidence: EstimateConfidence.high,
+      origin: f.saved ? f.source : FoodSource.estimated,
+      perKcal: f.kcal / base,
+      perProtein: f.protein / base,
+      perCarbs: f.carbs / base,
+      perFat: f.fat / base,
+      perFiber: f.fiber / base,
+      perGrams: f.servingGrams / base,
+      saveToLibrary: false,
+      servingText: f.servingText,
+      baseAmount: base,
+    );
+  }
 
   final String text;
   final String name;
@@ -249,6 +256,9 @@ class MealItem {
 
   /// The full serving wording of a candidate, kept for saving it unchanged.
   final String servingText;
+
+  /// How many units [servingText] stands for: 100 for "100 g", 1 for "1 medium".
+  final double baseAmount;
 
   /// Numbers for one unit of the item.
   final double perKcal;
@@ -291,6 +301,7 @@ class MealItem {
     perGrams: perGrams,
     saveToLibrary: saveToLibrary ?? this.saveToLibrary,
     servingText: servingText,
+    baseAmount: baseAmount,
   );
 
   MealItem withQuantity(double q) => _copy(quantity: q);
@@ -301,30 +312,51 @@ class MealItem {
 
   /// This item as a library entry: the numbers for one unit.
   SavedFood toSavedFood() {
-    final perUnitGrams = _tenth(perGrams);
+    final servingGrams = _tenth(perGrams * baseAmount);
     final text = servingText.isNotEmpty
         ? servingText
-        : '1 $unit${perUnitGrams > 0 && !unit.contains('g)') ? ' (${_plain(perUnitGrams)} g)' : ''}';
+        : '1 $unit${servingGrams > 0 && !unit.contains('g)') ? ' (${_plain(servingGrams)} g)' : ''}';
     return SavedFood(
       name: name,
       brand: brand,
       servingText: text,
-      servingGrams: perUnitGrams,
-      kcal: perKcal.round(),
-      protein: _tenth(perProtein),
-      carbs: _tenth(perCarbs),
-      fat: _tenth(perFat),
-      fiber: _tenth(perFiber),
+      servingGrams: servingGrams,
+      kcal: (perKcal * baseAmount).round(),
+      protein: _tenth(perProtein * baseAmount),
+      carbs: _tenth(perCarbs * baseAmount),
+      fat: _tenth(perFat * baseAmount),
+      fiber: _tenth(perFiber * baseAmount),
       source: source,
       sourceId: sourceId,
     );
   }
 }
 
+final _leadingAmount = RegExp(r'^\s*(\d+(?:\.\d+)?(?:\s+\d+/\d+|/\d+)?)\s*');
+
 extension on SavedFood {
+  /// The amount the serving text starts with: 100 for "100 g", 1 for "1 medium (182 g)" or a
+  /// serving with no amount.
+  double get baseAmount {
+    final m = _leadingAmount.firstMatch(servingText);
+    if (m == null) return 1;
+    var total = 0.0;
+    for (final part in m.group(1)!.split(RegExp(r'\s+'))) {
+      final frac = part.split('/');
+      if (frac.length == 2) {
+        final den = double.tryParse(frac[1]) ?? 0;
+        if (den == 0) return 1;
+        total += (double.tryParse(frac[0]) ?? 1) / den;
+      } else {
+        total += double.tryParse(part) ?? 0;
+      }
+    }
+    return total >= 0.25 && total <= 1000 ? total : 1;
+  }
+
   /// The serving without its leading amount: "1 medium (182 g)" counts in "medium (182 g)".
   String get unitLabel {
-    final stripped = servingText.replaceFirst(RegExp(r'^\s*[\d./]+(\s+\d+/\d+)?\s*'), '').trim();
+    final stripped = servingText.replaceFirst(_leadingAmount, '').trim();
     return stripped.isEmpty ? 'serving' : stripped;
   }
 }

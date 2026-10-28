@@ -45,6 +45,21 @@ class FoodScreen extends ConsumerWidget {
   }
 }
 
+/// What the Food targets row says is set: the calories and the protein the Today quest asks
+/// for, which is the weight-based default while no protein target is typed in.
+String foodTargetsSummary(Today today) {
+  final t = today.food.targets;
+  final questProtein = today.quests.where((q) => q.key == 'protein' && q.target > 0);
+  final num? protein = t.protein ?? (questProtein.isEmpty ? null : questProtein.first.target);
+  final kcal = t.kcal;
+  if (kcal == null && protein == null) return 'Not set';
+  if (protein == null) return '${kcal!.formatted} kcal a day';
+  return [
+    if (kcal != null) '${kcal.formatted} kcal',
+    '${protein.formatted} g protein',
+  ].join(', ');
+}
+
 class _FoodBody extends ConsumerWidget {
   const _FoodBody({required this.today});
 
@@ -52,7 +67,6 @@ class _FoodBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final kcal = today.food.targets.kcal;
     return RefreshIndicator(
       color: context.accent,
       backgroundColor: kSurface,
@@ -84,7 +98,7 @@ class _FoodBody extends ConsumerWidget {
                 icon: Icons.restaurant_rounded,
                 palette: accentById('green'),
                 title: 'Food targets',
-                subtitle: kcal == null ? 'Not set' : '${kcal.formatted} kcal a day',
+                subtitle: foodTargetsSummary(today),
                 onTap: () => pushPage(context, const FoodTargetsPage()),
               ),
               SettingsRow(

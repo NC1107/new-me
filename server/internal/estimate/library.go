@@ -218,6 +218,12 @@ type ServingView struct {
 // otherwise the first household measure (the last for branded foods, whose first is the plain
 // "serving"), otherwise 100 g.
 func (f Food) Serving() ServingView {
+	v := f.serving()
+	v.Text = tidyServing(v.Text)
+	return v
+}
+
+func (f Food) serving() ServingView {
 	if f.PerServing != nil {
 		text := f.ServingText
 		if text == "" {
@@ -286,7 +292,7 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 		var ranked []s
 		for _, fd := range foods {
 			if m, ok := scoreFood(it, fd); ok {
-				ranked = append(ranked, s{fd, m.Score})
+				ranked = append(ranked, s{fd, searchScore(it, m)})
 			}
 		}
 		sort.SliceStable(ranked, func(i, j int) bool { return ranked[i].score > ranked[j].score })
@@ -308,4 +314,35 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 	out = append(out, top(off, 3)...)
 	out = append(out, top(branded, 3)...)
 	return out
+}
+
+var servingEcho = regexp.MustCompile(`^(?:1 )?(.+?) \((?:1 )?(.+)\)$`)
+
+// tidyServing cleans database serving wording for display: "1 serving (1 serving)" becomes
+// "1 serving", and household text in capitals ("1 POUCH RECONSTITUTED") is lowered.
+func tidyServing(text string) string {
+	text = strings.Join(strings.Fields(text), " ")
+	if m := servingEcho.FindStringSubmatch(text); m != nil && strings.EqualFold(m[1], m[2]) {
+		text = strings.TrimSuffix(text, text[strings.LastIndex(text, " ("):])
+	}
+	if strings.ToUpper(text) == text && strings.ToLower(text) != text {
+		text = strings.ToLower(text)
+	}
+	return text
+}
+
+// substitutes are words that mark a stand-in for a food, which someone searching for the food
+// itself rarely wants first.
+var substitutes = map[string]bool{"meatless": true, "imitation": true, "substitute": true, "analog": true, "vegetarian": true}
+
+// searchScore ranks a remote candidate for the library search: the estimate's match score,
+// lowered for stand-ins the query did not ask for.
+func searchScore(it Item, m match) float64 {
+	asked := toSet(tokens(it.Food))
+	for _, t := range tokens(m.Food.Name) {
+		if substitutes[t] && !asked[t] {
+			return m.Score - 0.5
+		}
+	}
+	return m.Score
 }

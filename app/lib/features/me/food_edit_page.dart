@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
+import '../../state/foods.dart';
 import '../../state/log_actions.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -12,6 +13,7 @@ import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
+import '../log/food_search.dart';
 import 'me_support.dart';
 
 final _decimal = TextInputFormatter.withFunction(
@@ -124,6 +126,7 @@ class _FoodEditPageState extends ConsumerState<FoodEditPage> {
     });
     try {
       await action();
+      ref.invalidate(foodLibraryProvider);
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
       if (mounted) {
@@ -135,15 +138,22 @@ class _FoodEditPageState extends ConsumerState<FoodEditPage> {
     }
   }
 
-  Future<void> _save() => _run(() async {
-    final actions = ref.read(logActionsProvider);
-    final food = _build();
-    if (_food?.id case final id?) {
-      await actions.updateFood(id, food);
-    } else {
-      await actions.saveFood(food);
-    }
-  });
+  Future<void> _save() {
+    final messenger = ScaffoldMessenger.of(context);
+    return _run(() async {
+      final actions = ref.read(logActionsProvider);
+      final food = _build();
+      if (_food?.id case final id?) {
+        await actions.updateFood(id, food);
+      } else {
+        await actions.saveFood(food);
+        // The page closes on save, so a new food says where it went.
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Saved ${food.name} to My foods')));
+      }
+    });
+  }
 
   Future<void> _delete() async {
     final id = _food?.id;
@@ -204,6 +214,18 @@ class _FoodEditPageState extends ConsumerState<FoodEditPage> {
         ],
       ),
       children: [
+        if (_food == null) ...[
+          Text(
+            'Search or scan to fill it in, or type it from the label.',
+            style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          FoodSearchBox(
+            browseOnFocus: false,
+            onPick: (food) => replacePage(context, FoodEditPage(food: food)),
+          ),
+          const SizedBox(height: 20),
+        ],
         _field('Name', _name, 'Apple'),
         const SizedBox(height: 14),
         _field('Brand (optional)', _brand, 'Chomps', max: 40),

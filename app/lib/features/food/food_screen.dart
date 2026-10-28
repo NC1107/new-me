@@ -19,11 +19,10 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
-import '../log/log_kind.dart';
-import '../log/log_sheet.dart';
 import '../me/food_targets_page.dart';
 import '../me/my_foods_page.dart';
 import '../me/settings_row.dart';
+import 'add_sheet.dart';
 import 'food_card.dart';
 
 /// The Food tab: what was eaten today against the targets, today's meals, and the food settings.
@@ -80,9 +79,9 @@ class _FoodBody extends ConsumerWidget {
           FoodCard(food: today.food),
           const SizedBox(height: kCardGap),
           ChunkyButton(
-            label: 'Log a meal',
+            label: 'Add',
             icon: Icons.add_rounded,
-            onPressed: () => showLogSheet(context, kind: LogKind.meal, focusSearch: true),
+            onPressed: () => showAddFoodSheet(context),
           ),
           const SizedBox(height: 24),
           Semantics(header: true, child: const Text('Meals today', style: AppText.headline)),

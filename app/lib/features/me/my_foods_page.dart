@@ -18,10 +18,8 @@ import 'food_edit_page.dart';
 class MyFoodsPage extends ConsumerWidget {
   const MyFoodsPage({super.key});
 
-  Future<void> _open(BuildContext context, WidgetRef ref, [SavedFood? food]) async {
-    await pushPage(context, FoodEditPage(food: food));
-    ref.invalidate(foodLibraryProvider);
-  }
+  Future<void> _open(BuildContext context, WidgetRef ref, [SavedFood? food]) =>
+      pushPage(context, FoodEditPage(food: food));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,9 +87,11 @@ class _FoodRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final detail =
-        '${food.servingText} · ${food.kcal.formatted} kcal · used ${food.useCount} '
-        '${food.useCount == 1 ? 'time' : 'times'}';
+    final detail = [
+      food.servingText,
+      '${food.kcal.formatted} kcal',
+      if (food.useCount > 0) 'used ${food.useCount} ${food.useCount == 1 ? 'time' : 'times'}',
+    ].join(' · ');
     return Semantics(
       button: true,
       excludeSemantics: true,

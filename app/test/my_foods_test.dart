@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/features/food/add_sheet.dart';
+import 'package:newme/features/food/food_screen.dart';
+import 'package:newme/features/me/food_edit_page.dart';
 import 'package:newme/features/me/my_foods_page.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -151,6 +154,47 @@ void main() {
     expect(body['servings'], [
       {'text': '1/2 bar', 'grams': 22.5},
     ]);
+    expect(find.text('Saved Oat bar to My foods'), findsOneWidget);
+  });
+
+  testWidgets('a food never logged leaves out its use count', (tester) async {
+    final server = fullServer()
+      ..on(
+        'GET /api/foods',
+        StubResponse(200, {
+          'foods': [Map.of(_apple)..['useCount'] = 0],
+          'candidates': <Object>[],
+        }),
+      );
+    await _open(tester, server);
+    expect(find.text('1 medium (182 g) · 95 kcal'), findsOneWidget);
+  });
+
+  testWidgets('Add then Food on the Food tab opens New food, and a search result fills it in', (
+    tester,
+  ) async {
+    final server = _server()..on('POST /api/foods', const StubResponse(201, _apple));
+    final app = TestApp(tester, server, surfaceHeight: 3200);
+    await app.pump(const FoodScreen());
+
+    await app.tap(find.text('ADD'));
+    await app.tap(find.descendant(of: find.byType(AddFoodSheet), matching: find.text('Food')));
+    expect(find.text('New food'), findsOneWidget);
+    expect(find.text('Search or scan to fill it in, or type it from the label.'), findsOneWidget);
+
+    await app.enter(_searchBox(), 'app');
+    await app.settle(14);
+    await app.tap(find.textContaining('95 kcal'));
+    expect(find.byType(FoodEditPage), findsOneWidget, reason: 'replaced, not stacked');
+    expect(find.text('Edit food'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is EditableText && w.controller.text == '1 medium (182 g)'),
+      findsOneWidget,
+    );
+
+    await app.tap(find.byTooltip('Back'));
+    expect(find.byType(FoodScreen), findsOneWidget);
+    expect(find.byType(FoodEditPage), findsNothing);
   });
 
   testWidgets('editing changes the serving and nutrients but never the source', (tester) async {

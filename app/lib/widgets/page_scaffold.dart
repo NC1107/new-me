@@ -5,16 +5,20 @@ import '../theme/typography.dart';
 
 /// Pushes a full page. With reduced motion the page appears at once; otherwise the platform
 /// transition runs, which keeps the iOS swipe back gesture.
-Future<T?> pushPage<T>(BuildContext context, Widget page) {
-  final route = MediaQuery.disableAnimationsOf(context)
-      ? PageRouteBuilder<T>(
-          pageBuilder: (_, _, _) => page,
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-        )
-      : MaterialPageRoute<T>(builder: (_) => page);
-  return Navigator.of(context).push(route);
-}
+Future<T?> pushPage<T>(BuildContext context, Widget page) =>
+    Navigator.of(context).push(_pageRoute<T>(context, page));
+
+/// Swaps the current page for [page], so back goes to where the current one came from.
+Future<T?> replacePage<T>(BuildContext context, Widget page) =>
+    Navigator.of(context).pushReplacement(_pageRoute<T>(context, page));
+
+Route<T> _pageRoute<T>(BuildContext context, Widget page) => MediaQuery.disableAnimationsOf(context)
+    ? PageRouteBuilder<T>(
+        pageBuilder: (_, _, _) => page,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      )
+    : MaterialPageRoute<T>(builder: (_) => page);
 
 /// A full page with a back arrow and a title above scrolling content and an optional footer
 /// pinned below it. The subtitle scrolls with the content; only the title row and the footer

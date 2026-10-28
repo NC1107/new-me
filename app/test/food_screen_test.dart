@@ -38,7 +38,7 @@ void main() {
     expect(find.text('+'), findsNothing, reason: 'the card has no add button any more');
     expect(find.text('Set your targets'), findsNothing);
 
-    expect(_chunky('Log a meal'), findsOneWidget);
+    expect(_chunky('Add'), findsOneWidget);
     expect(find.text('Meals today'), findsOneWidget);
     expect(find.text('Chicken bowl'), findsOneWidget);
     expect(find.textContaining('600 kcal'), findsOneWidget);
@@ -108,11 +108,14 @@ void main() {
     expect(find.text('Nothing logged yet today.'), findsOneWidget);
   });
 
-  testWidgets('Log a meal opens the meal form', (tester) async {
+  testWidgets('Add asks what is added, and Meal opens the meal form', (tester) async {
     final app = TestApp(tester, _server(), surfaceHeight: 2000);
     await app.pump(const FoodScreen());
 
-    await app.tap(_chunky('Log a meal'));
+    await app.tap(_chunky('Add'));
+    expect(find.text('What are you adding?'), findsOneWidget);
+    await app.tap(find.text('Meal'));
+    expect(find.text('What are you adding?'), findsNothing);
     expect(find.byType(LogSheet), findsOneWidget);
     expect(find.text('Portion'), findsOneWidget);
     final search = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));

@@ -28,6 +28,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>New Me uses the camera to scan a food barcode and look up its nutrition. Nothing is saved or uploaded except the barcode number.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>New Me reads your activity, workouts, sleep, heart, and body measurements from Health to score your day and chart your progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>

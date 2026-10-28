@@ -545,6 +545,22 @@ class ApiClient {
     (data) => FoodSearch.fromJson(data as Json),
   );
 
+  /// Looks a scanned barcode up through the server; null when no food has that barcode.
+  Future<SavedFood?> foodByBarcode(String code) async {
+    try {
+      return await _send(
+        () => _dio.get<dynamic>(
+          '/api/foods/barcode/${Uri.encodeComponent(code)}',
+          options: Options(receiveTimeout: const Duration(seconds: 20)),
+        ),
+        (data) => SavedFood.fromJson(data as Json),
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 404 && e.code == 'not_found') return null;
+      rethrow;
+    }
+  }
+
   /// Saves a food. A database food that is already saved comes back as the saved copy.
   Future<SavedFood> createFood(SavedFood food) => _send(
     () => _dio.post<dynamic>('/api/foods', data: food.toJson()),

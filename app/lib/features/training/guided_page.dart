@@ -370,21 +370,25 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     }
   }
 
+  Widget _introFor(ExerciseCatalog? catalog) {
+    final holds = catalog == null ? null : _routine.build(catalog);
+    return _Intro(
+      routine: _routine,
+      holds: holds,
+      onStart: holds == null || holds.isEmpty ? null : () => _start(holds),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(exercisesProvider).value?.data;
-    final holds = catalog == null ? null : _routine.build(catalog);
     return PopScope(
       canPop: _stage != _Stage.running,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_leave());
       },
       child: switch (_stage) {
-        _Stage.intro => _Intro(
-          routine: _routine,
-          holds: holds,
-          onStart: holds == null || holds.isEmpty ? null : () => _start(holds),
-        ),
+        _Stage.intro => _introFor(catalog),
         _Stage.running => _Running(
           routine: _routine,
           session: _session!,

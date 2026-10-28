@@ -18,7 +18,7 @@ String bodySummary(HealthStatus health, Insights? insights) {
     if (health.metrics['sleep_minutes'] case final minutes?) 'Slept ${durationLabel(minutes)}',
     if (week > 0) '$week ${week == 1 ? 'workout' : 'workouts'} this week',
   ];
-  return parts.isEmpty ? 'Steps, sleep and workouts' : parts.join(' - ');
+  return parts.isEmpty ? 'Steps, sleep and workouts' : parts.join(' · ');
 }
 
 /// One slim row that opens Insights, where the body numbers and their trends are.

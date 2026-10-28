@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../theme/tokens.dart';
@@ -20,7 +19,7 @@ class AwayLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final span = away.current;
     if (!away.today) return const SizedBox.shrink();
-    final until = span == null ? null : DateFormat('E d MMM').format(parseLocalDate(span.to));
+    final until = span == null ? null : dayWithWeekday(span.to);
     return AppCard(
       onTap: onOpen,
       semanticLabel: 'Away today${until == null ? '' : ' until $until'}, open away days',

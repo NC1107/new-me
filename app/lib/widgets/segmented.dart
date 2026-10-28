@@ -21,6 +21,12 @@ class Segmented<T> extends StatelessWidget {
   /// What VoiceOver reads for an option whose short label needs its unit, like "5 minutes".
   final String Function(T value)? spokenLabel;
 
+  void _select(T value) {
+    if (value == selected) return;
+    HapticFeedback.selectionClick();
+    onChanged(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -39,19 +45,17 @@ class Segmented<T> extends StatelessWidget {
                 selected: value == selected,
                 label: spokenLabel?.call(value) ?? label,
                 excludeSemantics: true,
+                onTap: () => _select(value),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    if (value == selected) return;
-                    HapticFeedback.selectionClick();
-                    onChanged(value);
-                  },
+                  onTap: () => _select(value),
                   child: AnimatedContainer(
                     duration: MediaQuery.disableAnimationsOf(context)
                         ? Duration.zero
                         : const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    constraints: const BoxConstraints(minHeight: 44),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: value == selected ? context.accentLight : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
@@ -70,73 +74,6 @@ class Segmented<T> extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// A tappable pill used for quick values and recent meals.
-class ChipButton extends StatelessWidget {
-  const ChipButton({
-    super.key,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-    this.enabled = true,
-    this.fill = false,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-  final bool enabled;
-
-  /// Centers the label so the chip can stretch to the width it is given.
-  final bool fill;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: enabled,
-      label: label,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled
-            ? () {
-                HapticFeedback.selectionClick();
-                onTap();
-              }
-            : null,
-        child: AnimatedContainer(
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          alignment: fill ? Alignment.center : null,
-          decoration: BoxDecoration(
-            color: selected ? context.accentLight : kBgMain,
-            borderRadius: BorderRadius.circular(9999),
-            border: Border.all(color: selected ? context.accent : kBorder),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: !enabled
-                  ? kFgMuted
-                  : selected
-                  ? context.accent
-                  : kFgPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
       ),
     );
   }

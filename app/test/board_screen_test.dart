@@ -80,7 +80,7 @@ void main() {
     expect(find.text('4-day streak'), findsNWidgets(2));
     expect(find.textContaining('synced'), findsNothing);
     expect(find.text('Week'), findsNothing);
-    expect(find.text('Preseason - ends Dec 31'), findsOneWidget);
+    expect(find.text('Preseason, ends Dec 31'), findsOneWidget);
     expect(find.textContaining('Together:'), findsNothing);
     expect(find.text('Weekly recap'), findsOneWidget);
     expect(find.text('Progress'), findsOneWidget);

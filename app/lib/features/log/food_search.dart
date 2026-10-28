@@ -288,7 +288,7 @@ class FoodTile extends StatelessWidget {
                             style: AppText.body.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            '${food.servingText}  -  ${food.kcal.formatted} kcal  -  ${food.source.chip}',
+                            '${food.servingText} · ${food.kcal.formatted} kcal · ${food.source.chip}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.caption.copyWith(color: kInkSecondary),

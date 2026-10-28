@@ -183,7 +183,7 @@ class EstimateNote extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Estimate - ${confidenceLabel(estimate.confidence)}',
+                  'Estimate, ${confidenceLabel(estimate.confidence).toLowerCase()}',
                   style: AppText.label.copyWith(fontWeight: FontWeight.w800),
                 ),
                 if (estimate.notes.isNotEmpty)

@@ -480,7 +480,7 @@ void main() {
       await app.pump(const MeScreen());
       await app.tap(find.text('About you'));
       expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Colour'), findsOneWidget);
+      expect(find.text('Color'), findsOneWidget);
       expect(find.text('Birth year (optional)'), findsOneWidget);
       expect(find.text('Profile'), findsNothing);
     });

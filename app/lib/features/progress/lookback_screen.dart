@@ -104,7 +104,7 @@ class _LookbackScreenState extends ConsumerState<LookbackScreen> {
 
   String _facts({required int points, required int days, bool both = false}) {
     final d = days == 1 ? '1 day' : '$days days';
-    return '${points.formatted} points - ${both ? 'both counted on $d' : '$d counted'}';
+    return '${points.formatted} points, ${both ? 'both counted on $d' : '$d counted'}';
   }
 }
 

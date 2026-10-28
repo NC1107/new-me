@@ -111,7 +111,7 @@ void main() {
 
       for (final label in [
         'Daily goals, 3 of 6 on',
-        'About you, Sam, Iris, units and body',
+        'About you, Sam, units and body',
         'Pairing code, Invite your partner',
       ]) {
         final row = find.bySemanticsLabel(label);
@@ -128,10 +128,10 @@ void main() {
 
       adapter.on('GET /api/me', const StubResponse.unreachable());
       await app.pump(const MeScreen(), key: UniqueKey());
-      expect(find.textContaining('Offline - updated'), findsOneWidget);
+      expect(find.textContaining('Offline, updated'), findsOneWidget);
 
       await app.tap(find.text('Daily goals'));
-      expect(find.textContaining('Offline - updated'), findsOneWidget);
+      expect(find.textContaining('Offline, updated'), findsOneWidget);
       expect(
         tester.widgetList<Switch>(find.byType(Switch)).every((s) => s.onChanged == null),
         isTrue,

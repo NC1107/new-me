@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
@@ -275,7 +274,7 @@ class _PlanView extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = context.accentPalette;
     final days = [...plan.days]..sort((a, b) => a.weekday.compareTo(b.weekday));
-    final ends = DateFormat('d MMM').format(parseLocalDate(plan.endsOn));
+    final ends = dayShort(plan.endsOn);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

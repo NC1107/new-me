@@ -319,7 +319,7 @@ void main() {
 
     adapter.on('GET /api/today', const StubResponse.unreachable());
     await app.pump(const TodayScreen(), key: UniqueKey());
-    expect(find.textContaining('Offline - updated'), findsOneWidget);
+    expect(find.textContaining('Offline, updated'), findsOneWidget);
     expect(find.text('88%'), findsOneWidget);
   });
 
@@ -423,7 +423,7 @@ void main() {
 
       adapter.on('GET /api/today', const StubResponse.unreachable());
       await app.pump(const TodayScreen(), key: UniqueKey());
-      expect(find.textContaining('Offline - updated'), findsOneWidget);
+      expect(find.textContaining('Offline, updated'), findsOneWidget);
       expect(find.byType(DayCountedSheet), findsNothing);
     });
   });

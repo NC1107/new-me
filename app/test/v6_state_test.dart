@@ -201,7 +201,7 @@ void main() {
       final app = TestApp(tester, server, surfaceHeight: 4000);
       await app.pump(const RecapScreen());
 
-      expect(find.text('Oct 19 - Oct 25'), findsOneWidget);
+      expect(find.text('Oct 19 to Oct 25'), findsOneWidget);
       final order = [
         find.text('Together'),
         find.text('Best day together'),
@@ -328,7 +328,7 @@ void main() {
         expect(find.text(l), findsOneWidget);
       }
       final values = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value).toList();
-      expect(values.skip(5), [false, true, false, true, true, true]);
+      expect(values.skip(6), [false, true, false, true, true, true]);
 
       await app.tap(find.text('Steps to go'));
       expect(app.body('PATCH /api/me'), {

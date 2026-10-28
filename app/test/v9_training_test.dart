@@ -388,7 +388,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('2 days a week, 40 min'), findsOneWidget);
       expect(find.textContaining('Dumbbells to 30\u00a0kg'), findsOneWidget);
-      expect(find.text('Plan · 4 weeks, until 29 Nov'), findsOneWidget);
+      expect(find.text('Plan · 4 weeks, until Nov 29'), findsOneWidget);
       expect(find.text('Train'), findsOneWidget);
       expect(find.text('Full body A'), findsWidgets, reason: "today's card and the plan day");
       expect(find.text('Dumbbell row'), findsNWidgets(2));

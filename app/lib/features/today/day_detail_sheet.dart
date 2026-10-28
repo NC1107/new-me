@@ -207,7 +207,7 @@ class _EntryRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppText.label.copyWith(fontSize: 16),
                 ),
-                Text(detail == null ? time : '$time - $detail', style: AppText.caption),
+                Text(detail == null ? time : '$time · $detail', style: AppText.caption),
               ],
             ),
           ),

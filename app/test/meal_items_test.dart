@@ -261,7 +261,7 @@ void main() {
     await app.enter(_searchField, 'app');
     await app.settle(4);
     expect(server.to('GET /api/foods').last.queryParameters, {'q': 'app'});
-    await app.tap(find.textContaining('1 medium (182 g)  -  95 kcal'));
+    await app.tap(find.textContaining('1 medium (182 g) · 95 kcal'));
 
     expect(fieldWith('Apple'), findsOneWidget);
     expect(find.text('Saved'), findsOneWidget);

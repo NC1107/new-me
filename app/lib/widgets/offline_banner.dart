@@ -25,7 +25,7 @@ class OfflineBanner extends StatelessWidget {
           const Icon(Icons.cloud_off_outlined, size: 14, color: kFgMuted),
           const SizedBox(width: 8),
           Text(
-            'Offline - updated $time',
+            'Offline, updated $time',
             style: const TextStyle(color: kFgSecondary, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],

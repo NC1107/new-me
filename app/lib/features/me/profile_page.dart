@@ -187,7 +187,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           ),
         ),
         const SizedBox(height: 24),
-        const FieldLabel('Colour'),
+        const FieldLabel('Color'),
         IgnorePointer(
           ignoring: !editable,
           child: AccentPicker(

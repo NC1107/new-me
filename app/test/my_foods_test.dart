@@ -66,7 +66,7 @@ void main() {
   testWidgets('lists saved foods with their serving, kcal and use', (tester) async {
     await _open(tester, _server());
     expect(find.text('Apple'), findsOneWidget);
-    expect(find.text('1 medium (182 g)  -  95 kcal  -  used 6 times'), findsOneWidget);
+    expect(find.text('1 medium (182 g) · 95 kcal · used 6 times'), findsOneWidget);
     expect(find.text('Chomps Beef stick'), findsOneWidget);
     expect(find.textContaining('used 1 time'), findsOneWidget);
   });

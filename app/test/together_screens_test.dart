@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/widgets/pressable.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/board/board_screen.dart';
 import 'package:newme/features/me/me_screen.dart';
@@ -90,6 +91,7 @@ void main() {
 
   group('cheers', () {
     testWidgets('tapping the partner opens four reactions; sending marks one sent', (tester) async {
+      final handle = tester.ensureSemantics();
       final app = TestApp(tester, _server());
       await _openUs(app);
 
@@ -102,8 +104,9 @@ void main() {
 
       await app.tap(find.text('Fire'));
       expect(app.body('POST /api/cheers'), {'to': 1, 'kind': 'fire'});
-      expect(find.text('Sent'), findsOneWidget);
-      expect(find.text('Fire'), findsNothing);
+      expect(find.bySemanticsLabel('Fire sent to Ana'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.text('Fire'), findsOneWidget, reason: 'the tile keeps its name');
       expect(
         tester
             .widget<Confetti>(
@@ -113,8 +116,9 @@ void main() {
         1,
       );
 
-      await app.tap(find.text('Sent'));
+      await app.tap(find.text('Fire'));
       expect(app.adapter.to('POST /api/cheers'), hasLength(1), reason: 'a sent kind is inert');
+      handle.dispose();
     });
 
     testWidgets('a kind sent earlier today still shows as sent when the sheet reopens', (
@@ -127,7 +131,7 @@ void main() {
       await app.closeSheet();
 
       await app.tap(find.text('Cheer'));
-      expect(find.text('Sent'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
       expect(find.text('Clap'), findsOneWidget);
     });
 
@@ -140,7 +144,7 @@ void main() {
       await app.tap(find.text('Clap'));
 
       expect(find.text('no such person'), findsOneWidget);
-      expect(find.text('Sent'), findsNothing);
+      expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
     });
 
     testWidgets('the person on the left is not cheerable', (tester) async {
@@ -426,14 +430,20 @@ void main() {
       final (app, _) = await open(tester);
       await app.tap(find.text('Notifications'));
 
-      expect(tester.widgetList<Switch>(find.byType(Switch)).take(4).every((s) => s.value), isTrue);
+      expect(
+        tester.widgetList<Switch>(find.byType(Switch)).skip(1).take(4).every((s) => s.value),
+        isTrue,
+      );
       await app.tap(find.text('Cheers'));
 
       expect(app.body('PATCH /api/me'), {
         'notifications': {'cheers': false},
       });
-      final values = tester.widgetList<Switch>(find.byType(Switch)).map((s) => s.value).toList();
-      expect(values.take(4), [true, false, true, true]);
+      final cheers = find.descendant(
+        of: find.ancestor(of: find.text('Cheers'), matching: find.byType(Pressable)).first,
+        matching: find.byType(Switch),
+      );
+      expect(tester.widget<Switch>(cheers).value, isFalse);
     });
 
     testWidgets('a failed save puts the switch back and says so', (tester) async {
@@ -443,19 +453,17 @@ void main() {
       await app.tap(find.text('Cheers'));
 
       expect(find.text('nope'), findsOneWidget);
-      expect(tester.widgetList<Switch>(find.byType(Switch)).take(4).every((s) => s.value), isTrue);
+      expect(
+        tester.widgetList<Switch>(find.byType(Switch)).skip(1).take(4).every((s) => s.value),
+        isTrue,
+      );
     });
 
-    testWidgets('it links on to the evening reminder', (tester) async {
+    testWidgets('it holds the evening reminder instead of linking to a page', (tester) async {
       final (app, _) = await open(tester);
       await app.tap(find.text('Notifications'));
-      await tester.scrollUntilVisible(
-        find.text('Evening reminder'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await app.tap(find.text('Evening reminder'));
-      expect(find.text('Reminders'), findsWidgets);
+      expect(find.text('Reminders'), findsOneWidget);
+      expect(find.text('Evening reminder'), findsOneWidget);
     });
 
     testWidgets('without permission it offers to ask, then hides the card', (tester) async {

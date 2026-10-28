@@ -102,7 +102,7 @@ class MilestoneRow extends StatelessWidget {
                   children: [
                     Text(m.title, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
                     Text(
-                      [milestoneOwner(m), if (date.isNotEmpty) date].join(' - '),
+                      [milestoneOwner(m), if (date.isNotEmpty) date].join(' · '),
                       style: AppText.caption.copyWith(color: kInkSecondary),
                     ),
                   ],

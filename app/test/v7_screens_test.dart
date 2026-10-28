@@ -15,6 +15,7 @@ import 'package:newme/features/progress/milestone_celebration.dart';
 import 'package:newme/features/progress/milestones_page.dart';
 import 'package:newme/features/progress/progress_screen.dart';
 import 'package:newme/features/progress/sparkline.dart';
+import 'package:newme/features/progress/metric_card.dart';
 import 'package:newme/features/today/today_screen.dart';
 import 'package:newme/features/together/notifications_page.dart';
 import 'package:newme/api/models.dart';
@@ -416,13 +417,24 @@ void main() {
       expect(find.text('Steps'), findsOneWidget);
       expect(find.text('Resting heart rate'), findsOneWidget);
       expect(find.byType(Sparkline), findsWidgets);
-      expect(find.text('30-day average'), findsNothing);
-      expect(find.textContaining('(30-day average)'), findsWidgets);
+      expect(find.textContaining(', 30 days'), findsWidgets);
+      expect(find.textContaining('(30-day average)'), findsNothing);
     });
 
-    testWidgets('each card has the plain sentence and both comparisons', (tester) async {
+    testWidgets('lists you first, selected, with the partner second', (tester) async {
       await open(tester);
-      expect(find.text('Reading: 24 min a day, up from 11 in your first month'), findsOneWidget);
+      final you = tester.getTopLeft(find.text('Nadia')).dx;
+      final partner = tester.getTopLeft(find.text('Nick')).dx;
+      expect(you, lessThan(partner));
+      expect(
+        tester.widget<Semantics>(find.widgetWithText(Semantics, 'Nadia').first).properties.selected,
+        isTrue,
+      );
+    });
+
+    testWidgets('each card has both comparisons and no line restating the number', (tester) async {
+      await open(tester);
+      expect(find.textContaining('Reading: 24 min a day'), findsNothing);
       expect(find.text('+6 (+33%) vs the previous month, better'), findsOneWidget);
       expect(find.text('+13 (+118%) vs your first month, better'), findsOneWidget);
       expect(find.text('-680 (-8%) vs the previous month, worse'), findsOneWidget);
@@ -466,10 +478,23 @@ void main() {
       }
     });
 
-    testWidgets('a metric with no reading says so instead of drawing nothing', (tester) async {
+    testWidgets('a metric with no reading is left out instead of an empty card', (tester) async {
       await open(tester);
-      expect(find.text('No data yet'), findsOneWidget);
-      expect(find.text('Shows up once there is a reading.'), findsOneWidget);
+      expect(find.text('No data yet'), findsNothing);
+      expect(find.byType(MetricCard), findsNWidgets(10));
+    });
+
+    testWidgets('a person with no habits kept gets no habits card', (tester) async {
+      final data = _fixture('progress_rich');
+      for (final person in data['people'] as List) {
+        for (final m in (person as Map)['metrics'] as List) {
+          if ((m as Map)['key'] == 'habits_kept') {
+            m['current'] = 0.0;
+          }
+        }
+      }
+      await open(tester, server: _server()..on('GET /api/progress', StubResponse(200, data)));
+      expect(find.text('Habits kept'), findsNothing);
     });
 
     testWidgets('the switcher shows the partner and back', (tester) async {
@@ -482,10 +507,19 @@ void main() {
       expect(find.text('Reading'), findsOneWidget);
     });
 
-    testWidgets('a new person sees a note instead of empty comparisons', (tester) async {
+    testWidgets('a new person sees one page note instead of the same lines on every card', (
+      tester,
+    ) async {
       final fresh = _fixture('progress');
       await open(tester, server: _server()..on('GET /api/progress', StubResponse(200, fresh)));
-      expect(find.text('Comparisons appear once there is a full month to compare.'), findsWidgets);
+      expect(find.textContaining('Trends show after a second week'), findsOneWidget);
+      expect(find.text('A trend shows after a second week.'), findsNothing);
+      expect(find.textContaining('Comparisons appear once'), findsNothing);
+    });
+
+    testWidgets('a full history shows no sparse note', (tester) async {
+      await open(tester);
+      expect(find.textContaining('Trends show after a second week'), findsNothing);
     });
 
     testWidgets('a failure offers Try again', (tester) async {
@@ -512,7 +546,11 @@ void main() {
           home: Sparkline(values: [1, null, null], color: Colors.green, semanticLabel: 'x'),
         ),
       );
-      expect(find.text('A trend shows after a second week.'), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(Sparkline), matching: find.byType(CustomPaint)),
+        findsNothing,
+        reason: 'one reading draws no line',
+      );
       const painter = SparklinePainter([1, null, 3, 2], Colors.green);
       final points = painter.points(const Size(100, 50));
       expect(points[1], isNull);
@@ -552,8 +590,8 @@ void main() {
       expect(find.text('Workouts: 3.3 a week, up from 2.6'), findsOneWidget);
       expect(find.text('Push-ups: 40 a day, up from 32'), findsOneWidget);
       expect(find.text('+25%'), findsOneWidget);
-      expect(find.text('8,000 points - both counted on 19 days'), findsOneWidget);
-      expect(find.text('4,120 points - 24 days counted'), findsOneWidget);
+      expect(find.text('8,000 points, both counted on 19 days'), findsOneWidget);
+      expect(find.text('4,120 points, 24 days counted'), findsOneWidget);
     });
 
     testWidgets('moves to the month before and back', (tester) async {
@@ -619,8 +657,8 @@ void main() {
         expect(y, greaterThan(last), reason: t);
         last = y;
       }
-      expect(find.textContaining('Together - '), findsOneWidget);
-      expect(find.textContaining('You - '), findsNWidgets(4));
+      expect(find.textContaining('Together · '), findsOneWidget);
+      expect(find.textContaining('You · '), findsNWidgets(4));
     });
 
     testWidgets('an empty list says what the first ones are', (tester) async {

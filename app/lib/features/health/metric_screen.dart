@@ -12,7 +12,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/page_scaffold.dart';
-import '../../widgets/pressable.dart';
+import '../../widgets/segmented.dart';
 import '../../widgets/skeletons.dart';
 import 'health_metrics.dart';
 import 'trend_chart.dart';
@@ -55,9 +55,9 @@ class _MetricScreenState extends ConsumerState<MetricScreen> {
     return PageScaffold(
       title: widget.metric.name,
       children: [
-        _WindowToggle(
-          days: _days,
-          palette: palette,
+        Segmented<int>(
+          options: [for (final d in kTrendWindows) (d, '$d days')],
+          selected: _days,
           onChanged: (d) => setState(() {
             _days = d;
             _selected = null;
@@ -82,59 +82,6 @@ class _MetricScreenState extends ConsumerState<MetricScreen> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _WindowToggle extends StatelessWidget {
-  const _WindowToggle({required this.days, required this.palette, required this.onChanged});
-
-  final int days;
-  final AccentPalette palette;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final reduce = MediaQuery.disableAnimationsOf(context);
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: kSunken, borderRadius: BorderRadius.circular(kRadiusButton)),
-      child: Row(
-        children: [
-          for (final d in kTrendWindows)
-            Expanded(
-              child: Semantics(
-                button: true,
-                selected: d == days,
-                label: '$d days',
-                excludeSemantics: true,
-                onTap: () => onChanged(d),
-                child: Pressable(
-                  onTap: d == days ? null : () => onChanged(d),
-                  child: AnimatedContainer(
-                    duration: reduce ? Duration.zero : kMotionDuration,
-                    constraints: const BoxConstraints(minHeight: 44),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: d == days ? kSurface : Colors.transparent,
-                      borderRadius: BorderRadius.circular(kRadiusButton - 4),
-                      border: d == days
-                          ? Border.all(color: palette.fill, width: kBorderWidth)
-                          : null,
-                    ),
-                    child: Text(
-                      '$d days',
-                      style: AppText.label.copyWith(
-                        color: d == days ? palette.lip : kInkSecondary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

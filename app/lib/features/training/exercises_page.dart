@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
@@ -345,8 +344,7 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
   }
 }
 
-String _day(String date) =>
-    date.isEmpty ? '' : DateFormat('EEE d MMM').format(parseLocalDate(date));
+String _day(String date) => date.isEmpty ? '' : dayWithWeekday(date);
 
 /// A day's sets in the order they were done, newest day first. The server lists sets oldest
 /// first.

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/api_client.dart';
 import '../../api/models.dart';
@@ -24,11 +23,10 @@ import 'streak_visuals.dart';
 
 const kMaxAwayDays = 14;
 
-/// "Fri 30 Oct" for one day, "Fri 30 Oct to Sun 1 Nov" for a span.
+/// "Fri, Oct 30" for one day, "Fri, Oct 30 to Sun, Nov 1" for a span.
 String awayRangeLabel(String from, String to) {
-  final f = DateFormat('E d MMM');
-  final a = f.format(parseLocalDate(from));
-  return from == to ? a : '$a to ${f.format(parseLocalDate(to))}';
+  final a = dayWithWeekday(from);
+  return from == to ? a : '$a to ${dayWithWeekday(to)}';
 }
 
 /// "3 days" for a span, counting both ends.
@@ -170,7 +168,7 @@ class _AwayPageState extends ConsumerState<AwayPage> {
       title: 'Away days',
       children: [
         Text(
-          'Sick or travelling? Away days neither break nor extend your streak, use no freeze and '
+          'Sick or traveling? Away days neither break nor extend your streak, use no freeze and '
           'keep the nudges quiet. Your partner sees you as away.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
@@ -269,7 +267,7 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = DateFormat('E d MMM').format(parseLocalDate(value));
+    final text = dayWithWeekday(value);
     return Semantics(
       button: true,
       label: '$label, $text',
@@ -332,7 +330,7 @@ class _SpanRow extends StatelessWidget {
                       if (now) 'Away now',
                       awayLengthLabel(span.from, span.to),
                       if (span.note.isNotEmpty) span.note,
-                    ].join(' - '),
+                    ].join(' · '),
                     style: AppText.caption.copyWith(color: kInkSecondary),
                   ),
                 ],

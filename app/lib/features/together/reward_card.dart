@@ -196,7 +196,7 @@ class _HistoryRow extends StatelessWidget {
     final at = reward.claimedAt ?? reward.reachedAt;
     final when = at == null ? null : DateFormat.MMMd().format(at.toLocal());
     final detail =
-        '${reward.target.formatted} points${when == null ? '' : ' - ${reward.claimed ? 'enjoyed' : 'reached'} $when'}';
+        '${reward.target.formatted} points${when == null ? '' : ', ${reward.claimed ? 'enjoyed' : 'reached'} $when'}';
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 56),
       child: Semantics(

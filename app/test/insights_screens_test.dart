@@ -392,7 +392,7 @@ void main() {
       expect(find.text('3 workouts'), findsOneWidget);
       expect(find.text('2 h 7 min moving'), findsOneWidget);
       expect(find.text('Strength'), findsWidgets);
-      expect(find.text('5x - 4 h 20 min'), findsOneWidget);
+      expect(find.text('5x, 4 h 20 min'), findsOneWidget);
       expect(find.byType(RankedBar), findsNWidgets(2));
       expect(find.text('Recent workouts'), findsOneWidget);
       expect(find.text('Run'), findsWidgets);

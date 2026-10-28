@@ -51,7 +51,7 @@ class LogChip extends StatelessWidget {
             : null,
         child: AnimatedContainer(
           duration: reduce ? Duration.zero : kMotionDuration,
-          constraints: BoxConstraints(minHeight: 44, minWidth: compact ? 0 : 56),
+          constraints: BoxConstraints(minHeight: 44, minWidth: compact ? 44 : 56),
           padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 16, vertical: 8),
           decoration: BoxDecoration(
             color: selected ? person.tint : kSurface,

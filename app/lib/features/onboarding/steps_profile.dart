@@ -87,7 +87,7 @@ class ColorStep extends ConsumerWidget {
         Center(
           child: Mascot(size: 128, state: MascotState.happy, palette: chosen),
         ),
-        const StepTitle('Pick your colour', subtitle: 'This is how you show up on the scoreboard.'),
+        const StepTitle('Pick your color', subtitle: 'This is how you show up on the scoreboard.'),
         LayoutBuilder(
           builder: (context, box) {
             const gap = 12.0;

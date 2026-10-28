@@ -242,7 +242,7 @@ class _BestDayCard extends StatelessWidget {
               children: [
                 const Text('Best day together', style: AppText.caption),
                 Text(
-                  '$date - ${best.points.formatted} points',
+                  '$date, ${best.points.formatted} points',
                   style: AppText.body.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
@@ -361,7 +361,7 @@ class _PersonCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                'Best day ${DateFormat.E().format(parseLocalDate(best.date))} - ${best.points.formatted} points',
+                'Best day ${DateFormat.E().format(parseLocalDate(best.date))}, ${best.points.formatted} points',
                 style: AppText.caption,
               ),
             ),

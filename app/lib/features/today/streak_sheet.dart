@@ -28,7 +28,7 @@ String freezeProgressLabel(Freezes f) {
   }
   final left = kDaysPerFreeze - f.earnedTowardNext;
   return '${f.earnedTowardNext} of $kDaysPerFreeze counted days to your next freeze'
-      ' - $left to go';
+      ', $left to go';
 }
 
 /// What the streak is, and how freezes, repairs and away days keep it alive.
@@ -135,7 +135,7 @@ class StreakSheet extends StatelessWidget {
               icon: Icons.pause_circle_rounded,
               title: 'Away days',
               text:
-                  'Sick or travelling? Away days neither break nor extend a streak and do not '
+                  'Sick or traveling? Away days neither break nor extend a streak and do not '
                   'use a freeze.',
             ),
             if (onAway != null) ...[

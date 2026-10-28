@@ -151,7 +151,7 @@ void main() {
       );
       await app.pump(const MeScreen());
       expect(find.text('Audiobookshelf'), findsOneWidget);
-      expect(find.text('Count audiobook listening'), findsOneWidget);
+      expect(find.text('Not linked'), findsOneWidget);
     });
 
     testWidgets('names the account and the last sync once linked', (tester) async {

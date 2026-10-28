@@ -120,13 +120,13 @@ void main() {
     adapter.on('GET /api/me', const StubResponse.unreachable());
     await app.pump(const HomeShell(), key: UniqueKey());
     await app.tap(find.byKey(const Key('nav-me')));
-    expect(find.textContaining('Offline - updated'), findsOneWidget);
+    expect(find.textContaining('Offline, updated'), findsOneWidget);
 
     adapter.on('GET /api/me', StubResponse(200, meJson()));
     await app.tap(find.byKey(const Key('nav-us')));
     await app.tap(find.byKey(const Key('nav-me')));
 
-    expect(find.textContaining('Offline - updated'), findsNothing);
+    expect(find.textContaining('Offline, updated'), findsNothing);
   });
 
   testWidgets('a new session starts on Today instead of the tab the last one left', (tester) async {

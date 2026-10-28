@@ -50,7 +50,7 @@ void main() {
     await tester.pumpWidget(
       _host(OfflineBanner(info: OfflineInfo(updatedAt: DateTime(2026, 10, 26, 14, 2)))),
     );
-    expect(find.text('Offline - updated 2:02 PM'), findsOneWidget);
+    expect(find.text('Offline, updated 2:02 PM'), findsOneWidget);
   });
 
   testWidgets('the offline banner follows a 24-hour phone', (tester) async {
@@ -59,7 +59,7 @@ void main() {
     await tester.pumpWidget(
       _host(OfflineBanner(info: OfflineInfo(updatedAt: DateTime(2026, 10, 26, 14, 2)))),
     );
-    expect(find.text('Offline - updated 14:02'), findsOneWidget);
+    expect(find.text('Offline, updated 14:02'), findsOneWidget);
   });
 
   testWidgets('the update screen offers no way past it', (tester) async {

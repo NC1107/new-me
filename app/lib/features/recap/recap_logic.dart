@@ -26,7 +26,7 @@ String recapHeadline(Recap recap) {
 
 /// "Oct 19 - Oct 25" for the recap's week.
 String recapRange(Recap recap, String Function(String date) day) =>
-    '${day(recap.from)} - ${day(recap.to)}';
+    '${day(recap.from)} to ${day(recap.to)}';
 
 /// How a number moved against the week before. [direction] is -1, 0 or 1, so a screen can add an
 /// icon and never rely on colour alone.

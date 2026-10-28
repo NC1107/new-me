@@ -191,7 +191,7 @@ void main() {
     await app.enter('Ana');
     await app.tapButton('Continue');
 
-    expect(find.text('Pick your colour'), findsOneWidget);
+    expect(find.text('Pick your color'), findsOneWidget);
     await app.tapText('Sky');
     await app.tapButton('Continue');
     expect(app.lastBody('POST /api/join'), {

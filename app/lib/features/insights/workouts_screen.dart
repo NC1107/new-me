@@ -194,7 +194,7 @@ class _ByType extends StatelessWidget {
                       ),
                       Flexible(
                         child: Text(
-                          '${t.count}x - ${durationLabel(t.minutes)}',
+                          '${t.count}x, ${durationLabel(t.minutes)}',
                           textAlign: TextAlign.end,
                           style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
                         ),

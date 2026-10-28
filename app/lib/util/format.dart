@@ -9,6 +9,16 @@ extension FormattedNumber on num {
   String get formatted => (this % 1 == 0 ? _whole : _tenths).format(this);
 }
 
+/// "Oct 28": one date format for the whole app, written US style.
+String dayShort(String date) => DateFormat('MMM d', 'en_US').format(parseLocalDate(date));
+
+/// "Wed, Oct 28".
+String dayWithWeekday(String date) =>
+    DateFormat('EEE, MMM d', 'en_US').format(parseLocalDate(date));
+
+/// "Wednesday, Oct 28".
+String dayLong(String date) => DateFormat('EEEE, MMM d', 'en_US').format(parseLocalDate(date));
+
 /// "just now", "5m ago", "3h ago" or "2d ago"; a time in the future reads as "just now".
 String relativeTime(DateTime then, DateTime now) {
   final elapsed = now.difference(then);

@@ -379,7 +379,7 @@ class _BackdateToggle extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Add to yesterday - open until ${formatClock(hour)}',
+                'Add to yesterday, open until ${formatClock(hour)}',
                 style: AppText.label.copyWith(color: kInkSecondary),
               ),
             ),

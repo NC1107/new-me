@@ -82,7 +82,7 @@ class _FoodRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final detail =
-        '${food.servingText}  -  ${food.kcal.formatted} kcal  -  used ${food.useCount} '
+        '${food.servingText} · ${food.kcal.formatted} kcal · used ${food.useCount} '
         '${food.useCount == 1 ? 'time' : 'times'}';
     return Semantics(
       button: true,

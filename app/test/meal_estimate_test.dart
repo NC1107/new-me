@@ -78,7 +78,7 @@ void main() {
     reply.complete(const StubResponse(200, _estimate));
     await app.settle();
     expect(find.text('Estimating...'), findsNothing);
-    expect(find.text('Estimate - Medium confidence'), findsOneWidget);
+    expect(find.text('Estimate, medium confidence'), findsOneWidget);
     expect(find.text('Portion looked like about 350 g.'), findsOneWidget);
     expect(fieldWith('Chicken burrito bowl'), findsOneWidget);
     expect(fieldWith('640'), findsOneWidget);
@@ -104,7 +104,7 @@ void main() {
     await app.enter(find.widgetWithText(TextField, '').first, 'oats');
     await app.tap(find.text('ESTIMATE'));
     expect(find.textContaining('Enter this one by hand'), findsOneWidget);
-    expect(find.text('Estimate - Medium confidence'), findsNothing);
+    expect(find.text('Estimate, medium confidence'), findsNothing);
 
     server.on(
       'POST /api/meals/estimate',

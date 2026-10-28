@@ -154,7 +154,7 @@ void main() {
       );
       await app.tap(find.bySemanticsLabel(RegExp('day streak')));
       expect(find.text('1 of 2 freezes'), findsOneWidget);
-      expect(find.text('4 of 7 counted days to your next freeze - 3 to go'), findsOneWidget);
+      expect(find.text('4 of 7 counted days to your next freeze, 3 to go'), findsOneWidget);
       expect(find.text('Earning and using freezes'), findsOneWidget);
       expect(find.textContaining('earn 1 more for every 7 counted days'), findsOneWidget);
       expect(find.text('Repair'), findsOneWidget);
@@ -295,7 +295,7 @@ void main() {
         ),
       );
       expect(find.text('You are away'), findsOneWidget);
-      expect(find.text('Your streak is paused until Wed 28 Oct.'), findsOneWidget);
+      expect(find.text('Your streak is paused until Wed, Oct 28.'), findsOneWidget);
       expect(find.text("Can't today?"), findsNothing);
       await app.tap(find.text('You are away'));
       expect(find.byType(AwayPage), findsOneWidget);
@@ -327,9 +327,9 @@ void main() {
         ],
       );
       await open(tester, server);
-      expect(find.text('Mon 26 Oct to Wed 28 Oct'), findsOneWidget);
-      expect(find.text('Away now - 3 days - Flu'), findsOneWidget);
-      expect(find.text('Mon 2 Nov'), findsOneWidget);
+      expect(find.text('Mon, Oct 26 to Wed, Oct 28'), findsOneWidget);
+      expect(find.text('Away now · 3 days · Flu'), findsOneWidget);
+      expect(find.text('Mon, Nov 2'), findsOneWidget);
       expect(find.text('1 day'), findsOneWidget);
     });
 
@@ -406,7 +406,7 @@ void main() {
       app.container.read(todayProvider);
       await app.settle();
       expect(find.text('Away days'), findsOneWidget);
-      expect(find.text('Next: Mon 2 Nov to Tue 3 Nov'), findsOneWidget);
+      expect(find.text('Next: Mon, Nov 2 to Tue, Nov 3'), findsOneWidget);
       await app.tap(find.text('Away days'));
       expect(find.byType(AwayPage), findsOneWidget);
     });

@@ -81,7 +81,11 @@ class ErrorBlock extends StatelessWidget {
       ),
       TextButton(
         onPressed: onRetry,
-        style: TextButton.styleFrom(foregroundColor: kFgPrimary),
+        style: TextButton.styleFrom(
+          foregroundColor: kFgPrimary,
+          minimumSize: const Size(64, 44),
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ),
         child: const Text('Try again', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
     ],

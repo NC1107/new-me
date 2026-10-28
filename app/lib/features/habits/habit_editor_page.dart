@@ -286,7 +286,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
         const FieldLabel('Name'),
         AppTextField(
           controller: _name,
-          hint: 'Brush teeth',
+          hint: 'For example, Brush teeth',
           semanticLabel: 'Habit name',
           textCapitalization: TextCapitalization.sentences,
           onChanged: (_) => setState(() => _error = null),

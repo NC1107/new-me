@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../theme/typography.dart';
@@ -66,10 +65,7 @@ class TodayHeader extends StatelessWidget {
           child: Text(greetingFor(now, name), style: AppText.title),
         ),
         const SizedBox(height: 2),
-        Text(
-          DateFormat('EEEE, MMM d').format(parseLocalDate(today.localToday)),
-          style: AppText.caption,
-        ),
+        Text(dayLong(today.localToday), style: AppText.caption),
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,

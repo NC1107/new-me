@@ -288,7 +288,7 @@ void main() {
     test('the next freeze reads as progress, or why it waits', () {
       expect(
         freezeProgressLabel(const Freezes(held: 1, earnedTowardNext: 4)),
-        '4 of 7 counted days to your next freeze - 3 to go',
+        '4 of 7 counted days to your next freeze, 3 to go',
       );
       expect(
         freezeProgressLabel(const Freezes(held: 2, earnedTowardNext: 6)),
@@ -418,8 +418,8 @@ void main() {
 
   group('away words', () {
     test('a day, a span and its length', () {
-      expect(awayRangeLabel('2026-10-30', '2026-10-30'), 'Fri 30 Oct');
-      expect(awayRangeLabel('2026-10-30', '2026-11-01'), 'Fri 30 Oct to Sun 1 Nov');
+      expect(awayRangeLabel('2026-10-30', '2026-10-30'), 'Fri, Oct 30');
+      expect(awayRangeLabel('2026-10-30', '2026-11-01'), 'Fri, Oct 30 to Sun, Nov 1');
       expect(awayLengthLabel('2026-10-30', '2026-10-30'), '1 day');
       expect(awayLengthLabel('2026-10-30', '2026-11-01'), '3 days');
     });

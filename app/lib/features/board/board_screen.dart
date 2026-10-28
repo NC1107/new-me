@@ -97,7 +97,7 @@ class _UsBody extends ConsumerWidget {
         Text(
           ends == null
               ? seasonLabel(board.season.name)
-              : '${seasonLabel(board.season.name)} - ends ${DateFormat.MMMd().format(parseLocalDate(ends))}',
+              : '${seasonLabel(board.season.name)}, ends ${DateFormat.MMMd().format(parseLocalDate(ends))}',
           style: AppText.caption,
         ),
         const SizedBox(height: 16),

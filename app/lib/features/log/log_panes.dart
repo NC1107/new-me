@@ -508,7 +508,7 @@ class _MealPaneState extends State<MealPane> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const FieldLabel('Recent meals - tap to log'),
+                const FieldLabel('Recent meals, tap to log'),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,

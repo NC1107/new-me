@@ -151,7 +151,7 @@ void main() {
       final app = await open(tester, adapter);
       await app.tap(_pill('Custom'));
       await app.enter(find.byType(TextField).first, 'Read');
-      await app.tap(_pill('menu book'));
+      await app.tap(_pill('Open book'));
       await app.tap(_button('Add a time'));
       await app.enter(find.byType(TextField).last, 'Night');
       await app.tap(_button('Save'));
@@ -223,7 +223,7 @@ void main() {
       final app = await open(tester, habitsServer());
       await app.tap(_pill('Brush teeth'));
       expect(tester.takeException(), isNull);
-      for (final label in ['Monday', 'menu book', 'Every day', 'Brush teeth']) {
+      for (final label in ['Monday', 'Open book', 'Every day', 'Brush teeth']) {
         final size = tester.getSize(_pill(label));
         expect(size.height, greaterThanOrEqualTo(44), reason: label);
         expect(size.width, greaterThanOrEqualTo(44), reason: label);

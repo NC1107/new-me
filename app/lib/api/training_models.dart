@@ -81,9 +81,106 @@ class SetAmount {
 
 enum ExerciseKind {
   strength,
-  stretch;
+  stretch,
+  yoga;
 
-  static ExerciseKind parse(Object? v) => v == 'stretch' ? stretch : strength;
+  static ExerciseKind parse(Object? v) => switch (v) {
+    'stretch' => stretch,
+    'yoga' => yoga,
+    _ => strength,
+  };
+}
+
+/// Who took a Creative Commons photo and under what license, which the license requires showing.
+class ImageCredit {
+  const ImageCredit({
+    required this.author,
+    required this.license,
+    this.licenseUrl,
+    required this.sourceUrl,
+  });
+
+  static ImageCredit? tryParse(Object? v) {
+    final j = _map(v);
+    final author = _strOrNull(j?['author']);
+    final source = _strOrNull(j?['sourceUrl']);
+    if (j == null || author == null || source == null) return null;
+    return ImageCredit(
+      author: author,
+      license: _str(j['license']),
+      licenseUrl: _strOrNull(j['licenseUrl']),
+      sourceUrl: source,
+    );
+  }
+
+  final String author;
+  final String license;
+  final String? licenseUrl;
+
+  /// The photo's file page on Wikimedia Commons.
+  final String sourceUrl;
+
+  /// "Photo: Kennguru, CC BY 3.0".
+  String get label => 'Photo: $author, $license';
+
+  Map<String, dynamic> toJson() => {
+    'author': author,
+    'license': license,
+    'licenseUrl': licenseUrl,
+    'sourceUrl': sourceUrl,
+  };
+}
+
+/// The library groups of yoga poses, in the order the library lists them.
+const kPoseGroups = [
+  ('standing', 'Standing'),
+  ('kneeling', 'Kneeling and all fours'),
+  ('seated', 'Seated'),
+  ('prone', 'On your front'),
+  ('supine', 'On your back'),
+];
+
+/// What a yoga pose has beyond a how-to.
+class YogaPose {
+  const YogaPose({
+    this.sanskrit = '',
+    this.group = 'standing',
+    this.effect = '',
+    this.holdNote = '',
+    this.cautions = const [],
+    this.imageCredits = const [],
+  });
+
+  static YogaPose? tryParse(Object? v) {
+    final j = _map(v);
+    if (j == null) return null;
+    return YogaPose(
+      sanskrit: _str(j['sanskrit']),
+      group: _str(j['group'], 'standing'),
+      effect: _str(j['effect']),
+      holdNote: _str(j['holdNote']),
+      cautions: _strings(j['cautions']),
+      imageCredits: _list(j['imageCredits'], ImageCredit.tryParse),
+    );
+  }
+
+  final String sanskrit;
+  final String group;
+  final String effect;
+  final String holdNote;
+  final List<String> cautions;
+
+  /// One credit per photo, in the order of the exercise's imageUrls.
+  final List<ImageCredit> imageCredits;
+
+  Map<String, dynamic> toJson() => {
+    'sanskrit': sanskrit,
+    'group': group,
+    'effect': effect,
+    'holdNote': holdNote,
+    'cautions': cautions,
+    'imageCredits': [for (final c in imageCredits) c.toJson()],
+  };
 }
 
 class Exercise {
@@ -105,6 +202,7 @@ class Exercise {
     this.imageUrls = const [],
     this.kind = ExerciseKind.strength,
     this.perSide = false,
+    this.pose,
   });
 
   static Exercise? tryParse(Object? v) {
@@ -129,6 +227,7 @@ class Exercise {
       imageUrls: _strings(j['imageUrls']),
       kind: ExerciseKind.parse(j['kind']),
       perSide: j['perSide'] == true,
+      pose: YogaPose.tryParse(j['pose']),
     );
   }
 
@@ -151,13 +250,20 @@ class Exercise {
   final List<String> cues;
   final List<String> imageUrls;
 
-  /// Stretches belong to mobility sessions, never to strength plans.
+  /// Stretches belong to mobility sessions and poses to yoga, never to strength plans.
   final ExerciseKind kind;
 
-  /// A stretch done once on each side.
+  /// A stretch or pose done once on each side.
   final bool perSide;
 
+  /// Set for yoga poses only.
+  final YogaPose? pose;
+
   bool get stretch => kind == ExerciseKind.stretch;
+  bool get yoga => kind == ExerciseKind.yoga;
+
+  /// Stretches and poses stay out of the strength library, plans and set counts.
+  bool get strength => kind == ExerciseKind.strength;
 
   bool get hasHowTo => steps.isNotEmpty || cues.isNotEmpty || imageUrls.isNotEmpty;
 
@@ -182,6 +288,7 @@ class Exercise {
     'imageUrls': imageUrls,
     'kind': kind.name,
     'perSide': perSide,
+    'pose': pose?.toJson(),
   };
 }
 

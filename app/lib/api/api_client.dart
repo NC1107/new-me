@@ -177,6 +177,9 @@ class ApiClient {
          ),
        ) {
     if (adapter != null) _dio.httpClientAdapter = adapter;
+    // The exercise catalog passes the 50 KB where the default transformer hands decoding to an
+    // isolate, which a widget test cannot wait for; no response here is large enough to need one.
+    _dio.transformer = SyncTransformer();
     _dio.interceptors.add(
       InterceptorsWrapper(
         onError: (e, handler) async {
@@ -466,6 +469,27 @@ class ApiClient {
   Future<TrainingProfile> saveTrainingProfile(TrainingProfile profile) => _send(
     () => _dio.put<dynamic>('/api/training/profile', data: profile.toJson()),
     (data) => TrainingProfile.tryParse((data as Json)['profile']) ?? profile,
+  );
+
+  Future<YogaPlanState> yogaPlan() =>
+      _send(() => _dio.get<dynamic>('/api/yoga/plan'), YogaPlanState.parse);
+
+  /// Saves the weekly yoga plan; the server places the days. [restartLevel] turns a declined
+  /// longer-flow offer into another two weeks at the same length.
+  Future<YogaPlanState> saveYogaPlan({
+    required int daysPerWeek,
+    required int flowMinutes,
+    bool restartLevel = false,
+  }) => _send(
+    () => _dio.put<dynamic>(
+      '/api/yoga/plan',
+      data: {
+        'daysPerWeek': daysPerWeek,
+        'flowMinutes': flowMinutes,
+        if (restartLevel) 'restartLevel': true,
+      },
+    ),
+    YogaPlanState.parse,
   );
 
   /// Plan design asks Claude once or twice, so it gets far longer than the default timeout.

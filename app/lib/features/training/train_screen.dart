@@ -21,6 +21,7 @@ import '../../state/today.dart';
 import '../me/settings_row.dart';
 import 'exercises_page.dart';
 import 'mobility_page.dart';
+import 'yoga_page.dart';
 import 'training_card.dart';
 import 'training_history_page.dart';
 import 'training_progress_page.dart';
@@ -125,7 +126,20 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             Semantics(header: true, child: const Text('Train', style: AppText.display)),
             const SizedBox(height: 16),
             if (localToday != null) TrainingSlot(localToday: localToday, onTrainTab: true),
-            const _MobilityCard(),
+            const _RoutineCard(
+              title: 'Yoga',
+              blurb: 'Guided flows of 10, 20 or 30 minutes and a pose library. Plan your week.',
+              icon: Icons.spa_rounded,
+              colorId: 'violet',
+              page: YogaPage(),
+            ),
+            const _RoutineCard(
+              title: 'Mobility',
+              blurb: '10 guided stretches, about 11 minutes. Counts toward yoga.',
+              icon: Icons.self_improvement_rounded,
+              colorId: 'rose',
+              page: MobilityPage(),
+            ),
             switch (setup) {
               AsyncValue(:final value?) => _body(value, catalog),
               AsyncValue(:final error?) => ErrorBlock(
@@ -289,17 +303,32 @@ class _SourcesSheet extends StatelessWidget {
   }
 }
 
-/// The way into the guided Mobility 10 routine, which needs no plan.
-class _MobilityCard extends StatelessWidget {
-  const _MobilityCard();
+/// A way into a guided routine, which needs no training plan.
+class _RoutineCard extends StatelessWidget {
+  const _RoutineCard({
+    required this.title,
+    required this.blurb,
+    required this.icon,
+    required this.colorId,
+    required this.page,
+  });
+
+  final String title;
+  final String blurb;
+  final IconData icon;
+  final String colorId;
+  final Widget page;
 
   @override
   Widget build(BuildContext context) {
-    final accent = accentById('rose');
+    final accent = accentById(colorId);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: AppCard(
-        onTap: () => pushPage(context, const MobilityPage()),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          pushPage(context, page);
+        },
         child: Row(
           children: [
             Container(
@@ -309,18 +338,15 @@ class _MobilityCard extends StatelessWidget {
                 color: accent.tint,
                 borderRadius: BorderRadius.circular(kRadiusField),
               ),
-              child: Icon(Icons.self_improvement_rounded, color: accent.lip, size: 24),
+              child: Icon(icon, color: accent.lip, size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Mobility', style: AppText.headline),
-                  Text(
-                    '10 guided stretches, about 11 minutes. Counts toward yoga.',
-                    style: AppText.caption.copyWith(color: kInkSecondary),
-                  ),
+                  Text(title, style: AppText.headline),
+                  Text(blurb, style: AppText.caption.copyWith(color: kInkSecondary)),
                 ],
               ),
             ),

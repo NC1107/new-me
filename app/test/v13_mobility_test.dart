@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/training/exercises_page.dart';
+import 'package:newme/features/training/guided_session.dart';
 import 'package:newme/features/training/mobility_page.dart';
 import 'package:newme/features/training/mobility_session.dart';
 import 'package:newme/features/training/train_screen.dart';
@@ -111,7 +112,7 @@ void main() {
   });
 
   group('the session clock', () {
-    List<MobilityHold> holds() => buildMobilityHolds(_catalog);
+    List<GuidedHold> holds() => buildMobilityHolds(_catalog);
 
     test('has two holds per stretch, one per side where it has sides', () {
       final h = holds();
@@ -123,31 +124,31 @@ void main() {
     });
 
     test('runs a lead-in, a 30 second hold, then advances by itself', () {
-      final c = MobilityController(holds());
-      expect(c.phase, MobilityPhase.leadIn);
+      final c = GuidedController(holds());
+      expect(c.phase, GuidedPhase.leadIn);
       expect(
         [c.tick(), c.tick(), c.tick()],
-        [MobilityEvent.leadInTick, MobilityEvent.leadInTick, MobilityEvent.go],
+        [GuidedEvent.leadInTick, GuidedEvent.leadInTick, GuidedEvent.go],
       );
-      expect(c.phase, MobilityPhase.hold);
+      expect(c.phase, GuidedPhase.hold);
       expect(c.holdLeft, 30);
       for (var i = 0; i < 29; i++) {
         expect(c.tick(), isNull);
       }
-      expect(c.tick(), MobilityEvent.nextHold);
+      expect(c.tick(), GuidedEvent.nextHold);
       expect(c.index, 1);
-      expect(c.phase, MobilityPhase.leadIn);
+      expect(c.phase, GuidedPhase.leadIn);
       expect(c.leadLeft, 3);
       expect(c.activeSeconds, 33);
     });
 
     test('finishes after the last hold with about eleven minutes', () {
-      final c = MobilityController(holds());
-      MobilityEvent? last;
+      final c = GuidedController(holds());
+      GuidedEvent? last;
       while (!c.finished) {
         last = c.tick();
       }
-      expect(last, MobilityEvent.finished);
+      expect(last, GuidedEvent.finished);
       expect(c.activeSeconds, 20 * 33);
       expect(c.minutes, 11);
       expect(c.progress, 1);
@@ -155,34 +156,34 @@ void main() {
     });
 
     test('pause stops time, skip and back move by stretch', () {
-      final c = MobilityController(holds());
+      final c = GuidedController(holds());
       c.pause();
       expect(c.tick(), isNull);
       expect(c.activeSeconds, 0);
       c.resume();
       expect(c.canGoBack, isFalse);
-      c.skipStretch();
+      c.skipStep();
       expect(c.index, 2);
       expect(c.current.exercise.key, 'childs_pose');
       c.tick();
       c.tick();
       c.tick();
       c.tick();
-      expect(c.phase, MobilityPhase.hold);
-      c.backStretch();
+      expect(c.phase, GuidedPhase.hold);
+      c.backStep();
       expect(c.index, 2, reason: 'mid stretch, back restarts it');
-      expect(c.phase, MobilityPhase.leadIn);
-      c.backStretch();
+      expect(c.phase, GuidedPhase.leadIn);
+      c.backStep();
       expect(c.index, 0, reason: 'at its start, back goes to the stretch before');
-      c.skipStretch();
-      c.skipStretch();
+      c.skipStep();
+      c.skipStep();
       expect(c.index, 4);
     });
 
     test('skipping the last stretch finishes', () {
-      final c = MobilityController(holds());
+      final c = GuidedController(holds());
       for (var i = 0; i < kMobilitySequence.length; i++) {
-        c.skipStretch();
+        c.skipStep();
       }
       expect(c.finished, isTrue);
       expect(c.minutes, 1);

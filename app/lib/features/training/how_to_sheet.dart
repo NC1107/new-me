@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../api/models.dart';
 import '../../state/training.dart';
@@ -88,6 +89,11 @@ class HowToSheet extends ConsumerWidget {
   }
 }
 
+/// Where the cautions on a yoga pose come from.
+const kPoseCautionSource =
+    'NCCIH, "Yoga: What You Need To Know"; Cramer et al., PLoS One 2013;8(10):e75515. '
+    'Not medical advice.';
+
 /// Photos, numbered steps and form cues of one exercise, in the how-to sheet and on the
 /// exercise's own page.
 class HowToDetails extends StatelessWidget {
@@ -99,10 +105,19 @@ class HowToDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = exercise;
     final photos = e.imageUrls.isNotEmpty;
+    final pose = e.pose;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (photos) HowToPhotos(urls: e.imageUrls, name: e.name),
+        if (pose != null && (pose.effect.isNotEmpty || pose.holdNote.isNotEmpty)) ...[
+          if (pose.effect.isNotEmpty) Text(pose.effect, style: AppText.body),
+          if (pose.holdNote.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(pose.holdNote, style: AppText.label.copyWith(color: kInkSecondary)),
+          ],
+          const SizedBox(height: 16),
+        ],
+        if (photos) HowToPhotosOf(exercise: e),
         if (e.steps.isNotEmpty) ...[
           if (photos) const SizedBox(height: 20),
           const Text('Steps', style: AppText.headline),
@@ -114,6 +129,13 @@ class HowToDetails extends StatelessWidget {
           const Text('Form cues', style: AppText.headline),
           const SizedBox(height: 8),
           for (final cue in e.cues) HowToCue(text: cue),
+        ],
+        if (pose != null && pose.cautions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text('Take care', style: AppText.headline),
+          const SizedBox(height: 8),
+          for (final caution in pose.cautions) HowToCue(text: caution),
+          Text(kPoseCautionSource, style: AppText.caption.copyWith(color: kInkMuted)),
         ],
         if (!e.hasHowTo)
           Text(
@@ -127,12 +149,75 @@ class HowToDetails extends StatelessWidget {
   }
 }
 
-/// The start and end photos side by side, each labelled, so there is nothing to swipe.
+/// The photos of one exercise. A yoga pose shows each photo whole with its credit underneath,
+/// as the Creative Commons licenses it was published under require; other exercises show their
+/// start and end photos.
+class HowToPhotosOf extends StatelessWidget {
+  const HowToPhotosOf({super.key, required this.exercise});
+
+  final Exercise exercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = exercise;
+    final credits = e.pose?.imageCredits ?? const <ImageCredit>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HowToPhotos(urls: e.imageUrls, name: e.name, whole: e.yoga),
+        for (final credit in credits) PhotoCredit(credit: credit),
+      ],
+    );
+  }
+}
+
+/// "Photo: author, license", a link to the photo's file page.
+class PhotoCredit extends StatelessWidget {
+  const PhotoCredit({super.key, required this.credit});
+
+  final ImageCredit credit;
+
+  Future<void> _open() async {
+    final uri = Uri.tryParse(credit.sourceUrl);
+    if (uri == null || uri.scheme != 'https') return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      link: true,
+      label: '${credit.label}. Opens the photo page',
+      excludeSemantics: true,
+      onTap: _open,
+      child: InkWell(
+        onTap: _open,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              credit.label,
+              style: AppText.caption.copyWith(
+                color: kInkSecondary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The start and end photos side by side, each labelled, so there is nothing to swipe. With
+/// [whole] each photo is shown uncropped and unlabelled, since a pose has one photo.
 class HowToPhotos extends StatelessWidget {
-  const HowToPhotos({super.key, required this.urls, required this.name});
+  const HowToPhotos({super.key, required this.urls, required this.name, this.whole = false});
 
   final List<String> urls;
   final String name;
+  final bool whole;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +228,7 @@ class HowToPhotos extends StatelessWidget {
         for (final (i, url) in urls.take(2).indexed) ...[
           if (i > 0) const SizedBox(width: 12),
           Expanded(
-            child: _Photo(url: url, label: labels[i], name: name),
+            child: _Photo(url: url, label: whole ? null : labels[i], name: name, whole: whole),
           ),
         ],
       ],
@@ -152,11 +237,12 @@ class HowToPhotos extends StatelessWidget {
 }
 
 class _Photo extends ConsumerWidget {
-  const _Photo({required this.url, required this.label, required this.name});
+  const _Photo({required this.url, required this.label, required this.name, required this.whole});
 
   final String url;
-  final String label;
+  final String? label;
   final String name;
+  final bool whole;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -164,7 +250,7 @@ class _Photo extends ConsumerWidget {
     final instant = MediaQuery.disableAnimationsOf(context);
     return Semantics(
       image: true,
-      label: '$name, $label position',
+      label: label == null ? name : '$name, $label position',
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,11 +266,11 @@ class _Photo extends ConsumerWidget {
               child: AspectRatio(
                 aspectRatio: 4 / 3,
                 child: ColoredBox(
-                  color: kSunken,
+                  color: whole ? Colors.white : kSunken,
                   child: switch (image) {
                     AsyncValue(:final value?) => Image.memory(
                       value,
-                      fit: BoxFit.cover,
+                      fit: whole ? BoxFit.contain : BoxFit.cover,
                       gaplessPlayback: true,
                       frameBuilder: (context, child, frame, sync) => AnimatedOpacity(
                         opacity: frame == null && !sync ? 0 : 1,
@@ -200,12 +286,14 @@ class _Photo extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppText.caption.copyWith(color: kInkSecondary),
-          ),
+          if (label case final text?) ...[
+            const SizedBox(height: 6),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: AppText.caption.copyWith(color: kInkSecondary),
+            ),
+          ],
         ],
       ),
     );

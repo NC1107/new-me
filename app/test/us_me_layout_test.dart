@@ -107,8 +107,11 @@ void _suite(double scale) {
     }
 
     Future<void> scrollAll(WidgetTester tester, TestApp app, String where) async {
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));
-      await app.settle();
+      // A lazy list learns its length as it builds, so one drag can stop short of the end.
+      for (var i = 0; i < 3; i++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));
+        await app.settle();
+      }
       noOverflow(tester, '$where scrolled');
     }
 

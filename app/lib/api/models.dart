@@ -16,6 +16,7 @@ export 'v6_models.dart';
 export 'v7_models.dart';
 export 'training_history_models.dart';
 export 'training_models.dart';
+export 'yoga_models.dart';
 export 'v8_models.dart';
 
 typedef Json = Map<String, dynamic>;

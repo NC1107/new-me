@@ -22,6 +22,7 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/offline_banner.dart';
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/segmented.dart';
 import '../../widgets/skeletons.dart';
 import '../log/log_chip.dart';
 import 'how_to_sheet.dart';
@@ -38,7 +39,7 @@ List<(String, List<Exercise>)> groupExercises(ExerciseCatalog catalog, String qu
   final q = query.trim().toLowerCase();
   final matching = [
     for (final e in catalog.exercises)
-      if (!e.stretch && (q.isEmpty || e.name.toLowerCase().contains(q))) e,
+      if (e.strength && (q.isEmpty || e.name.toLowerCase().contains(q))) e,
   ];
   final order = [...catalog.muscles, 'other'];
   return [
@@ -48,10 +49,34 @@ List<(String, List<Exercise>)> groupExercises(ExerciseCatalog catalog, String qu
   ];
 }
 
+/// Yoga poses whose name or Sanskrit name matches [query], grouped in the library's order.
+List<(String, List<Exercise>)> groupPoses(ExerciseCatalog catalog, String query) {
+  final q = query.trim().toLowerCase();
+  final matching = [
+    for (final e in catalog.exercises)
+      if (e.yoga &&
+          (q.isEmpty ||
+              e.name.toLowerCase().contains(q) ||
+              (e.pose?.sanskrit.toLowerCase().contains(q) ?? false)))
+        e,
+  ];
+  return [
+    for (final (group, label) in kPoseGroups)
+      if (matching.where((e) => e.pose?.group == group).toList() case final list
+          when list.isNotEmpty)
+        (label, list),
+  ];
+}
+
+/// Which part of the library is showing.
+enum LibraryFilter { strength, yoga }
+
 /// The exercise library: search, the catalog by muscle, custom exercises, and each exercise's
 /// sets and bests.
 class ExercisesPage extends ConsumerStatefulWidget {
-  const ExercisesPage({super.key});
+  const ExercisesPage({super.key, this.initialFilter = LibraryFilter.strength});
+
+  final LibraryFilter initialFilter;
 
   @override
   ConsumerState<ExercisesPage> createState() => _ExercisesPageState();
@@ -59,6 +84,7 @@ class ExercisesPage extends ConsumerStatefulWidget {
 
 class _ExercisesPageState extends ConsumerState<ExercisesPage> {
   final _search = TextEditingController();
+  late LibraryFilter _filter = widget.initialFilter;
 
   @override
   void dispose() {
@@ -86,16 +112,24 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
     return PageScaffold(
       title: 'Exercises',
       banner: offline == null ? null : OfflineBanner(info: offline),
-      footer: ChunkyButton.secondary(
-        label: 'Add your own',
-        icon: Icons.add_rounded,
-        onPressed: _addCustom,
-      ),
+      footer: _filter == LibraryFilter.yoga
+          ? null
+          : ChunkyButton.secondary(
+              label: 'Add your own',
+              icon: Icons.add_rounded,
+              onPressed: _addCustom,
+            ),
       children: [
+        Segmented<LibraryFilter>(
+          options: const [(LibraryFilter.strength, 'Strength'), (LibraryFilter.yoga, 'Yoga')],
+          selected: _filter,
+          onChanged: (f) => setState(() => _filter = f),
+        ),
+        const SizedBox(height: 12),
         AppTextField(
           controller: _search,
-          hint: 'Search exercises',
-          semanticLabel: 'Search exercises',
+          hint: _filter == LibraryFilter.yoga ? 'Search poses' : 'Search exercises',
+          semanticLabel: _filter == LibraryFilter.yoga ? 'Search poses' : 'Search exercises',
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
@@ -108,7 +142,15 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
           const SizedBox(height: 16),
         ],
         if (cached != null)
-          _Library(groups: groupExercises(cached.data, _search.text))
+          _Library(
+            groups: _filter == LibraryFilter.yoga
+                ? groupPoses(cached.data, _search.text)
+                : [
+                    for (final (muscle, list) in groupExercises(cached.data, _search.text))
+                      (muscleLabel(muscle), list),
+                  ],
+            empty: _filter == LibraryFilter.yoga ? 'No pose by that name' : null,
+          )
         else if (!value.hasError)
           const SkeletonBlock(height: 240, radius: kRadiusCard),
       ],
@@ -117,20 +159,21 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 }
 
 class _Library extends StatelessWidget {
-  const _Library({required this.groups});
+  const _Library({required this.groups, this.empty});
 
   final List<(String, List<Exercise>)> groups;
+  final String? empty;
 
   @override
   Widget build(BuildContext context) {
     if (groups.isEmpty) {
-      return const EmptyState(icon: Icons.search_off_rounded, title: 'No exercise by that name');
+      return EmptyState(icon: Icons.search_off_rounded, title: empty ?? 'No exercise by that name');
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (muscle, list) in groups) ...[
-          FieldLabel(muscleLabel(muscle)),
+        for (final (label, list) in groups) ...[
+          FieldLabel(label),
           AppCard(
             padding: EdgeInsets.zero,
             child: ClipRRect(
@@ -166,7 +209,12 @@ class _ExerciseRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = exercise;
-    final detail = e.best != null
+    final detail = e.yoga
+        ? [
+            if (e.pose?.sanskrit.isNotEmpty ?? false) e.pose!.sanskrit,
+            if (e.perSide) 'each side',
+          ].join(', ')
+        : e.best != null
         ? bestLabel(e.best!, context.units)
         : e.equipment.isEmpty
         ? (e.timed ? 'Hold, bodyweight' : 'Bodyweight')
@@ -275,6 +323,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
       );
     }
     final e = exercise;
+    if (e.yoga) {
+      return PageScaffold(
+        title: e.name,
+        subtitle: [
+          if (e.pose?.sanskrit.isNotEmpty ?? false) e.pose!.sanskrit,
+          if (e.perSide) 'each side',
+        ].join(', '),
+        children: [HowToDetails(exercise: e)],
+      );
+    }
     final sets = ref.watch(exerciseSetsProvider(e.key));
     final muscles = [...e.primaryMuscles, ...e.secondaryMuscles].map(muscleLabel).join(', ');
     return PageScaffold(

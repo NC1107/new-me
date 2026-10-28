@@ -49,5 +49,11 @@ done
 if [ "$#" -eq 0 ]; then
   set -- ./...
 fi
+# The DB-backed packages queue on one database, so on a busy machine a package can wait past
+# go test's 10 minute default without anything being wrong; an explicit -timeout still wins.
+case " $* " in
+  *" -timeout"*) ;;
+  *) set -- -timeout 30m "$@" ;;
+esac
 TESTDB_URL="postgres://newme:$PASSWORD@127.0.0.1:$PORT/newme_test?sslmode=disable" \
   go test -race "$@"

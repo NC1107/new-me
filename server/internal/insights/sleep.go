@@ -47,7 +47,8 @@ type NightBar struct {
 
 // Sleep is the sleep part of the insights answer.
 type Sleep struct {
-	Avg7Min          int        `json:"avg7Min"`
+	// Avg7Min is null when the last week has no nights, so nothing reads as zero sleep.
+	Avg7Min          *int       `json:"avg7Min"`
 	Avg30Min         int        `json:"avg30Min"`
 	TargetMin        int        `json:"targetMin"`
 	AvgBedtime       *string    `json:"avgBedtime"`
@@ -96,7 +97,7 @@ func ComputeSleep(in SleepInput) Sleep {
 	last7, last14, last30 := inWindow(7), inWindow(14), inWindow(30)
 
 	out := Sleep{
-		Avg7Min:   int(math.Round(mean(asleep(last7)))),
+		Avg7Min:   roundedMean(asleep(last7)),
 		Avg30Min:  int(math.Round(mean(asleep(last30)))),
 		TargetMin: in.TargetMin,
 		Nights:    make([]NightBar, 0, len(last14)),

@@ -33,7 +33,8 @@ func TestCatalogListsSeededExercisesWithVocabularies(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	got := h.get("/api/exercises", nick.Token).expect(http.StatusOK)
-	if got.length("exercises") < 35 || got.length("muscles") != 11 || got.length("equipment") != 8 {
+	if got.length("exercises") < 35 || got.length("muscles") != 11 || got.length("equipment") != 9 ||
+		got.str("equipment.7") != "low_bar" {
 		t.Fatalf("catalog = %d exercises, %d muscles, %d equipment", got.length("exercises"),
 			got.length("muscles"), got.length("equipment"))
 	}

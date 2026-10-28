@@ -245,3 +245,15 @@ Adding one would have meant a new fact type through `internal/plan`, `internal/c
 - The Exercises library keeps strength as the default side, so existing habits and tests are unchanged.
 - Three of the photos are not studio-quality or uniform: Cat-cow is two outdoor photos of one person, Legs up the wall is a top-down photo, and Happy baby is a cropped black and white photo.
   They were kept because they show the pose, and no better free photo was found.
+
+## Runner layout on a real phone
+
+- On a phone at least 740 points tall the pose photo sits full width under the name and timer, taking what the screen has to spare past the fixed parts (about 170 points on a 390x844 phone), so it can be read from the mat.
+- A shorter phone such as the iPhone SE keeps the photo as a thumbnail beside the name, which is what lets every step of every pose fit without scrolling there.
+- The timer is a 76 point ring with 32 point digits.
+
+## Training equipment
+
+- Exercise equipment follows each exercise's own steps: an inverted row hangs under a bar at waist height, so it needs the new "Low bar or rack (waist height)" option, which a full gym includes; a decline push-up puts the feet on a bench or box like a step-up does.
+- The bench option reads "Bench, box or sturdy chair", since a chair or a stair serves for all of those.
+- Plans and targets read in lifters' notation, "3 × 5–10" and "3 × 8 @ 22.5 kg", after "3 × 5 to 10 reps" read as 150 push-ups.

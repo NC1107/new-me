@@ -520,10 +520,11 @@ class _Running extends StatelessWidget {
         credits.length > 1 &&
         credits.every((c) => c.label == credits.first.label);
     final roomy = MediaQuery.textScalerOf(context).scale(16) <= 16 * 1.3;
+    final tall = MediaQuery.sizeOf(context).height >= 740;
     final next = _GuidedPageState.nextPhrase(hold, session.next);
 
     final timer = SizedBox(
-      width: 72,
+      width: 84,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -534,8 +535,8 @@ class _Running extends StatelessWidget {
             label: paused ? 'Paused' : (leadIn ? 'Get ready' : 'Hold timer running'),
             excludeSemantics: true,
             child: SizedBox(
-              width: 64,
-              height: 64,
+              width: 76,
+              height: 76,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -554,7 +555,7 @@ class _Running extends StatelessWidget {
                   MediaQuery.withNoTextScaling(
                     child: Text(
                       '$digits',
-                      style: AppText.tabular(AppText.display.copyWith(fontSize: 28, height: 1)),
+                      style: AppText.tabular(AppText.display.copyWith(fontSize: 32, height: 1)),
                     ),
                   ),
                 ],
@@ -600,10 +601,10 @@ class _Running extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (inlinePhoto) ...[
+            if (!tall && inlinePhoto) ...[
               PoseThumb(url: photos.first, name: e.name, credit: credits.firstOrNull, width: 96),
               const SizedBox(width: 12),
-            ] else if (photos.length > 1) ...[
+            ] else if (!tall && photos.length > 1) ...[
               for (final (i, url) in photos.indexed) ...[
                 if (i > 0) const SizedBox(width: 6),
                 PoseThumb(
@@ -640,6 +641,39 @@ class _Running extends StatelessWidget {
             ),
           ),
         ),
+        if (tall && photos.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          // The photo is what someone on the mat glances at, so on a tall phone it takes what
+          // the screen has to spare past the fixed parts; a short one keeps it beside the name.
+          LayoutBuilder(
+            builder: (context, box) {
+              final height = ((MediaQuery.sizeOf(context).height - 560) * 0.6).clamp(120.0, 190.0);
+              final gap = 8.0;
+              final each = inlinePhoto
+                  ? (height * 4 / 3).clamp(0.0, box.maxWidth)
+                  : ((box.maxWidth - gap * (photos.length - 1)) / photos.length).clamp(
+                      0.0,
+                      height * 4 / 3,
+                    );
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (i, url) in photos.indexed) ...[
+                    if (i > 0) SizedBox(width: gap),
+                    PoseThumb(
+                      url: url,
+                      name: e.name,
+                      credit: sharedCredit ? null : (i < credits.length ? credits[i] : null),
+                      openOnTap: i < credits.length ? credits[i] : null,
+                      width: each,
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
         if (sharedCredit) PhotoCredit(credit: credits.first, plural: true),
         if (e.steps.isNotEmpty) ...[
           const SizedBox(height: 10),

@@ -51,7 +51,8 @@ type Suggestion struct {
 
 // Steps is the step part of the insights answer.
 type Steps struct {
-	Avg7         int         `json:"avg7"`
+	// Avg7 is null when the last week has no readings, so nothing reads as zero steps.
+	Avg7         *int        `json:"avg7"`
 	Avg30        int         `json:"avg30"`
 	Median14     int         `json:"median14"`
 	Trend        string      `json:"trend"`
@@ -98,7 +99,7 @@ func ComputeSteps(in StepInput) Steps {
 	last30 := window(yesterday.AddDays(-29), yesterday)
 
 	out := Steps{
-		Avg7:     int(math.Round(mean(last7))),
+		Avg7:     roundedMean(last7),
 		Avg30:    int(math.Round(mean(last30))),
 		Median14: int(math.Round(median(last14))),
 		Trend:    trend(mean(last7), mean(prev7), len(last7) > 0 && len(prev7) > 0),
@@ -206,3 +207,12 @@ func median(v []float64) float64 {
 // AgeOn is the age by calendar year on the date, or nil when the birth year is unknown or in
 // the future.
 func AgeOn(today score.Date, birthYear *int) *int { return ageOn(today, birthYear) }
+
+// roundedMean is the whole-number mean, or nil for no values.
+func roundedMean(v []float64) *int {
+	if len(v) == 0 {
+		return nil
+	}
+	m := int(math.Round(mean(v)))
+	return &m
+}

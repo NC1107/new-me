@@ -45,7 +45,7 @@ Finder _button(String label) => find.text(label.toUpperCase());
 
 /// The big countdown number, not a step number that happens to read the same.
 Finder _digits(String value) => find.byWidgetPredicate(
-  (w) => w is Text && w.data == value && w.style?.fontSize == 28,
+  (w) => w is Text && w.data == value && w.style?.fontSize == 32,
   description: 'countdown $value',
 );
 

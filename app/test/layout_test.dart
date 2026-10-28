@@ -112,7 +112,7 @@ void _layoutSuite(double textScale) {
     for (final (label, name) in [
       ('Add entry for Get stronger', 'push-ups'),
       ('Add entry for Read 20 min or 15 pages', 'reading'),
-      ('Add entry for Yoga or stretching for 20 min', 'yoga'),
+      ('Add entry for Yoga or stretch 20 min', 'yoga'),
     ]) {
       await _tapOnToday(tester, app, _plus(label));
       noOverflow('log $name');

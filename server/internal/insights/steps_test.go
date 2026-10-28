@@ -94,7 +94,7 @@ func TestStepsWindowsAndAverages(t *testing.T) {
 	// Yesterday back 14 days: 7 days of 10000 then 7 days of 8000.
 	vals := append(repeat(10000, 7), repeat(8000, 7)...)
 	got := ComputeSteps(StepInput{Days: daysBack(vals...), Today: today, Goal: 9000})
-	if got.Avg7 != 10000 || got.Avg30 != 9000 || got.Median14 != 9000 {
+	if *got.Avg7 != 10000 || got.Avg30 != 9000 || got.Median14 != 9000 {
 		t.Fatalf("averages = %+v", got)
 	}
 	if got.Trend != TrendUp {
@@ -109,7 +109,7 @@ func TestStepsWindowsAndAverages(t *testing.T) {
 func TestStepsExcludeTodayFromAveragesButNotBestOrGoal(t *testing.T) {
 	days := append(daysBack(repeat(7000, 14)...), StepDay{Date: today, Steps: 20000})
 	got := ComputeSteps(StepInput{Days: days, Today: today, Goal: 7000})
-	if got.Avg7 != 7000 || got.Median14 != 7000 {
+	if *got.Avg7 != 7000 || got.Median14 != 7000 {
 		t.Fatalf("a partial today must not move the averages: %+v", got)
 	}
 	if got.Best == nil || got.Best.Date != today || got.Best.Value != 20000 {
@@ -206,7 +206,7 @@ func TestStepsBestDayAndEmpty(t *testing.T) {
 	}
 
 	empty := ComputeSteps(StepInput{Today: today, Goal: 8000})
-	if empty.Best != nil || empty.Suggestion != nil || empty.Avg7 != 0 || empty.Avg30 != 0 || empty.Median14 != 0 ||
+	if empty.Best != nil || empty.Suggestion != nil || empty.Avg7 != nil || empty.Avg30 != 0 || empty.Median14 != 0 ||
 		empty.Trend != TrendFlat || empty.Goal != 8000 {
 		t.Fatalf("empty = %+v", empty)
 	}
@@ -219,7 +219,7 @@ func TestStepsIgnoresZeroDaysAndOutOfWindow(t *testing.T) {
 		{Date: today.AddDays(-40), Steps: 90000},
 	}
 	got := ComputeSteps(StepInput{Days: days, Today: today})
-	if got.Avg7 != 6000 || got.Avg30 != 6000 || got.Best == nil || got.Best.Value != 6000 {
+	if *got.Avg7 != 6000 || got.Avg30 != 6000 || got.Best == nil || got.Best.Value != 6000 {
 		t.Fatalf("got %+v", got)
 	}
 }

@@ -43,7 +43,7 @@ String questTitle(Quest q, {Units units = Units.metric}) {
     'exercise' => 'Exercise ${t.formatted} min',
     'meals_logged' => 'Log ${t.formatted} ${t == 1 ? 'meal' : 'meals'}',
     'protein' => 'Eat ${t.formatted} g protein',
-    'yoga' => 'Yoga or stretching for ${t.formatted} ${shortUnit(q.unit)}',
+    'yoga' => 'Yoga or stretch ${t.formatted} ${shortUnit(q.unit)}',
     'water' => 'Drink ${units.volume(t)}',
     'sleep_regularity' => 'Keep a steady bedtime',
     'produce' => 'Eat ${t.formatted} a day',

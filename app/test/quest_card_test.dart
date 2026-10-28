@@ -149,10 +149,7 @@ void main() {
       expect(questTitle(q('exercise', {'unit': 'min', 'target': 30})), 'Exercise 30 min');
       expect(questTitle(q('meals_logged', {'unit': 'meals', 'target': 1})), 'Log 1 meal');
       expect(questTitle(q('protein', {'unit': 'g', 'target': 130})), 'Eat 130 g protein');
-      expect(
-        questTitle(q('yoga', {'unit': 'minutes', 'target': 15})),
-        'Yoga or stretching for 15 min',
-      );
+      expect(questTitle(q('yoga', {'unit': 'minutes', 'target': 15})), 'Yoga or stretch 15 min');
     });
 
     test('progress reads as a short phrase', () {

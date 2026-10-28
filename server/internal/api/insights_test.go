@@ -35,7 +35,7 @@ func TestInsightsForANewPersonAreEmptyNotErrors(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	got := h.get("/api/insights", nick.Token).expect(http.StatusOK)
-	if got.num("steps.avg7") != 0 || got.str("steps.trend") != "flat" || !got.isNull("steps.best") ||
+	if !got.isNull("steps.avg7") || !got.isNull("sleep.avg7Min") || got.str("steps.trend") != "flat" || !got.isNull("steps.best") ||
 		!got.isNull("steps.suggestion") || got.num("steps.goal") != 8000 || got.num("steps.daysAtGoal30") != 0 {
 		t.Fatalf("steps = %s", got.Body)
 	}

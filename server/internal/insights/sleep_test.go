@@ -37,7 +37,7 @@ func TestSleepAveragesCountOnlyNightsWithData(t *testing.T) {
 		night("2026-10-05", at("2026-10-04", 23, 0), 480),
 	}
 	got := ComputeSleep(SleepInput{Nights: nights, Today: today, TargetMin: 420, Loc: tz})
-	if got.Avg7Min != 390 || got.Avg30Min != 420 || got.TargetMin != 420 {
+	if *got.Avg7Min != 390 || got.Avg30Min != 420 || got.TargetMin != 420 {
 		t.Fatalf("averages = %+v", got)
 	}
 	if len(got.Nights) != 2 || got.Nights[0].Date != "2026-11-01" || got.Nights[1].Date != "2026-11-02" {
@@ -59,8 +59,8 @@ func TestSleepWindowsAreInclusiveOfTodayAndBounded(t *testing.T) {
 		t.Fatalf("14-night list = %+v", got.Nights)
 	}
 	// Last 7 nights are 400..406.
-	if got.Avg7Min != 403 {
-		t.Fatalf("avg7 = %d, want 403", got.Avg7Min)
+	if *got.Avg7Min != 403 {
+		t.Fatalf("avg7 = %d, want 403", *got.Avg7Min)
 	}
 	// Last 30 covers all 20 nights: mean of 400..419.
 	if got.Avg30Min != 410 {
@@ -154,7 +154,7 @@ func TestSleepStages7AreAveragedOverTheLastWeek(t *testing.T) {
 func TestSleepWithNoNights(t *testing.T) {
 	got := ComputeSleep(SleepInput{Today: today, TargetMin: 420, Loc: tz})
 	if got.AvgBedtime != nil || got.AvgWake != nil || got.Stages7 != nil || got.LastNight != nil ||
-		got.Avg7Min != 0 || got.BedtimeSpreadMin != 0 || got.Nights == nil || len(got.Nights) != 0 || got.TargetMin != 420 {
+		got.Avg7Min != nil || got.BedtimeSpreadMin != 0 || got.Nights == nil || len(got.Nights) != 0 || got.TargetMin != 420 {
 		t.Fatalf("empty = %+v", got)
 	}
 }

@@ -26,7 +26,7 @@ Nick's feedback after v0.11.0:
 - Gems are 3 a minute, capped at 100. The rate is the timed quests' own (yoga 50 for 20 minutes is 2.5, exercise 100 for 30 is 3.3, reading 100 for 20 is 5; the median is 3.3, rounded down to keep habits from outpaying quests).
 - When someone with a partner creates a habit or changes its minutes, the new gems are proposed: the habit keeps its current gems (a new one is only tracked) until the partner approves. Declining keeps the current gems. Without a partner the change applies at once.
 - The partner sees the proposal on Us and gets one push; approving or declining is one tap.
-- An approved change applies from the next day the habit is scored, like other template changes; finalized days keep their values.
+- An approved change rescores the days still open, today included; finalized days keep their values.
 - Existing habits keep their gems; their minutes are unset until edited.
 
 ## Yoga and stretching

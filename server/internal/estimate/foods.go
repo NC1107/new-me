@@ -2,6 +2,7 @@ package estimate
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 )
@@ -115,11 +116,21 @@ func (f *Foods) Lookup(ctx context.Context, it Item) (hit, bool, error) {
 		return hit{}, false, firstErr
 	}
 	if f.USDA != nil {
-		foods, err := cached(c, "usda|generic|"+strings.ToLower(query), func() ([]Food, error) {
+		reference, err := cached(c, "usda|generic|"+strings.ToLower(query), func() ([]Food, error) {
 			return f.USDA.Search(ctx, query, typeFoundation, typeSRLegacy)
 		})
-		if h, ok := try(foods, err); ok {
+		// FNDDS describes foods as people report eating them ("Milk, whole") with household
+		// measures such as fl oz, where the reference data often ranks a cheese or a yogurt
+		// made from the food above the food itself. It is searched on its own so the reference
+		// rows cannot crowd it out of one page of results.
+		survey, surveyErr := cached(c, "usda|survey|"+strings.ToLower(query), func() ([]Food, error) {
+			return f.USDA.Search(ctx, query, typeSurvey)
+		})
+		if h, ok := f.pick(ctx, it, append(append([]Food{}, reference...), survey...)); ok {
 			return h, true, nil
+		}
+		if firstErr == nil {
+			firstErr = errors.Join(err, surveyErr)
 		}
 	}
 	return hit{}, false, firstErr

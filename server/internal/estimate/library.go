@@ -264,7 +264,7 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 		return nil
 	}
 	it := Item{Food: q}
-	var generic, branded, off, survey []Food
+	var generic, asEaten, branded, off, survey []Food
 	var wg sync.WaitGroup
 	run := func(fn func()) {
 		wg.Add(1)
@@ -275,6 +275,9 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 	if f.USDA != nil {
 		run(func() {
 			generic, _ = cached(c, "usda|generic|"+key, func() ([]Food, error) { return f.USDA.Search(ctx, q, typeFoundation, typeSRLegacy) })
+		})
+		run(func() {
+			asEaten, _ = cached(c, "usda|survey|"+key, func() ([]Food, error) { return f.USDA.Search(ctx, q, typeSurvey) })
 		})
 		run(func() {
 			branded, _ = cached(c, "usda|branded|"+key, func() ([]Food, error) { return f.USDA.Search(ctx, q, typeBranded) })
@@ -314,7 +317,7 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 	if fd, ok := unspecifiedDefault(q, survey); ok {
 		out = append(out, fd)
 	}
-	for i, fd := range top(generic, 4) {
+	for i, fd := range top(append(generic, asEaten...), 4) {
 		if i < 3 && len(fd.Portions) == 0 && f.USDA != nil {
 			if ps, err := cached(c, "usda|portions|"+fd.ID, func() ([]Portion, error) { return f.USDA.Portions(ctx, fd.ID) }); err == nil {
 				fd.Portions = ps

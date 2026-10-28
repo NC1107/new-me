@@ -182,3 +182,116 @@ func TestRankingOnCapturedUSDAResults(t *testing.T) {
 		t.Fatal("another brand's beef stick must never answer for Chomps")
 	}
 }
+
+// Real USDA rows captured on 2026-10-28 for "whole milk", which picked mozzarella and logged
+// 12 oz of milk as 1017 kcal.
+func TestRankingFindsTheFoodNotWhatIsMadeFromIt(t *testing.T) {
+	milk := []Food{
+		{ID: "170845", Name: "Cheese, mozzarella, whole milk", DataType: typeSRLegacy},
+		{ID: "746766", Name: "Cheese, ricotta, whole milk", DataType: typeFoundation},
+		{ID: "172225", Name: "Milk, buttermilk, fluid, whole", DataType: typeSRLegacy},
+		{ID: "171284", Name: "Yogurt, plain, whole milk", DataType: typeSRLegacy},
+		{ID: "170876", Name: "Milk, dry, whole, with added vitamin D", DataType: typeSRLegacy},
+		{ID: "2705385", Name: "Milk, whole", DataType: typeSurvey},
+		{ID: "2705399", Name: "Milk, evaporated, whole", DataType: typeSurvey},
+		{ID: "2705467", Name: "Chocolate milk, whole", DataType: typeSurvey},
+	}
+	for _, q := range []string{"whole milk", "milk, whole"} {
+		if best, ok := pickBest(Item{Food: q}, milk); !ok || best.Food.ID != "2705385" {
+			t.Errorf("%q = %+v", q, best.Food)
+		}
+	}
+	if _, ok := pickBest(Item{Food: "whole milk"}, milk[:2]); ok {
+		t.Error("a cheese made from whole milk must never answer for milk")
+	}
+
+	avocado := []Food{
+		{ID: "2710208", Name: "Avocado dressing", DataType: typeSurvey},
+		{ID: "2709223", Name: "Avocado, raw", DataType: typeSurvey},
+		{ID: "171706", Name: "Avocados, raw, California", DataType: typeSRLegacy},
+	}
+	if best, _ := pickBest(Item{Food: "avocado"}, avocado); best.Food.ID != "2709223" {
+		t.Errorf("avocado = %+v", best.Food)
+	}
+
+	almonds := []Food{
+		{ID: "2707533", Name: "Almond butter", DataType: typeSurvey},
+		{ID: "2707490", Name: "Almonds, flavored", DataType: typeSurvey},
+		{ID: "2707485", Name: "Almonds, NFS", DataType: typeSurvey},
+		{ID: "170567", Name: "Nuts, almonds", DataType: typeSRLegacy},
+	}
+	if best, _ := pickBest(Item{Food: "almonds"}, almonds); best.Food.ID != "2707485" {
+		t.Errorf("almonds = %+v", best.Food)
+	}
+
+	skim := []Food{
+		{ID: "170887", Name: "Yogurt, plain, skim milk", DataType: typeSRLegacy},
+		{ID: "2705388", Name: "Milk, fat free (skim)", DataType: typeSurvey},
+	}
+	if best, _ := pickBest(Item{Food: "skim milk"}, skim); best.Food.ID != "2705388" {
+		t.Errorf("skim milk = %+v", best.Food)
+	}
+}
+
+func TestResolveConvertsVolumesThroughAVolumePortion(t *testing.T) {
+	per100 := &Nutrients{Kcal: 47}
+	juice := Food{Source: SourceUSDA, Per100g: per100, Portions: []Portion{{Label: "can (6 fl oz)", Grams: 187}, {Label: "cup (8 fl oz)", Grams: 249}}}
+	got, ok := resolve(juice, Item{Quantity: 8, Unit: "fl oz"})
+	if !ok || got.Grams < 248 || got.Grams > 250 || got.Basis != basisExact {
+		t.Fatalf("8 fl oz = %+v %v, want the cup's 249 g", got, ok)
+	}
+	if _, ok := resolve(Food{Source: SourceUSDA, Per100g: per100, Portions: []Portion{{Label: "medium", Grams: 180}}}, Item{Quantity: 8, Unit: "fl oz"}); ok {
+		t.Fatal("a volume must not take the weight of a measure that is not a volume")
+	}
+	butter := Food{Source: SourceUSDA, Per100g: per100, Portions: []Portion{{Label: `pat (1" sq, 1/3" high)`, Grams: 5}, {Label: "tbsp", Grams: 14.2}}}
+	if got, _ := resolve(butter, Item{Quantity: 1, Unit: "tbsp"}); got.Grams != 14.2 {
+		t.Fatalf("1 tbsp of butter = %v g", got.Grams)
+	}
+	avocado := Food{Name: "Avocado, raw", Source: SourceUSDA, DataType: typeSurvey, Per100g: per100,
+		Portions: []Portion{{Label: "slice", Grams: 15}, {Label: "fruit", Grams: 150}}}
+	if got, _ := resolve(avocado, Item{Quantity: 0.5, Unit: "whole"}); got.Grams != 75 || got.Basis != basisExact {
+		t.Fatalf("half an avocado = %+v", got)
+	}
+}
+
+// A sandwich logged without amounts once took a cup of mayonnaise, the food's first measure.
+func TestAServingWithoutALabelUsesTheSurveyUnspecifiedAmount(t *testing.T) {
+	per100 := &Nutrients{Kcal: 680}
+	mayo := Food{Name: "Mayonnaise, regular", Source: SourceUSDA, DataType: typeSurvey, Per100g: per100,
+		Portions: []Portion{{Label: "cup", Grams: 220}, {Label: "tablespoon", Grams: 13.8}}, UnspecifiedGrams: 9}
+	got, ok := resolve(mayo, Item{Quantity: 1, Unit: "serving"})
+	if !ok || got.Grams != 9 || got.Basis != basisGuess {
+		t.Fatalf("a serving of mayonnaise = %+v %v", got, ok)
+	}
+	reference := Food{Name: "Mayonnaise, made with tofu", Source: SourceUSDA, DataType: typeSRLegacy, Per100g: per100,
+		Portions: []Portion{{Label: "cup", Grams: 240}}}
+	if got, ok := resolve(reference, Item{Quantity: 1, Unit: "serving"}); ok {
+		t.Fatalf("a serving must not become the first measure: %+v", got)
+	}
+}
+
+func TestUSDAKeepsTheUnspecifiedAmountOutOfTheMeasures(t *testing.T) {
+	f := decodeUSDA(2710154, "Mayonnaise, regular", nutrients(680, 1, 0.6, 75, 0, srIDs))
+	f.DataType = typeSurvey
+	f.FoodMeasures = []usdaMeasure{
+		{GramWeight: 13.8, Modifier: "10200", Rank: 1, Text: "1 tablespoon"},
+		{GramWeight: 9, Modifier: "90000", Rank: 2, Text: "Quantity not specified"},
+	}
+	food, ok := f.toFood()
+	if !ok || food.UnspecifiedGrams != 9 || len(food.Portions) != 1 {
+		t.Fatalf("food = %+v", food)
+	}
+}
+
+func TestRankingPutsAStandInBelowTheFood(t *testing.T) {
+	sour := []Food{
+		{ID: "2705617", Name: "Sour cream, imitation", DataType: typeSurvey},
+		{ID: "2705610", Name: "Sour cream, regular", DataType: typeSurvey},
+	}
+	if best, _ := pickBest(Item{Food: "sour cream"}, sour); best.Food.ID != "2705610" {
+		t.Fatalf("sour cream = %+v", best.Food)
+	}
+	if best, _ := pickBest(Item{Food: "imitation sour cream"}, sour); best.Food.ID != "2705617" {
+		t.Fatalf("asked-for imitation = %+v", best.Food)
+	}
+}

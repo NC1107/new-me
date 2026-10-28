@@ -225,7 +225,7 @@ func (f usdaFood) portions() []Portion {
 		if amount <= 0 {
 			amount = 1
 		}
-		if label != "" && p.GramWeight > 0 {
+		if label != "" && p.GramWeight > 0 && !surveyOnlyMeasure.MatchString(label) {
 			out = append(out, Portion{Label: label, Grams: p.GramWeight / amount})
 		}
 	}
@@ -247,6 +247,17 @@ func (f usdaFood) portions() []Portion {
 	return out
 }
 
+func (f usdaFood) unspecifiedGrams() float64 {
+	for _, m := range f.FoodMeasures {
+		if quantityNotSpecified.MatchString(strings.TrimSpace(m.Text)) && m.GramWeight > 0 {
+			return m.GramWeight
+		}
+	}
+	return 0
+}
+
+var quantityNotSpecified = regexp.MustCompile(`(?i)^quantity not specified`)
+
 var measureCode = regexp.MustCompile(`^\d+$`)
 
 // surveyOnlyMeasure matches FNDDS measures that are coding aids rather than portions a person
@@ -260,9 +271,9 @@ func (f usdaFood) toFood() (Food, bool) {
 	}
 	food := Food{
 		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID),
-		Name:  tidyName(strings.TrimSpace(parenthetical.ReplaceAllString(f.Description, ""))),
+		Name:  tidyName(strings.TrimSpace(usdaNote.ReplaceAllString(f.Description, ""))),
 		Brand: tidyBrand(f.BrandName, f.BrandOwner), DataType: f.DataType,
-		Per100g: &per100, Portions: f.portions(),
+		Per100g: &per100, Portions: f.portions(), UnspecifiedGrams: f.unspecifiedGrams(),
 	}
 	switch strings.ToLower(f.ServingUnit) {
 	case "g", "grm":
@@ -280,9 +291,10 @@ func (f usdaFood) toFood() (Food, bool) {
 	return food, true
 }
 
-// parenthetical drops notes such as "(Includes foods for USDA's Food Distribution Program)", which
-// would count as extra words against an otherwise exact name.
-var parenthetical = regexp.MustCompile(`\s*\([^)]*\)`)
+// usdaNote drops notes such as "(Includes foods for USDA's Food Distribution Program)", which
+// would count as extra words against an otherwise exact name, and keeps descriptors such as the
+// "(2%)" in "Milk, reduced fat (2%)".
+var usdaNote = regexp.MustCompile(`(?i)\s*\(includes [^)]*\)`)
 
 func firstNonEmpty(ss ...string) string {
 	for _, s := range ss {

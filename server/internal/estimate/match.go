@@ -14,10 +14,11 @@ type match struct {
 
 func dataTypePreference(f Food) float64 {
 	switch f.DataType {
-	case typeFoundation, typeSRLegacy:
+	// FNDDS takes its nutrients from Foundation and SR Legacy foods or from recipes built on
+	// them (FNDDS 2021-2023 documentation, "Nutrient values"), so it is as trustworthy and only
+	// worded the way people eat.
+	case typeFoundation, typeSRLegacy, typeSurvey:
 		return 1
-	case typeSurvey:
-		return 0.5
 	case typeBranded:
 		return 0.2
 	}
@@ -53,6 +54,18 @@ func scoreFood(it Item, f Food) (match, bool) {
 	}
 
 	nameTokens := tokens(f.Name)
+	// USDA generic descriptions lead with the food itself and add descriptors after commas
+	// ("Milk, whole", "Cheese, mozzarella, whole milk"). A lead the person did not name is another
+	// food, whatever order they said their words in: "whole milk" is not mozzarella and "avocado"
+	// is not "Avocado dressing".
+	if isGenericUSDA(f) {
+		segments := strings.Split(f.Name, ",")
+		lead := tokens(segments[0])
+		if len(lead) == 0 || !containsAll(nameWant, lead) {
+			return match{}, false
+		}
+		nameTokens = specifiedTokens(segments)
+	}
 	precision := 0.0
 	if len(nameTokens) > 0 {
 		wantSet := toSet(append(append([]string{}, nameWant...), brand...))
@@ -64,9 +77,8 @@ func scoreFood(it Item, f Food) (match, bool) {
 		}
 		precision = float64(hits) / float64(len(nameTokens))
 	}
-	// Generic names lead with the food itself ("Apples, raw"), so "Rose-apples" is a different food.
 	first := 0.0
-	if len(nameTokens) > 0 && len(nameWant) > 0 && nameTokens[0] == nameWant[0] {
+	if isGenericUSDA(f) || (len(nameTokens) > 0 && len(nameWant) > 0 && nameTokens[0] == nameWant[0]) {
 		first = 1
 	}
 	last := dataTypePreference(f)
@@ -76,6 +88,27 @@ func scoreFood(it Item, f Food) (match, bool) {
 	return match{Food: f, Recall: recall, Score: 0.5*recall + 0.2*precision + 0.15*first + 0.15*last}, true
 }
 
+// specifiedTokens leaves out FNDDS "NFS" and "NS as to ..." descriptors, which say the detail was
+// not given (FNDDS 2021-2023 documentation, "NFS and NS food codes"), so they do not count as
+// words the person left out: "almonds" is exactly "Almonds, NFS".
+func specifiedTokens(segments []string) []string {
+	var out []string
+	for _, seg := range segments {
+		if !unspecifiedMarker.MatchString(strings.TrimSpace(seg)) {
+			out = append(out, tokens(seg)...)
+		}
+	}
+	return out
+}
+
+func isGenericUSDA(f Food) bool {
+	switch f.DataType {
+	case typeFoundation, typeSRLegacy, typeSurvey:
+		return true
+	}
+	return false
+}
+
 // pickBest returns the highest scoring acceptable candidate. Ties keep the earlier result,
 // which is the database's own relevance order.
 func pickBest(it Item, foods []Food) (match, bool) {
@@ -83,6 +116,7 @@ func pickBest(it Item, foods []Food) (match, bool) {
 	found := false
 	for _, f := range foods {
 		m, ok := scoreFood(it, f)
+		m.Score = searchScore(it, m)
 		if ok && (!found || m.Score > best.Score) {
 			best, found = m, true
 		}

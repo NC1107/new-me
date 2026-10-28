@@ -70,7 +70,7 @@ text is the person's own words for that item. label is a short log name of at mo
 food is the plain database-style name of the food without the brand and without the amount, for example "apple, raw" or "pepperoni pizza".
 brand is the manufacturer or restaurant when the person named a product (for example "a chomp meat stick" is brand "Chomps", food "original beef stick"), otherwise null. Correct obvious misspellings of brands.
 kind is "branded" when a specific product or brand is meant, otherwise "generic".
-quantity is a number of units (1 when the person says "a" or "an", 0.5 for half). unit is the unit as the person gave it ("medium", "stick", "cup", "g", "slice", "serving"); use "serving" when none is given.
+quantity is a number of units (1 when the person says "a" or "an", 0.5 for half). unit is the unit as the person gave it ("medium", "stick", "cup", "g", "slice", "serving"); use "serving" when none is given. For a drink, ounces mean fluid ounces, so write the unit as "fl oz".
 grams is the weight only when the person stated it explicitly, otherwise null. Never estimate a weight.`
 
 func splitSchema() map[string]any {

@@ -565,6 +565,7 @@ GET    /foods?q=&remote=1                               auth
   foods are the household's saved foods matching every word of q (prefix match), exact names first, then most used; an empty q lists the most used
   candidates are unsaved USDA and Open Food Facts results with id null, only when remote=1 and q is not empty
   a bare food name puts the FNDDS not-further-specified food first, named "<Food>, any kind" (design-v14)
+  candidates draw on Foundation, SR Legacy and FNDDS foods whose leading name segment the query names (design-v16)
 POST   /foods                                           auth
   req {name, servingText, kcal, brand?, servingGrams?, protein?, carbs?, fat?, fiber?, source?: default "manual", sourceId?, servings?: [{text, grams}]}
   201 Food; 200 with the saved copy when that source and sourceId are already saved

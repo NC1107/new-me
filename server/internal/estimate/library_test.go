@@ -2,6 +2,7 @@ package estimate
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -227,6 +228,9 @@ func TestSearchRemotePutsTheSurveyDefaultFirstForABareName(t *testing.T) {
 	fake.usda = func(query, dataType string) any {
 		switch dataType {
 		case "Survey (FNDDS)":
+			if query == "Chicken!" {
+				return obj{"foods": []obj{}}
+			}
 			if query != "chicken AND (NFS OR NS)" {
 				t.Errorf("survey query = %q", query)
 			}
@@ -238,7 +242,7 @@ func TestSearchRemotePutsTheSurveyDefaultFirstForABareName(t *testing.T) {
 		case "Branded":
 			return obj{"foods": []obj{}}
 		}
-		return obj{"foods": []obj{{"fdcId": 9, "description": "Chicken spread", "dataType": "SR Legacy",
+		return obj{"foods": []obj{{"fdcId": 9, "description": "Chicken, canned, meat only", "dataType": "SR Legacy",
 			"foodNutrients": []obj{{"nutrientId": 1008, "value": 158}}}}}
 	}
 	got := f2.SearchRemote(context.Background(), "Chicken!")
@@ -260,7 +264,7 @@ func TestSearchRemoteSkipsADefaultThatNamesAPreparation(t *testing.T) {
 			"foodNutrients": []obj{{"nutrientId": 1008, "value": 87}}}}}
 	}
 	for _, c := range f2.SearchRemote(context.Background(), "potato") {
-		if c.ID == "1" {
+		if strings.HasSuffix(c.Name, "any kind") {
 			t.Fatalf("a prepared default was promoted: %+v", c)
 		}
 	}

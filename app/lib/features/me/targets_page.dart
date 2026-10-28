@@ -169,10 +169,14 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
   }) {
     final targets = [for (final key in group.keys) ?report.target(key)];
     if (targets.isEmpty) return const [];
+    // A lone card's own name is the heading, so the group title would only repeat it.
+    final titled = targets.length > 1;
     return [
-      const SizedBox(height: 24),
-      Semantics(header: true, child: Text(group.title, style: AppText.headline)),
-      const SizedBox(height: 10),
+      SizedBox(height: titled ? 24 : kCardGap),
+      if (titled) ...[
+        Semantics(header: true, child: Text(group.title, style: AppText.headline)),
+        const SizedBox(height: 10),
+      ],
       for (final (i, t) in targets.indexed) ...[
         if (i > 0) const SizedBox(height: kCardGap),
         TargetCard(

@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
 import 'dart:async';
@@ -129,8 +130,7 @@ class AppleHealthPage extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'New Me never writes to Health. To change what it can read, open Health > '
-                'Sharing > Apps > New Me.',
+                'New Me never writes to Health.',
                 style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
               ),
             ),
@@ -222,32 +222,28 @@ class _HistoryCard extends ConsumerWidget {
   }
 }
 
-/// Apple Health shows its permission sheet once per kind of data, so this asks again for
-/// anything not yet decided and says where to turn on what was declined.
-class _AccessCard extends ConsumerWidget {
+/// Apple shows its permission sheet once per kind of data, so a later change happens in the
+/// Health app; this opens it and says where to go.
+class _AccessCard extends StatelessWidget {
   const _AccessCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => AppCard(
+  Widget build(BuildContext context) => AppCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('What New Me can read', style: AppText.headline.copyWith(fontSize: 18)),
         const SizedBox(height: 4),
         Text(
-          'Apple asks only once for each kind of data. To share something you turned off, open '
-          'Settings, then Health, then Data Access and Devices, then New Me, and turn on '
-          'All Categories.',
+          'Apple asks only once. To change it, open Health, tap your picture, then Apps, '
+          'New Me, and Turn On All.',
           style: AppText.label.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 12),
         ChunkyButton.secondary(
-          label: 'Ask again',
-          icon: Icons.favorite_border_rounded,
-          onPressed: () async {
-            await ref.read(healthSyncProvider.notifier).connect();
-            unawaited(ref.read(healthHistoryProvider.notifier).run());
-          },
+          label: 'Open Health',
+          icon: Icons.open_in_new_rounded,
+          onPressed: () => launchUrl(Uri.parse('x-apple-health://')),
         ),
       ],
     ),

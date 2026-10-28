@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"slices"
@@ -131,27 +132,31 @@ func (s *Server) handlePutHealthHistory(w http.ResponseWriter, r *http.Request) 
 	}
 	c := callerFrom(r)
 	now := s.now()
-	dates := make([]score.Date, len(req.Items))
-	var problems []itemError
-	for i, item := range req.Items {
+	// History is best effort: an odd reading from years ago (a bad weigh-in, a watch glitch) is
+	// skipped and counted rather than failing the whole batch and stopping the import.
+	type valid struct {
+		item healthItem
+		date score.Date
+	}
+	var keep []valid
+	skipped := map[string]int{}
+	for _, item := range req.Items {
 		date, problem := s.checkHistoryItem(c, item, now)
 		if problem != nil {
-			problem.Index = i
-			problems = append(problems, *problem)
+			skipped[item.Metric+": "+problem.Error]++
 			continue
 		}
-		dates[i] = date
+		keep = append(keep, valid{item, date})
 	}
-	if problems != nil {
-		fail(w, r, batchError(problems))
-		return
+	if len(skipped) > 0 {
+		log.Printf("[NEWME] health history for user %d skipped %v", c.user.ID, skipped)
 	}
 	stored := 0
 	ctx := r.Context()
 	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
-		for i, item := range req.Items {
-			added, err := db.InsertHealthHistory(ctx, tx, c.user.ID, dates[i], item.Metric, item.Value,
-				item.Source, item.MeasuredAt)
+		for _, k := range keep {
+			added, err := db.InsertHealthHistory(ctx, tx, c.user.ID, k.date, k.item.Metric, k.item.Value,
+				k.item.Source, k.item.MeasuredAt)
 			if err != nil {
 				return err
 			}
@@ -165,7 +170,8 @@ func (s *Server) handlePutHealthHistory(w http.ResponseWriter, r *http.Request) 
 		fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"stored": stored, "received": len(req.Items)})
+	writeJSON(w, http.StatusOK, map[string]any{"stored": stored, "received": len(req.Items),
+		"skipped": len(req.Items) - len(keep)})
 }
 
 // handlePutHealthDaily stores up to 50 daily readings in one transaction and returns the

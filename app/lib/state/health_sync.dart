@@ -140,6 +140,16 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     state = HealthSyncState(prompted: prompted, lastSyncedAt: lastSyncedAt);
     // Observers must be registered on every launch for HealthKit to keep delivering.
     if (prompted) unawaited(ref.read(backgroundHealthBridgeProvider).enable());
+    // A new version may read kinds of data that were never offered; Apple shows its sheet only
+    // for those, and nothing at all when every kind was already decided.
+    if (prompted && await LocalPrefs.healthAskedVersion() != kClientVersion) {
+      try {
+        await ref.read(healthSourceProvider).requestAccess();
+        await LocalPrefs.setHealthAskedVersion(kClientVersion);
+      } on Object catch (e) {
+        debugPrint('[NEWME] health access recheck failed: $e');
+      }
+    }
     await sync(SyncTrigger.start);
   }
 

@@ -59,7 +59,7 @@ void main() {
   });
 
   group('Targets page', () {
-    testWidgets('lists each group with value, setting, formula, label and the disclaimer once', (
+    testWidgets('lists each group with value and own setting, the working behind info', (
       tester,
     ) async {
       await _open(tester, _server());
@@ -70,48 +70,59 @@ void main() {
       expect(find.text('This is general guidance, not medical advice.'), findsOneWidget);
 
       expect(find.text('2,350 kcal'), findsOneWidget);
-      expect(find.text('Your setting: 2,200 kcal'), findsOneWidget);
-      expect(find.text('Your setting: not set'), findsWidgets);
+      expect(find.text('Yours: 2,200 kcal'), findsOneWidget);
       expect(find.text('7 h 30 min'), findsOneWidget);
-      expect(find.text('Your setting: 7 h'), findsOneWidget);
-      expect(find.textContaining('Mifflin-St Jeor: 10 x 82.4 kg'), findsOneWidget);
-      expect(
-        find.textContaining('Maintenance 2,750 kcal (our step-band convention)'),
-        findsOneWidget,
-      );
-
-      expect(find.text('Guideline'), findsWidgets);
-      expect(find.text('Convention'), findsOneWidget);
-      expect(find.text('Derivation'), findsWidgets);
+      expect(find.text('Yours: 7 h'), findsOneWidget);
+      expect(find.textContaining('Your setting'), findsNothing);
+      // Formulas, labels and sources wait behind the info button.
+      expect(find.textContaining('Mifflin-St Jeor'), findsNothing);
+      expect(find.text('Guideline'), findsNothing);
+      expect(find.textContaining('Sources'), findsNothing);
       expect(find.text('Needed to work these out'), findsNothing);
     });
 
-    testWidgets('sources are one tap away and show full citations', (tester) async {
+    testWidgets('the info button explains the formula, its label and full citations', (
+      tester,
+    ) async {
       final app = await _open(tester, _server());
-      expect(find.textContaining('Am J Clin Nutr 1990;51:241'), findsNothing);
 
-      await app.tap(find.bySemanticsLabel('Sources (2) for Resting energy'));
+      await app.tap(find.byTooltip('How Resting energy is worked out'));
+      expect(find.textContaining('Mifflin-St Jeor: 10 x 82.4 kg'), findsOneWidget);
+      expect(find.text('Guideline'), findsOneWidget);
+      expect(find.text('Sources'), findsOneWidget);
       expect(find.textContaining('Mifflin MD et al., Am J Clin Nutr 1990;51:241'), findsOneWidget);
       expect(find.textContaining('J Am Diet Assoc 2005;105:775'), findsOneWidget);
-
-      await app.tap(find.bySemanticsLabel('Sources (2) for Resting energy'));
-      expect(find.textContaining('Am J Clin Nutr 1990;51:241'), findsNothing);
     });
 
-    testWidgets('the log-based estimate is a secondary line under maintenance', (tester) async {
-      await _open(tester, _server());
+    testWidgets('the log-based estimate is explained with maintenance', (tester) async {
+      final app = await _open(tester, _server());
+      expect(find.textContaining('Estimated from your logs'), findsNothing);
+
+      await app.tap(find.byTooltip('How Maintenance is worked out'));
       expect(find.text('Estimated from your logs: 2,650 kcal'), findsOneWidget);
       expect(find.textContaining('logged intake is commonly under-reported'), findsOneWidget);
-      // The estimate is not a row of its own.
-      expect(find.text('Estimated from your logs'), findsNothing);
     });
 
     testWidgets('extra detail lines show bedtime, shortfall and the push-up max', (tester) async {
-      await _open(tester, _server());
+      final app = await _open(tester, _server());
+      Future<void> info(String name) async {
+        await app.tap(find.byTooltip('How $name is worked out'));
+      }
+
+      Future<void> close() async {
+        Navigator.of(tester.element(find.text('Sources').last)).pop();
+        await app.settle(4);
+      }
+
+      await info('Sleep');
       expect(find.text('Bedtime 11:15 PM (11:45 PM on days off)'), findsOneWidget);
       expect(find.text('Last 7 nights: 5 h short of your target'), findsOneWidget);
       expect(find.text('Sleep Regularity Index 82 of 100'), findsOneWidget);
+      await close();
+      await info('Push-ups');
       expect(find.text('Latest max test: 24 reps (70 to 80% is 17 to 19)'), findsOneWidget);
+      await close();
+      await info('Protein');
       expect(find.text('About 0.4 g/kg a meal, 33 g, across 4 meals.'), findsOneWidget);
     });
 
@@ -168,9 +179,10 @@ void main() {
       expect(find.text('Push-up max test'), findsOneWidget);
       // The rows explain themselves instead of showing a number.
       expect(find.text('Not available yet'), findsWidgets);
-      expect(find.textContaining('Needs height, sex to be filled in'), findsWidgets);
-      // The estimate has no value, so it shows no line.
-      expect(find.textContaining('Estimated from your logs'), findsNothing);
+      await app.tap(find.byTooltip('How Resting energy is worked out'));
+      expect(find.textContaining('Needs height, sex to be filled in'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Sources'))).pop();
+      await app.settle(4);
 
       await app.tap(find.bySemanticsLabel(RegExp('^Height\\.')));
       expect(find.byType(AboutYouPage), findsOneWidget);
@@ -227,27 +239,27 @@ void main() {
         ]);
 
         final list = find.byType(Scrollable).first;
-        var sourceRows = 0;
+        var infoButtons = 0;
         for (var i = 0; i < 40; i++) {
           expect(tester.takeException(), isNull, reason: 'while scrolling');
-          final rows = find.bySemanticsLabel(RegExp('^Sources'));
-          sourceRows += rows.evaluate().length;
+          final rows = find.byTooltip(RegExp('^How '));
+          infoButtons += rows.evaluate().length;
           if (rows.evaluate().isNotEmpty) _expectTapTargets(tester, [rows]);
           await tester.drag(list, const Offset(0, -400));
           await app.settle(2);
         }
-        expect(sourceRows, greaterThan(0));
+        expect(infoButtons, greaterThan(0));
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('an expanded source list and the Use buttons fit at scale 2.0', (tester) async {
+    testWidgets('an info sheet and the Use buttons fit at scale 2.0', (tester) async {
       final app = await _open(tester, _server(), scale: 2);
+      _expectTapTargets(tester, [_chip('Use this calories target')]);
 
-      await app.tap(find.text('Sources (2)').first);
+      await app.tap(find.byTooltip('How Resting energy is worked out'));
       expect(find.textContaining('Am J Clin Nutr 1990;51:241'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      _expectTapTargets(tester, [_chip('Use this calories target')]);
     });
   });
 

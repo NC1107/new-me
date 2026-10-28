@@ -4,6 +4,7 @@ import 'together_prefs.dart';
 
 const _kHistoryReached = 'health.history.reached';
 const _kHistoryDone = 'health.history.done';
+const _kHealthAskedVersion = 'health.askedVersion';
 const _kHealthPrompted = 'healthPrompted';
 const _kLastSyncedAt = 'lastSyncedAt';
 const _kLastLogKind = 'lastLogKind';
@@ -32,6 +33,13 @@ class LocalPrefs {
     await prefs.setString(_kHistoryReached, reached);
     await prefs.setBool(_kHistoryDone, done);
   }
+
+  /// The app version that last asked Apple Health for access.
+  static Future<String?> healthAskedVersion() async =>
+      (await SharedPreferences.getInstance()).getString(_kHealthAskedVersion);
+
+  static Future<void> setHealthAskedVersion(String version) async =>
+      (await SharedPreferences.getInstance()).setString(_kHealthAskedVersion, version);
 
   static Future<bool> healthPrompted() async =>
       (await SharedPreferences.getInstance()).getBool(_kHealthPrompted) ?? false;

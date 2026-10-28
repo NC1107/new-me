@@ -29,9 +29,14 @@ func TestHealthHistoryFillsClosedDaysWithoutRescoring(t *testing.T) {
 		t.Fatalf("history should show in trends: %s", trend.Body)
 	}
 
-	for _, date := range []string{"2026-11-02", "2016-01-01", "2026-11-05"} {
-		h.put("/api/health/history", nick.Token, obj{"items": []obj{item(date, 1000)}}).
-			expect(http.StatusUnprocessableEntity)
+	// Out-of-window days and impossible readings are skipped; the good ones in the batch land.
+	mixed := h.put("/api/health/history", nick.Token, obj{"items": []obj{
+		item("2026-11-02", 1000), item("2016-01-01", 1000), item("2026-11-05", 1000),
+		{"date": "2026-09-01", "metric": "resting_hr", "value": 3, "source": "healthkit", "measuredAt": at},
+		item("2026-09-01", 5000),
+	}}).expect(http.StatusOK)
+	if mixed.num("stored") != 1 || mixed.num("skipped") != 4 {
+		t.Fatalf("mixed batch = %s", mixed.Body)
 	}
 	if h.get("/api/today", nick.Token).expect(http.StatusOK).num("day.basePoints") != 0 {
 		t.Fatal("history must not touch today's score")

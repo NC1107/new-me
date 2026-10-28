@@ -23,7 +23,7 @@ String _unitWord(Quest q, num n) => switch (q.unit) {
 };
 
 /// The plain-words title: "Walk 8,000 steps", never "steps quest target".
-String questTitle(Quest q) {
+String questTitle(Quest q, {Units units = Units.metric}) {
   final t = q.target;
   return switch (q.key) {
     'steps' => 'Walk ${t.formatted} steps',
@@ -40,6 +40,7 @@ String questTitle(Quest q) {
     'meals_logged' => 'Log ${t.formatted} ${t == 1 ? 'meal' : 'meals'}',
     'protein' => 'Eat ${t.formatted} g protein',
     'yoga' => 'Yoga or stretching for ${t.formatted} ${shortUnit(q.unit)}',
+    'water' => 'Drink ${units.volume(t)}',
     _ => q.title,
   };
 }
@@ -52,7 +53,7 @@ bool titleStatesTarget(Quest q) => switch (q.key) {
 };
 
 /// "2,000 of 8,000 steps", or "12 min + 5 pages" for the two-part reading quest.
-String questProgress(Quest q) {
+String questProgress(Quest q, {Units units = Units.metric}) {
   final alt = q.unitAlt;
   if (alt != null) {
     final actualAlt = q.actualAlt ?? 0;
@@ -64,6 +65,9 @@ String questProgress(Quest q) {
         ? 'A strength session or ${q.target.formatted} push-ups'
         : '${q.actual.formatted} of ${q.target.formatted} push-ups, or a strength workout';
   }
+  if (q.key == 'water') {
+    return '${units.volumeNumber(q.actual)} of ${units.volume(q.target)}';
+  }
   if (q.key == 'sleep') {
     return q.actual == 0
         ? 'No sleep recorded'
@@ -74,8 +78,9 @@ String questProgress(Quest q) {
 
 /// The amount so far, beside the bar, for a card whose title already states the target:
 /// "4,321", "7 h 12 min", "25 min". Null when there is nothing yet.
-String? questActualLabel(Quest q) {
+String? questActualLabel(Quest q, {Units units = Units.metric}) {
   if (q.actual <= 0 || q.unitAlt != null) return null;
+  if (q.key == 'water') return units.volume(q.actual);
   return switch (q.unit) {
     'min' || 'minutes' => durationLabel(q.actual),
     'steps' => q.actual.formatted,

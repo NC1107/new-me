@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
+import '../../state/units.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -221,7 +222,7 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
             customSemanticsActions: {
               const CustomSemanticsAction(label: 'Delete'): () => _delete(entry, messenger),
             },
-            child: _EntryRow(entry: entry),
+            child: _EntryRow(entry: entry, units: ref.watch(unitsProvider)),
           ),
         );
       },
@@ -230,13 +231,14 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
 }
 
 class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.entry});
+  const _EntryRow({required this.entry, required this.units});
 
   final LogEntry entry;
+  final Units units;
 
   @override
   Widget build(BuildContext context) {
-    final (key, title, quantity, detail) = _describe(entry);
+    final (key, title, quantity, detail) = _describe(entry, units);
     final palette = questPalette(key);
     final time = formatClock(entry.loggedAt.toLocal());
     return Container(
@@ -273,21 +275,23 @@ class _EntryRow extends StatelessWidget {
     );
   }
 
-  (String, String, String, String?) _describe(LogEntry entry) => switch (entry) {
+  (String, String, String, String?) _describe(LogEntry entry, Units units) => switch (entry) {
     final ActivityLog a => (
       switch (a.type) {
         'pushups' => 'pushups',
         'reading' => 'reading',
         'other' => 'exercise',
+        'water' => 'water',
         _ => 'yoga',
       },
       switch (a.type) {
         'pushups' => 'Push-ups',
         'reading' => 'Reading',
         'other' => a.name.isEmpty ? 'Activity' : a.name,
+        'water' => 'Water',
         _ => 'Yoga',
       },
-      '${a.quantity.formatted} ${shortUnit(a.unit)}',
+      a.type == 'water' ? units.volume(a.quantity) : '${a.quantity.formatted} ${shortUnit(a.unit)}',
       a.type == 'other' && a.intensity != null ? '${a.intensity} effort' : null,
     ),
     final MealLog m => (

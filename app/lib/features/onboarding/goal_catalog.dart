@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../util/format.dart';
+import '../../util/units.dart';
 
 /// One named choice on a daily goal screen.
 class GoalOption {
@@ -20,6 +21,7 @@ class GoalSpec {
     required this.defaultValue,
     required this.label,
     this.note,
+    this.labelIn,
   });
 
   final String questKey;
@@ -32,6 +34,11 @@ class GoalSpec {
 
   /// "8,000 steps"
   final String Function(int value) label;
+
+  /// The same label in the person's units, for goals measured in volume or weight.
+  final String Function(int value, Units units)? labelIn;
+
+  String describe(int value, Units units) => labelIn?.call(value, units) ?? label(value);
 }
 
 String _minutes(int v) => '$v min';
@@ -100,6 +107,17 @@ final Map<String, GoalSpec> kGoalSpecs = {
       options: _named([390, 420, 450, 480]),
       defaultValue: 420,
       label: _sleep,
+    ),
+    GoalSpec(
+      questKey: 'water',
+      question: 'How much water a day?',
+      note:
+          'The National Academies figure for drinks is 3.0 L for men and 2.2 L for women. '
+          'Needs rise with activity and heat.',
+      options: _named([1500, 2200, 3000, 3500]),
+      defaultValue: 2200,
+      label: (v) => Units.metric.volume(v),
+      labelIn: (v, units) => units.volume(v),
     ),
     GoalSpec(
       questKey: 'yoga',

@@ -11,6 +11,7 @@ import '../../state/right_now.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
 import '../../state/training.dart';
+import '../../state/units.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -258,6 +259,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           QuestCard(
             key: ValueKey(q.key),
             quest: q,
+            units: ref.watch(unitsProvider),
             onTap: _openEntries,
             onAdd: kind == null ? null : () => showLogSheet(context, kind: kind),
             listeningMinutes: q.key == 'reading' ? today.listeningMinutes : 0,

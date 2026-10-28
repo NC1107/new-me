@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
 import '../../state/me.dart';
+import '../../state/units.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -18,9 +19,9 @@ import 'goal_picker_page.dart';
 import 'me_support.dart';
 
 /// "8,000 steps", or "20 min or 15 pages" for a quest with two ways to finish it.
-String goalLabel(QuestTemplate q, int target, int? alt) {
+String goalLabel(QuestTemplate q, int target, int? alt, {Units units = Units.metric}) {
   final spec = kGoalSpecs[q.key];
-  final main = spec?.label(target) ?? '$target ${q.unit}';
+  final main = spec?.describe(target, units) ?? '$target ${q.unit}';
   if (q.targetAlt == null || alt == null) return main;
   return '$main or $alt ${q.unitAlt ?? ''}'.trim();
 }
@@ -88,7 +89,12 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
   Future<void> _pick(QuestTemplate q) async {
     final choice = await pushPage<GoalChoice>(
       context,
-      GoalPickerPage(quest: q, target: _target[q.key]!, targetAlt: _alt[q.key]),
+      GoalPickerPage(
+        quest: q,
+        target: _target[q.key]!,
+        targetAlt: _alt[q.key],
+        units: ref.read(unitsProvider),
+      ),
     );
     if (choice == null || !mounted) return;
     setState(() {
@@ -138,7 +144,12 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
           _QuestGoalCard(
             quest: q,
             enabled: _enabled[q.key] ?? q.enabled,
-            label: goalLabel(q, _target[q.key] ?? q.target.round(), _alt[q.key]),
+            label: goalLabel(
+              q,
+              _target[q.key] ?? q.target.round(),
+              _alt[q.key],
+              units: ref.watch(unitsProvider),
+            ),
             editable: view.editable,
             onToggle: (on) => _toggle(q, on),
             onOpen: () => _pick(q),

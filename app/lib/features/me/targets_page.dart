@@ -8,6 +8,7 @@ import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/session.dart';
 import '../../state/targets.dart';
+import '../../state/units.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
@@ -71,7 +72,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
               appliedToast([
                 for (final t in targets)
                   if (applied.contains(t.key)) t,
-              ]),
+              ], units: ref.read(unitsProvider)),
             ),
           ),
         );
@@ -183,6 +184,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
           target: t,
           report: report,
           estimate: t.key == 'maintenance' && estimate?.value != null ? estimate : null,
+          units: ref.watch(unitsProvider),
           busy: !enabled || _busy.isNotEmpty,
           onUse: () => _apply([t]),
           onMaxTest: () => _fix(kPushupMaxItem),

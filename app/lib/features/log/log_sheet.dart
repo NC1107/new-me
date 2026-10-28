@@ -13,6 +13,7 @@ import '../../state/clock.dart';
 import '../../state/log_actions.dart';
 import '../../state/me.dart';
 import '../../state/today.dart';
+import '../../state/units.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -24,6 +25,7 @@ import '../../widgets/dialogs.dart';
 import 'activity_pane.dart';
 import 'log_kind.dart';
 import 'log_panes.dart';
+import 'water_pane.dart';
 
 /// Opens the log sheet for [kind], from a quest card's + or the food card.
 Future<void> showLogSheet(
@@ -329,6 +331,13 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                       choices: [15, 30, 45, 60, 75, 90],
                     ),
                   ],
+                  busy: _busy,
+                  failed: _error != null,
+                  onLog: _submit,
+                ),
+                LogKind.water => WaterPane(
+                  key: const ValueKey(LogKind.water),
+                  units: ref.watch(unitsProvider),
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,

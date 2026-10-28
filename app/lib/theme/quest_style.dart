@@ -13,6 +13,7 @@ AccentPalette questPalette(String key) => accentById(switch (key) {
   'protein' => 'teal',
   'sleep' => 'violet',
   'yoga' => 'teal',
+  'water' => 'sky',
   _ => 'sky',
 });
 
@@ -25,5 +26,6 @@ IconData questIcon(String key) => switch (key) {
   'protein' => Icons.egg_alt_rounded,
   'sleep' => Icons.bedtime_rounded,
   'yoga' => Icons.self_improvement_rounded,
+  'water' => Icons.water_drop_rounded,
   _ => Icons.star_rounded,
 };

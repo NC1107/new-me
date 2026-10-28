@@ -6,6 +6,9 @@ const kKgPerLb = 0.45359237;
 /// Centimetres in an inch (exact by definition).
 const kCmPerInch = 2.54;
 
+/// Millilitres in a US fluid ounce.
+const kMlPerFlOz = 29.5735;
+
 /// What a person reads: metric, or pounds, feet and inches. Everything is stored metric.
 enum Units {
   metric,
@@ -34,6 +37,19 @@ enum Units {
     final v = isImperial ? (weightIn(kg) * 2).round() / 2 : _round(kg, 1);
     return '${v.formatted} $weightUnit';
   }
+
+  /// "L" or "fl oz".
+  String get volumeUnit => isImperial ? 'fl oz' : 'L';
+
+  /// Drinks as the bare number in this unit's volume: "1.2" litres, or "40" US fluid ounces.
+  String volumeNumber(num ml) =>
+      isImperial ? '${(ml / kMlPerFlOz).round()}' : (ml / 1000).toStringAsFixed(1);
+
+  /// "3.0 L" or "101 fl oz", from millilitres.
+  String volume(num ml) => '${volumeNumber(ml)} $volumeUnit';
+
+  /// Millilitres for a drink typed in "ml" for metric or "fl oz" for imperial.
+  int mlFromDrink(num amount) => isImperial ? (amount * kMlPerFlOz).round() : amount.round();
 
   /// "5 ft 10 in" or "178 cm".
   String height(double cm) {

@@ -19,6 +19,7 @@ class TargetCard extends StatelessWidget {
     required this.onUse,
     required this.onMaxTest,
     this.estimate,
+    this.units = Units.metric,
   });
 
   final Target target;
@@ -29,6 +30,9 @@ class TargetCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onUse;
   final VoidCallback onMaxTest;
+
+  /// How water is read.
+  final Units units;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +73,7 @@ class TargetCard extends StatelessWidget {
                 Flexible(
                   child: value != null
                       ? Text(
-                          formatTargetValue(value, t.unit),
+                          formatTargetValue(value, t.unit, units: units),
                           style: AppText.tabular(AppText.title.copyWith(fontSize: 26)),
                         )
                       : Text('Not available yet', style: AppText.body.copyWith(color: kInkMuted)),
@@ -111,7 +115,7 @@ class TargetCard extends StatelessWidget {
                     ),
                   if (differs)
                     Text(
-                      'Yours: ${formatTargetValue(t.current!, t.unit)}',
+                      'Yours: ${formatTargetValue(t.current!, t.unit, units: units)}',
                       style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
                     ),
                 ],

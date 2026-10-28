@@ -29,6 +29,7 @@ class QuestCard extends StatefulWidget {
     this.onAdd,
     this.listeningMinutes = 0,
     this.listeningNote,
+    this.units = Units.metric,
   });
 
   final Quest quest;
@@ -42,6 +43,9 @@ class QuestCard extends StatefulWidget {
 
   /// "Listening synced 3 min ago"; only passed on the reading quest of a linked person.
   final String? listeningNote;
+
+  /// How water is read: litres, or US fluid ounces.
+  final Units units;
 
   @override
   State<QuestCard> createState() => _QuestCardState();
@@ -145,7 +149,7 @@ class _QuestCardState extends State<QuestCard> {
                     children: [
                       Expanded(
                         child: Text(
-                          questTitle(q),
+                          questTitle(q, units: widget.units),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.headline.copyWith(fontSize: 17),
@@ -160,7 +164,7 @@ class _QuestCardState extends State<QuestCard> {
                             icon: Icons.add_rounded,
                             semanticLabel: q.key == 'exercise'
                                 ? 'Log an activity'
-                                : 'Add entry for ${questTitle(q)}',
+                                : 'Add entry for ${questTitle(q, units: widget.units)}',
                             onPressed: widget.onAdd,
                           ),
                         ),
@@ -169,10 +173,13 @@ class _QuestCardState extends State<QuestCard> {
                 ),
                 if (titleStatesTarget(q))
                   // Spoken only: the title and bar show the target, a screen reader still hears progress.
-                  Semantics(label: questProgress(q), child: const SizedBox.shrink())
+                  Semantics(
+                    label: questProgress(q, units: widget.units),
+                    child: const SizedBox.shrink(),
+                  )
                 else
                   Text(
-                    questProgress(q),
+                    questProgress(q, units: widget.units),
                     style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
                   ),
                 if (q.doneBy case final by?)
@@ -193,7 +200,7 @@ class _QuestCardState extends State<QuestCard> {
                 _BarWithAmount(
                   value: questFraction(q),
                   color: q.done ? person.fill : category.fill,
-                  amount: titleStatesTarget(q) ? questActualLabel(q) : null,
+                  amount: titleStatesTarget(q) ? questActualLabel(q, units: widget.units) : null,
                 ),
               ],
             ),

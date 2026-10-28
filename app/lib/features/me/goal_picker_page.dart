@@ -24,11 +24,15 @@ class GoalPickerPage extends StatefulWidget {
     required this.quest,
     required this.target,
     required this.targetAlt,
+    this.units = Units.metric,
   });
 
   final QuestTemplate quest;
   final int target;
   final int? targetAlt;
+
+  /// How a volume goal is read and typed.
+  final Units units;
 
   @override
   State<GoalPickerPage> createState() => _GoalPickerPageState();
@@ -43,9 +47,22 @@ class _GoalPickerPageState extends State<GoalPickerPage> {
 
   GoalSpec? get _spec => kGoalSpecs[widget.quest.key];
 
+  bool get _isWater => widget.quest.key == 'water';
+
+  /// The goal as typed: millilitres, or US fluid ounces for an imperial person's water.
+  String _fieldText(int value) => _isWater && widget.units.isImperial
+      ? (value / kMlPerFlOz).round().toString()
+      : value.toString();
+
+  int? _valueFrom(String text) {
+    final typed = int.tryParse(text);
+    if (typed == null || !_isWater) return typed;
+    return widget.units.mlFromDrink(typed);
+  }
+
   String _customText() {
     final onPreset = _spec?.options.any((o) => o.value == widget.target) ?? false;
-    return onPreset ? '' : widget.target.toString();
+    return onPreset ? '' : _fieldText(widget.target);
   }
 
   @override
@@ -57,7 +74,10 @@ class _GoalPickerPageState extends State<GoalPickerPage> {
 
   int? get _altValue => int.tryParse(_alt.text);
 
-  bool get _valid => (_value ?? 0) > 0 && (widget.quest.targetAlt == null || (_altValue ?? 0) > 0);
+  bool get _valid =>
+      (_value ?? 0) > 0 &&
+      (!_isWater || (_value! >= 250 && _value! <= 6000)) &&
+      (widget.quest.targetAlt == null || (_altValue ?? 0) > 0);
 
   void _done() => Navigator.of(context).pop(GoalChoice(_value!, _altValue));
 
@@ -75,7 +95,11 @@ class _GoalPickerPageState extends State<GoalPickerPage> {
             palette: palette,
             presets: [
               for (final o in spec.options)
-                Preset(name: o.name, valueLabel: spec.label(o.value), value: o.value),
+                Preset(
+                  name: o.name,
+                  valueLabel: spec.describe(o.value, widget.units),
+                  value: o.value,
+                ),
             ],
             selected: spec.options.any((o) => o.value == _value) ? _value : null,
             onChanged: (v) => setState(() {
@@ -89,8 +113,8 @@ class _GoalPickerPageState extends State<GoalPickerPage> {
           controller: _custom,
           label: spec == null ? 'Your goal' : 'Or type your own',
           hint: spec == null ? widget.target.toString() : 'Your number',
-          unit: shortUnit(q.unit),
-          onChanged: () => setState(() => _value = int.tryParse(_custom.text) ?? _value),
+          unit: _isWater && widget.units.isImperial ? 'fl oz' : shortUnit(q.unit),
+          onChanged: () => setState(() => _value = _valueFrom(_custom.text) ?? _value),
         ),
         if (q.targetAlt != null) ...[
           const SizedBox(height: 16),

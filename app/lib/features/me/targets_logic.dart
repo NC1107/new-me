@@ -18,6 +18,7 @@ const kTargetGroups = [
   TargetGroup('Activity', ['activity']),
   TargetGroup('Steps', ['steps']),
   TargetGroup('Push-ups', ['pushups']),
+  TargetGroup('Water', ['water']),
 ];
 
 /// The estimate from logs is a secondary line under maintenance, not a row of its own.
@@ -37,13 +38,15 @@ const _names = {
   'activity': 'Activity',
   'steps': 'Steps',
   'pushups': 'Push-ups',
+  'water': 'Water',
 };
 
 String targetName(String key) => _names[key] ?? key;
 
-/// "2,300 kcal", "7 h 30 min" for minutes, "150 min a week".
-String formatTargetValue(int value, String unit) {
+/// "2,300 kcal", "7 h 30 min" for minutes, "150 min a week", "2.2 L" or "74 fl oz" for water.
+String formatTargetValue(int value, String unit, {Units units = Units.metric}) {
   if (unit == 'min') return formatDuration(value);
+  if (unit == 'ml') return units.volume(value);
   return unit.isEmpty ? value.formatted : '${value.formatted} $unit';
 }
 
@@ -129,10 +132,11 @@ List<Target> usable(TargetsReport report) => [
 ];
 
 /// What the toast says after applying. Open days are scored first, so a change starts tomorrow.
-String appliedToast(List<Target> applied) {
+String appliedToast(List<Target> applied, {Units units = Units.metric}) {
   if (applied.isEmpty) return 'Nothing to change';
   final parts = [
-    for (final t in applied) '${targetName(t.key)} ${formatTargetValue(t.value!, t.unit)}',
+    for (final t in applied)
+      '${targetName(t.key)} ${formatTargetValue(t.value!, t.unit, units: units)}',
   ];
   return 'Starts tomorrow: ${parts.join(', ')}';
 }
@@ -185,6 +189,8 @@ List<String> detailLines(Target t) {
         }
         add(str(reg['note']));
       }
+    case 'water':
+      add(str(d['note']));
     case 'pushups':
       final range = d['rangePerSet'];
       final max = d['latestMax'];

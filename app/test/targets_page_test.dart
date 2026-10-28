@@ -10,7 +10,7 @@ import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/me/profile_page.dart';
 import 'package:newme/features/me/targets_page.dart';
 import 'package:newme/features/setup/about_you_page.dart';
-import 'package:newme/features/today/food_card.dart';
+import 'package:newme/features/food/food_card.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
 
@@ -264,12 +264,12 @@ void main() {
   });
 
   group('Me', () {
-    testWidgets('Targets and My foods are always listed, and Targets opens the page', (
+    testWidgets('Targets is always listed and opens the page; food rows moved to Food', (
       tester,
     ) async {
       final app = TestApp(tester, _server(), surfaceHeight: 2400);
       await app.pump(const MeScreen());
-      expect(find.text('My foods'), findsOneWidget);
+      expect(find.text('My foods'), findsNothing);
       expect(find.text('Targets'), findsOneWidget);
       await app.tap(find.text('Targets'));
       expect(find.byType(TargetsPage), findsOneWidget);
@@ -426,23 +426,23 @@ void main() {
     });
   });
 
-  group('Today food card', () {
-    Widget card({Targets targets = const Targets(kcal: 2200, protein: 150, carbs: 250, fat: 70)}) =>
-        SingleChildScrollView(
-          child: FoodCard(
-            food: Food(
-              kcal: 900,
-              protein: 160,
-              carbs: 100,
-              fat: 20.4,
-              fiber: 5,
-              burned: 200,
-              targets: targets,
-            ),
-            onTap: () {},
-            onSetTargets: () {},
-          ),
-        );
+  group('Food card', () {
+    Widget card({
+      Targets targets = const Targets(kcal: 2200, protein: 150, carbs: 250, fat: 70),
+      num burned = 0,
+    }) => SingleChildScrollView(
+      child: FoodCard(
+        food: Food(
+          kcal: 900,
+          protein: 160,
+          carbs: 100,
+          fat: 20.4,
+          fiber: 5,
+          burned: burned,
+          targets: targets,
+        ),
+      ),
+    );
 
     testWidgets('shows what is left of each macro and what is over', (tester) async {
       final app = TestApp(tester, _server());
@@ -452,18 +452,50 @@ void main() {
       expect(find.text('10 g over'), findsOneWidget);
     });
 
+    testWidgets('the header says what was eaten of the target and how much is left', (
+      tester,
+    ) async {
+      final app = TestApp(tester, _server());
+      await app.pump(card());
+      expect(find.text('900 of 2,200 kcal'), findsOneWidget);
+      expect(find.text('1,300 left'), findsOneWidget);
+    });
+
+    testWidgets('over the calorie target the header says how far over', (tester) async {
+      final app = TestApp(tester, _server());
+      await app.pump(card(targets: const Targets(kcal: 800)));
+      expect(find.text('900 of 800 kcal'), findsOneWidget);
+      expect(find.text('100 over'), findsOneWidget);
+    });
+
+    testWidgets('without a calorie target the header is just the total', (tester) async {
+      final app = TestApp(tester, _server());
+      await app.pump(card(targets: const Targets()));
+      expect(find.text('900 kcal'), findsOneWidget);
+      expect(find.textContaining(' left'), findsNothing);
+    });
+
     testWidgets('a macro without a target shows no remainder', (tester) async {
       final app = TestApp(tester, _server());
       await app.pump(card(targets: const Targets(kcal: 2200)));
-      expect(find.textContaining(' left'), findsNothing);
-      expect(find.textContaining(' over'), findsNothing);
+      expect(find.textContaining(' g left'), findsNothing);
+      expect(find.textContaining(' g over'), findsNothing);
+    });
+
+    testWidgets('the activity line shows only when something was burned', (tester) async {
+      final app = TestApp(tester, _server());
+      await app.pump(card());
+      expect(find.textContaining('burned in activity'), findsNothing);
+
+      await app.pump(card(burned: 200), key: UniqueKey());
+      expect(find.text('200 kcal burned in activity'), findsOneWidget);
     });
 
     testWidgets('fits at text scale 2.0', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final app = TestApp(tester, _server());
-      await app.pump(card());
+      await app.pump(card(burned: 200));
       expect(tester.takeException(), isNull);
       expect(find.text('10 g over'), findsOneWidget);
     });

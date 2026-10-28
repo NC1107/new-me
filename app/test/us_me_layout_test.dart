@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/food/food_screen.dart';
 import 'package:newme/features/health/health_screen.dart';
 import 'package:newme/features/me/me_screen.dart';
+import 'package:newme/features/training/train_screen.dart';
 import 'package:newme/widgets/mascot.dart';
 
 import 'fixtures.dart';
@@ -12,6 +17,10 @@ Map<String, dynamic> _withHighlights(Map<String, dynamic> user) => {
   ...user,
   'highlights': {'steps': 12345, 'exercise_minutes': 95, 'sleep_minutes': 505},
 };
+
+/// A recorded server response from test/contract_v9.
+Map<String, dynamic> _contract(String name) =>
+    jsonDecode(File('test/contract_v9/$name.json').readAsStringSync()) as Map<String, dynamic>;
 
 StubAdapter _server({bool paired = true}) {
   final me = meJson(admin: true, yoga: true);
@@ -122,14 +131,7 @@ void _suite(double scale) {
       await app.pump(const MeScreen(), tall: false);
       noOverflow(tester, 'Me');
 
-      for (final row in [
-        'Daily goals',
-        'Food targets',
-        'Profile',
-        'Time zone',
-        'Apple Health',
-        'Pairing code',
-      ]) {
+      for (final row in ['Daily goals', 'Profile', 'Time zone', 'Apple Health', 'Pairing code']) {
         await app.tap(find.text(row));
         noOverflow(tester, row);
         if (row == 'Daily goals') {
@@ -147,6 +149,44 @@ void _suite(double scale) {
         await app.tap(find.byTooltip('Back'));
       }
       await scrollAll(tester, app, 'Me');
+    });
+
+    testWidgets('Food and every page behind it', (tester) async {
+      configure(tester);
+      final app = TestApp(tester, _server());
+      await app.pump(const FoodScreen(), tall: false);
+      noOverflow(tester, 'Food');
+      await scrollAll(tester, app, 'Food');
+
+      for (final row in ['Food targets', 'My foods']) {
+        await app.tap(find.text(row));
+        noOverflow(tester, row);
+        await app.tap(find.byTooltip('Back'));
+      }
+    });
+
+    testWidgets('Train and every page behind it', (tester) async {
+      configure(tester);
+      final server = _server();
+      for (final (route, file) in [
+        ('GET /api/training/today', 'training_today'),
+        ('GET /api/exercises', 'exercises'),
+        ('GET /api/training/profile', 'training_profile'),
+        ('GET /api/training/progress', 'training_progress'),
+        ('GET /api/sets', 'sets'),
+      ]) {
+        server.on(route, StubResponse(200, _contract(file)));
+      }
+      final app = TestApp(tester, server);
+      await app.pump(const TrainScreen(), tall: false);
+      noOverflow(tester, 'Train');
+      await scrollAll(tester, app, 'Train');
+
+      for (final row in ['Exercises and sets', 'Weekly sets']) {
+        await app.tap(find.text(row));
+        noOverflow(tester, row);
+        await app.tap(find.byTooltip('Back'));
+      }
     });
 
     testWidgets('Health list and a metric chart', (tester) async {

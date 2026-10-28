@@ -29,8 +29,6 @@ import '../insights/insights_screen.dart';
 import 'apple_health_page.dart';
 import 'audiobookshelf_page.dart';
 import 'daily_goals_page.dart';
-import 'food_targets_page.dart';
-import 'my_foods_page.dart';
 import '../streaks/away_page.dart';
 import 'pairing_page.dart';
 import 'profile_page.dart';
@@ -38,7 +36,6 @@ import 'reminders_page.dart';
 import 'schedule_page.dart';
 import '../setup/about_you_page.dart';
 import '../together/notifications_page.dart';
-import '../training/training_page.dart';
 import 'settings_row.dart';
 import 'targets_page.dart';
 import 'timezone_page.dart';
@@ -84,7 +81,6 @@ class _MeBody extends ConsumerWidget {
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
     final away = ref.watch(todayProvider.select((t) => t.value?.data.away)) ?? const AwayState();
-    final kcal = me.targets.kcal;
     final accent = accentById(me.user.color);
     final synced = health.lastSyncedAt;
     return ListView(
@@ -114,13 +110,6 @@ class _MeBody extends ConsumerWidget {
               onTap: () => pushPage(context, const HabitsPage()),
             ),
             SettingsRow(
-              icon: Icons.fitness_center_rounded,
-              palette: accentById('rose'),
-              title: 'Training',
-              subtitle: 'Your plan, exercises and sets',
-              onTap: () => pushPage(context, const TrainingPage()),
-            ),
-            SettingsRow(
               icon: Icons.insights_rounded,
               palette: accentById('sky'),
               title: 'Insights',
@@ -128,25 +117,11 @@ class _MeBody extends ConsumerWidget {
               onTap: () => openInsights(context),
             ),
             SettingsRow(
-              icon: Icons.restaurant_rounded,
-              palette: accentById('green'),
-              title: 'Food targets',
-              subtitle: kcal == null ? 'Not set' : '${kcal.formatted} kcal a day',
-              onTap: () => pushPage(context, const FoodTargetsPage()),
-            ),
-            SettingsRow(
               icon: Icons.science_rounded,
               palette: accentById('green'),
               title: 'Targets',
               subtitle: 'Calories, macros, sleep and more, with sources',
               onTap: () => pushPage(context, const TargetsPage()),
-            ),
-            SettingsRow(
-              icon: Icons.bookmarks_rounded,
-              palette: accentById('green'),
-              title: 'My foods',
-              subtitle: 'Saved foods with exact numbers',
-              onTap: () => pushPage(context, const MyFoodsPage()),
             ),
             SettingsRow(
               icon: Icons.person_rounded,

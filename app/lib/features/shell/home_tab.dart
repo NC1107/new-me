@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/session.dart';
 
-enum HomeTab { today, board, me }
+enum HomeTab { today, food, train, board, me }
 
 /// The selected bottom tab, a provider so a screen can send the user to another one.
 class HomeTabController extends Notifier<HomeTab> {

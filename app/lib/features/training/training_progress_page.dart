@@ -82,8 +82,13 @@ class _Body extends StatelessWidget {
               ExcludeSemantics(
                 child: Row(
                   children: [
-                    const Spacer(),
-                    Text('3 weeks before', style: AppText.caption.copyWith(color: kInkMuted)),
+                    Expanded(
+                      child: Text(
+                        '3 weeks before',
+                        textAlign: TextAlign.right,
+                        style: AppText.caption.copyWith(color: kInkMuted),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 64,
@@ -146,9 +151,12 @@ class _MuscleRow extends StatelessWidget {
               Expanded(
                 child: Text(muscleLabel(volume.muscle), style: AppText.label.copyWith(color: kInk)),
               ),
-              Text(
-                earlier.join('   '),
-                style: AppText.tabular(AppText.caption.copyWith(color: kInkMuted)),
+              Flexible(
+                child: Text(
+                  earlier.join('   '),
+                  textAlign: TextAlign.right,
+                  style: AppText.tabular(AppText.caption.copyWith(color: kInkMuted)),
+                ),
               ),
               const SizedBox(width: 12),
               SizedBox(

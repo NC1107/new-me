@@ -5,20 +5,15 @@ import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
-import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/chunky_icon_button.dart';
-import '../../widgets/pressable.dart';
 import '../../widgets/thick_progress_bar.dart';
-import 'mini_bar.dart';
+import '../today/mini_bar.dart';
 
-/// Calories and macros eaten today. Not a quest and never scored; tapping it logs a meal.
+/// Calories and macros eaten today, at the top of the Food tab. Not a quest and never scored.
 class FoodCard extends StatelessWidget {
-  const FoodCard({super.key, required this.food, required this.onTap, required this.onSetTargets});
+  const FoodCard({super.key, required this.food});
 
   final Food food;
-  final VoidCallback onTap;
-  final VoidCallback onSetTargets;
 
   @override
   Widget build(BuildContext context) {
@@ -30,44 +25,32 @@ class FoodCard extends StatelessWidget {
       _Macro('Carbs', food.carbs, food.targets.carbs, questPalette('pushups').fill),
       _Macro('Fat', food.fat, food.targets.fat, questPalette('exercise').fill),
     ];
+    final left = kcalTarget == null ? null : kcalTarget - food.kcal;
 
     return AppCard(
-      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-                child: Icon(questIcon('meals_logged'), size: 26, color: palette.lip),
-              ),
-              const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Food', style: AppText.headline.copyWith(fontSize: 17)),
-                    Text(
-                      kcalTarget == null
-                          ? '${food.kcal.formatted} kcal'
-                          : '${food.kcal.formatted} of ${kcalTarget.formatted} kcal',
-                      style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
-                    ),
-                  ],
+                child: Text(
+                  kcalTarget == null
+                      ? '${food.kcal.formatted} kcal'
+                      : '${food.kcal.formatted} of ${kcalTarget.formatted} kcal',
+                  style: AppText.tabular(AppText.headline),
                 ),
               ),
-              ChunkyIconButton(
-                icon: Icons.add_rounded,
-                semanticLabel: 'Log a meal',
-                onPressed: onTap,
-              ),
+              if (left != null)
+                Text(
+                  left >= 0 ? '${left.formatted} left' : '${(-left).formatted} over',
+                  style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+                ),
             ],
           ),
           if (kcalTarget != null && kcalTarget > 0) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             ThickProgressBar(value: (food.kcal / kcalTarget).toDouble(), color: palette.fill),
           ],
           const SizedBox(height: 14),
@@ -86,44 +69,21 @@ class FoodCard extends StatelessWidget {
               if (i > 0) const SizedBox(height: 10),
               macros[i],
             ],
-          const SizedBox(height: 6),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.local_fire_department_rounded, size: 16, color: kInkMuted),
-                    const SizedBox(width: 4),
-                    Text('burned ${food.burned.formatted}', style: AppText.caption),
-                  ],
-                ),
-              ),
-              if (!food.targets.complete)
-                Semantics(
-                  button: true,
-                  excludeSemantics: true,
-                  label: 'Set your targets',
-                  onTap: onSetTargets,
-                  child: Pressable(
-                    onTap: onSetTargets,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 44),
-                      child: Center(
-                        widthFactor: 1,
-                        child: Text(
-                          'Set your targets',
-                          style: AppText.label.copyWith(color: context.accentText),
-                        ),
-                      ),
-                    ),
+          if (food.burned > 0) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.local_fire_department_rounded, size: 16, color: kInkMuted),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    '${food.burned.formatted} kcal burned in activity',
+                    style: AppText.tabular(AppText.caption),
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

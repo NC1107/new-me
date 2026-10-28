@@ -2,8 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/food/food_screen.dart';
+import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/shell/home_tab.dart';
+import 'package:newme/features/today/today_screen.dart';
+import 'package:newme/features/training/train_screen.dart';
 import 'package:newme/state/session.dart';
 import 'package:newme/theme/accent.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -17,22 +22,59 @@ void main() {
     Mascot.idleMotion = false;
   });
 
-  testWidgets('renders three tabs, no centre button, and tapping switches the visible body', (
+  testWidgets('renders five tabs, no centre button, and tapping switches the visible body', (
     tester,
   ) async {
-    final app = TestApp(tester, fullServer());
+    final adapter = fullServer()
+      ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()));
+    final app = TestApp(tester, adapter);
     await app.pump(const HomeShell());
 
-    for (final tab in ['today', 'us', 'me']) {
+    for (final tab in ['today', 'food', 'train', 'us', 'me']) {
       expect(find.byKey(Key('nav-$tab')), findsOneWidget);
     }
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(app.container.read(homeTabProvider), HomeTab.today);
 
-    await app.tap(find.byKey(const Key('nav-us')));
-    expect(app.container.read(homeTabProvider), HomeTab.board);
-    await app.tap(find.byKey(const Key('nav-me')));
-    expect(app.container.read(homeTabProvider), HomeTab.me);
+    for (final (key, tab, screen) in [
+      ('food', HomeTab.food, FoodScreen),
+      ('train', HomeTab.train, TrainScreen),
+      ('us', HomeTab.board, BoardScreen),
+      ('me', HomeTab.me, MeScreen),
+    ]) {
+      await app.tap(find.byKey(Key('nav-$key')));
+      expect(app.container.read(homeTabProvider), tab);
+      expect(find.byType(screen), findsOneWidget, reason: 'only the selected tab is on stage');
+      expect(find.byType(TodayScreen), findsNothing);
+    }
+    await app.tap(find.byKey(const Key('nav-today')));
+    expect(app.container.read(homeTabProvider), HomeTab.today);
+  });
+
+  testWidgets('the tabs show Today, Food, Train, Us and Me in that order', (tester) async {
+    final app = TestApp(tester, fullServer());
+    await app.pump(const HomeShell());
+
+    final labels = ['Today', 'Food', 'Train', 'Us', 'Me'];
+    final lefts = [
+      for (final l in labels)
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: find.byKey(Key('nav-${l.toLowerCase()}')),
+                matching: find.text(l),
+              ),
+            )
+            .dx,
+    ];
+    expect(lefts, [...lefts]..sort());
+    expect(
+      tester
+          .widget<IndexedStack>(find.byType(IndexedStack).first)
+          .children
+          .map((w) => w.runtimeType),
+      [TodayScreen, FoodScreen, TrainScreen, BoardScreen, MeScreen],
+    );
   });
 
   testWidgets('the selected tab sits in a tinted square bordered in the person colour', (
@@ -63,7 +105,7 @@ void main() {
   testWidgets('each tab is at least 44pt tall', (tester) async {
     final app = TestApp(tester, fullServer());
     await app.pump(const HomeShell());
-    for (final tab in ['today', 'us', 'me']) {
+    for (final tab in ['today', 'food', 'train', 'us', 'me']) {
       expect(tester.getSize(find.byKey(Key('nav-$tab'))).height, greaterThanOrEqualTo(44));
     }
   });

@@ -206,7 +206,7 @@ void main() {
   });
 
   testWidgets(
-    'Today reads top to bottom: greeting, plan bubble, day, right now, habits, quests, food, body',
+    'Today reads top to bottom: greeting, plan bubble, day, right now, habits, quests, body',
     (tester) async {
       await _open(tester, _server(readiness: _readiness(), habits: true));
       final order = [
@@ -216,7 +216,6 @@ void main() {
         find.text('Take it easy today'),
         find.text('Habits'),
         find.text('Get stronger'),
-        find.text('Food'),
         find.text('Body'),
       ];
       for (final f in order) {
@@ -224,6 +223,7 @@ void main() {
       }
       final tops = [for (final f in order) tester.getTopLeft(f).dy];
       expect([...tops]..sort(), tops, reason: 'in this order: $tops');
+      expect(find.text('Food'), findsNothing, reason: 'the food card moved to the Food tab');
       expect(
         find.text('Walk 70,000 steps together'),
         findsNothing,

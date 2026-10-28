@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
+import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/chunky_icon_button.dart';
 import 'package:newme/widgets/mascot.dart';
 
@@ -61,6 +62,9 @@ StubAdapter _server({bool counted = false}) => fullServer()
   ..on('POST /api/logs', StubResponse(201, logResultJson()))
   ..on('GET /api/me', StubResponse(200, meJson(admin: true, yoga: true)));
 
+Finder _chunky(String label) =>
+    find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
+
 Finder _plus(String label) =>
     find.byWidgetPredicate((w) => w is ChunkyIconButton && w.semanticLabel == label);
 
@@ -119,13 +123,29 @@ void _layoutSuite(double textScale) {
     noOverflow('log pages');
     await app.closeSheet();
 
-    await _tapOnToday(tester, app, find.text('Food'));
+    await app.tap(find.byKey(const Key('nav-food')));
+    noOverflow('Food');
+    await tester.scrollUntilVisible(
+      _chunky('Log a meal'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await app.tap(_chunky('Log a meal'));
     noOverflow('log meal');
     await app.tap(find.text('More'));
     noOverflow('log meal more');
     await app.tap(find.text('1.5'));
     noOverflow('log meal portion');
     await app.closeSheet();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -4000));
+    await app.settle();
+    noOverflow('Food scrolled');
+
+    await app.tap(find.byKey(const Key('nav-train')));
+    noOverflow('Train');
+    await tester.drag(find.byType(ListView).first, const Offset(0, -4000));
+    await app.settle();
+    noOverflow('Train scrolled');
 
     await app.tap(find.byKey(const Key('nav-us')));
     noOverflow('Board');
@@ -209,7 +229,7 @@ void main() {
     await app.pump(const HomeShell(), tall: false);
 
     expect(tester.takeException(), isNull);
-    for (final tab in ['today', 'us', 'me']) {
+    for (final tab in ['today', 'food', 'train', 'us', 'me']) {
       final label = find.descendant(of: find.byKey(Key('nav-$tab')), matching: find.byType(Text));
       expect(tester.getRect(label).bottom, lessThanOrEqualTo(844 - 34));
       expect(tester.getSize(find.byKey(Key('nav-$tab'))).height, greaterThanOrEqualTo(44));

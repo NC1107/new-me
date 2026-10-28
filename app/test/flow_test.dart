@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/features/log/log_sheet.dart';
+import 'package:newme/features/me/food_targets_page.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
@@ -12,12 +14,16 @@ import 'fixtures.dart';
 import 'test_support.dart';
 
 StubAdapter _server() => fullServer()
+  ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()))
   ..on('POST /api/logs', StubResponse(201, logResultJson()))
   ..on('DELETE /api/logs/77', StubResponse(200, deleteLogJson()))
   ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
   ..on('PATCH /api/me', StubResponse(200, meJson()));
 
-Finder _save() => find.byWidgetPredicate((w) => w is ChunkyButton && w.label == 'Save');
+Finder _chunky(String label) =>
+    find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
+
+Finder _save() => _chunky('Save');
 
 Finder _logPushups() => find.bySemanticsLabel('Add entry for Get stronger');
 
@@ -105,10 +111,11 @@ void main() {
       );
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
+    await app.tap(find.byKey(const Key('nav-food')));
     expect(find.text('1,850 of 2,200 kcal'), findsOneWidget);
 
-    await app.tap(find.text('Food'));
-    await app.tap(find.text('Chicken bowl'));
+    await app.tap(_chunky('Log a meal'));
+    await app.tap(find.descendant(of: find.byType(LogSheet), matching: find.text('Chicken bowl')));
 
     expect(find.text('2,450 of 2,200 kcal'), findsOneWidget);
     expect(find.text('122 / 150 g'), findsOneWidget);
@@ -181,12 +188,14 @@ void main() {
     expect(find.textContaining('You are offline'), findsOneWidget);
   });
 
-  testWidgets('Set your targets sends you to Me', (tester) async {
+  testWidgets('the Food tab opens the food targets', (tester) async {
     final app = TestApp(tester, _server(), surfaceHeight: 2800);
     await app.pump(const HomeShell());
+    await app.tap(find.byKey(const Key('nav-food')));
 
-    await app.tap(find.text('Set your targets'));
-    expect(app.container.read(homeTabProvider), HomeTab.me);
+    await app.tap(find.text('Food targets'));
+    expect(find.byType(FoodTargetsPage), findsOneWidget);
+    expect(app.container.read(homeTabProvider), HomeTab.food);
   });
 
   testWidgets('a phone that moved time zones tells the server, a first run does not', (

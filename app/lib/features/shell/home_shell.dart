@@ -20,6 +20,8 @@ import '../../theme/tokens.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/pressable.dart';
 import '../board/board_screen.dart';
+import '../food/food_screen.dart';
+import '../training/train_screen.dart';
 import '../me/me_screen.dart';
 import '../today/today_screen.dart';
 import 'home_tab.dart';
@@ -101,6 +103,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   static const _tabs = [
     (icon: Icons.home_rounded, label: 'Today'),
+    (icon: Icons.restaurant_rounded, label: 'Food'),
+    (icon: Icons.fitness_center_rounded, label: 'Train'),
     (icon: Icons.groups_rounded, label: 'Us'),
     (icon: Icons.person_rounded, label: 'Me'),
   ];
@@ -113,7 +117,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: tab.index,
-        children: const [TodayScreen(), BoardScreen(), MeScreen()],
+        children: const [TodayScreen(), FoodScreen(), TrainScreen(), BoardScreen(), MeScreen()],
       ),
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
@@ -128,7 +132,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           child: MediaQuery.withClampedTextScaling(
             maxScaleFactor: kBottomNavMaxTextScale,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               child: SizedBox(
                 height: 64,
                 child: Row(
@@ -196,8 +200,8 @@ class _NavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: reduce ? Duration.zero : kMotionDuration,
             curve: Curves.easeOut,
-            constraints: const BoxConstraints(minWidth: 84, minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            constraints: const BoxConstraints(minWidth: 64, minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
               color: selected ? person.tint : Colors.transparent,
               borderRadius: BorderRadius.circular(kRadiusButton),
@@ -232,7 +236,13 @@ class _NavItem extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: kBottomNavIconLabelGap),
-                Text(label, style: kBottomNavLabelStyle.copyWith(color: color)),
+                Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.fade,
+                  style: kBottomNavLabelStyle.copyWith(color: color),
+                ),
               ],
             ),
           ),

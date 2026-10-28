@@ -54,7 +54,7 @@ String questProgress(Quest q) {
   }
   if (q.key == 'pushups' && !q.done) {
     return q.actual == 0
-        ? 'A strength workout, a training session, or ${q.target.formatted} push-ups'
+        ? 'A strength session or ${q.target.formatted} push-ups'
         : '${q.actual.formatted} of ${q.target.formatted} push-ups, or a strength workout';
   }
   if (q.key == 'sleep') {

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/board/board_screen.dart';
 import 'package:newme/features/me/me_screen.dart';
+import 'package:newme/features/streaks/away_line.dart';
 import 'package:newme/features/streaks/away_page.dart';
 import 'package:newme/features/streaks/shared_streak_card.dart';
 import 'package:newme/features/streaks/streak_visuals.dart';
@@ -185,8 +186,9 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('Today draws them from the board', (tester) async {
-      final handle = tester.ensureSemantics();
+    testWidgets('Today no longer draws a week strip, even when the board has marks', (
+      tester,
+    ) async {
       await _openToday(
         tester,
         _server(
@@ -204,9 +206,8 @@ void main() {
           ],
         ),
       );
-      expect(find.bySemanticsLabel(RegExp('Sat, frozen day')), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('Sun, away day')), findsOneWidget);
-      handle.dispose();
+      expect(find.byType(WeekCard), findsNothing);
+      expect(find.text('This week'), findsNothing);
     });
   });
 
@@ -257,9 +258,14 @@ void main() {
   });
 
   group("Can't today?", () {
-    testWidgets('is a link on Today that opens the Away page', (tester) async {
+    testWidgets('is not on Today; the streak sheet opens the Away page', (tester) async {
       final app = await _openToday(tester, _server());
-      await app.tap(find.text("Can't today?"));
+      expect(find.text("Can't today?"), findsNothing);
+      expect(find.byType(AwayLine), findsNothing, reason: "AwayLine only renders while away");
+      expect(find.text('You are away'), findsNothing);
+
+      await app.tap(find.bySemanticsLabel(RegExp('day streak')));
+      await app.tap(find.text("CAN'T TODAY?"));
       expect(find.byType(AwayPage), findsOneWidget);
       expect(find.text('Away days'), findsWidgets);
     });

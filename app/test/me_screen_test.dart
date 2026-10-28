@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
+import 'package:newme/features/food/food_screen.dart';
 import 'package:newme/features/health/health_screen.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/state/me.dart';
@@ -56,6 +57,12 @@ StubAdapter _server({bool admin = false}) => fullServer()
 TestApp _app(WidgetTester tester, StubAdapter adapter) =>
     TestApp(tester, adapter, surfaceHeight: 1600);
 
+/// The Food tab, which holds the food targets row, with nothing burned so its card is plain.
+TestApp _foodApp(WidgetTester tester, StubAdapter adapter) {
+  adapter.on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()));
+  return _app(tester, adapter);
+}
+
 Future<void> _back(TestApp app, WidgetTester tester) async {
   await app.tap(find.byTooltip('Back'));
 }
@@ -75,11 +82,13 @@ void main() {
       expect(find.text('S'), findsOneWidget);
       expect(find.text('4 day streak'), findsOneWidget);
       expect(find.text('900 season points'), findsOneWidget);
-      for (final row in ['Daily goals', 'Food targets', 'Profile', 'Time zone', 'Apple Health']) {
+      for (final row in ['Daily goals', 'Profile', 'Time zone', 'Apple Health']) {
         expect(find.text(row), findsOneWidget);
       }
       expect(find.text('3 of 6 on'), findsOneWidget);
-      expect(find.text('2,200 kcal a day'), findsOneWidget);
+      for (final moved in ['Training', 'Food targets', 'My foods']) {
+        expect(find.text(moved), findsNothing, reason: '$moved moved to its own tab');
+      }
       expect(find.text('America/New_York'), findsOneWidget);
       expect(find.text('Not connected'), findsOneWidget);
       expect(find.text('Pairing code'), findsNothing);
@@ -100,7 +109,6 @@ void main() {
 
       for (final label in [
         'Daily goals, 3 of 6 on',
-        'Food targets, 2,200 kcal a day',
         'Profile, Sam, Iris',
         'Time zone, America/New_York',
         'Pairing code, Invite your partner',
@@ -127,8 +135,17 @@ void main() {
         tester.widgetList<Switch>(find.byType(Switch)).every((s) => s.onChanged == null),
         isTrue,
       );
+    });
+
+    testWidgets('offline, the food targets are shown and cannot be edited', (tester) async {
+      final adapter = _server();
+      final app = _foodApp(tester, adapter);
+      await app.pump(const FoodScreen(), key: UniqueKey());
+      await app.tap(find.text('Food targets'));
       await _back(app, tester);
 
+      adapter.on('GET /api/me', const StubResponse.unreachable());
+      await app.pump(const FoodScreen(), key: UniqueKey());
       await app.tap(find.text('Food targets'));
       final guard = find.ancestor(of: fieldWith('2200'), matching: find.byType(IgnorePointer));
       expect(tester.widget<IgnorePointer>(guard.first).ignoring, isTrue);
@@ -262,8 +279,8 @@ void main() {
   group('food targets', () {
     testWidgets('save only the edited fields', (tester) async {
       final adapter = _server();
-      final app = _app(tester, adapter);
-      await app.pump(const MeScreen());
+      final app = _foodApp(tester, adapter);
+      await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
       await app.enter(fieldWith('2200'), '2400');
@@ -276,8 +293,8 @@ void main() {
 
     testWidgets('emptying a target sends null so the server clears it', (tester) async {
       final adapter = _server();
-      final app = _app(tester, adapter);
-      await app.pump(const MeScreen());
+      final app = _foodApp(tester, adapter);
+      await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
       await app.tap(find.byTooltip('Clear Protein (g)'));
@@ -289,8 +306,8 @@ void main() {
 
     testWidgets('an empty field that was never set is not sent', (tester) async {
       final adapter = _server();
-      final app = _app(tester, adapter);
-      await app.pump(const MeScreen());
+      final app = _foodApp(tester, adapter);
+      await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
       await app.enter(fieldWith('150'), '');
@@ -303,8 +320,8 @@ void main() {
 
     testWidgets('fields are named for screen readers', (tester) async {
       final handle = tester.ensureSemantics();
-      final app = _app(tester, _server());
-      await app.pump(const MeScreen());
+      final app = _foodApp(tester, _server());
+      await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
       expect(tester.getSemantics(fieldWith('2200')).label, contains('Calories (kcal)'));
@@ -313,8 +330,8 @@ void main() {
 
     testWidgets('typed edits survive another save', (tester) async {
       final adapter = _server()..on('PATCH /api/me', StubResponse(200, _me(color: 'amber')));
-      final app = _app(tester, adapter);
-      await app.pump(const MeScreen());
+      final app = _foodApp(tester, adapter);
+      await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
       await app.enter(fieldWith('2200'), '2400');
 

@@ -33,7 +33,6 @@ import 'connect_health_card.dart';
 import 'day_card.dart';
 import 'day_counted_sheet.dart';
 import 'day_detail_sheet.dart';
-import 'food_card.dart';
 import 'plan_sheet.dart';
 import 'right_now.dart';
 import 'streak_sheet.dart';
@@ -41,7 +40,9 @@ import 'today_header.dart';
 import 'today_providers.dart';
 import 'today_skeleton.dart';
 import 'today_top_bar.dart';
-import 'week_card.dart';
+
+/// How long Health may go without syncing before Today mentions it.
+const kHealthStaleAfter = Duration(hours: 12);
 
 /// More than this at once is a flood; the rest are marked seen without playing.
 const kMaxMilestoneCelebrations = 3;
@@ -171,7 +172,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final syncedAt = today.health.syncedAt ?? lastSynced;
     final now = ref.watch(clockProvider)();
     final partner = ref.watch(partnerProvider);
-    final mine = ref.watch(ownBoardUserProvider);
     final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
 
@@ -215,28 +215,21 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             onEntries: _openEntries,
           ),
           RightNowSlot(today: today),
-          const SizedBox(height: kCardGap),
-          AwayLine(away: today.away, onOpen: _openAway),
+          if (today.away.today) ...[
+            const SizedBox(height: kCardGap),
+            AwayLine(away: today.away, onOpen: _openAway),
+          ],
           HabitsStrip(today: today),
-          TrainingSlot(localToday: today.localToday),
+          TrainingSlot(localToday: today.localToday, onTrainTab: false),
           ..._questCards(prompted, now),
-          const SizedBox(height: kCardGap),
-          FoodCard(
-            food: today.food,
-            onTap: () => showLogSheet(context, kind: LogKind.meal),
-            onSetTargets: () => tabs.select(HomeTab.me),
-          ),
           const SizedBox(height: kCardGap),
           BodyRow(
             summary: bodySummary(today.health, insights),
             weight: insights?.weight,
             onTap: () => openInsights(context),
           ),
-          if (mine != null && mine.last7.isNotEmpty) ...[
-            const SizedBox(height: kCardGap),
-            WeekCard(days: mine.last7, today: today.localToday, todayCounted: today.day.counted),
-          ],
-          if (syncedAt != null) ...[
+          // Sync is quiet when it works; the line shows only once Health has been silent a while.
+          if (syncedAt != null && now.difference(syncedAt) > kHealthStaleAfter) ...[
             const SizedBox(height: 20),
             Center(
               child: Text('Health synced ${relativeTime(syncedAt, now)}', style: AppText.caption),

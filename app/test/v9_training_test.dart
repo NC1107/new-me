@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/api_client.dart';
 import 'package:newme/api/models.dart';
+import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/training/exercises_page.dart';
 import 'package:newme/features/training/session_page.dart';
 import 'package:newme/features/training/training_card.dart';
 import 'package:newme/features/training/training_copy.dart';
-import 'package:newme/features/training/training_page.dart';
+import 'package:newme/features/training/train_screen.dart';
 import 'package:newme/features/training/training_profile_page.dart';
 import 'package:newme/features/training/training_progress_page.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -229,6 +230,7 @@ void main() {
       await app.pump(const TrainingSlot(localToday: '2026-11-02'));
       await tester.pumpAndSettle();
       expect(find.text('Full body A'), findsOneWidget);
+      expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
       expect(find.text('1 of 10 sets'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
       // One label, read once: the visible text is not merged in a second time.
@@ -238,12 +240,70 @@ void main() {
       );
     });
 
-    testWidgets('a rest day names the next session', (tester) async {
+    testWidgets('a rest day shows nothing on Today but names the next session on Train', (
+      tester,
+    ) async {
       final app = TestApp(tester, _server(today: 'training_today_rest'));
       await app.pump(const TrainingSlot(localToday: '2026-11-03'));
       await tester.pumpAndSettle();
+      expect(find.text('Rest day'), findsNothing);
+
+      await app.pump(
+        const TrainingSlot(localToday: '2026-11-03', onTrainTab: true),
+        key: UniqueKey(),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Rest day'), findsOneWidget);
       expect(find.text('Next: Full body B, Thu'), findsOneWidget);
+      expect(
+        find.byIcon(Icons.chevron_right_rounded),
+        findsNothing,
+        reason: 'the rest card has no tap',
+      );
+      expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
+    });
+
+    testWidgets('a finished session leaves Today but stays on Train', (tester) async {
+      final done = _load('training_today');
+      (done['session']! as Map<String, dynamic>)['completed'] = true;
+      final app = TestApp(
+        tester,
+        _server()..on('GET /api/training/today', StubResponse(200, done)),
+      );
+      await app.pump(const TrainingSlot(localToday: '2026-11-02'));
+      await tester.pumpAndSettle();
+      expect(find.text('Full body A'), findsNothing);
+
+      await app.pump(
+        const TrainingSlot(localToday: '2026-11-02', onTrainTab: true),
+        key: UniqueKey(),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Full body A'), findsOneWidget);
+    });
+
+    testWidgets('a finished block shows on Today and its Plan opens the Train tab', (tester) async {
+      final ended = {..._load('training_today_rest'), 'blockEnded': true};
+      final app = TestApp(
+        tester,
+        _server()..on('GET /api/training/today', StubResponse(200, ended)),
+      );
+      await app.pump(const TrainingSlot(localToday: '2026-11-03'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your 4-week block is done'), findsOneWidget);
+      expect(find.text('Plan'), findsOneWidget);
+
+      await tester.tap(find.text('Plan'));
+      await tester.pumpAndSettle();
+      expect(app.container.read(homeTabProvider), HomeTab.train);
+
+      await app.pump(
+        const TrainingSlot(localToday: '2026-11-03', onTrainTab: true),
+        key: UniqueKey(),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Your 4-week block is done'), findsOneWidget);
+      expect(find.text('Plan'), findsNothing, reason: 'the plan sits right below on Train');
     });
 
     testWidgets('nothing without a plan', (tester) async {
@@ -316,7 +376,7 @@ void main() {
       final server = _server()
         ..on('GET /api/training/profile', StubResponse(200, _load('training_profile_empty')));
       final app = TestApp(tester, server);
-      await app.pump(const TrainingPage());
+      await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
       expect(_button('Set up training'), findsOneWidget);
       expect(find.textContaining('WHO 2020'), findsOneWidget);
@@ -324,13 +384,16 @@ void main() {
 
     testWidgets('shows the plan with exercise names and ranges', (tester) async {
       final app = TestApp(tester, _server(), surfaceHeight: 4000);
-      await app.pump(const TrainingPage());
+      await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
       expect(find.text('2 days a week, 40 min'), findsOneWidget);
       expect(find.textContaining('Dumbbells to 30\u00a0kg'), findsOneWidget);
       expect(find.text('Plan · 4 weeks, until 29 Nov'), findsOneWidget);
-      expect(find.text('Full body A'), findsOneWidget);
+      expect(find.text('Train'), findsOneWidget);
+      expect(find.text('Full body A'), findsWidgets, reason: "today's card and the plan day");
       expect(find.text('Dumbbell row'), findsNWidgets(2));
+      expect(find.text('Exercises and sets'), findsOneWidget);
+      expect(find.text('Weekly sets'), findsOneWidget);
       expect(find.text('2 x 6 to 10 reps'), findsWidgets);
       expect(_button('Change plan'), findsOneWidget);
     });
@@ -339,7 +402,7 @@ void main() {
       final server = _server(today: 'training_today_none')
         ..on('POST /api/training/plan', StubResponse(422, _load('plan_invalid')));
       final app = TestApp(tester, server);
-      await app.pump(const TrainingPage());
+      await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
       await tester.tap(_button('Design my plan'));
       await tester.pumpAndSettle();
@@ -351,7 +414,7 @@ void main() {
       final server = _server()
         ..on('POST /api/training/plan/change', StubResponse(201, _load('plan')));
       final app = TestApp(tester, server, surfaceHeight: 4000);
-      await app.pump(const TrainingPage());
+      await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
       await tester.tap(_button('Change plan'));
       await tester.pumpAndSettle();

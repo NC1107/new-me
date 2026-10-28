@@ -108,6 +108,12 @@ Map<String, dynamic> richTodayJson({
   },
 };
 
+/// Today's food with nothing burned, so the Food tab shows no activity line.
+Map<String, dynamic> restingFoodJson() => {
+  ...(richTodayJson()['food'] as Map<String, dynamic>),
+  'burned': 0,
+};
+
 Map<String, dynamic> _template(
   String key,
   String title,

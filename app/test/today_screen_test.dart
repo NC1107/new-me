@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/features/food/food_card.dart';
 import 'package:newme/features/insights/insights_screen.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
@@ -77,12 +78,25 @@ void main() {
     expect(_chunky('Connect Health'), findsOneWidget);
     expect(find.text('Walk 8,000 steps'), findsNothing);
 
-    expect(find.text('1,850 of 2,200 kcal'), findsOneWidget);
-    expect(find.text('82 / 150 g'), findsOneWidget);
-    expect(find.text('200 g'), findsOneWidget);
-    expect(find.text('burned 540'), findsOneWidget);
-    expect(find.text('Set your targets'), findsOneWidget);
-    expect(find.text('Health synced 3h ago'), findsOneWidget);
+    expect(find.text('Log 2 meals'), findsOneWidget, reason: 'food is a quest here');
+    expect(find.text('1,850 of 2,200 kcal'), findsNothing, reason: 'the food card lives on Food');
+    expect(find.byType(FoodCard), findsNothing);
+    expect(find.textContaining('Health synced'), findsNothing, reason: 'synced 3h ago is quiet');
+  });
+
+  testWidgets('Today mentions Health only once it has been silent for over 12 hours', (
+    tester,
+  ) async {
+    Future<void> openAt(DateTime now) async {
+      await _app(tester, fullServer()).pump(const TodayScreen(), key: UniqueKey(), now: now);
+    }
+
+    // The fixture synced at 11:00Z; the clock sits at 14:00Z in the other tests.
+    await openAt(testNow.add(const Duration(hours: 9)));
+    expect(find.textContaining('Health synced'), findsNothing, reason: '12 hours is not stale');
+
+    await openAt(testNow.add(const Duration(hours: 10)));
+    expect(find.text('Health synced 13h ago'), findsOneWidget);
   });
 
   testWidgets('manual quests get a plus, automatic ones an Apple Health chip', (tester) async {
@@ -102,8 +116,8 @@ void main() {
     expect(find.text('Apple Health'), findsNWidgets(3));
     expect(
       find.byIcon(Icons.add_rounded),
-      findsNWidgets(5),
-      reason: '3 manual quests, exercise and food',
+      findsNWidgets(4),
+      reason: '3 manual quests and the food quest',
     );
   });
 
@@ -173,19 +187,17 @@ void main() {
     expect(find.bySemanticsLabel(RegExp(r'open Us')), findsNothing);
   });
 
-  testWidgets('the week strip shows flames on counted days and a moon on the rest day', (
-    tester,
-  ) async {
+  testWidgets('Today has no week strip and no food card, only the top bar flame', (tester) async {
     final app = _app(tester, fullServer());
     await app.pump(const TodayScreen());
 
-    expect(find.text('This week'), findsOneWidget);
+    expect(find.text('This week'), findsNothing);
+    expect(find.byIcon(Icons.bedtime_rounded), findsNothing);
     expect(
       find.byIcon(Icons.local_fire_department_rounded),
-      findsNWidgets(6),
-      reason: 'top bar, four counted days, food burned',
+      findsOneWidget,
+      reason: 'the top bar flame; burned calories moved to Food',
     );
-    expect(find.byIcon(Icons.bedtime_rounded), findsOneWidget);
   });
 
   testWidgets('the Body row summarises sleep and opens Insights; weight stays off Today', (
@@ -264,11 +276,11 @@ void main() {
     expect(find.text('Pages'), findsOneWidget);
   });
 
-  testWidgets('the food card opens the meal form', (tester) async {
+  testWidgets('the food quest plus opens the meal form', (tester) async {
     final app = _app(tester, fullServer());
     await app.pump(const TodayScreen());
 
-    await app.tap(find.text('Food'));
+    await app.tap(find.bySemanticsLabel('Add entry for Log 2 meals'));
     expect(find.text('Log a meal'), findsOneWidget);
     expect(find.text('Portion'), findsOneWidget);
   });
@@ -277,7 +289,11 @@ void main() {
     final today = richTodayJson(stepsEverSynced: true);
     final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
     await _app(tester, adapter).pump(const TodayScreen());
-    expect(find.byIcon(Icons.add_rounded), findsNWidgets(4), reason: '3 manual quests and food');
+    expect(
+      find.byIcon(Icons.add_rounded),
+      findsNWidgets(3),
+      reason: '3 manual quests, food is the third',
+    );
     expect(find.bySemanticsLabel(RegExp(r'^Add entry for Walk')), findsNothing);
   });
 

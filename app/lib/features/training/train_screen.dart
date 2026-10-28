@@ -18,7 +18,11 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
+import '../../state/today.dart';
+import '../me/settings_row.dart';
 import 'exercises_page.dart';
+import 'training_card.dart';
+import 'training_progress_page.dart';
 import 'training_copy.dart';
 import 'training_profile_page.dart';
 import '../../widgets/units_scope.dart';
@@ -29,15 +33,16 @@ const kTrainingSources =
     'sets per muscle from Schoenfeld, Ogborn and Krieger 2017, and reps in reserve from Zourdos '
     'et al. 2016. Day-to-day progression follows the ACSM 2009 position stand, without AI.';
 
-/// Training in Me: the setup plans are built for, the active plan, and changes to it.
-class TrainingPage extends ConsumerStatefulWidget {
-  const TrainingPage({super.key});
+/// The Train tab: today's session, the setup plans are built for, the active plan, changes to it,
+/// and the exercise log and weekly sets.
+class TrainScreen extends ConsumerStatefulWidget {
+  const TrainScreen({super.key});
 
   @override
-  ConsumerState<TrainingPage> createState() => _TrainingPageState();
+  ConsumerState<TrainScreen> createState() => _TrainScreenState();
 }
 
-class _TrainingPageState extends ConsumerState<TrainingPage> {
+class _TrainScreenState extends ConsumerState<TrainScreen> {
   bool _designing = false;
   String? _error;
   List<PlanViolation> _violations = const [];
@@ -102,19 +107,35 @@ class _TrainingPageState extends ConsumerState<TrainingPage> {
   Widget build(BuildContext context) {
     final setup = ref.watch(trainingSetupProvider);
     final catalog = ref.watch(exercisesProvider).value?.data;
-    return PageScaffold(
-      title: 'Training',
-      children: [
-        switch (setup) {
-          AsyncValue(:final value?) => _body(value, catalog),
-          AsyncValue(:final error?) => ErrorBlock(
-            title: 'Could not load your training',
-            error: error,
-            onRetry: () async => ref.invalidate(trainingSetupProvider),
-          ),
-          _ => const SkeletonBlock(height: 160, radius: kRadiusCard),
+    final localToday = ref.watch(todayProvider.select((v) => v.value?.data.localToday));
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        color: context.accent,
+        backgroundColor: kSurface,
+        onRefresh: () async {
+          ref.invalidate(trainingSetupProvider);
+          await ref.read(trainingTodayProvider.notifier).refresh();
         },
-      ],
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(kGutter, 16, kGutter, 32),
+          children: [
+            Semantics(header: true, child: const Text('Train', style: AppText.display)),
+            const SizedBox(height: 16),
+            if (localToday != null) TrainingSlot(localToday: localToday, onTrainTab: true),
+            switch (setup) {
+              AsyncValue(:final value?) => _body(value, catalog),
+              AsyncValue(:final error?) => ErrorBlock(
+                title: 'Could not load your training',
+                error: error,
+                onRetry: () async => ref.invalidate(trainingSetupProvider),
+              ),
+              _ => const SkeletonBlock(height: 160, radius: kRadiusCard),
+            },
+          ],
+        ),
+      ),
     );
   }
 
@@ -175,10 +196,23 @@ class _TrainingPageState extends ConsumerState<TrainingPage> {
           ChunkyButton.secondary(label: 'End plan', onPressed: _designing ? null : _end),
         ],
         const SizedBox(height: 20),
-        ChunkyButton.secondary(
-          label: 'Exercises and sets',
-          icon: Icons.list_alt_rounded,
-          onPressed: () => pushPage(context, const ExercisesPage()),
+        SettingsGroup(
+          rows: [
+            SettingsRow(
+              icon: Icons.list_alt_rounded,
+              palette: accentById('rose'),
+              title: 'Exercises and sets',
+              subtitle: 'Everything you have logged',
+              onTap: () => pushPage(context, const ExercisesPage()),
+            ),
+            SettingsRow(
+              icon: Icons.bar_chart_rounded,
+              palette: accentById('rose'),
+              title: 'Weekly sets',
+              subtitle: 'Sets per muscle against the target range',
+              onTap: () => pushPage(context, const TrainingProgressPage()),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         Text(kTrainingSources, style: AppText.caption.copyWith(color: kInkMuted)),
@@ -308,9 +342,12 @@ class _PrescriptionRow extends StatelessWidget {
           child: Text(exercise?.name ?? p.exercise, style: AppText.label.copyWith(color: kInk)),
         ),
         const SizedBox(width: 12),
-        Text(
-          '${p.sets} x ${rangeLabel(p, timed: timed)}',
-          style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+        Flexible(
+          child: Text(
+            '${p.sets} x ${rangeLabel(p, timed: timed)}',
+            textAlign: TextAlign.end,
+            style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+          ),
         ),
       ],
     );

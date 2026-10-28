@@ -13,7 +13,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
 import 'session_page.dart';
 import 'training_copy.dart';
-import 'training_page.dart';
+import '../shell/home_tab.dart';
 
 /// The next plan day after [date] (YYYY-MM-DD), for the rest-day line.
 PlanDay? nextPlanDay(TrainingPlan plan, String date) {
@@ -27,13 +27,14 @@ PlanDay? nextPlanDay(TrainingPlan plan, String date) {
   return null;
 }
 
-/// Today's training on the Today screen: the planned session, a rest day, or the end of a block.
-/// Shows nothing for someone without a plan, which the Training page in Me offers.
+/// Today's training: the planned session, a rest day, or the end of a block. Shows nothing without
+/// a plan. On Today only something to do is shown; the Train tab shows every state.
 class TrainingSlot extends ConsumerStatefulWidget {
-  const TrainingSlot({super.key, required this.localToday});
+  const TrainingSlot({super.key, required this.localToday, this.onTrainTab = false});
 
   /// Today's date from GET /today; a held training answer for an earlier date is refreshed.
   final String localToday;
+  final bool onTrainTab;
 
   @override
   ConsumerState<TrainingSlot> createState() => _TrainingSlotState();
@@ -57,16 +58,25 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
     }
     final plan = training.plan;
     if (plan == null) return const SizedBox.shrink();
+    final tab = widget.onTrainTab;
+    final session = training.session;
+    if (!tab && !training.blockEnded && (session == null || session.completed)) {
+      return const SizedBox.shrink();
+    }
+    // The plan sits right under the card on the Train tab, so there the card only opens a session.
+    final VoidCallback? openPlan = tab
+        ? null
+        : () => ref.read(homeTabProvider.notifier).select(HomeTab.train);
     final Widget card;
     if (training.blockEnded) {
       card = _TrainingCard(
         icon: Icons.flag_rounded,
         title: 'Your ${plan.weeks}-week block is done',
         subtitle: 'Design the next block to keep progressing.',
-        action: 'Plan',
-        onTap: () => pushPage(context, const TrainingPage()),
+        action: tab ? null : 'Plan',
+        onTap: openPlan,
       );
-    } else if (training.session case final session?) {
+    } else if (session != null) {
       card = _TrainingCard(
         icon: session.completed ? Icons.check_circle_rounded : Icons.fitness_center_rounded,
         title: session.label,
@@ -91,11 +101,11 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
         subtitle: next == null
             ? 'Recovery is part of the plan.'
             : 'Next: ${next.label}, ${weekdayLabel(next.weekday)}',
-        onTap: () => pushPage(context, const TrainingPage()),
+        onTap: openPlan,
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(top: kCardGap),
+      padding: EdgeInsets.only(top: tab ? 0 : kCardGap, bottom: tab ? 20 : 0),
       child: card,
     );
   }
@@ -114,7 +124,7 @@ class _TrainingCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String? action;
   final bool done;
 
@@ -141,7 +151,6 @@ class _TrainingCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Training', style: AppText.caption.copyWith(color: kInkMuted)),
                   Text(
                     title,
                     maxLines: 1,
@@ -168,7 +177,7 @@ class _TrainingCard extends StatelessWidget {
                   ),
                 ),
               ),
-            ] else
+            ] else if (onTap != null)
               const Icon(Icons.chevron_right_rounded, color: kInkMuted),
           ],
         ),

@@ -207,7 +207,7 @@ Every write path runs in one transaction:
 5.
    Upsert the result into `day_scores`.
 
-Write paths: `POST /logs`, `DELETE /logs/{id}`, `PUT /health/daily`, and the quest edits in `PATCH /me` (which snapshot today before applying the edit, so edits only affect the next day).
+Write paths: `POST /logs`, `PATCH /logs/{id}`, `DELETE /logs/{id}`, `PUT /health/daily`, and the quest edits in `PATCH /me` (which snapshot today before applying the edit, so edits only affect the next day).
 `GET /today` and `GET /board` run the same lock, snapshot and score steps for today so reads are always fresh.
 
 `ensureSnapshot(tx, user, date)` is `INSERT INTO day_quests ... SELECT FROM quest_templates WHERE user_id = $1 AND enabled ON CONFLICT (user_id, local_date, key) DO NOTHING`.
@@ -426,6 +426,11 @@ POST   /logs                                            201 first time, 200 with
 
 GET    /logs?date=YYYY-MM-DD
   200 {date, logs: [Log]}                                the caller's logs, oldest first
+
+PATCH  /logs/{id}
+  req {name?, kcal?, protein?, carbs?, fat?, fiber?}     meals only, at least one field, same validation as create
+  200 {log: Log, day: DayDetail}                         obeys the day window; 404 for another user's or a deleted log
+  422 for an activity log, and for a day that is closed
 
 DELETE /logs/{id}
   200 {day: DayDetail}                                   obeys the day window; takes no other parameter

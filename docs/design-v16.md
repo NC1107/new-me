@@ -86,3 +86,21 @@ Checking 30 common foods against live USDA found the same kinds of faults: 8 fl 
 - A size USDA does not list takes one whole item, or the first measure only when that is itself a size, so "1 medium" french fries is never a single fry.
 - Plurals ending in "-oes" and "-ies" meet their singulars ("Tomatoes" and "tomato").
 - Still estimated today: steamed broccoli, 93/7 ground beef, cheese pizza by the slice and protein shakes, which no row names closely enough.
+
+## Editing a meal
+
+- A logged meal can be corrected in place, because a bad database match used to mean deleting it and logging it again, or fixing the row by hand in production.
+- `PATCH /logs/{id}` changes any of name, kcal, protein, carbs, fat and fiber of the caller's own live meal.
+- Fields that are left out keep their stored value, and a field sent as zero is a value, not an absence.
+- The fields are validated exactly as when the meal was created, and a body with none of them is a 422.
+- The day follows the same window as creating and deleting: today, or yesterday until the grace hour passes.
+- A refused edit changes nothing, since the write and the rescore share one transaction.
+- The answer is what creating a meal answers, the meal and the rescored day, so the app can refresh from it.
+- Another person's meal and a deleted meal are both a 404.
+- An activity log answers 422 with a message that only meals can be edited, because the entry exists and is the caller's, and 404 would hide that.
+- Tapping a meal under Meals today on the Food tab, or in Today's entries, opens an "Edit meal" sheet with the name, calories, protein, carbs, fat and fiber filled in.
+- Scale chips (0.5x, 1.5x, 2x) multiply every number from the meal as it was opened, for "I ate half" or "I ate double", and tapping the chosen chip again restores the original.
+- Save sends only the fields that differ from the opened meal, and stays off until something changed and every field is valid.
+- A failed save keeps the sheet open with the reason and a Try again button.
+- Delete in the sheet is the same delete as the trash button, with the same Undo.
+- A meal on a day the server would refuse shows its numbers read-only with a line saying the day is closed.

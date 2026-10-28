@@ -22,6 +22,7 @@ import '../../state/today.dart';
 import '../me/settings_row.dart';
 import 'exercises_page.dart';
 import 'training_card.dart';
+import 'training_history_page.dart';
 import 'training_progress_page.dart';
 import 'training_copy.dart';
 import 'training_profile_page.dart';
@@ -211,6 +212,13 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
               title: 'Weekly sets',
               subtitle: 'Sets per muscle against the target range',
               onTap: () => pushPage(context, const TrainingProgressPage()),
+            ),
+            SettingsRow(
+              icon: Icons.calendar_month_rounded,
+              palette: accentById('rose'),
+              title: 'History',
+              subtitle: 'Sessions and sets by day',
+              onTap: () => pushPage(context, const TrainingHistoryPage()),
             ),
           ],
         ),

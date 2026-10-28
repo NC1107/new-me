@@ -25,6 +25,8 @@ Future<void> _afterSetWrite(Ref ref, DayDetail day) async {
   if (ref.exists(boardProvider)) unawaited(ref.read(boardProvider.notifier).refresh());
   if (ref.exists(exercisesProvider)) unawaited(ref.read(exercisesProvider.notifier).refresh());
   if (ref.exists(trainingProgressProvider)) ref.invalidate(trainingProgressProvider);
+  ref.invalidate(exerciseHistoryProvider);
+  ref.invalidate(trainingHistoryProvider);
 }
 
 /// GET /training/today: the planned session with its progression targets, or a rest day.
@@ -130,6 +132,7 @@ class ExercisesNotifier extends CachedNotifier<ExerciseCatalog> {
       reps: exercise.timed ? null : amount,
       seconds: exercise.timed ? amount : null,
     );
+    ref.invalidate(exerciseHistoryProvider);
     await refresh();
   }
 }
@@ -195,6 +198,16 @@ final trainingProgressProvider = FutureProvider<TrainingProgress>(
 /// The sets of one exercise, oldest first, for its detail page.
 final exerciseSetsProvider = FutureProvider.family<List<ExerciseSet>, String>(
   (ref, key) => _client(ref).sets(exercise: key, days: 365),
+);
+
+/// One month of the training calendar, by "YYYY-MM".
+final trainingHistoryProvider = FutureProvider.family<TrainingHistoryMonth, String>(
+  (ref, month) => _client(ref).trainingHistory(month),
+);
+
+/// One exercise's strength chart data.
+final exerciseHistoryProvider = FutureProvider.family<ExerciseHistory, String>(
+  (ref, key) => _client(ref).exerciseHistory(key),
 );
 
 /// One how-to photo by its server path. Kept for the session, since photos never change and the

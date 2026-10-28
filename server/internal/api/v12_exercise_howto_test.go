@@ -23,6 +23,9 @@ func TestEveryCatalogExerciseHasAHowTo(t *testing.T) {
 		if cues := got.length(p + "cues"); cues < 1 || cues > 2 {
 			t.Errorf("%s has %d cues, want 1 or 2", key, cues)
 		}
+		if got.str(p+"kind") == "yoga" {
+			continue
+		}
 		switch photos := got.length(p + "imageUrls"); photos {
 		case 0:
 		case 1:

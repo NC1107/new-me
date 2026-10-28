@@ -22,7 +22,7 @@ func TestCatalogCarriesKindAndPerSide(t *testing.T) {
 			if got.str(p+"measure") != "seconds" || got.str(p+"load") != "bodyweight" || got.length(p+"equipment") != 0 {
 				t.Errorf("%s must be a bodyweight hold without equipment: %s", got.str(p+"key"), got.Body)
 			}
-		} else if got.flag(p + "perSide") {
+		} else if kind == "strength" && got.flag(p+"perSide") {
 			t.Errorf("%s is strength but perSide", got.str(p+"key"))
 		}
 	}

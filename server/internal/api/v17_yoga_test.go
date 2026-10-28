@@ -161,6 +161,8 @@ func TestYogaDaysAvoidAHeavyLowerBodyDay(t *testing.T) {
 
 func TestALongerFlowIsOfferedAfterTwoFinishedWeeks(t *testing.T) {
 	h := newHarness(t)
+	// Joining first at the plan's start, because days before an account are closed.
+	h.clock.Set(ny(2026, time.October, 19, 12, 0))
 	nick := h.joinAdmin("Nick", "green")
 	// The plan starts two Mondays back, so the two weeks before this one began at this level.
 	h.clock.Set(ny(2026, time.October, 19, 12, 0))
@@ -195,6 +197,8 @@ func TestALongerFlowIsOfferedAfterTwoFinishedWeeks(t *testing.T) {
 
 func TestNoOfferAfterOneShortWeek(t *testing.T) {
 	h := newHarness(t)
+	// Joining first at the plan's start, because days before an account are closed.
+	h.clock.Set(ny(2026, time.October, 19, 12, 0))
 	nick := h.joinAdmin("Nick", "green")
 	h.clock.Set(ny(2026, time.October, 19, 12, 0))
 	h.put("/api/yoga/plan", nick.Token, obj{"daysPerWeek": 2, "flowMinutes": 10}).expect(http.StatusOK)

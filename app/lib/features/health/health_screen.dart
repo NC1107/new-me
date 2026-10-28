@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../state/today.dart';
@@ -38,8 +37,10 @@ class HealthScreen extends ConsumerWidget {
           children: [
             for (final (i, group) in kHealthGroups.indexed) ...[
               if (i > 0) const SizedBox(height: 20),
-              _GroupHeader(group: group),
-              const SizedBox(height: 8),
+              if (!_repeatsItsMetric(group)) ...[
+                _GroupHeader(group: group),
+                const SizedBox(height: 8),
+              ],
               AppCard(
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -58,6 +59,10 @@ class HealthScreen extends ConsumerWidget {
     );
   }
 }
+
+/// A group of one metric named like the group (Sleep, Sleep) needs no heading above its row.
+bool _repeatsItsMetric(HealthGroup group) =>
+    group.metrics.length == 1 && group.metrics.first.name == group.name;
 
 class _HealthLoading extends StatelessWidget {
   const _HealthLoading();
@@ -99,9 +104,7 @@ class _MetricRow extends StatelessWidget {
     final today = health.metrics[metric.key];
     final latest = health.latest[metric.key];
     final value = today ?? latest?.value;
-    final asOf = today == null && latest != null
-        ? DateFormat.MMMd().format(parseLocalDate(latest.date))
-        : null;
+    final asOf = today == null && latest != null ? dayShort(latest.date) : null;
     final text = value == null ? null : metric.display(value, context.units);
     final palette = group.palette;
     return Semantics(
@@ -135,7 +138,8 @@ class _MetricRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Flexible(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 150),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,

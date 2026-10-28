@@ -200,7 +200,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             SettingsRow(
               icon: Icons.list_alt_rounded,
               palette: accentById('rose'),
-              title: 'Exercises and sets',
+              title: 'Exercises',
               subtitle: 'Everything you have logged',
               onTap: () => pushPage(context, const ExercisesPage()),
             ),

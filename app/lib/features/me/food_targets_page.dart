@@ -126,13 +126,13 @@ class _FoodTargetsPageState extends ConsumerState<FoodTargetsPage> with MeSaving
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),
-        _field('kcal', 'Calories (kcal)', 'kcal', editable),
+        _field('kcal', 'Calories', 'kcal', editable),
         const SizedBox(height: 16),
-        _field('protein', 'Protein (g)', 'g', editable),
+        _field('protein', 'Protein', 'g', editable),
         const SizedBox(height: 16),
-        _field('carbs', 'Carbs (g)', 'g', editable),
+        _field('carbs', 'Carbs', 'g', editable),
         const SizedBox(height: 16),
-        _field('fat', 'Fat (g)', 'g', editable),
+        _field('fat', 'Fat', 'g', editable),
       ],
     );
   }

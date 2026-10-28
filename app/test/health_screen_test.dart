@@ -235,8 +235,10 @@ void main() {
           StubResponse(200, _trend('weight_kg', [('2026-10-26', 82.4)])),
         );
       await open(tester, adapter);
+      expect(find.text('Not enough data yet'), findsOneWidget);
       expect(find.textContaining('Only one reading so far'), findsOneWidget);
-      expect(find.text('82.4 kg'), findsWidgets);
+      expect(find.text('Lowest'), findsNothing);
+      expect(find.text('82.4 kg'), findsOneWidget);
     });
 
     testWidgets('loading shows placeholders, a failure shows Try again and recovers', (

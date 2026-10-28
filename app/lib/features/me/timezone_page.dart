@@ -23,6 +23,28 @@ const _kZones = [
   'UTC',
 ];
 
+const _kZoneNames = {
+  'America/New_York': 'Eastern Time (New York)',
+  'America/Chicago': 'Central Time (Chicago)',
+  'America/Denver': 'Mountain Time (Denver)',
+  'America/Los_Angeles': 'Pacific Time (Los Angeles)',
+  'Europe/London': 'London',
+  'Europe/Paris': 'Central Europe (Paris)',
+  'Europe/Berlin': 'Central Europe (Berlin)',
+  'Asia/Tokyo': 'Japan (Tokyo)',
+  'Australia/Sydney': 'Eastern Australia (Sydney)',
+  'UTC': 'UTC',
+};
+
+/// A zone as people say it: "Eastern Time (New York)", or the city of an id with no name here,
+/// so "Pacific/Auckland" reads "Auckland".
+String zoneLabel(String zone) {
+  final known = _kZoneNames[zone];
+  if (known != null) return known;
+  final city = zone.split('/').last.replaceAll('_', ' ');
+  return city.isEmpty ? zone : city;
+}
+
 /// The zones to pick from, with this phone's first and a field for any other. It only reports the
 /// choice; the Schedule page saves it with the rest.
 class TimezonePicker extends ConsumerStatefulWidget {
@@ -123,7 +145,7 @@ class _ZoneRow extends StatelessWidget {
     button: true,
     selected: selected,
     excludeSemantics: true,
-    label: isDevice ? '$zone, this phone' : zone,
+    label: isDevice ? '${zoneLabel(zone)}, this phone' : zoneLabel(zone),
     onTap: onTap,
     child: Pressable(
       scale: 0.99,
@@ -138,7 +160,10 @@ class _ZoneRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(zone, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      zoneLabel(zone),
+                      style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                    ),
                     if (isDevice) const Text('This phone', style: AppText.caption),
                   ],
                 ),

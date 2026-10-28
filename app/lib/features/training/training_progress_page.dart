@@ -13,6 +13,9 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import 'exercises_page.dart';
 
+/// Width of each of the three earlier-week columns, shared by the header and the rows.
+const _kWeekColumn = 44.0;
+
 /// Where a week's sets sit against the evidence range.
 enum VolumeBand { none, under, inRange, over }
 
@@ -45,7 +48,7 @@ class TrainingProgressPage extends ConsumerWidget {
         },
         const SizedBox(height: 20),
         ChunkyButton.secondary(
-          label: 'Exercises and bests',
+          label: 'Exercises',
           icon: Icons.list_alt_rounded,
           onPressed: () => pushPage(context, const ExercisesPage()),
         ),
@@ -66,15 +69,23 @@ class _Body extends StatelessWidget {
       p.rangeMax,
       for (final m in p.muscles) m.thisWeek,
     ].reduce((a, b) => a > b ? a : b);
+    final hasSets = p.muscles.any((m) => m.weeks.any((w) => w > 0));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           'Aim for ${p.rangeMin} to ${p.rangeMax} hard sets a week per muscle. The shaded band '
-          'on each bar is that range.',
+          'on each bar is that range. The small columns are weeks ago.',
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 16),
+        if (!hasSets) ...[
+          Text(
+            'No hard sets in the last 4 weeks. Log a set and each muscle fills in here.',
+            style: AppText.label.copyWith(color: kInk, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+        ],
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -82,13 +93,16 @@ class _Body extends StatelessWidget {
               ExcludeSemantics(
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        '3 weeks before',
-                        textAlign: TextAlign.right,
-                        style: AppText.caption.copyWith(color: kInkMuted),
+                    const Spacer(),
+                    for (final weeksAgo in [3, 2, 1])
+                      SizedBox(
+                        width: _kWeekColumn,
+                        child: Text(
+                          '$weeksAgo wk',
+                          textAlign: TextAlign.right,
+                          style: AppText.caption.copyWith(color: kInkMuted),
+                        ),
                       ),
-                    ),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 64,
@@ -151,13 +165,15 @@ class _MuscleRow extends StatelessWidget {
               Expanded(
                 child: Text(muscleLabel(volume.muscle), style: AppText.label.copyWith(color: kInk)),
               ),
-              Flexible(
-                child: Text(
-                  earlier.join('   '),
-                  textAlign: TextAlign.right,
-                  style: AppText.tabular(AppText.caption.copyWith(color: kInkMuted)),
+              for (var i = 0; i < 3; i++)
+                SizedBox(
+                  width: _kWeekColumn,
+                  child: Text(
+                    i >= 3 - earlier.length ? '${earlier[i - (3 - earlier.length)]}' : '',
+                    textAlign: TextAlign.right,
+                    style: AppText.tabular(AppText.caption.copyWith(color: kInkMuted)),
+                  ),
                 ),
-              ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 64,
@@ -221,7 +237,7 @@ class _VolumeBar extends StatelessWidget {
                 bottom: 0,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: accent.tint,
+                    color: accent.fill.withValues(alpha: 0.28),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

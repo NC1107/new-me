@@ -29,6 +29,14 @@ class NumberField extends StatelessWidget {
   final bool editable;
   final VoidCallback? onChanged;
 
+  /// The label with its unit, since the unit is drawn inside the field and not in the label.
+  String get _spokenLabel => switch (unit) {
+    null => label,
+    'g' => '$label, grams',
+    final u when label.contains(u) => label,
+    final u => '$label, $u',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -45,7 +53,7 @@ class NumberField extends StatelessWidget {
           child: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
             builder: (context, value, _) => Semantics(
-              label: label,
+              label: _spokenLabel,
               child: TextField(
                 controller: controller,
                 keyboardType: TextInputType.number,

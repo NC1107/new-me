@@ -191,8 +191,10 @@ class _ExerciseRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (!e.custom) HowToButton(exerciseKey: e.key, name: e.name),
-            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+            if (e.custom)
+              const Icon(Icons.chevron_right_rounded, color: kInkMuted)
+            else
+              HowToButton(exerciseKey: e.key, name: e.name),
           ],
         ),
       ),

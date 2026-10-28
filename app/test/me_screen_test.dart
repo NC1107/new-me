@@ -298,7 +298,7 @@ void main() {
       await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
-      await app.tap(find.byTooltip('Clear Protein (g)'));
+      await app.tap(find.byTooltip('Clear Protein'));
       await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {
         'targets': {'protein': null},
@@ -325,7 +325,7 @@ void main() {
       await app.pump(const FoodScreen());
       await app.tap(find.text('Food targets'));
 
-      expect(tester.getSemantics(fieldWith('2200')).label, contains('Calories (kcal)'));
+      expect(tester.getSemantics(fieldWith('2200')).label, contains('Calories, kcal'));
       handle.dispose();
     });
 
@@ -430,7 +430,9 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Europe/London'), findsOneWidget);
+      expect(find.text('London'), findsOneWidget);
+      expect(find.text('Eastern Time (New York)'), findsOneWidget);
+      expect(find.text('America/New_York'), findsNothing, reason: 'zones read as names');
 
       adapter.on(
         'PATCH /api/me',
@@ -441,7 +443,7 @@ void main() {
       expect(find.text('The server does not know "Mars/Base".'), findsOneWidget);
 
       adapter.on('PATCH /api/me', StubResponse(200, _me()));
-      await app.tap(find.text('Europe/London'));
+      await app.tap(find.text('London'));
       await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {'timezone': 'Europe/London'});
     });

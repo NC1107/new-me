@@ -14,12 +14,28 @@ import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
+import '../../widgets/chunky_button.dart';
+import '../log/log_kind.dart';
+import '../log/log_sheet.dart';
+import '../shell/home_tab.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/skeletons.dart';
 import '../../util/time_format.dart';
 
-Future<void> showDayDetailSheet(BuildContext context, {required String date}) =>
-    showAppSheet<void>(context, builder: (_) => DayDetailSheet(date: date));
+/// Where an empty sheet sends the person: to log a meal, or to the Train tab for a set.
+enum _Next { meal, set }
+
+Future<void> showDayDetailSheet(BuildContext context, {required String date}) async {
+  final container = ProviderScope.containerOf(context);
+  final next = await showAppSheet<_Next>(context, builder: (_) => DayDetailSheet(date: date));
+  if (next == null || !context.mounted) return;
+  switch (next) {
+    case _Next.meal:
+      await showLogSheet(context, kind: LogKind.meal, focusSearch: true);
+    case _Next.set:
+      container.read(homeTabProvider.notifier).select(HomeTab.train);
+  }
+}
 
 /// The day's entries with their time and quantity, each removable with a swipe.
 class DayDetailSheet extends ConsumerStatefulWidget {
@@ -35,6 +51,9 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
   List<LogEntry>? _entries;
   Object? _error;
 
+  /// Set only by a fresh load, so deleting the last entry keeps the sheet (and its Undo) put.
+  bool _emptyOnLoad = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +66,7 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
       if (mounted) {
         setState(() {
           _entries = entries;
+          _emptyOnLoad = entries.isEmpty;
           _error = null;
         });
       }
@@ -89,6 +109,7 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (_emptyOnLoad) return _empty(context);
     final height = MediaQuery.sizeOf(context).height * 0.7;
     return ScaffoldMessenger(
       child: Builder(
@@ -118,6 +139,37 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
     );
   }
 
+  /// Nothing to list, so the sheet is only as tall as its title, line and two actions.
+  Widget _empty(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      kGutter,
+      0,
+      kGutter,
+      kGutter + MediaQuery.paddingOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(header: true, child: const Text("Today's entries", style: AppText.title)),
+        const SizedBox(height: 8),
+        Text('No meals or sets logged yet.', style: AppText.body.copyWith(color: kInkSecondary)),
+        const SizedBox(height: 20),
+        ChunkyButton(
+          label: 'Log a meal',
+          icon: Icons.add_rounded,
+          onPressed: () => Navigator.of(context).pop(_Next.meal),
+        ),
+        const SizedBox(height: kCardGap),
+        ChunkyButton.secondary(
+          label: 'Log a set',
+          icon: Icons.fitness_center_rounded,
+          onPressed: () => Navigator.of(context).pop(_Next.set),
+        ),
+      ],
+    ),
+  );
+
   Widget _content(ScaffoldMessengerState messenger) {
     final entries = _entries;
     if (entries == null) {
@@ -144,7 +196,10 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
     if (entries.isEmpty) {
       return Align(
         alignment: Alignment.topLeft,
-        child: Text('Nothing logged yet.', style: AppText.body.copyWith(color: kInkSecondary)),
+        child: Text(
+          'No meals or sets logged yet.',
+          style: AppText.body.copyWith(color: kInkSecondary),
+        ),
       );
     }
     return ListView.separated(

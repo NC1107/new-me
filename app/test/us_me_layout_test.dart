@@ -182,7 +182,7 @@ void _suite(double scale) {
       noOverflow(tester, 'Train');
       await scrollAll(tester, app, 'Train');
 
-      for (final row in ['Exercises and sets', 'Weekly sets']) {
+      for (final row in ['Exercises', 'Weekly sets']) {
         await app.tap(find.text(row));
         noOverflow(tester, row);
         await app.tap(find.byTooltip('Back'));

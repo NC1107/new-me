@@ -392,7 +392,7 @@ void main() {
       expect(find.text('Train'), findsOneWidget);
       expect(find.text('Full body A'), findsWidgets, reason: "today's card and the plan day");
       expect(find.text('Dumbbell row'), findsNWidgets(2));
-      expect(find.text('Exercises and sets'), findsOneWidget);
+      expect(find.text('Exercises'), findsOneWidget);
       expect(find.text('Weekly sets'), findsOneWidget);
       expect(find.text('2 x 6 to 10 reps'), findsWidgets);
       expect(_button('Change plan'), findsOneWidget);

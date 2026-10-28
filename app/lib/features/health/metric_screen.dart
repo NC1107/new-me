@@ -154,66 +154,83 @@ class _Loaded extends StatelessWidget {
           style: AppText.caption,
         ),
         const SizedBox(height: 12),
-        Semantics(
-          label: summary,
-          image: true,
-          excludeSemantics: true,
-          child: AppCard(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                TrendChart(
-                  points: points,
-                  color: palette.fill,
-                  format: metric.format,
-                  onSelect: onSelect,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        DateFormat.MMMd().format(
-                          parseLocalDate(latest.date).subtract(Duration(days: days - 1)),
-                        ),
-                        style: AppText.caption,
-                      ),
-                      const Text('Today', style: AppText.caption),
-                    ],
+        if (points.length == 1)
+          const _NotEnough()
+        else ...[
+          Semantics(
+            label: summary,
+            image: true,
+            excludeSemantics: true,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  TrendChart(
+                    points: points,
+                    color: palette.fill,
+                    format: metric.format,
+                    onSelect: onSelect,
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          DateFormat.MMMd().format(
+                            parseLocalDate(latest.date).subtract(Duration(days: days - 1)),
+                          ),
+                          style: AppText.caption,
+                        ),
+                        const Text('Today', style: AppText.caption),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        if (points.length == 1) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'Only one reading so far. The line fills in as more days arrive.',
-            style: AppText.caption,
+          const SizedBox(height: kCardGap),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _Stat(label: 'Lowest', value: metric.display(low, context.units)),
+              ),
+              const SizedBox(width: kCardGap),
+              Expanded(
+                child: _Stat(label: 'Average', value: metric.display(average, context.units)),
+              ),
+              const SizedBox(width: kCardGap),
+              Expanded(
+                child: _Stat(label: 'Highest', value: metric.display(high, context.units)),
+              ),
+            ],
           ),
         ],
-        const SizedBox(height: kCardGap),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _Stat(label: 'Lowest', value: metric.display(low, context.units)),
-            ),
-            const SizedBox(width: kCardGap),
-            Expanded(
-              child: _Stat(label: 'Average', value: metric.display(average, context.units)),
-            ),
-            const SizedBox(width: kCardGap),
-            Expanded(
-              child: _Stat(label: 'Highest', value: metric.display(high, context.units)),
-            ),
-          ],
-        ),
       ],
     );
   }
+}
+
+/// One day of data cannot make a trend, so the chart and the lowest, average and highest wait.
+class _NotEnough extends StatelessWidget {
+  const _NotEnough();
+
+  @override
+  Widget build(BuildContext context) => const AppCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Not enough data yet', style: AppText.headline),
+        SizedBox(height: 4),
+        Text(
+          'Only one reading so far. The chart appears once a second day arrives.',
+          style: AppText.caption,
+        ),
+      ],
+    ),
+  );
 }
 
 class _Stat extends StatelessWidget {

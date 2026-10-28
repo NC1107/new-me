@@ -83,6 +83,10 @@ type basis int
 
 const (
 	basisGuess basis = iota
+	// basisStandard is a standard amount where the item's own is unknown, the FNDDS "Quantity not
+	// specified" weight or one whole item for a size USDA does not list: sound enough to use,
+	// never exact enough to call high confidence.
+	basisStandard
 	basisExact
 )
 
@@ -146,16 +150,12 @@ func resolve(f Food, it Item) (resolved, bool) {
 	if factor, ok := massGrams[unit]; ok {
 		return byGrams(it.Quantity*factor, basisExact)
 	}
-	if len(units) > 0 {
-		for _, p := range f.Portions {
-			if containsAll(portionUnit(p.Label), units) {
-				// The label's own numbers beat per-100 g ones scaled by a serving weight.
-				if f.PerServing != nil && f.ServingGrams > 0 && p.Grams == f.ServingGrams {
-					return resolved{N: f.PerServing.scale(it.Quantity), Grams: it.Quantity * p.Grams, Basis: basisExact}, true
-				}
-				return byGrams(it.Quantity*p.Grams, basisExact)
-			}
+	if p, ok := bestPortion(f.Portions, units, tokens(it.Food)); ok {
+		// The label's own numbers beat per-100 g ones scaled by a serving weight.
+		if f.PerServing != nil && f.ServingGrams > 0 && p.Grams == f.ServingGrams {
+			return resolved{N: f.PerServing.scale(it.Quantity), Grams: it.Quantity * p.Grams, Basis: basisExact}, true
 		}
+		return byGrams(it.Quantity*p.Grams, basisExact)
 	}
 	ml, isVolume := volumeML[unit]
 	if isVolume {
@@ -180,7 +180,7 @@ func resolve(f Food, it Item) (resolved, bool) {
 			return byGrams(it.Quantity*f.ServingGrams, basisExact)
 		}
 		if f.UnspecifiedGrams > 0 && (unit == "serving" || unit == "") {
-			return byGrams(it.Quantity*f.UnspecifiedGrams, basisGuess)
+			return byGrams(it.Quantity*f.UnspecifiedGrams, basisStandard)
 		}
 		if p, ok := wholePortion(f); ok && servingWord {
 			return byGrams(it.Quantity*p.Grams, basisExact)
@@ -190,27 +190,30 @@ func resolve(f Food, it Item) (resolved, bool) {
 		return byGrams(*it.Grams, basisGuess)
 	}
 	// Only a size word USDA does not list ("huge") is near enough to one whole item, or failing
-	// that its first measure. A volume is not, and neither is "a serving" of a food with no serving,
+	// that its first measure when that is a size. A volume is not, and neither is "a serving" of a food with no serving,
 	// since that first measure may be a cup of mayonnaise; those are estimated instead.
 	if isVolume || countUnits[unit] || unit == "" || f.Source != SourceUSDA || f.DataType == typeBranded {
 		return resolved{}, false
 	}
 	if p, ok := wholePortion(f); ok {
-		return byGrams(it.Quantity*p.Grams, basisGuess)
+		return byGrams(it.Quantity*p.Grams, basisStandard)
 	}
-	if len(f.Portions) > 0 && f.Portions[0].Grams > 0 {
+	// The first measure stands in only when it is itself a size; for french fries it is one fry.
+	if len(f.Portions) > 0 && f.Portions[0].Grams > 0 && sizedPortion.MatchString(f.Portions[0].Label) {
 		return byGrams(it.Quantity*f.Portions[0].Grams, basisGuess)
 	}
 	return resolved{}, false
 }
 
+var sizedPortion = regexp.MustCompile(`(?i)\b(small|medium|large|regular|extra large)\b`)
+
 // wholePortion is the measure of one whole item, which FNDDS names after the item itself
-// ("banana", "egg") or calls "fruit".
+// ("banana", "egg") or calls "fruit" or "whole".
 func wholePortion(f Food) (Portion, bool) {
 	lead := tokens(strings.Split(f.Name, ",")[0])
 	for _, p := range f.Portions {
 		u := portionUnit(p.Label)
-		if len(u) == 1 && p.Grams > 0 && (u[0] == "fruit" || slices.Contains(lead, u[0])) {
+		if len(u) == 1 && p.Grams > 0 && (u[0] == "fruit" || u[0] == "whole" || slices.Contains(lead, u[0])) {
 			return p, true
 		}
 	}
@@ -226,6 +229,34 @@ func gramsPerML(portions []Portion) (float64, bool) {
 		}
 	}
 	return 0, false
+}
+
+// bestPortion is the measure for the item's unit. Several can share a unit ("cup, diced", "cup,
+// shredded", "cup, melted" for cheddar), and they weigh very differently, so the one whose other
+// words the person used wins, then the plainest, then USDA's own order.
+func bestPortion(portions []Portion, units, words []string) (Portion, bool) {
+	if len(units) == 0 {
+		return Portion{}, false
+	}
+	said := toSet(words)
+	best, bestNamed, bestExtra, found := Portion{}, 0, 0, false
+	for _, p := range portions {
+		label := portionUnit(p.Label)
+		if !containsAll(label, units) {
+			continue
+		}
+		extra := without(label, toSet(units))
+		named := 0
+		for _, t := range extra {
+			if said[t] {
+				named++
+			}
+		}
+		if !found || named > bestNamed || (named == bestNamed && len(extra) < bestExtra) {
+			best, bestNamed, bestExtra, found = p, named, len(extra), true
+		}
+	}
+	return best, found
 }
 
 // portionUnit is a portion label's unit without its note, so "cup (8 fl oz)" is a cup and never
@@ -262,15 +293,20 @@ var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
 
 var stopwords = map[string]bool{"a": true, "an": true, "the": true, "of": true, "and": true, "with": true, "in": true, "s": true}
 
-// tokens lowercases, splits on punctuation, drops filler words and strips a plural "s" so
-// "Apples" and "apple" meet.
+// tokens lowercases, splits on punctuation, drops filler words and strips a plural so "Apples"
+// and "apple", "Tomatoes" and "tomato", "Berries" and "berry" meet.
 func tokens(s string) []string {
 	var out []string
 	for _, t := range nonAlnum.Split(strings.ToLower(s), -1) {
 		if t == "" || stopwords[t] {
 			continue
 		}
-		if len(t) > 3 && strings.HasSuffix(t, "s") && !strings.HasSuffix(t, "ss") {
+		switch {
+		case len(t) > 4 && strings.HasSuffix(t, "ies"):
+			t = strings.TrimSuffix(t, "ies") + "y"
+		case len(t) > 4 && strings.HasSuffix(t, "oes"):
+			t = strings.TrimSuffix(t, "es")
+		case len(t) > 3 && strings.HasSuffix(t, "s") && !strings.HasSuffix(t, "ss"):
 			t = strings.TrimSuffix(t, "s")
 		}
 		out = append(out, t)

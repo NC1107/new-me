@@ -360,7 +360,9 @@ func tidyServing(text string) string {
 
 // substitutes are words that mark a stand-in for a food, which someone searching for the food
 // itself rarely wants first.
-var substitutes = map[string]bool{"meatless": true, "imitation": true, "substitute": true, "analog": true, "vegetarian": true}
+var substitutes = map[string]bool{"meatless": true, "imitation": true, "substitute": true, "analog": true, "vegetarian": true,
+	// "Non-dairy milk" and "non-alcoholic beer" stand in for the food they name.
+	"non": true}
 
 // searchScore ranks a remote candidate for the library search: the estimate's match score,
 // lowered for stand-ins the query did not ask for.

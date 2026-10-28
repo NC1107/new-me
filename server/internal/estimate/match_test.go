@@ -7,6 +7,17 @@ import (
 
 func ptrf(v float64) *float64 { return &v }
 
+func TestTokensMeetTheirPlurals(t *testing.T) {
+	for _, pair := range [][2]string{{"Tomatoes", "tomato"}, {"Strawberries", "strawberry"}, {"Apples", "apple"}, {"Potatoes", "potato"}} {
+		if a, b := tokens(pair[0]), tokens(pair[1]); !reflect.DeepEqual(a, b) {
+			t.Errorf("%q = %v, %q = %v", pair[0], a, pair[1], b)
+		}
+	}
+	if got := tokens("Swiss glass"); !reflect.DeepEqual(got, []string{"swiss", "glass"}) {
+		t.Errorf("double s = %v", got)
+	}
+}
+
 func TestTokensSingularizeAndDropFiller(t *testing.T) {
 	got := tokens("Apples, raw, with skin (Jack Link's)")
 	want := []string{"apple", "raw", "skin", "jack", "link"}
@@ -260,7 +271,7 @@ func TestAServingWithoutALabelUsesTheSurveyUnspecifiedAmount(t *testing.T) {
 	mayo := Food{Name: "Mayonnaise, regular", Source: SourceUSDA, DataType: typeSurvey, Per100g: per100,
 		Portions: []Portion{{Label: "cup", Grams: 220}, {Label: "tablespoon", Grams: 13.8}}, UnspecifiedGrams: 9}
 	got, ok := resolve(mayo, Item{Quantity: 1, Unit: "serving"})
-	if !ok || got.Grams != 9 || got.Basis != basisGuess {
+	if !ok || got.Grams != 9 || got.Basis != basisStandard {
 		t.Fatalf("a serving of mayonnaise = %+v %v", got, ok)
 	}
 	reference := Food{Name: "Mayonnaise, made with tofu", Source: SourceUSDA, DataType: typeSRLegacy, Per100g: per100,

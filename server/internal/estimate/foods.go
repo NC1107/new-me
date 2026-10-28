@@ -55,7 +55,7 @@ func (f *Foods) memo() *ttlCache {
 
 // maxCandidates bounds how many ranked rows are tried when a unit will not convert, since each
 // USDA candidate may cost a detail call.
-const maxCandidates = 3
+const maxCandidates = 5
 
 // hit is a chosen database row with its converted nutrients.
 type hit struct {
@@ -129,6 +129,9 @@ func (f *Foods) Lookup(ctx context.Context, it Item) (hit, bool, error) {
 		if h, ok := f.pick(ctx, it, append(append([]Food{}, reference...), survey...)); ok {
 			return h, true, nil
 		}
+		if h, ok := f.unspecified(ctx, it); ok {
+			return h, true, nil
+		}
 		if firstErr == nil {
 			firstErr = errors.Join(err, surveyErr)
 		}
@@ -137,12 +140,16 @@ func (f *Foods) Lookup(ctx context.Context, it Item) (hit, bool, error) {
 }
 
 // pick ranks the candidates and converts the best one that the item's unit can be applied to.
+// Among the top few, one that converts the unit exactly beats a better named one that can only
+// guess it: "1 medium" french fries is a medium order from the restaurant row, not the first
+// measure of the generic row, which is a single fry.
 func (f *Foods) pick(ctx context.Context, it Item, foods []Food) (hit, bool) {
 	remaining := foods
+	var guess *hit
 	for tries := 0; tries < maxCandidates && len(remaining) > 0; tries++ {
 		best, ok := pickBest(it, remaining)
 		if !ok {
-			return hit{}, false
+			break
 		}
 		food := best.Food
 		if f.USDA != nil && food.Source == SourceUSDA && food.DataType != typeBranded && len(food.Portions) == 0 {
@@ -153,7 +160,13 @@ func (f *Foods) pick(ctx context.Context, it Item, foods []Food) (hit, bool) {
 			}
 		}
 		if r, ok := resolve(food, it); ok {
-			return hit{Food: food, Resolved: r, Confidence: confidenceFor(best, r.Basis)}, true
+			h := hit{Food: food, Resolved: r, Confidence: confidenceFor(best, r.Basis)}
+			if r.Basis != basisGuess {
+				return h, true
+			}
+			if guess == nil {
+				guess = &h
+			}
 		}
 		next := remaining[:0:0]
 		for _, c := range remaining {
@@ -163,5 +176,38 @@ func (f *Foods) pick(ctx context.Context, it Item, foods []Food) (hit, bool) {
 		}
 		remaining = next
 	}
+	if guess != nil {
+		return *guess, true
+	}
 	return hit{}, false
+}
+
+// unspecified falls back to the FNDDS food a dietary survey records when the detail is unknown,
+// such as "Coffee, NFS" for "coffee, black" or "Oatmeal, NFS" for "oatmeal, cooked", when no row
+// names the food with the person's own descriptors. Confidence follows how many of their words
+// it kept, so a dropped descriptor reads as lower confidence (FNDDS 2021-2023 documentation,
+// "NFS and NS food codes").
+func (f *Foods) unspecified(ctx context.Context, it Item) (hit, bool) {
+	name := strings.TrimSpace(strings.Split(it.Food, ",")[0])
+	words := strings.Fields(nonAlnum.ReplaceAllString(strings.ToLower(name), " "))
+	if len(words) == 0 {
+		return hit{}, false
+	}
+	key := strings.Join(words, " ")
+	survey, err := cached(f.memo(), "usda|default|"+key, func() ([]Food, error) {
+		return f.USDA.Search(ctx, key+" AND (NFS OR NS)", typeSurvey)
+	})
+	if err != nil {
+		return hit{}, false
+	}
+	food, ok := unspecifiedDefault(name, survey)
+	if !ok {
+		return hit{}, false
+	}
+	r, ok := resolve(food, it)
+	if !ok {
+		return hit{}, false
+	}
+	recall := share(tokens(it.Food), toSet(tokens(food.Name)))
+	return hit{Food: food, Resolved: r, Confidence: confidenceFor(match{Recall: recall}, r.Basis)}, true
 }

@@ -74,3 +74,15 @@ Checking 30 common foods against live USDA found the same kinds of faults: 8 fl 
 ## Health import
 
 - Workout minutes for a day are the time workouts cover within that day, not their summed lengths, so overlapping recordings count once and an overnight or forgotten workout cannot put more than a day on one date, which the server rejected along with the rest of that day.
+
+## Matching measured against a corpus
+
+- `TestLiveCorpus` (run by hand with `-tags live`) holds 46 everyday foods, worded as the split step words them, each with the USDA row it must land on and a believable calorie range; every matching change is checked against it.
+- Rows that lead with a class ("Fish, salmon, baked", "Soft drink, cola", "Potato, french fries") count when their second part is the food the person led with; a restaurant's name ("APPLEBEE'S, french fries") is not a class.
+- When no row names the food with the person's descriptors ("coffee, black", "oatmeal, cooked"), the FNDDS not-further-specified food for its name is used at low confidence.
+- "Non-dairy" and "non-alcoholic" foods rank as stand-ins, below the food they stand in for.
+- Of several measures with the item's unit, the one whose other words the person used wins ("cup, shredded" for shredded cheddar, 28 g a quarter cup instead of the melted cup's 61 g), then the plainest.
+- Among the top five rows, one that converts the unit exactly beats a better named one that can only guess; one whole item or the FNDDS unspecified amount counts as a standard answer, not a guess.
+- A size USDA does not list takes one whole item, or the first measure only when that is itself a size, so "1 medium" french fries is never a single fry.
+- Plurals ending in "-oes" and "-ies" meet their singulars ("Tomatoes" and "tomato").
+- Still estimated today: steamed broccoli, 93/7 ground beef, cheese pizza by the slice and protein shakes, which no row names closely enough.

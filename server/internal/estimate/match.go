@@ -1,6 +1,9 @@
 package estimate
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // minRecall is the share of the item's name tokens a candidate must contain to be accepted.
 const minRecall = 0.6
@@ -60,8 +63,7 @@ func scoreFood(it Item, f Food) (match, bool) {
 	// is not "Avocado dressing".
 	if isGenericUSDA(f) {
 		segments := strings.Split(f.Name, ",")
-		lead := tokens(segments[0])
-		if len(lead) == 0 || !containsAll(nameWant, lead) {
+		if !namesTheFood(segments, nameWant, restaurantRow(f)) {
 			return match{}, false
 		}
 		nameTokens = specifiedTokens(segments)
@@ -88,6 +90,24 @@ func scoreFood(it Item, f Food) (match, bool) {
 	return match{Food: f, Recall: recall, Score: 0.5*recall + 0.2*precision + 0.15*first + 0.15*last}, true
 }
 
+// namesTheFood is whether a USDA generic row is the food the person named. The lead segment is
+// usually the food itself ("Milk, whole"), and must then be words they said. Some rows lead with
+// a class instead ("Fish, salmon, baked", "Soft drink, cola"); those count when the second
+// segment is words they said and holds their leading word, so "Fish, salmon" answers "salmon,
+// baked" while "Orange peel, raw" still does not answer "orange, raw".
+func namesTheFood(segments, want []string, restaurant bool) bool {
+	if lead := tokens(segments[0]); len(lead) > 0 && containsAll(want, lead) {
+		return true
+	}
+	// A restaurant row leads with the restaurant ("APPLEBEE'S, french fries"), which is a brand
+	// the person did not name, not a class of food.
+	if restaurant || len(segments) < 2 || len(want) == 0 {
+		return false
+	}
+	second := tokens(segments[1])
+	return len(second) > 0 && containsAll(want, second) && slices.Contains(second, want[0])
+}
+
 // specifiedTokens leaves out FNDDS "NFS" and "NS as to ..." descriptors, which say the detail was
 // not given (FNDDS 2021-2023 documentation, "NFS and NS food codes"), so they do not count as
 // words the person left out: "almonds" is exactly "Almonds, NFS".
@@ -99,6 +119,11 @@ func specifiedTokens(segments []string) []string {
 		}
 	}
 	return out
+}
+
+// restaurantRow is whether USDA files the row under a restaurant's or fast food chain's food.
+func restaurantRow(f Food) bool {
+	return f.Category == "Restaurant Foods" || f.Category == "Fast Foods"
 }
 
 func isGenericUSDA(f Food) bool {

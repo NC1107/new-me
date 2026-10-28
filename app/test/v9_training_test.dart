@@ -148,9 +148,9 @@ void main() {
     );
 
     test('targets and sets', () {
-      expect(targetLabel(ex(), Units.metric), '3 x 8 reps');
-      expect(targetLabel(ex(load: 22.5), Units.metric), '3 x 8 reps at 22.5\u00a0kg');
-      expect(targetLabel(ex(timed: true, amount: 45), Units.metric), '3 x 45 s');
+      expect(targetLabel(ex(), Units.metric), '3 × 8 reps');
+      expect(targetLabel(ex(load: 22.5), Units.metric), '3 × 8 reps at 22.5\u00a0kg');
+      expect(targetLabel(ex(timed: true, amount: 45), Units.metric), '3 × 45 s');
       expect(
         setLabel(const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 1), Units.metric),
         '1 rep',
@@ -255,11 +255,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Rest day'), findsOneWidget);
       expect(find.text('Next: Full body B, Thu'), findsOneWidget);
-      expect(
-        find.byIcon(Icons.chevron_right_rounded),
-        findsNothing,
-        reason: 'the rest card has no tap',
-      );
+      expect(find.text('Log sets'), findsOneWidget);
+      await tester.tap(find.text('Rest day'));
+      await tester.pumpAndSettle();
+      expect(find.text('Search exercises'), findsWidgets, reason: 'the card opens the Exercises');
       expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
     });
 
@@ -322,7 +321,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Push-up'), findsOneWidget);
-      expect(find.text('2 x 6 reps'), findsNWidgets(3));
+      expect(find.text('2 × 6 reps'), findsNWidgets(3));
       expect(find.textContaining('First time in this plan'), findsWidgets);
       expect(find.text('10 reps at 20\u00a0kg · 2 RIR'), findsOneWidget);
 
@@ -379,6 +378,9 @@ void main() {
       await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
       expect(_button('Set up training'), findsOneWidget);
+      expect(find.textContaining('WHO 2020'), findsNothing, reason: 'the sources are one tap away');
+      await tester.tap(find.byTooltip('Sources for plans and progression'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('WHO 2020'), findsOneWidget);
     });
 
@@ -394,7 +396,7 @@ void main() {
       expect(find.text('Dumbbell row'), findsNWidgets(2));
       expect(find.text('Exercises'), findsOneWidget);
       expect(find.text('Weekly sets'), findsOneWidget);
-      expect(find.text('2 x 6 to 10 reps'), findsWidgets);
+      expect(find.text('2 × 6 to 10 reps'), findsWidgets);
       expect(_button('Change plan'), findsOneWidget);
     });
 

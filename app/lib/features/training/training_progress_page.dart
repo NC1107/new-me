@@ -8,10 +8,8 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/cached_view.dart';
-import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
-import 'exercises_page.dart';
 
 /// Width of each of the three earlier-week columns, shared by the header and the rows.
 const _kWeekColumn = 44.0;
@@ -46,12 +44,6 @@ class TrainingProgressPage extends ConsumerWidget {
           ),
           _ => const SkeletonBlock(height: 240, radius: kRadiusCard),
         },
-        const SizedBox(height: 20),
-        ChunkyButton.secondary(
-          label: 'Exercises',
-          icon: Icons.list_alt_rounded,
-          onPressed: () => pushPage(context, const ExercisesPage()),
-        ),
       ],
     );
   }
@@ -74,8 +66,8 @@ class _Body extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Aim for ${p.rangeMin} to ${p.rangeMax} hard sets a week per muscle. The shaded band '
-          'on each bar is that range. The small columns are weeks ago.',
+          'Aim for ${p.rangeMin} to ${p.rangeMax} hard sets a week per muscle, the shaded band '
+          'on each bar.',
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 16),

@@ -9,6 +9,7 @@ import 'package:newme/features/training/exercises_page.dart';
 import 'package:newme/features/training/how_to_sheet.dart';
 import 'package:newme/features/training/session_page.dart';
 import 'package:newme/features/training/set_assist.dart';
+import 'package:newme/features/log/big_number_stepper.dart';
 import 'package:newme/features/training/set_form.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -336,7 +337,8 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       await tester.pump(const Duration(seconds: 2));
       expect(find.text('3'), findsWidgets);
-      await tester.tap(_button('Stop and use 2 s'));
+      expect(find.byType(BigNumberStepper), findsNothing, reason: 'one big number while timing');
+      await tester.tap(_button('Stop at 2 seconds'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, '2'), findsOneWidget);
       await tester.tap(_button('Log set'));

@@ -8,6 +8,7 @@ import 'board.dart';
 import 'session.dart';
 import 'targets.dart';
 import 'today.dart';
+import 'training.dart';
 
 /// The write side of the log: every save and delete keeps Today and the Board in step.
 class LogActions {
@@ -25,6 +26,7 @@ class LogActions {
     final result = await _client.createLog(draft);
     await _ref.read(todayProvider.notifier).applyLog(result);
     _refreshBoard();
+    _ref.invalidate(trainingHistoryProvider);
     return result;
   }
 
@@ -33,6 +35,7 @@ class LogActions {
   Future<PushupMaxResult> recordPushupMax(int reps, {String? date}) async {
     final result = await _client.recordPushupMax(reps: reps, date: date);
     if (_ref.exists(targetsProvider)) unawaited(_ref.read(targetsProvider.notifier).refresh());
+    _ref.invalidate(exerciseHistoryProvider);
     return result;
   }
 
@@ -40,6 +43,7 @@ class LogActions {
     await _client.deleteLog(entry);
     await _ref.read(todayProvider.notifier).refresh();
     _refreshBoard();
+    _ref.invalidate(trainingHistoryProvider);
   }
 
   Future<List<LogEntry>> entriesFor(String date) => _client.logs(date: date);

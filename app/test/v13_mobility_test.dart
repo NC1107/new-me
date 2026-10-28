@@ -303,11 +303,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await tester.pump();
-      expect(tester.widget<TextButton>(_action('Back')).onPressed, isNull);
+      expect(tester.widget<TextButton>(_action('Previous')).onPressed, isNull);
       await tester.tap(_action('Skip'));
       await tester.pump();
       expect(find.text('Stretch 2 of 10'), findsOneWidget);
-      await tester.tap(_action('Back'));
+      await tester.tap(_action('Previous'));
       await tester.pump();
       expect(find.text('Stretch 1 of 10'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 100));
@@ -400,7 +400,7 @@ void main() {
       expect(server.to('POST /api/logs'), isEmpty);
     });
 
-    testWidgets('stopping in the first seconds just leaves', (tester) async {
+    testWidgets('stopping in the first seconds confirms and logs nothing', (tester) async {
       final server = _server();
       final app = TestApp(tester, server, surfaceHeight: 3000);
       await app.pump(const MobilityPage());
@@ -409,7 +409,10 @@ void main() {
       await _seconds(tester, 5);
       await tester.tap(_action('End'));
       await tester.pumpAndSettle();
-      expect(find.text('End Mobility early?'), findsNothing);
+      expect(find.text('End Mobility?'), findsOneWidget);
+      expect(find.textContaining('nothing will be logged'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'End').last);
+      await tester.pumpAndSettle();
       expect(find.byType(MobilityPage), findsNothing);
       expect(server.to('POST /api/logs'), isEmpty);
     });
@@ -455,6 +458,71 @@ void main() {
       expect(_digits('30'), findsOneWidget);
     });
 
+    testWidgets('skipping through every stretch logs nothing', (tester) async {
+      final server = _server();
+      final app = TestApp(tester, server, surfaceHeight: 3000);
+      await app.pump(const MobilityPage());
+      await tester.pumpAndSettle();
+      await tester.tap(_button('Start'));
+      await tester.pump();
+      for (var i = 0; i < 10; i++) {
+        await tester.tap(_action('Skip'));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing logged'), findsOneWidget);
+      expect(find.textContaining('Logged'), findsNothing);
+      expect(server.to('POST /api/logs'), isEmpty);
+      await tester.tap(_button('Done'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MobilityPage), findsNothing);
+    });
+
+    testWidgets('time in the background is counted once when the ticker fires meanwhile', (
+      tester,
+    ) async {
+      var now = DateTime(2026, 10, 28, 7);
+      final app = TestApp(tester, _server(), surfaceHeight: 3000);
+      await app.pump(MobilityPage(now: () => now));
+      await tester.pumpAndSettle();
+      await tester.tap(_button('Start'));
+      await _seconds(tester, 3);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      for (var i = 0; i < 35; i++) {
+        now = now.add(const Duration(seconds: 1));
+        await tester.pump(const Duration(seconds: 1));
+      }
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(find.text('Hold 2 of 2'), findsOneWidget);
+      expect(_digits('28'), findsOneWidget);
+      await _seconds(tester, 1);
+      expect(_digits('27'), findsOneWidget);
+    });
+
+    testWidgets('a log that fails oddly can still be retried', (tester) async {
+      final server = _server();
+      var fail = true;
+      server.routes['POST /api/logs'] = (_) =>
+          fail ? const StubResponse(201, {'unexpected': true}) : StubResponse(201, logResultJson());
+      final app = TestApp(tester, server, surfaceHeight: 3000);
+      await app.pump(const MobilityPage());
+      await tester.pumpAndSettle();
+      await tester.tap(_button('Start'));
+      await _seconds(tester, 20 * 33);
+      await tester.pumpAndSettle();
+      expect(_button('Try again'), findsOneWidget);
+      fail = false;
+      await tester.tap(_button('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Logged 11 minutes to your yoga quest.'), findsOneWidget);
+      final ids = [for (final r in server.to('POST /api/logs')) (r.data as Map)['clientOpId']];
+      expect(ids.toSet(), hasLength(1));
+    });
+
     testWidgets('the digits are not read every second and controls are 44 points', (tester) async {
       final handle = tester.ensureSemantics();
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
@@ -465,7 +533,7 @@ void main() {
       expect(find.bySemanticsLabel('Hold timer running'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp(r'^\d+$')), findsNothing);
       expect(find.bySemanticsLabel('Session progress'), findsOneWidget);
-      for (final label in ['Back', 'End', 'Skip']) {
+      for (final label in ['Previous', 'End', 'Skip']) {
         final size = tester.getSize(_action(label));
         expect(size.width, greaterThanOrEqualTo(44), reason: label);
         expect(size.height, greaterThanOrEqualTo(44), reason: label);

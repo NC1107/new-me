@@ -12,6 +12,7 @@ import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
 import 'eased_note.dart';
+import 'exercises_page.dart';
 import 'session_page.dart';
 import 'training_copy.dart';
 import '../shell/home_tab.dart';
@@ -103,7 +104,10 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
         subtitle: next == null
             ? 'Recovery is part of the plan.'
             : 'Next: ${next.label}, ${weekdayLabel(next.weekday)}',
-        onTap: openPlan,
+        // The server starts only today's session, so on the Train tab a rest day points at the
+        // Exercises, where sets can be logged any day.
+        action: tab ? 'Log sets' : null,
+        onTap: tab ? () => pushPage(context, const ExercisesPage()) : openPlan,
       );
     }
     return Padding(

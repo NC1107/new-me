@@ -139,15 +139,18 @@ class _SetFormState extends State<SetForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        BigNumberStepper(
-          controller: _amount,
-          unitLabel: widget.timed ? 'seconds' : 'reps',
-          onMinus: amount > 0 ? () => _step(-step) : null,
-          onPlus: amount < _max ? () => _step(step) : null,
-          onChanged: (_) => setState(() {}),
-          errorText: _amountError,
-        ),
-        const SizedBox(height: 12),
+        // While counting or timing, the assist shows the one big number.
+        if (_assist == _Assist.none) ...[
+          BigNumberStepper(
+            controller: _amount,
+            unitLabel: widget.timed ? 'seconds' : 'reps',
+            onMinus: amount > 0 ? () => _step(-step) : null,
+            onPlus: amount < _max ? () => _step(step) : null,
+            onChanged: (_) => setState(() {}),
+            errorText: _amountError,
+          ),
+          const SizedBox(height: 12),
+        ],
         switch (_assist) {
           _Assist.counting => RepCounter(
             max: _max,

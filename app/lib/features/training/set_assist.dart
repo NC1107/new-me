@@ -262,7 +262,9 @@ class _HoldTimerState extends State<HoldTimer> {
         ),
         const SizedBox(height: 12),
         ChunkyButton.secondary(
-          label: !leadIn && _held > 0 ? 'Stop and use $_held s' : 'Cancel',
+          label: !leadIn && _held > 0
+              ? 'Stop at $_held ${_held == 1 ? 'second' : 'seconds'}'
+              : 'Cancel',
           onPressed: _stop,
         ),
       ],

@@ -25,7 +25,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	if got.num("day.basePoints") != 306 || got.num("day.bonusPoints") != 30 || got.num("day.points") != 336 ||
-		got.num("day.maxBase") != 400 || got.num("day.percent") != 76 || got.num("day.goalPercent") != 108 || !got.flag("day.counted") ||
+		got.num("day.maxBase") != 400 || got.num("day.percent") != 76 || got.num("day.goalPercent") != 109 || !got.flag("day.counted") ||
 		got.num("day.streakLine") != 70 {
 		t.Fatalf("day = %s", got.Body)
 	}

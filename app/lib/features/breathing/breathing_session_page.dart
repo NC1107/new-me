@@ -117,35 +117,38 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-              child: LayoutBuilder(
-                builder: (context, box) => SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(8, 4, kGutter, 24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: box.maxHeight - 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    // The close button's own 48pt box already insets its glyph from the edge.
+                    padding: const EdgeInsets.fromLTRB(8, 4, kGutter, 0),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: _leave,
-                              tooltip: done ? 'Close' : 'End session',
-                              constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-                              icon: const Icon(Icons.close_rounded, size: 28, color: kInk),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Semantics(
-                                header: true,
-                                child: Text(widget.pace.name, style: AppText.title),
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: _leave,
+                          tooltip: done ? 'Close' : 'End session',
+                          constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+                          icon: const Icon(Icons.close_rounded, size: 28, color: kInk),
                         ),
-                        const SizedBox(height: 24),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Semantics(
+                            header: true,
+                            child: Text(widget.pace.name, style: AppText.title),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, box) => SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: kGutter),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: box.maxHeight),
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Center(
@@ -176,15 +179,20 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
                                 textAlign: TextAlign.center,
                                 style: AppText.body.copyWith(color: kInkSecondary),
                               ),
-                              const SizedBox(height: 32),
-                              ..._buttons(),
                             ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(kGutter, 12, kGutter, kGutter),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _buttons(),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

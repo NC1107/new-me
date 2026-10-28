@@ -121,7 +121,6 @@ func (u *USDA) get(ctx context.Context, path string, q url.Values, out any) erro
 }
 
 func (u *USDA) do(ctx context.Context, method, path string, q url.Values, body any, out any) error {
-	q.Set("api_key", u.Key)
 	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)
 	defer cancel()
 	var reqBody io.Reader
@@ -139,6 +138,9 @@ func (u *USDA) do(ctx context.Context, method, path string, q url.Values, body a
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	// A header, not the api_key query parameter, so a transport error that quotes the URL
+	// cannot carry the key into the server log.
+	req.Header.Set("X-Api-Key", u.Key)
 	resp, err := u.HTTP.Do(req)
 	if err != nil {
 		return fmt.Errorf("%w: usda: %v", ErrLookup, err)

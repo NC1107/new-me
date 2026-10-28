@@ -101,14 +101,11 @@ class _ServingGuide extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 7, right: 10),
-                  child: SizedBox(
-                    width: 6,
-                    height: 6,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(color: kInkMuted, shape: BoxShape.circle),
-                    ),
+                // A text bullet sits on the line's baseline at any text size.
+                ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text('•', style: AppText.body.copyWith(color: kInkMuted)),
                   ),
                 ),
                 Expanded(child: Text(line, style: AppText.body)),

@@ -93,7 +93,8 @@ func newFakeFoods(t *testing.T) (*fakeFoods, *Foods) {
 		usda: func(string, string) any { return obj{"foods": []obj{}} },
 		off:  func(string) any { return obj{"products": []obj{}} }}
 	usda := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("api_key") != "test-key" {
+		// The key travels in a header and never in the URL, where an error message could log it.
+		if r.Header.Get("X-Api-Key") != "test-key" || r.URL.Query().Has("api_key") {
 			http.Error(w, "bad key", http.StatusForbidden)
 			return
 		}

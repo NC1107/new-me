@@ -75,6 +75,8 @@ type Input struct {
 type Reason struct {
 	Kind string `json:"kind"`
 	Text string `json:"text"`
+	// Strain marks a reason that pulled the level down; it is not sent to the app.
+	Strain bool `json:"-"`
 }
 
 // Result is the readiness of the day.
@@ -101,17 +103,17 @@ func Compute(in Input) (Result, bool) {
 		switch {
 		case change <= -HRVLowFraction:
 			score--
-			reasons = append(reasons, Reason{KindHRV, fmt.Sprintf("HRV %d%% below your usual", pct(-change))})
+			reasons = append(reasons, Reason{Kind: KindHRV, Text: fmt.Sprintf("HRV %d%% below your usual", pct(-change)), Strain: true})
 		case change >= HRVHighFraction:
 			score++
-			reasons = append(reasons, Reason{KindHRV, fmt.Sprintf("HRV %d%% above your usual", pct(change))})
+			reasons = append(reasons, Reason{Kind: KindHRV, Text: fmt.Sprintf("HRV %d%% above your usual", pct(change))})
 		}
 	}
 	if rhrOK {
 		if diff := *in.RestingHR - rhrBase; diff >= RestingHRHighBPM {
 			score--
-			reasons = append(reasons, Reason{KindRestingHR,
-				fmt.Sprintf("Resting heart rate %d bpm above your usual", int(math.Round(diff)))})
+			reasons = append(reasons, Reason{Kind: KindRestingHR,
+				Text: fmt.Sprintf("Resting heart rate %d bpm above your usual", int(math.Round(diff))), Strain: true})
 		}
 	}
 	sleepVote := 0
@@ -120,10 +122,10 @@ func Compute(in Input) (Result, bool) {
 		switch {
 		case short >= SleepShortMin:
 			sleepVote = -1
-			reasons = append(reasons, Reason{KindSleep, fmt.Sprintf("Slept %s, %s under your target", Duration(*in.SleepMin), Duration(short))})
+			reasons = append(reasons, Reason{Kind: KindSleep, Text: fmt.Sprintf("Slept %s, %s under your target", Duration(*in.SleepMin), Duration(short)), Strain: true})
 		case short <= SleepOnTargetSlackMin:
 			sleepVote = 1
-			reasons = append(reasons, Reason{KindSleep, fmt.Sprintf("Slept %s, on target", Duration(*in.SleepMin))})
+			reasons = append(reasons, Reason{Kind: KindSleep, Text: fmt.Sprintf("Slept %s, on target", Duration(*in.SleepMin))})
 		}
 	}
 
@@ -146,10 +148,10 @@ func Compute(in Input) (Result, bool) {
 		}
 	}
 	if len(reasons) == 0 {
-		reasons = append(reasons, Reason{KindSteady, "Sleep and recovery look close to your usual"})
+		reasons = append(reasons, Reason{Kind: KindSteady, Text: "Sleep and recovery look close to your usual"})
 	}
 	if res.Basis == BasisSleepOnly {
-		reasons = append(reasons, Reason{KindBasis, "Based on sleep only until there are 7 days of heart data"})
+		reasons = append(reasons, Reason{Kind: KindBasis, Text: "Based on sleep only until there are 7 days of heart data"})
 	}
 	res.Reasons = reasons
 	return res, true

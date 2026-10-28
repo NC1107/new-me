@@ -11,6 +11,7 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
+import 'eased_note.dart';
 import 'session_page.dart';
 import 'training_copy.dart';
 import '../shell/home_tab.dart';
@@ -92,6 +93,7 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
             : 'Continue',
         onTap: () => pushPage(context, const SessionPage()),
         done: session.completed,
+        footer: session.eased && !session.completed ? EasedNote(session: session) : null,
       );
     } else {
       final next = nextPlanDay(plan, training.date);
@@ -119,6 +121,7 @@ class _TrainingCard extends StatelessWidget {
     required this.onTap,
     this.action,
     this.done = false,
+    this.footer,
   });
 
   final IconData icon;
@@ -128,60 +131,64 @@ class _TrainingCard extends StatelessWidget {
   final String? action;
   final bool done;
 
+  /// A line under the row, such as why the session is eased.
+  final Widget? footer;
+
   @override
   Widget build(BuildContext context) {
     final accent = context.accentPalette;
+    final row = ExcludeSemantics(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accent.tint,
+              borderRadius: BorderRadius.circular(kRadiusField),
+            ),
+            child: Icon(icon, color: done ? accent.fill : accent.lip, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.headline),
+                Text(subtitle, style: AppText.caption.copyWith(color: kInkSecondary)),
+              ],
+            ),
+          ),
+          if (action case final label?) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: done ? accent.tint : accent.fill,
+                borderRadius: BorderRadius.circular(kRadiusButton),
+              ),
+              child: Text(
+                label,
+                style: AppText.label.copyWith(
+                  color: done ? accent.lip : accent.onFill,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ] else if (onTap != null)
+            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+        ],
+      ),
+    );
     return AppCard(
       onTap: onTap,
       semanticLabel: ['Training', title, subtitle, ?action].join('. '),
-      child: ExcludeSemantics(
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.tint,
-                borderRadius: BorderRadius.circular(kRadiusField),
-              ),
-              child: Icon(icon, color: done ? accent.fill : accent.lip, size: 24),
+      child: footer == null
+          ? row
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [row, const SizedBox(height: 10), footer!],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.headline,
-                  ),
-                  Text(subtitle, style: AppText.caption.copyWith(color: kInkSecondary)),
-                ],
-              ),
-            ),
-            if (action case final label?) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: done ? accent.tint : accent.fill,
-                  borderRadius: BorderRadius.circular(kRadiusButton),
-                ),
-                child: Text(
-                  label,
-                  style: AppText.label.copyWith(
-                    color: done ? accent.lip : accent.onFill,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ] else if (onTap != null)
-              const Icon(Icons.chevron_right_rounded, color: kInkMuted),
-          ],
-        ),
-      ),
     );
   }
 }

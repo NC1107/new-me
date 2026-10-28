@@ -455,6 +455,10 @@ class ApiClient {
   Future<TrainingToday> trainingToday() =>
       _send(() => _dio.get<dynamic>('/api/training/today'), TrainingToday.parse);
 
+  /// Chooses the full session for today instead of the eased one; the choice sticks for the day.
+  Future<TrainingToday> takeFullSession() =>
+      _send(() => _dio.post<dynamic>('/api/training/today/full'), TrainingToday.parse);
+
   /// Completes a session; the rescored day has the strength quest done by the session.
   Future<DayDetail> completeSession(int id) => _send(
     () => _dio.post<dynamic>('/api/training/sessions/$id/complete'),

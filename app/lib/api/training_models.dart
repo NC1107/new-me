@@ -614,6 +614,8 @@ class TrainingSession {
     required this.label,
     this.completed = false,
     this.exercises = const [],
+    this.eased = false,
+    this.easedReason = '',
   });
 
   static TrainingSession? tryParse(Object? v) {
@@ -626,6 +628,8 @@ class TrainingSession {
       label: _str(j['label'], 'Training'),
       completed: j['completed'] == true,
       exercises: _list(j['exercises'], SessionExercise.tryParse),
+      eased: j['eased'] == true,
+      easedReason: _str(j['easedReason']),
     );
   }
 
@@ -634,6 +638,14 @@ class TrainingSession {
   final String label;
   final bool completed;
   final List<SessionExercise> exercises;
+
+  /// True when an Easy readiness morning made the session one set lighter per exercise;
+  /// [easedReason] says why in one line.
+  final bool eased;
+  final String easedReason;
+
+  /// Whether "Do the full session" still applies: once a set is logged the session stays as it was.
+  bool get canTakeFull => eased && !completed && setsLogged == 0;
 
   int get setsLogged => exercises.fold(0, (n, e) => n + e.logged.length);
   int get setsPlanned => exercises.fold(0, (n, e) => n + e.target.sets);
@@ -644,6 +656,8 @@ class TrainingSession {
     label: label,
     completed: completed ?? this.completed,
     exercises: exercises ?? this.exercises,
+    eased: eased,
+    easedReason: easedReason,
   );
 
   Map<String, dynamic> toJson() => {
@@ -652,6 +666,8 @@ class TrainingSession {
     'label': label,
     'completed': completed,
     'exercises': [for (final e in exercises) e.toJson()],
+    'eased': eased,
+    'easedReason': easedReason,
   };
 }
 

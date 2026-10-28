@@ -106,6 +106,8 @@
   "session": {
     "completed": false,
     "date": "2026-11-02",
+    "eased": false,
+    "easedReason": "",
     "exercises": [
       {
         "exercise": "push_up",

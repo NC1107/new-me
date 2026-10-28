@@ -215,3 +215,22 @@ func ExerciseHistory(ctx context.Context, q Querier, userID int64, keys []string
 	}
 	return out, rows.Err()
 }
+
+// SessionEase is whether a session was shown eased, and whether the person chose the full
+// session instead.
+func SessionEase(ctx context.Context, q Querier, sessionID int64) (eased, full bool, err error) {
+	err = q.QueryRow(ctx, `SELECT eased, full_session FROM training_sessions WHERE id = $1`, sessionID).Scan(&eased, &full)
+	return eased, full, notFound(err)
+}
+
+// SetSessionEased records whether the session is shown eased.
+func SetSessionEased(ctx context.Context, q Querier, sessionID int64, eased bool) error {
+	_, err := q.Exec(ctx, `UPDATE training_sessions SET eased = $2 WHERE id = $1`, sessionID, eased)
+	return err
+}
+
+// TakeFullSession makes the session the full one for the day.
+func TakeFullSession(ctx context.Context, q Querier, sessionID int64) error {
+	_, err := q.Exec(ctx, `UPDATE training_sessions SET full_session = true, eased = false WHERE id = $1`, sessionID)
+	return err
+}

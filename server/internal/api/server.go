@@ -232,6 +232,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
 		r.Get("/api/foods", s.handleListFoods)
+		r.Get("/api/foods/barcode/{code}", s.handleFoodByBarcode)
 		r.Post("/api/foods", s.handleCreateFood)
 		r.Patch("/api/foods/{id}", s.handlePatchFood)
 		r.Delete("/api/foods/{id}", s.handleDeleteFood)

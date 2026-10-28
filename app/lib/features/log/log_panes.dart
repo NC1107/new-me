@@ -285,6 +285,7 @@ class MealPane extends StatefulWidget {
 
 class _MealPaneState extends State<MealPane> {
   final _name = TextEditingController();
+  final _nameFocus = FocusNode();
   final _kcal = TextEditingController();
   final _protein = TextEditingController();
   final _carbs = TextEditingController();
@@ -301,6 +302,7 @@ class _MealPaneState extends State<MealPane> {
     for (final c in [_name, _kcal, _protein, _carbs, _fat, _fiber]) {
       c.dispose();
     }
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -463,7 +465,12 @@ class _MealPaneState extends State<MealPane> {
           ),
           const SizedBox(height: 12),
         ],
-        FoodSearchBox(onPick: _addFood, enabled: !widget.busy, autofocus: widget.autofocusSearch),
+        FoodSearchBox(
+          onPick: _addFood,
+          enabled: !widget.busy,
+          autofocus: widget.autofocusSearch,
+          onEnterByHand: _entries.isEmpty ? _nameFocus.requestFocus : null,
+        ),
         const SizedBox(height: 16),
         if (_entries.isNotEmpty)
           ItemizedMeal(
@@ -532,6 +539,7 @@ class _MealPaneState extends State<MealPane> {
       const FieldLabel('Name'),
       AppTextField(
         controller: _name,
+        focusNode: _nameFocus,
         hint: 'What was it? (optional)',
         textCapitalization: TextCapitalization.sentences,
         inputFormatters: [LengthLimitingTextInputFormatter(80)],

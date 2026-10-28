@@ -56,7 +56,9 @@ void main() {
     expect(order, keys, reason: '07:30, 12:00, 22:00, then the untimed floss and water');
     expect(find.text('Habits'), findsOneWidget);
     expect(find.text('0 of 5'), findsOneWidget);
-    expect(find.text('Morning · 7:30 AM'), findsOneWidget);
+    // The chip shows the slot name; the time is still read out with it.
+    expect(find.text('Morning'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Morning · 7:30 AM')), findsOneWidget);
     expect(find.text('0/8'), findsOneWidget);
   });
 

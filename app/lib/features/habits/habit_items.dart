@@ -44,6 +44,14 @@ class StripItem {
     return parts.isEmpty ? null : parts.join(' · ');
   }
 
+  /// What fits under the name on a chip: the slot label when there are several ("Morning"),
+  /// otherwise the time. The full caption is still read out.
+  String? get chipCaption {
+    if (isCount) return caption;
+    if (multiSlot && slot!.label.isNotEmpty) return slot!.label;
+    return minutes == null ? null : formatReminderTime(minutes!);
+  }
+
   String get semanticLabel {
     final state = done ? 'done' : (overdue ? 'overdue' : 'not done');
     return [title, ?caption, state].join(', ');

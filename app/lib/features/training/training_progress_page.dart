@@ -146,7 +146,7 @@ class _MuscleRow extends StatelessWidget {
     };
     return Semantics(
       label:
-          '${muscleLabel(volume.muscle)}, $sets sets this week, $status. '
+          '${muscleLabel(volume.muscle)}, $sets ${sets == 1 ? 'set' : 'sets'} this week, $status. '
           'The 3 weeks before: ${earlier.join(', ')}',
       excludeSemantics: true,
       child: Column(

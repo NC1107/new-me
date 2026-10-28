@@ -32,7 +32,7 @@ class HabitChip extends StatelessWidget {
     final overdue = item.overdue;
     final Color fill = done ? palette.tint : (overdue ? _kOverdueFill : kSurface);
     final Color border = done ? palette.fill : (overdue ? kFlame : kBorder);
-    final caption = item.caption;
+    final caption = item.chipCaption;
 
     final chip = AnimatedContainer(
       duration: reduce ? Duration.zero : kMotionDuration,

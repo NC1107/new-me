@@ -200,7 +200,9 @@ class _SetFormState extends State<SetForm> {
                     label: r == 4 ? '4+' : '$r',
                     compact: true,
                     selected: _rir == r,
-                    semanticLabel: '$r reps in reserve',
+                    semanticLabel: r == 4
+                        ? '4 or more reps in reserve'
+                        : '$r ${r == 1 ? 'rep' : 'reps'} in reserve',
                     onTap: () => setState(() => _rir = _rir == r ? null : r),
                   ),
                 ),

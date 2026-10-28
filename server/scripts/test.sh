@@ -8,7 +8,9 @@ set -e
 cd "$(dirname "$0")/.."
 
 CONTAINER=newme-test-postgres-$$
-PORT=${NEWME_TEST_PG_PORT:-55433}
+# Docker picks a free port unless one is given, so runs from several checkouts at once never
+# collide on a fixed port.
+PORT=${NEWME_TEST_PG_PORT:-}
 PASSWORD=test-$$
 
 cleanup() {
@@ -23,12 +25,13 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "starting a throwaway Postgres on port $PORT..." >&2
 docker run -d --name "$CONTAINER" \
   -e POSTGRES_USER=newme \
   -e POSTGRES_PASSWORD="$PASSWORD" \
   -e POSTGRES_DB=newme_test \
-  -p "$PORT":5432 postgres:16-alpine >/dev/null
+  -p "127.0.0.1:$PORT:5432" postgres:16-alpine >/dev/null
+PORT=$(docker port "$CONTAINER" 5432/tcp | head -n 1 | sed 's/.*://')
+echo "started a throwaway Postgres on port $PORT" >&2
 
 i=0
 # Probing over TCP skips the init-time server, which listens on the unix socket only and

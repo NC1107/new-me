@@ -91,10 +91,10 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
   }
 
   Future<void> _submit() {
+    if (!_valid) return Future.value();
     final name = _name.text.trim();
     final price = _priceValue!;
     final existing = _existing;
-    if (!_valid) return Future.value();
     return _run(
       (rewards) => existing == null
           ? rewards.propose(name: name, price: price)
@@ -133,6 +133,12 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // The price help may arrive after the sheet opened; fill the suggestion then if untouched.
+    ref.listen(rewardsProvider, (_, _) {
+      if (_existing != null || _price.text.isNotEmpty) return;
+      final suggested = _suggestedStart();
+      if (suggested.isNotEmpty) setState(() => _price.text = suggested);
+    });
     final person = context.accentPalette;
     final partner = ref.watch(partnerNameProvider);
     final list = ref.watch(rewardsProvider).value;

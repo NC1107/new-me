@@ -144,7 +144,12 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         ],
         if (board.lastChallenge case final last?) ...[
           const SizedBox(height: kCardGap),
-          ChallengeCard(challenge: last, today: today, people: people),
+          ChallengeCard(
+            challenge: last,
+            today: today,
+            people: people,
+            myId: ref.watch(sessionProvider.select((s) => s.session?.userId)),
+          ),
         ],
         const SizedBox(height: kCardGap),
         const RewardProposalsCard(),

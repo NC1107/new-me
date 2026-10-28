@@ -257,8 +257,14 @@ func (s *Server) Router() http.Handler {
 
 		r.Post("/api/cheers", s.handleCreateCheer)
 		r.Get("/api/rewards", s.handleListRewards)
-		r.Post("/api/rewards", s.handleCreateReward)
-		r.Post("/api/rewards/{id}/claim", s.handleClaimReward)
+		r.With(s.settleAfter).Post("/api/rewards", s.handleCreateReward)
+		r.Patch("/api/rewards/{id}", s.handlePatchReward)
+		r.Delete("/api/rewards/{id}", s.handleWithdrawReward)
+		r.Post("/api/rewards/{id}/approve", s.handleApproveReward)
+		r.Post("/api/rewards/{id}/decline", s.handleDeclineReward)
+		r.Post("/api/rewards/{id}/cancel", s.handleCancelReward)
+		r.Post("/api/rewards/{id}/focus", s.handleFocusReward)
+		r.With(s.settleAfter).Post("/api/rewards/{id}/claim", s.handleClaimReward)
 		r.Put("/api/devices/me/push", s.handlePutPushToken)
 		r.Delete("/api/devices/me/push", s.handleDeletePushToken)
 

@@ -139,7 +139,7 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	reward, err := s.boardReward(ctx)
+	reward, err := s.focusRewardJSON(ctx)
 	if err != nil {
 		fail(w, r, err)
 		return

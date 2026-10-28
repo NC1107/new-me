@@ -173,15 +173,6 @@ func BothCountedDays(counted []Counted, members []int64) int {
 	return days
 }
 
-// RewardProgress is the combined points earned since the reward started, never below zero and
-// never above the target it is shown against.
-func RewardProgress(total, baseline, target int) int {
-	return min(max(total-baseline, 0), target)
-}
-
-// RewardReached reports whether the combined points since the start cover the target.
-func RewardReached(total, baseline, target int) bool { return total-baseline >= target }
-
 // withThousands writes 120000 as "120,000".
 func withThousands(n int) string {
 	s := strconv.Itoa(n)

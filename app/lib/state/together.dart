@@ -86,8 +86,9 @@ class CheerMemory extends Notifier<CheerMemoryState> {
 
 final cheerMemoryProvider = NotifierProvider<CheerMemory, CheerMemoryState>(CheerMemory.new);
 
-/// The reward being earned and the history of reached ones. Not cached: the Us screen draws the
-/// active reward from the board, and the history simply stays hidden until this loads.
+/// The shared wishlist, the claimed history, the gem bank and the price helper. Not cached: the
+/// Us screen draws the focus reward from the board, and the rest simply stays hidden until this
+/// loads.
 class RewardsNotifier extends AsyncNotifier<RewardList> {
   @override
   Future<RewardList> build() async {
@@ -106,27 +107,42 @@ class RewardsNotifier extends AsyncNotifier<RewardList> {
     }
   }
 
-  /// Starts the next reward. Throws [ApiException]; code `reward_active` means someone else
-  /// started one first, so the board is reloaded to show it.
-  Future<void> start({required String name, required int target}) async {
-    final client = ref.read(apiClientProvider);
-    if (client == null) throw StateError('Not signed in');
+  ApiClient _client() => ref.read(apiClientProvider) ?? (throw StateError('Not signed in'));
+
+  /// Runs one change and reloads the wishlist and the board, also when it was refused, because a
+  /// refusal means the other phone changed the reward first. Throws [ApiException].
+  Future<void> _change(Future<Object?> Function(ApiClient client) call) async {
+    final client = _client();
     try {
-      await client.createReward(name: name, target: target);
-    } on ApiException catch (e) {
-      if (e.code == 'reward_active') await _reload();
+      await call(client);
+    } on ApiException {
+      await _reload();
       rethrow;
     }
     await _reload();
   }
 
-  /// Marks a reached reward as enjoyed, which moves it off the board.
-  Future<void> claim(int id) async {
-    final client = ref.read(apiClientProvider);
-    if (client == null) throw StateError('Not signed in');
-    await client.claimReward(id);
-    await _reload();
-  }
+  /// Proposes a reward; the partner approves it first unless I am alone on the server.
+  Future<void> propose({required String name, required int price}) =>
+      _change((c) => c.createReward(name: name, price: price));
+
+  /// Renames a reward or changes its price. A new price on an approved reward is proposed again.
+  Future<void> edit(int id, {String? name, int? price}) =>
+      _change((c) => c.patchReward(id, name: name, price: price));
+
+  Future<void> withdraw(int id) => _change((c) => c.withdrawReward(id));
+
+  Future<void> answer(int id, {required bool approve}) =>
+      _change((c) => c.answerReward(id, approve: approve));
+
+  /// Drops an approved reward from the wishlist.
+  Future<void> cancel(int id) => _change((c) => c.cancelReward(id));
+
+  /// Makes an approved reward the bar on Us.
+  Future<void> setFocus(int id) => _change((c) => c.focusReward(id));
+
+  /// Spends the price from the bank, which moves the reward into the history.
+  Future<void> claim(int id) => _change((c) => c.claimReward(id));
 
   Future<void> _reload() async {
     await Future.wait([ref.read(boardProvider.notifier).refresh(), refresh()]);

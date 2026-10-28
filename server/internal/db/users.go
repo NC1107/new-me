@@ -22,8 +22,6 @@ var (
 	ErrColorTaken = errors.New("color already taken")
 	// ErrAdminExists means a live admin is already present.
 	ErrAdminExists = errors.New("an admin already exists")
-	// ErrRewardActive means a reward is still being earned, and only one may be at a time.
-	ErrRewardActive = errors.New("a reward is already active")
 )
 
 // joinLockKey serializes joins; the one-argument advisory lock space is separate from the

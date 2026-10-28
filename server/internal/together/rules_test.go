@@ -1,6 +1,7 @@
 package together
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/nc1107/new-me/server/internal/score"
@@ -159,17 +160,71 @@ func TestBothCountedDaysNeedsEveryMemberOnTheSameDay(t *testing.T) {
 	}
 }
 
-func TestRewardProgressIsClampedAndReachedAtTheTarget(t *testing.T) {
-	if got := RewardProgress(900, 1000, 500); got != 0 {
-		t.Errorf("below baseline = %d, want 0", got)
+func TestBankNeverGoesNegative(t *testing.T) {
+	for _, c := range []struct{ total, spent, want int }{
+		{1240, 0, 1240}, {1240, 1000, 240}, {1000, 1000, 0}, {900, 1000, 0},
+	} {
+		if got := Bank(c.total, c.spent); got != c.want {
+			t.Errorf("Bank(%d, %d) = %d, want %d", c.total, c.spent, got, c.want)
+		}
 	}
-	if got := RewardProgress(1300, 1000, 500); got != 300 {
-		t.Errorf("progress = %d, want 300", got)
+}
+
+func TestRewardProgressIsClampedAndReadyAtThePrice(t *testing.T) {
+	for _, c := range []struct {
+		bank, price, progress int
+		ready                 bool
+	}{
+		{0, 2000, 0, false}, {1240, 2000, 1240, false}, {1999, 2000, 1999, false},
+		{2000, 2000, 2000, true}, {3500, 2000, 2000, true}, {-5, 100, 0, false},
+	} {
+		if got := RewardProgress(c.bank, c.price); got != c.progress {
+			t.Errorf("RewardProgress(%d, %d) = %d, want %d", c.bank, c.price, got, c.progress)
+		}
+		if got := RewardReady(c.bank, c.price); got != c.ready {
+			t.Errorf("RewardReady(%d, %d) = %v, want %v", c.bank, c.price, got, c.ready)
+		}
 	}
-	if got := RewardProgress(2000, 1000, 500); got != 500 {
-		t.Errorf("past target = %d, want 500", got)
+}
+
+func TestMedianInt(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		values []int
+		want   int
+	}{
+		{"none", nil, 0},
+		{"one", []int{7}, 7},
+		{"odd", []int{9, 1, 5}, 5},
+		{"even rounds half up", []int{1, 2}, 2},
+		{"even exact", []int{10, 30, 20, 40}, 25},
+		{"outlier does not pull it", []int{100, 100, 100, 100, 5000}, 100},
+	} {
+		in := append([]int(nil), c.values...)
+		if got := MedianInt(c.values); got != c.want {
+			t.Errorf("%s: median = %d, want %d", c.name, got, c.want)
+		}
+		if !slices.Equal(in, c.values) {
+			t.Errorf("%s: the input was reordered", c.name)
+		}
 	}
-	if RewardReached(1499, 1000, 500) || !RewardReached(1500, 1000, 500) {
-		t.Error("reached should flip exactly at baseline + target")
+}
+
+func TestSuggestPrices(t *testing.T) {
+	if SuggestPrices(nil) != nil || SuggestPrices([]int{0, 0, 0}) != nil {
+		t.Error("no history or no gems must give no suggestion")
+	}
+	got := SuggestPrices([]int{100, 80, 120, 0, 90, 110, 100, 95, 105, 100, 100, 60, 140, 100})
+	want := []PriceOption{{7, 700}, {14, 1400}, {30, 3000}}
+	if got == nil || got.MedianDaily != 100 || got.SampleDays != 14 || !slices.Equal(got.Options, want) {
+		t.Errorf("suggestions = %+v, want median 100 over 14 days with %v", got, want)
+	}
+	short := SuggestPrices([]int{50, 70, 60})
+	if short == nil || short.MedianDaily != 60 || short.SampleDays != 3 {
+		t.Errorf("a newer pair = %+v", short)
+	}
+	huge := SuggestPrices([]int{5000})
+	if huge == nil || len(huge.Options) != 2 || huge.Options[1].Days != 14 {
+		t.Errorf("options above the cap must drop: %+v", huge)
 	}
 }

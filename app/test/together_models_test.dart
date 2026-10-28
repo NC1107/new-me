@@ -91,6 +91,88 @@ void main() {
     expect(list.history.single.claimed, isFalse);
   });
 
+  group('shared rewards priced in gems', () {
+    Map<String, dynamic> row(int id, String status, {int proposedBy = 1, bool focus = false}) => {
+      'id': id,
+      'name': 'Reward $id',
+      'price': 2000,
+      'target': 2000,
+      'progress': 1240,
+      'status': status,
+      'focus': focus,
+      'ready': false,
+      'proposedBy': proposedBy,
+      'proposedByName': proposedBy == 1 ? 'Ana' : 'Sam',
+    };
+
+    test('the wishlist, bank and price helper parse', () {
+      final list = RewardList.fromJson({
+        'reward': row(1, 'approved', focus: true),
+        'rewards': [
+          row(1, 'approved', focus: true),
+          row(2, 'approved'),
+          row(3, 'pending'),
+          row(4, 'pending', proposedBy: 2),
+          row(5, 'declined', proposedBy: 2),
+        ],
+        'history': <dynamic>[],
+        'bank': 1240,
+        'priceHelp': {
+          'medianDaily': 100,
+          'sampleDays': 14,
+          'options': [
+            {'days': 7, 'price': 700},
+            {'days': 14, 'price': 1400},
+            {'days': 30, 'price': 3000},
+          ],
+        },
+      });
+      expect(list.bank, 1240);
+      expect(list.active!.price, 2000);
+      expect(list.active!.fraction, closeTo(0.62, 1e-9));
+      expect([for (final r in list.queued) r.id], [2]);
+      expect([for (final r in list.proposalsFor(2)) r.id], [3], reason: 'what Ana proposed to me');
+      expect([for (final r in list.mineOpen(2)) r.id], [4, 5]);
+      expect(
+        [for (final o in list.priceHelp!.options) o.span],
+        ['1 week', '2 weeks', 'about a month'],
+      );
+    });
+
+    test('a server without history sends no helper, and a bad one is dropped', () {
+      expect(RewardList.fromJson({'reward': null, 'history': <dynamic>[]}).priceHelp, isNull);
+      expect(PriceHelp.tryParse({'medianDaily': 0, 'options': <dynamic>[]}), isNull);
+      expect(PriceHelp.tryParse({'medianDaily': 50, 'options': <dynamic>[]}), isNull);
+    });
+
+    test('a reward from before shared rewards reads as approved, and ready once reached', () {
+      final open = Reward.tryParse({'id': 1, 'name': 'A', 'target': 100, 'progress': 10})!;
+      expect((open.price, open.approved, open.ready), (100, true, false));
+      final reached = Reward.tryParse({
+        'id': 1,
+        'name': 'A',
+        'target': 100,
+        'progress': 100,
+        'reachedAt': '2026-10-01T10:00:00Z',
+      })!;
+      expect(reached.ready, isTrue);
+      final claimed = Reward.tryParse({
+        'id': 1,
+        'name': 'A',
+        'target': 100,
+        'progress': 100,
+        'reachedAt': '2026-10-01T10:00:00Z',
+        'claimedAt': '2026-10-02T10:00:00Z',
+      })!;
+      expect((claimed.ready, claimed.claimed), (false, true));
+    });
+
+    test('a pending reward is never ready, even with a ready flag', () {
+      final r = Reward.tryParse({...row(1, 'pending'), 'ready': true})!;
+      expect(r.ready, isFalse);
+    });
+  });
+
   group('notifications', () {
     test('Me reads the four switches and defaults to all on', () {
       final json = {

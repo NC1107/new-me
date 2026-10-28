@@ -332,9 +332,7 @@ func needs(missing []string) string {
 // energyChain is the result of the resting energy, maintenance and calorie formulas.
 type energyChain struct {
 	resting     float64
-	hasResting  bool
 	pal         targets.PAL
-	hasPAL      bool
 	calories    targets.Calories
 	hasCalories bool
 }
@@ -367,7 +365,7 @@ func computeTargets(d targetData) targetsResponse {
 	resting := targetJSON{Key: tgtResting, Unit: "kcal", Label: labelGuideline,
 		Sources: []string{"mifflin1990", "frankenfield2005"}, Missing: restingMissing}
 	if len(restingMissing) == 0 {
-		chain.resting, chain.hasResting = targets.RestingEnergy(*d.WeightKg, *d.HeightCm, *d.Age, *d.Sex), true
+		chain.resting = targets.RestingEnergy(*d.WeightKg, *d.HeightCm, *d.Age, *d.Sex)
 		sexTerm := "+ 5"
 		if *d.Sex == targets.Female {
 			sexTerm = "- 161"
@@ -385,7 +383,7 @@ func computeTargets(d targetData) targetsResponse {
 	maint := targetJSON{Key: tgtMaintenance, Unit: "kcal", Label: labelConvention,
 		Sources: []string{"faowhounu2004", "tudorlocke", "shcherbina2017", "germini2022"}, Missing: maintMissing}
 	if len(maintMissing) == 0 {
-		chain.pal, chain.hasPAL = targets.PALForSteps(d.StepAvg14), true
+		chain.pal = targets.PALForSteps(d.StepAvg14)
 		maintenance := chain.resting * chain.pal.Value
 		maint.Value = intp(int(math.Round(maintenance)))
 		maint.Formula = fmt.Sprintf("Resting energy %s kcal x activity level %s (%s steps a day on average, in the %s band; the level inside the FAO/WHO/UNU 2004 range is our convention) = %s kcal.",

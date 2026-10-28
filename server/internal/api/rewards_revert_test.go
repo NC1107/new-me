@@ -35,7 +35,7 @@ func TestWithdrawingOrDecliningAPriceChangeRestoresTheApprovedReward(t *testing.
 	if list.length("rewards") != 2 || list.num("reward.id") != other {
 		t.Fatalf("after decline = %s", list.Body)
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		at := func(f string) string { return fmt.Sprintf("rewards.%d.%s", i, f) }
 		if list.num(at("id")) == first &&
 			(list.num(at("price")) != 500 || list.str(at("status")) != "approved" || list.flag(at("focus"))) {

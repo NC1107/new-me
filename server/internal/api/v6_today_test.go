@@ -119,7 +119,7 @@ func TestPlanAndReadinessAreOnlyForToday(t *testing.T) {
 	}
 }
 
-func withPolish(fake *fakeClaude, srvURL string) func(*Server) {
+func withPolish(_ *fakeClaude, srvURL string) func(*Server) {
 	return func(s *Server) {
 		s.polisher = &coach.Polisher{DB: s.db, Client: anthropic.New("sk-test", srvURL), Now: s.now}
 	}

@@ -51,7 +51,7 @@ class PlatformSessionAudio implements SessionAudio {
     try {
       await run();
     } on Object catch (e) {
-      debugPrint('session audio: $e');
+      debugPrint('[NEWME] session audio: $e');
     }
   }
 
@@ -120,7 +120,8 @@ class PlatformScreenAwake implements ScreenAwake {
     try {
       await WakelockPlus.enable();
     } on Object catch (e) {
-      debugPrint('wakelock: $e');
+      // Wake lock failures must never stop a session.
+      debugPrint('[NEWME] wakelock: $e');
     }
   }
 
@@ -129,7 +130,8 @@ class PlatformScreenAwake implements ScreenAwake {
     try {
       await WakelockPlus.disable();
     } on Object catch (e) {
-      debugPrint('wakelock: $e');
+      // Wake lock failures must never stop a session.
+      debugPrint('[NEWME] wakelock: $e');
     }
   }
 }

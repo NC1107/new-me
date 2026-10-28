@@ -695,17 +695,40 @@ class ApiClient {
   Future<RewardList> rewards() =>
       _send(() => _dio.get<dynamic>('/api/rewards'), (data) => RewardList.fromJson(data as Json));
 
-  /// Throws code `reward_active` (409) while another reward is still being earned.
-  Future<Reward> createReward({required String name, required int target}) => _send(
-    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'target': target}),
-    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  Reward _reward(Object? data) =>
+      Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward'));
+
+  /// Proposes a reward priced in gems. The partner approves it; alone it is approved at once.
+  Future<Reward> createReward({required String name, required int price}) => _send(
+    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'price': price}),
+    _reward,
   );
 
-  /// Throws code `reward_not_reached` (409) before the target is met.
-  Future<Reward> claimReward(int id) => _send(
-    () => _dio.post<dynamic>('/api/rewards/$id/claim'),
-    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  /// Edits a reward. A new price on an approved reward is proposed again.
+  Future<Reward> patchReward(int id, {String? name, int? price}) => _send(
+    () => _dio.patch<dynamic>('/api/rewards/$id', data: {'name': ?name, 'price': ?price}),
+    _reward,
   );
+
+  /// Withdraws my pending or declined proposal.
+  Future<void> withdrawReward(int id) =>
+      _send(() => _dio.delete<dynamic>('/api/rewards/$id'), (_) {});
+
+  Future<Reward> answerReward(int id, {required bool approve}) => _send(
+    () => _dio.post<dynamic>('/api/rewards/$id/${approve ? 'approve' : 'decline'}'),
+    _reward,
+  );
+
+  Future<Reward> cancelReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/cancel'), _reward);
+
+  Future<Reward> focusReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/focus'), _reward);
+
+  /// Spends the price from the bank. Throws code `reward_not_reached` (409) while the bank
+  /// does not cover it; a repeat answers the claimed reward without spending again.
+  Future<Reward> claimReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/claim'), _reward);
 
   Future<void> putPushToken(String token) =>
       _send(() => _dio.put<dynamic>('/api/devices/me/push', data: {'token': token}), (_) {});

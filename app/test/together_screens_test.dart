@@ -11,7 +11,7 @@ import 'package:newme/features/together/cheer_chip.dart';
 import 'package:newme/features/together/cheer_sheet.dart';
 import 'package:newme/features/together/notifications_page.dart';
 import 'package:newme/features/together/reward_card.dart';
-import 'package:newme/features/together/start_reward_sheet.dart';
+import 'package:newme/features/together/reward_sheet.dart';
 import 'package:newme/reminders/reminder_scheduler.dart';
 import 'package:newme/widgets/confetti.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -43,15 +43,36 @@ Map<String, dynamic> _reward({
   int progress = 500,
   bool reached = false,
   bool claimed = false,
+  String name = 'Date night',
+  int price = 2000,
+  String status = 'approved',
+  bool focus = true,
+  int proposedBy = 1,
 }) => {
   'id': id,
-  'name': 'Date night',
-  'target': 2000,
-  'progress': reached ? 2000 : progress,
+  'name': name,
+  'price': price,
+  'target': price,
+  'progress': claimed || reached ? price : progress,
+  'status': claimed ? 'claimed' : status,
+  'focus': focus,
+  'ready': reached && !claimed,
   'startedAt': '2026-10-20T10:00:00Z',
   'reachedAt': reached ? '2026-10-25T10:00:00Z' : null,
   'claimedAt': claimed ? '2026-10-26T10:00:00Z' : null,
-  'createdBy': 1,
+  'proposedBy': proposedBy,
+  'proposedByName': proposedBy == 1 ? 'Ana' : 'Sam',
+  'createdBy': proposedBy,
+};
+
+const _priceHelp = {
+  'medianDaily': 100,
+  'sampleDays': 14,
+  'options': [
+    {'days': 7, 'price': 700},
+    {'days': 14, 'price': 1400},
+    {'days': 30, 'price': 3000},
+  ],
 };
 
 Map<String, dynamic> _cheer(String kind, {String from = 'Ana'}) => {
@@ -65,6 +86,9 @@ StubAdapter _server({
   Map<String, dynamic>? challenge,
   Map<String, dynamic>? reward,
   List<Map<String, dynamic>> history = const [],
+  List<Map<String, dynamic>> wishlist = const [],
+  Map<String, dynamic>? priceHelp,
+  int bank = 0,
   List<Map<String, dynamic>> cheers = const [],
 }) => fullServer()
   ..on(
@@ -79,7 +103,16 @@ StubAdapter _server({
     }),
   )
   ..on('GET /api/today', StubResponse(200, {...richTodayJson(), 'cheers': cheers}))
-  ..on('GET /api/rewards', StubResponse(200, {'reward': null, 'history': history}))
+  ..on(
+    'GET /api/rewards',
+    StubResponse(200, {
+      'reward': reward,
+      'rewards': [?reward, ...wishlist],
+      'history': history,
+      'bank': bank,
+      'priceHelp': priceHelp,
+    }),
+  )
   ..on('POST /api/cheers', StubResponse(201, {'cheer': _cheer('fire', from: 'Sam'), 'to': 1}));
 
 Future<void> _openUs(TestApp app, {bool onUsTab = false}) async {
@@ -336,56 +369,220 @@ void main() {
   });
 
   group('shared reward', () {
-    testWidgets('the start sheet needs a name, offers presets, and posts', (tester) async {
-      final server = _server()..on('POST /api/rewards', StubResponse(201, {'reward': _reward()}));
+    testWidgets('the add sheet needs a name and a price, and proposes in gems', (tester) async {
+      final server = _server(priceHelp: _priceHelp)
+        ..on('POST /api/rewards', StubResponse(201, {'reward': _reward(status: 'pending')}));
       final app = TestApp(tester, server);
       await _openUs(app);
 
-      await app.tap(find.text('START A REWARD'));
-      for (final p in ['2,000', '5,000', '10,000']) {
-        expect(find.text(p), findsOneWidget);
+      await app.tap(find.text('ADD A REWARD'));
+      for (final label in ['700 - 1 week', '1,400 - 2 weeks', '3,000 - about a month']) {
+        expect(find.text(label), findsOneWidget);
       }
-      await app.tap(find.text('START REWARD'));
+      expect(
+        find.text('About 2 weeks at your pace.'),
+        findsOneWidget,
+        reason: 'two weeks is preset',
+      );
+      await app.tap(find.text('PROPOSE REWARD'));
       expect(app.adapter.to('POST /api/rewards'), isEmpty, reason: 'a name is required');
 
       await app.tap(find.text('Date night').last);
-      await app.tap(find.text('10,000'));
-      await app.tap(find.text('START REWARD'));
+      await app.tap(find.text('3,000 - about a month'));
+      await app.tap(find.text('PROPOSE REWARD'));
 
-      expect(app.body('POST /api/rewards'), {'name': 'Date night', 'target': 10000});
-      expect(find.byType(StartRewardSheet), findsNothing);
+      expect(app.body('POST /api/rewards'), {'name': 'Date night', 'price': 3000});
+      expect(find.byType(RewardSheet), findsNothing);
     });
 
-    testWidgets('a typed target outside 1 to 100,000 is refused', (tester) async {
+    testWidgets('without history there are no suggested prices, only the field', (tester) async {
       final app = TestApp(tester, _server());
       await _openUs(app);
-      await app.tap(find.text('START A REWARD'));
+      await app.tap(find.text('ADD A REWARD'));
+      expect(find.textContaining(' - 1 week'), findsNothing);
+      expect(find.text('Gems, like 1,500'), findsOneWidget);
+    });
+
+    testWidgets('a typed price outside 1 to 100,000 is refused', (tester) async {
+      final app = TestApp(tester, _server());
+      await _openUs(app);
+      await app.tap(find.text('ADD A REWARD'));
       await app.enter(find.byType(TextField).first, 'Pizza');
       await app.enter(find.byType(TextField).last, '100001');
       expect(find.text('Between 1 and 100,000'), findsOneWidget);
-      await app.tap(find.text('START REWARD'));
+      await app.tap(find.text('PROPOSE REWARD'));
       expect(app.adapter.to('POST /api/rewards'), isEmpty);
     });
 
-    testWidgets('someone else started one first: the sheet closes and the board reloads', (
-      tester,
-    ) async {
+    testWidgets('a refused proposal says why and keeps the sheet', (tester) async {
       final server = _server()
         ..on(
           'POST /api/rewards',
-          const StubResponse(409, {
-            'code': 'reward_active',
-            'error': 'a reward is already being earned',
-          }),
+          const StubResponse(409, {'code': 'wishlist_full', 'error': 'the wishlist is full'}),
         );
       final app = TestApp(tester, server);
       await _openUs(app);
-      await app.tap(find.text('START A REWARD'));
+      await app.tap(find.text('ADD A REWARD'));
       await app.tap(find.text('Dinner out'));
-      await app.tap(find.text('START REWARD'));
+      await app.enter(find.byType(TextField).last, '500');
+      await app.tap(find.text('PROPOSE REWARD'));
 
-      expect(find.byType(StartRewardSheet), findsNothing);
-      expect(app.adapter.to('GET /api/board').length, greaterThan(1));
+      expect(find.byType(RewardSheet), findsOneWidget);
+      expect(find.text('the wishlist is full'), findsOneWidget);
+    });
+
+    testWidgets('my partner\'s proposal waits for my answer', (tester) async {
+      final server = _server(
+        reward: _reward(),
+        wishlist: [
+          _reward(id: 4, name: 'Weekend away', price: 3000, status: 'pending', focus: false),
+        ],
+      )..on('POST /api/rewards/4/decline', StubResponse(200, {'reward': _reward(id: 4)}));
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      expect(find.text('Ana wants Weekend away for 3,000 gems'), findsOneWidget);
+      expect(find.text('Weekend away'), findsNothing, reason: 'it is not on the wishlist yet');
+      await app.tap(find.text('DECLINE'));
+      expect(app.adapter.to('POST /api/rewards/4/decline'), hasLength(1));
+    });
+
+    testWidgets('approving sends the answer and reloads', (tester) async {
+      final server = _server(
+        wishlist: [_reward(id: 4, name: 'Trip', status: 'pending', focus: false)],
+      )..on('POST /api/rewards/4/approve', StubResponse(200, {'reward': _reward(id: 4)}));
+      final app = TestApp(tester, server);
+      await _openUs(app);
+      await app.tap(find.text('APPROVE'));
+      expect(app.adapter.to('POST /api/rewards/4/approve'), hasLength(1));
+      expect(app.adapter.to('GET /api/rewards').length, greaterThan(1));
+    });
+
+    testWidgets('the wishlist lists queued rewards and my own proposals with their state', (
+      tester,
+    ) async {
+      final app = TestApp(
+        tester,
+        _server(
+          reward: _reward(),
+          wishlist: [
+            _reward(id: 5, name: 'Movie night', price: 600, focus: false),
+            _reward(
+              id: 6,
+              name: 'Spa day',
+              price: 4000,
+              status: 'pending',
+              focus: false,
+              proposedBy: 2,
+            ),
+            _reward(
+              id: 7,
+              name: 'Skydive',
+              price: 9000,
+              status: 'declined',
+              focus: false,
+              proposedBy: 2,
+            ),
+          ],
+        ),
+      );
+      await _openUs(app);
+
+      expect(find.text('Movie night'), findsOneWidget);
+      expect(find.text('600 gems'), findsOneWidget);
+      expect(find.text('4,000 gems - waiting for Ana'), findsOneWidget);
+      expect(find.text('9,000 gems - declined'), findsOneWidget);
+    });
+
+    testWidgets('opening my pending proposal edits it and can withdraw it', (tester) async {
+      final server =
+          _server(
+              wishlist: [
+                _reward(
+                  id: 6,
+                  name: 'Spa day',
+                  price: 4000,
+                  status: 'pending',
+                  focus: false,
+                  proposedBy: 2,
+                ),
+              ],
+              reward: _reward(),
+            )
+            ..on('PATCH /api/rewards/6', StubResponse(200, {'reward': _reward(id: 6)}))
+            ..on('DELETE /api/rewards/6', const StubResponse(204, <String, dynamic>{}));
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      await app.tap(find.text('Spa day'));
+      expect(find.text('Edit reward'), findsOneWidget);
+      await app.enter(find.byType(TextField).last, '3500');
+      await app.tap(find.text('SAVE'));
+      expect(app.body('PATCH /api/rewards/6'), {'price': 3500});
+
+      await app.tap(find.text('Spa day'));
+      await app.tap(find.text('WITHDRAW'));
+      expect(app.adapter.to('DELETE /api/rewards/6'), hasLength(1));
+    });
+
+    testWidgets('a queued reward can become the focus or be cancelled', (tester) async {
+      final server =
+          _server(
+              reward: _reward(),
+              wishlist: [_reward(id: 5, name: 'Movie night', price: 600, focus: false)],
+            )
+            ..on('POST /api/rewards/5/focus', StubResponse(200, {'reward': _reward(id: 5)}))
+            ..on('POST /api/rewards/5/cancel', StubResponse(200, {'reward': _reward(id: 5)}));
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      await app.tap(find.text('Movie night'));
+      await app.tap(find.text('MAKE IT THE FOCUS'));
+      expect(app.adapter.to('POST /api/rewards/5/focus'), hasLength(1));
+
+      await app.tap(find.text('Movie night'));
+      await app.tap(find.text('CANCEL REWARD'));
+      expect(app.adapter.to('POST /api/rewards/5/cancel'), hasLength(1));
+    });
+
+    testWidgets('a new price on an approved reward is proposed again', (tester) async {
+      final server =
+          _server(
+            reward: _reward(),
+            wishlist: [_reward(id: 5, name: 'Movie night', price: 600, focus: false)],
+          )..on(
+            'PATCH /api/rewards/5',
+            StubResponse(200, {'reward': _reward(id: 5, status: 'pending')}),
+          );
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      await app.tap(find.text('Movie night'));
+      expect(find.text('Both of you can rename it.'), findsOneWidget);
+      await app.enter(find.byType(TextField).last, '900');
+      expect(find.text('A new price goes to Ana to approve again.'), findsOneWidget);
+      await app.tap(find.text('PROPOSE NEW PRICE'));
+      expect(app.body('PATCH /api/rewards/5'), {'price': 900});
+    });
+
+    testWidgets('a queued reward the bank covers can be claimed from its sheet', (tester) async {
+      final server =
+          _server(
+            reward: _reward(),
+            wishlist: [
+              _reward(id: 5, name: 'Movie night', price: 600, focus: false, reached: true),
+            ],
+          )..on(
+            'POST /api/rewards/5/claim',
+            StubResponse(200, {'reward': _reward(id: 5, claimed: true)}),
+          );
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      expect(find.text('600 gems - ready'), findsOneWidget);
+      await app.tap(find.text('Movie night'));
+      await app.tap(find.text('WE DID IT'));
+      expect(app.adapter.to('POST /api/rewards/5/claim'), hasLength(1));
     });
 
     testWidgets('an active reward shows its bar and what is left', (tester) async {
@@ -393,9 +590,9 @@ void main() {
       await _openUs(app);
 
       expect(find.text('Date night'), findsOneWidget);
-      expect(find.text('500 of 2,000 points'), findsOneWidget);
+      expect(find.text('500 of 2,000 gems'), findsOneWidget);
       expect(find.text('1,500 to go'), findsOneWidget);
-      expect(find.text('START A REWARD'), findsNothing);
+      expect(find.text('ADD A REWARD'), findsNothing);
     });
 
     testWidgets('a reached reward celebrates once and We did it claims it', (tester) async {
@@ -407,7 +604,7 @@ void main() {
       final app = TestApp(tester, server);
       await _openUs(app, onUsTab: true);
 
-      expect(find.text('Reward reached!'), findsOneWidget);
+      expect(find.text('Reward ready!'), findsOneWidget);
       await app.tap(find.text('WE DID IT').last);
       expect(app.adapter.to('POST /api/rewards/3/claim'), hasLength(1));
       expect(find.byType(CelebrationSheet), findsNothing);
@@ -422,7 +619,7 @@ void main() {
       final app = TestApp(tester, server);
       await _openUs(app);
 
-      expect(find.text('Reward reached'), findsOneWidget);
+      expect(find.text('Reward ready'), findsOneWidget);
       await app.tap(find.text('WE DID IT'));
       expect(app.adapter.to('POST /api/rewards/3/claim'), hasLength(1));
     });
@@ -433,14 +630,14 @@ void main() {
           'POST /api/rewards/3/claim',
           const StubResponse(409, {
             'code': 'reward_not_reached',
-            'error': 'that reward has not been reached yet',
+            'error': 'the gem bank does not cover that reward yet',
           }),
         );
       final app = TestApp(tester, server);
       await _openUs(app);
       await app.tap(find.text('WE DID IT'));
 
-      expect(find.text('that reward has not been reached yet'), findsOneWidget);
+      expect(find.text('the gem bank does not cover that reward yet'), findsOneWidget);
       expect(find.text('WE DID IT'), findsOneWidget);
     });
 
@@ -620,7 +817,7 @@ void main() {
     }
 
     for (final scale in [1.0, 2.0]) {
-      testWidgets('Us, cheer sheet, start sheet and celebration fit at $scale', (tester) async {
+      testWidgets('Us, cheer sheet, add sheet and celebration fit at $scale', (tester) async {
         configure(tester, scale);
         final app = TestApp(
           tester,
@@ -645,7 +842,7 @@ void main() {
 
         showCelebrationSheet(
           tester.element(find.byType(Scaffold).first),
-          title: 'Reward reached!',
+          title: 'Reward ready!',
           message: 'A very long reward name that wraps over several lines',
           users: const [],
           buttonLabel: 'We did it',
@@ -655,13 +852,13 @@ void main() {
         await app.closeSheet();
       });
 
-      testWidgets('the start sheet fits at $scale', (tester) async {
+      testWidgets('the add sheet fits at $scale', (tester) async {
         configure(tester, scale);
         final app = TestApp(tester, _server());
         await app.pump(const BoardScreen());
         tester.view.physicalSize = const Size(390, 4000);
         await app.settle();
-        await app.tap(find.text('START A REWARD'));
+        await app.tap(find.text('ADD A REWARD'));
         expect(tester.takeException(), isNull);
         await app.enter(find.byType(TextField).first, 'Pizza');
         expect(tester.takeException(), isNull);
@@ -711,8 +908,8 @@ void main() {
       }
       await us.closeSheet();
 
-      await us.tap(find.text('START A REWARD'));
-      for (final label in ['Date night', '2,000']) {
+      await us.tap(find.text('ADD A REWARD'));
+      for (final label in ['Date night']) {
         final h = tester
             .getSize(find.ancestor(of: find.text(label), matching: find.byType(Container)).first)
             .height;

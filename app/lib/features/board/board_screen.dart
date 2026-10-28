@@ -8,6 +8,7 @@ import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
 import '../../state/habit_proposals.dart';
+import '../../state/together.dart';
 import '../../state/me.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
@@ -53,6 +54,7 @@ class BoardScreen extends ConsumerWidget {
           backgroundColor: kSurface,
           onRefresh: () async {
             unawaited(ref.read(habitProposalsProvider.notifier).refresh());
+            unawaited(ref.read(rewardsProvider.notifier).refresh());
             await notifier.refresh();
           },
           child: Center(

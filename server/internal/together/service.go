@@ -47,6 +47,8 @@ const (
 	EventPartnerCheer     = "partner_cheer"
 	EventPartnerChallenge = "partner_challenge"
 	EventRewardProgress   = "reward_progress"
+	// EventRewardProposal asks the partner to approve a reward or its new price (v13).
+	EventRewardProposal = "reward_proposal"
 )
 
 // AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
@@ -125,7 +127,7 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Milestones
 	case EventCover, EventPartnerCover:
 		return n.Cover
-	case EventHabitProposal:
+	case EventHabitProposal, EventRewardProposal:
 		return n.Approvals
 	case EventPartnerCheer, EventPartnerChallenge, EventRewardProgress:
 		return n.PartnerNudges
@@ -427,29 +429,30 @@ func (s *Service) settleChallenge(ctx context.Context, week score.Date, users []
 	return nil
 }
 
-// RewardTotals reads the combined points a reward measures against.
-func (s *Service) RewardTotals(ctx context.Context) (int, error) {
-	return db.TotalPoints(ctx, s.DB.Pool)
+// Bank reads the pair's spendable gems.
+func (s *Service) Bank(ctx context.Context) (int, error) {
+	total, err := db.TotalPoints(ctx, s.DB.Pool)
+	if err != nil {
+		return 0, err
+	}
+	spent, err := db.SpentGems(ctx, s.DB.Pool)
+	return Bank(total, spent), err
 }
 
+// settleReward announces, once each, the approved rewards the bank now covers.
 func (s *Service) settleReward(ctx context.Context, users []db.User) error {
-	r, err := db.ActiveReward(ctx, s.DB.Pool)
-	if errors.Is(err, db.ErrNotFound) {
-		return nil
-	}
+	bank, err := s.Bank(ctx)
 	if err != nil {
 		return err
 	}
-	total, err := s.RewardTotals(ctx)
-	if err != nil || !RewardReached(total, r.Baseline, r.Target) {
+	ready, err := db.MarkRewardsReady(ctx, s.DB.Pool, bank)
+	if err != nil {
 		return err
 	}
-	marked, err := db.MarkRewardReached(ctx, s.DB.Pool, r.ID)
-	if err != nil || !marked {
-		return err
-	}
-	for _, u := range users {
-		s.Notify(u, push.Message{Kind: EventReward, Title: "Reward reached", Body: r.Name})
+	for _, r := range ready {
+		for _, u := range users {
+			s.Notify(u, push.Message{Kind: EventReward, Title: "Reward ready", Body: r.Name})
+		}
 	}
 	return nil
 }

@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
+import '../../state/habit_proposals.dart';
 import '../../state/me.dart';
+import '../../state/session.dart';
 import '../../state/together.dart';
 import '../../state/together_prefs.dart';
 import '../../state/together_seen.dart';
@@ -18,7 +20,9 @@ import '../shell/home_tab.dart';
 import 'celebration_sheet.dart';
 import 'challenge_card.dart';
 import 'reward_card.dart';
-import 'start_reward_sheet.dart';
+import 'reward_proposals_card.dart';
+import 'reward_sheet.dart';
+import 'reward_wishlist.dart';
 
 /// Everything shared on Us below the two people: the weekly challenge, the reward and the
 /// rewards already earned. Also where the "we did it" celebrations play, once each.
@@ -41,7 +45,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
   bool get _wantsCelebration {
     final ch = board.challenge;
     final r = board.reward;
-    return (ch != null && ch.done) || (r != null && r.reached && !r.claimed);
+    return (ch != null && ch.done) || (r != null && r.ready);
   }
 
   void _maybeCelebrate(bool onUs) {
@@ -68,12 +72,12 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         if (!await _settled()) return;
       }
       final r = board.reward;
-      if (r != null && r.reached && !r.claimed && await TogetherPrefs.celebratedReward() != r.id) {
+      if (r != null && r.ready && await TogetherPrefs.celebratedReward() != r.id) {
         await ref.read(togetherSeenProvider.notifier).markReward(r.id);
         if (!mounted) return;
         await showCelebrationSheet(
           context,
-          title: 'Reward reached!',
+          title: 'Reward ready!',
           message: r.name,
           users: board.users,
           buttonLabel: 'We did it',
@@ -118,10 +122,13 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         ref.watch(meProvider.select((m) => m.value?.data.localToday)) ??
         formatDateKey(ref.watch(clockProvider)());
     final reward = board.reward;
+    final list = ref.watch(rewardsProvider).value;
+    final userId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     final history = [
-      for (final r in ref.watch(rewardsProvider).value?.history ?? const <Reward>[])
+      for (final r in list?.history ?? const <Reward>[])
         if (r.id != reward?.id) r,
     ];
+    final waiting = [...?list?.queued, ...?list?.mineOpen(userId)];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -134,14 +141,24 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
           ChallengeCard(challenge: last, today: today, people: people),
         ],
         const SizedBox(height: kCardGap),
+        const RewardProposalsCard(),
         RewardCard(
           reward: reward,
           people: people,
           claiming: _claiming,
           error: _claimError,
-          onStart: () => showStartRewardSheet(context),
+          onAdd: () => showRewardSheet(context),
           onClaim: () => _claim(reward!),
         ),
+        if (reward != null || waiting.isNotEmpty) ...[
+          const SizedBox(height: kCardGap),
+          RewardWishlist(
+            rewards: waiting,
+            partner: ref.watch(partnerNameProvider),
+            onOpen: (r) => showRewardSheet(context, reward: r),
+            onAdd: () => showRewardSheet(context),
+          ),
+        ],
         if (history.isNotEmpty) ...[
           const SizedBox(height: 28),
           Semantics(header: true, child: const Text('Rewards earned', style: AppText.headline)),

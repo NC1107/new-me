@@ -4,7 +4,7 @@
   "status": 201,
   "request": {
     "name": "Pizza night",
-    "target": 1
+    "price": 1
   },
   "body": {
     "reward": {

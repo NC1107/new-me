@@ -171,7 +171,7 @@ final _calls = <String, _Call>{
   'reward_created': (c, x) async => {
     'reward': (await c.createReward(
       name: _request(x)['name'] as String,
-      target: _request(x)['target'] as int,
+      price: _request(x)['price'] as int,
     )).toJson(),
   },
   'reward_claimed': (c, x) async => {
@@ -241,8 +241,22 @@ final _failingCalls = <String, _Call>{
   'cheer_invalid': (c, x) =>
       c.sendCheer(to: _request(x)['to'] as int, kind: CheerKind.parse(_request(x)['kind'])!),
   'reward_active': (c, x) =>
-      c.createReward(name: _request(x)['name'] as String, target: _request(x)['target'] as int),
+      c.createReward(name: _request(x)['name'] as String, price: _request(x)['target'] as int),
   'reward_claim_early': (c, x) => c.claimReward(int.parse(x.uri.pathSegments[2])),
+};
+
+/// The v13 reward fields the recordings predate (rewards were a single points goal then); the
+/// models still read the old shape, and rewards_v13_test.dart checks the new one.
+const _v13Keys = {
+  'price',
+  'status',
+  'focus',
+  'ready',
+  'proposedBy',
+  'proposedByName',
+  'rewards',
+  'bank',
+  'priceHelp',
 };
 
 /// The v6 fields the recordings predate. contract_v6_test.dart checks them against hand-checked
@@ -262,7 +276,9 @@ const _v6Keys = {
 Object? _withoutV6(Object? json) => switch (json) {
   final Map<String, dynamic> m => {
     for (final e in m.entries)
-      if (!_v6Keys.contains(e.key) && !(e.key == 'syncedAt' && m.containsKey('minutes')))
+      if (!_v6Keys.contains(e.key) &&
+          !_v13Keys.contains(e.key) &&
+          !(e.key == 'syncedAt' && m.containsKey('minutes')))
         e.key: _withoutV6(e.value),
   },
   final List<dynamic> l => [for (final v in l) _withoutV6(v)],

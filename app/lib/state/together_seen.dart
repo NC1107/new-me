@@ -66,7 +66,7 @@ bool usNeedsAttention({
   final challenge = board.challenge;
   if (challenge != null && challenge.done && seen.challengeEndsOn != challenge.endsOn) return true;
   final reward = board.reward;
-  return reward != null && reward.reached && !reward.claimed && seen.rewardId != reward.id;
+  return reward != null && reward.ready && seen.rewardId != reward.id;
 }
 
 final usBadgeProvider = Provider<bool>((ref) {

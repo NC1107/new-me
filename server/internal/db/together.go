@@ -165,100 +165,13 @@ func CountedDays(ctx context.Context, q Querier, from, to score.Date) ([]Counted
 	return out, rows.Err()
 }
 
-// Reward is a shared goal measured in combined points since it started.
-type Reward struct {
-	ID        int64
-	Name      string
-	Target    int
-	Baseline  int
-	CreatedBy *int64
-	StartedAt time.Time
-	ReachedAt *time.Time
-	ClaimedAt *time.Time
-}
-
-const rewardColumns = `id, name, target, baseline, created_by, started_at, reached_at, claimed_at`
-
-func scanReward(row interface{ Scan(...any) error }) (Reward, error) {
-	var r Reward
-	err := row.Scan(&r.ID, &r.Name, &r.Target, &r.Baseline, &r.CreatedBy, &r.StartedAt, &r.ReachedAt, &r.ClaimedAt)
-	return r, err
-}
-
-// TotalPoints is the combined all-time points of every live user.
+// TotalPoints is the combined all-time points (gems) of every live user.
 func TotalPoints(ctx context.Context, q Querier) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE(sum(s.base_points + s.bonus_points), 0)::int FROM day_scores s
 		JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL`).Scan(&n)
 	return n, err
-}
-
-// CreateReward starts a reward from the given baseline. A second unreached reward violates
-// rewards_one_active, which ErrRewardActive reports.
-func CreateReward(ctx context.Context, q Querier, name string, target, baseline int, by int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		INSERT INTO rewards (name, target, baseline, created_by) VALUES ($1, $2, $3, $4)
-		RETURNING `+rewardColumns, name, target, baseline, by))
-	if violatedConstraint(err) == "rewards_one_active" {
-		return Reward{}, ErrRewardActive
-	}
-	return r, err
-}
-
-// ActiveReward is the reward still being earned.
-func ActiveReward(ctx context.Context, q Querier) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx,
-		`SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NULL`))
-	return r, notFound(err)
-}
-
-// LatestUnclaimedReward is the newest reached reward nobody has marked as enjoyed yet.
-func LatestUnclaimedReward(ctx context.Context, q Querier) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NOT NULL AND claimed_at IS NULL
-		ORDER BY reached_at DESC, id DESC LIMIT 1`))
-	return r, notFound(err)
-}
-
-// GetReward reads one reward.
-func GetReward(ctx context.Context, q Querier, id int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `SELECT `+rewardColumns+` FROM rewards WHERE id = $1`, id))
-	return r, notFound(err)
-}
-
-// ListReachedRewards is the history, newest first.
-func ListReachedRewards(ctx context.Context, q Querier) ([]Reward, error) {
-	rows, err := q.Query(ctx, `
-		SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NOT NULL
-		ORDER BY reached_at DESC, id DESC LIMIT 100`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Reward{}
-	for rows.Next() {
-		r, err := scanReward(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
-}
-
-// MarkRewardReached stamps the moment once and reports whether this call did it.
-func MarkRewardReached(ctx context.Context, q Querier, id int64) (bool, error) {
-	tag, err := q.Exec(ctx, `UPDATE rewards SET reached_at = now() WHERE id = $1 AND reached_at IS NULL`, id)
-	return tag.RowsAffected() == 1, err
-}
-
-// ClaimReward marks a reached reward as enjoyed. A repeat keeps the first time.
-func ClaimReward(ctx context.Context, q Querier, id int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		UPDATE rewards SET claimed_at = COALESCE(claimed_at, now())
-		WHERE id = $1 AND reached_at IS NOT NULL RETURNING `+rewardColumns, id))
-	return r, notFound(err)
 }
 
 // UpsertPushToken registers the APNs token of an install. The token is unique, so one that

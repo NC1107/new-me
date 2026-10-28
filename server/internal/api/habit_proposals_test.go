@@ -67,6 +67,14 @@ func TestWithAPartnerMinutesAreProposedAndPointsStay(t *testing.T) {
 		list.num("proposals.0.minutes") != 2 || list.num("proposals.0.currentPoints") != 0 {
 		t.Fatalf("proposals = %s", list.Body)
 	}
+	// The habit comes whole, so Nadia can see how often and when before answering.
+	if list.str("proposals.0.habit.kind") != "check" || list.length("proposals.0.habit.weekdays") != 7 ||
+		list.str("proposals.0.habit.slots.0.time") != "07:30" || list.str("proposals.0.habit.slots.1.label") != "Evening" {
+		t.Fatalf("proposal habit = %s", list.Body)
+	}
+	if got := n.of(together.EventHabitProposal, nadia.ID); got[0].Body != "Nick wants Brush teeth worth 6 gems (2 min), every day" {
+		t.Fatalf("push body = %q", got[0].Body)
+	}
 
 	// Asking again for the same thing does not push again.
 	h.patch(habitPath(id, ""), nick.Token, obj{"minutes": 2, "name": "Brush"}).expect(http.StatusOK)

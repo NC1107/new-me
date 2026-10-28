@@ -5,16 +5,40 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/push"
+	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/together"
 )
 
 var errNoHabitProposal = newErr(http.StatusNotFound, codeNotFound, "no such proposal")
+
+var dayShort = [...]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
+
+// daysSummary words ISO weekdays as the app does: "Every day", "Weekdays", "Weekends" or
+// "Mon, Wed, Fri".
+func daysSummary(days []int) string {
+	days = slices.Sorted(slices.Values(days))
+	switch {
+	case len(days) == 7:
+		return "Every day"
+	case slices.Equal(days, []int{1, 2, 3, 4, 5}):
+		return "Weekdays"
+	case slices.Equal(days, []int{6, 7}):
+		return "Weekends"
+	}
+	names := make([]string, 0, len(days))
+	for _, d := range days {
+		names = append(names, dayShort[d-1])
+	}
+	return strings.Join(names, ", ")
+}
 
 // partnerOf is the other person on the server, nil when the caller is alone.
 func (s *Server) partnerOf(ctx context.Context, q db.Querier, userID int64) (*db.User, error) {
@@ -36,6 +60,7 @@ func (s *Server) notifyProposal(to, from db.User, h db.Habit) {
 	if h.ProposedMinutes != nil {
 		body += fmt.Sprintf(" (%d min)", *h.ProposedMinutes)
 	}
+	body += ", " + strings.ToLower(daysSummary(score.ISOWeekdays(h.Weekdays)))
 	s.together.Notify(to, push.Message{Kind: together.EventHabitProposal, Title: "Habit to approve", Body: body})
 }
 
@@ -48,6 +73,8 @@ type habitProposalJSON struct {
 	Minutes       *int   `json:"minutes"`
 	CurrentPoints int    `json:"currentPoints"`
 	At            string `json:"at"`
+	// Habit is the whole habit, so the answer can weigh how often and when it is done.
+	Habit habitJSON `json:"habit"`
 }
 
 // handleHabitProposals lists the partner's habit changes that wait for the caller.
@@ -64,7 +91,7 @@ func (s *Server) handleHabitProposals(w http.ResponseWriter, r *http.Request) {
 			for _, h := range pending {
 				out = append(out, habitProposalJSON{HabitID: h.ID, Name: h.Name, Icon: h.Icon,
 					Points: *h.ProposedPoints, Minutes: h.ProposedMinutes, CurrentPoints: h.Points,
-					At: wireTime(*h.ProposedAt)})
+					At: wireTime(*h.ProposedAt), Habit: toHabitJSON(h)})
 			}
 		}
 	}

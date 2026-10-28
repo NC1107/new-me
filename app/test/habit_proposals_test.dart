@@ -14,14 +14,28 @@ import 'test_support.dart';
 Finder _button(String label) =>
     find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
 
-Map<String, dynamic> _proposal({int id = 7, int points = 6, int? minutes = 2}) => {
+Map<String, dynamic> _proposal({
+  int id = 7,
+  int points = 6,
+  int? minutes = 2,
+  int currentPoints = 0,
+}) => {
   'habitId': id,
   'name': 'Brush teeth',
   'icon': 'brush',
   'points': points,
   'minutes': minutes,
-  'currentPoints': 0,
+  'currentPoints': currentPoints,
   'at': '2026-11-02T12:00:00Z',
+  'habit': habitJson(
+    id,
+    'Brush teeth',
+    weekdays: const [1, 2, 3, 4, 5],
+    slots: [
+      {'label': 'Morning', 'time': '07:30'},
+      {'label': 'Evening', 'time': '22:00'},
+    ],
+  ),
 };
 
 StubAdapter _usServer(List<Map<String, dynamic>> proposals) => fullServer()
@@ -57,10 +71,12 @@ void main() {
   });
 
   group('Us card', () {
-    testWidgets('names the partner, the habit, its gems and minutes', (tester) async {
+    testWidgets('names the partner, the habit, its gems, minutes, days and times', (tester) async {
       final app = TestApp(tester, _usServer([_proposal()]));
       await app.pump(const BoardScreen());
-      expect(find.text('Sam wants Brush teeth worth 6 gems (2 min)'), findsOneWidget);
+      expect(find.text('Brush teeth'), findsOneWidget);
+      expect(find.text('Sam wants 6 gems · 2 min'), findsOneWidget);
+      expect(find.text('Weekdays · 7:30 AM, 10:00 PM'), findsOneWidget);
       expect(_button('Approve'), findsOneWidget);
       expect(_button('Decline'), findsOneWidget);
       for (final label in ['Approve', 'Decline']) {
@@ -78,18 +94,27 @@ void main() {
       );
       await app.tap(_button('Approve'));
       expect(adapter.to('POST /api/habits/7/approve'), hasLength(1));
-      expect(find.textContaining('wants Brush teeth'), findsNothing);
+      expect(find.textContaining('Sam wants'), findsNothing);
     });
 
     testWidgets('decline posts the other answer', (tester) async {
       final adapter = _usServer([_proposal(minutes: null, points: 0)]);
       final app = TestApp(tester, adapter);
       await app.pump(const BoardScreen());
-      expect(find.text('Sam wants Brush teeth worth 0 gems'), findsOneWidget);
+      expect(find.text('Sam wants 0 gems · only tracked'), findsOneWidget);
       await app.tap(_button('Decline'));
       expect(adapter.to('POST /api/habits/7/decline'), hasLength(1));
       expect(adapter.to('POST /api/habits/7/approve'), isEmpty);
-      expect(find.textContaining('wants Brush teeth'), findsNothing);
+      expect(find.textContaining('Sam wants'), findsNothing);
+    });
+
+    testWidgets('a change to a habit that counts says what it is worth now', (tester) async {
+      final app = TestApp(
+        tester,
+        _usServer([_proposal(points: 30, minutes: 10, currentPoints: 6)]),
+      );
+      await app.pump(const BoardScreen());
+      expect(find.text('Sam wants 30 gems · 10 min, now 6'), findsOneWidget);
     });
 
     testWidgets('nothing pending shows no card', (tester) async {

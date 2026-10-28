@@ -324,6 +324,7 @@ class HabitProposal {
     required this.points,
     required this.minutes,
     required this.currentPoints,
+    this.habit,
   });
 
   factory HabitProposal.fromJson(Json j) => HabitProposal(
@@ -332,6 +333,7 @@ class HabitProposal {
     points: _int(j['points']),
     minutes: (j['minutes'] as num?)?.toInt(),
     currentPoints: _int(j['currentPoints']),
+    habit: j['habit'] is Json ? Habit.fromJson(j['habit'] as Json) : null,
   );
 
   final int habitId;
@@ -342,8 +344,8 @@ class HabitProposal {
   final int? minutes;
   final int currentPoints;
 
-  /// "Brush teeth worth 6 gems (2 min)".
-  String get worth => '$name worth $points gems${minutes == null ? '' : ' ($minutes min)'}';
+  /// The whole habit, so the answer can weigh how often and when; null from servers before v16.
+  final Habit? habit;
 }
 
 /// The partner's pending proposals, with their name.

@@ -8,8 +8,11 @@ import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
+import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
+import 'habit_icons.dart';
+import 'habits_page.dart';
 
 /// The partner's habit gems waiting for my answer, one row each. Shows nothing when there is
 /// nothing to answer, so Us stays quiet.
@@ -71,9 +74,18 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
     }
   }
 
+  /// "25 gems · 10 min", with what it is worth now when the habit already counts.
+  static String _ask(HabitProposal p) {
+    final time = p.minutes == null ? ' · only tracked' : ' · ${p.minutes} min';
+    final now = p.currentPoints > 0 ? ', now ${p.currentPoints}' : '';
+    return '${p.points} gems$time$now';
+  }
+
   @override
   Widget build(BuildContext context) {
     final busy = _approving != null;
+    final p = widget.proposal;
+    final habit = p.habit;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -84,16 +96,32 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(color: context.accentTint, shape: BoxShape.circle),
-              child: Icon(Icons.diamond_rounded, size: 22, color: context.accentLip),
+              child: Icon(
+                habit == null ? Icons.diamond_rounded : habitIcon(habit.icon),
+                size: 22,
+                color: context.accentLip,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  '${widget.from} wants ${widget.proposal.worth}',
-                  style: AppText.label.copyWith(fontWeight: FontWeight.w800),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(p.name, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${widget.from} wants ${_ask(p)}',
+                    style: AppText.label.copyWith(
+                      color: context.accentText,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (habit != null)
+                    Text(
+                      habitSchedule(habit),
+                      style: AppText.caption.copyWith(color: kInkSecondary),
+                    ),
+                ],
               ),
             ),
           ],

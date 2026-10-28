@@ -31,14 +31,19 @@ String daysSummary(List<int> weekdays) {
   return days.map((d) => _kDayShort[d - 1]).join(', ');
 }
 
-String habitSummary(Habit h) {
+/// "Every day · 7:30 AM, 10:00 PM", "Weekdays · 3 a day" or "Mon, Thu · Once a day".
+String habitSchedule(Habit h) {
   final what = h.isCount
       ? '${h.target ?? 0} a day'
       : h.slots.any((s) => s.minutes != null)
       ? (h.slots.map((s) => s.minutes).nonNulls.toList()..sort()).map(formatReminderTime).join(', ')
       : (h.slots.length > 1 ? '${h.slots.length} times a day' : 'Once a day');
+  return '${daysSummary(h.weekdays)} · $what';
+}
+
+String habitSummary(Habit h) {
   final pending = h.pending ? ' (${h.proposedPoints} pending)' : '';
-  return '${daysSummary(h.weekdays)} · $what · ${h.points} gems$pending';
+  return '${habitSchedule(h)} · ${h.points} gems$pending';
 }
 
 /// Every habit, in order: drag to reorder, tap to edit, and a menu to pause or delete.

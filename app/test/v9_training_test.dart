@@ -147,12 +147,18 @@ void main() {
     );
 
     test('targets and sets', () {
-      expect(targetLabel(ex()), '3 x 8 reps');
-      expect(targetLabel(ex(load: 22.5)), '3 x 8 reps at 22.5\u00a0kg');
-      expect(targetLabel(ex(timed: true, amount: 45)), '3 x 45 s');
-      expect(setLabel(const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 1)), '1 rep');
+      expect(targetLabel(ex(), Units.metric), '3 x 8 reps');
+      expect(targetLabel(ex(load: 22.5), Units.metric), '3 x 8 reps at 22.5\u00a0kg');
+      expect(targetLabel(ex(timed: true, amount: 45), Units.metric), '3 x 45 s');
       expect(
-        setLabel(const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 10, loadKg: 20)),
+        setLabel(const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 1), Units.metric),
+        '1 rep',
+      );
+      expect(
+        setLabel(
+          const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 10, loadKg: 20),
+          Units.metric,
+        ),
         '10 reps at 20\u00a0kg',
       );
       expect(rirLabel(null), '');
@@ -169,15 +175,18 @@ void main() {
         first: first,
         firstMonth: first == null ? null : '2026-09',
       );
-      expect(liftLine(lift(8, 3)), 'Pull-up: best set 8, up from 3 in your first month');
-      expect(liftLine(lift(8, null)), 'Pull-up: best set 8, first month logged');
-      expect(liftLine(lift(3, 3)), 'Pull-up: best set 3, same as your first month');
       expect(
-        liftLine(lift(30.4, 26.7, measure: 'e1rm')),
+        liftLine(lift(8, 3), Units.metric),
+        'Pull-up: best set 8, up from 3 in your first month',
+      );
+      expect(liftLine(lift(8, null), Units.metric), 'Pull-up: best set 8, first month logged');
+      expect(liftLine(lift(3, 3), Units.metric), 'Pull-up: best set 3, same as your first month');
+      expect(
+        liftLine(lift(30.4, 26.7, measure: 'e1rm'), Units.metric),
         'Pull-up: estimated one-rep max 30.4\u00a0kg, up from 26.7\u00a0kg in your first month',
       );
       expect(
-        liftLine(lift(60, 45, measure: 'seconds')),
+        liftLine(lift(60, 45, measure: 'seconds'), Units.metric),
         'Pull-up: best set 60 s, up from 45 s in your first month',
       );
     });

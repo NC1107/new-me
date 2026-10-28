@@ -104,13 +104,13 @@ String comparisonLabel(String key, String against, MetricChange? change) {
   return '${changeLabel(key, change)} vs $against, ${toneWord(t)}';
 }
 
-/// The smoothed weight's weekly rate: "down 0.3 kg a week", "steady" or null with too little
-/// history.
-String? weeklyRateLabel(double? kgPerWeek) {
+/// The smoothed weight's weekly rate: "down 0.3 kg a week" (or pounds), "steady" or null with
+/// too little history.
+String? weeklyRateLabel(double? kgPerWeek, Units units) {
   if (kgPerWeek == null) return null;
-  final rounded = (kgPerWeek.abs() * 10).round() / 10;
+  final rounded = (units.weightIn(kgPerWeek).abs() * 10).round() / 10;
   if (rounded == 0) return 'steady';
-  return '${kgPerWeek > 0 ? 'up' : 'down'} ${rounded.formatted} kg a week';
+  return '${kgPerWeek > 0 ? 'up' : 'down'} ${rounded.formatted} ${units.weightUnit} a week';
 }
 
 /// What a sparkline says to a screen reader.

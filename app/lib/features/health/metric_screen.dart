@@ -16,6 +16,7 @@ import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import 'health_metrics.dart';
 import 'trend_chart.dart';
+import '../../widgets/units_scope.dart';
 
 typedef TrendKey = ({String metric, int days});
 
@@ -187,16 +188,16 @@ class _Loaded extends StatelessWidget {
     final latest = points.last;
 
     final summary =
-        '${metric.name}, last $days days. Latest ${metric.format(latest.value)} on '
+        '${metric.name}, last $days days. Latest ${metric.display(latest.value, context.units)} on '
         '${DateFormat.MMMd().format(parseLocalDate(latest.date))}. '
-        'Lowest ${metric.format(low)}, highest ${metric.format(high)}, '
+        'Lowest ${metric.display(low, context.units)}, highest ${metric.display(high, context.units)}, '
         '${points.length} ${points.length == 1 ? 'reading' : 'readings'}.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          metric.format(shown.value),
+          metric.display(shown.value, context.units),
           style: AppText.tabular(AppText.display.copyWith(fontSize: 30)),
         ),
         Text(
@@ -251,15 +252,15 @@ class _Loaded extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _Stat(label: 'Lowest', value: metric.format(low)),
+              child: _Stat(label: 'Lowest', value: metric.display(low, context.units)),
             ),
             const SizedBox(width: kCardGap),
             Expanded(
-              child: _Stat(label: 'Average', value: metric.format(average)),
+              child: _Stat(label: 'Average', value: metric.display(average, context.units)),
             ),
             const SizedBox(width: kCardGap),
             Expanded(
-              child: _Stat(label: 'Highest', value: metric.format(high)),
+              child: _Stat(label: 'Highest', value: metric.display(high, context.units)),
             ),
           ],
         ),

@@ -174,10 +174,10 @@ void main() {
     });
 
     test('weight rate in words', () {
-      expect(weeklyRateLabel(-0.34), 'down 0.3 kg a week');
-      expect(weeklyRateLabel(0.5), 'up 0.5 kg a week');
-      expect(weeklyRateLabel(0.02), 'steady');
-      expect(weeklyRateLabel(null), isNull);
+      expect(weeklyRateLabel(-0.34, Units.metric), 'down 0.3 kg a week');
+      expect(weeklyRateLabel(0.5, Units.metric), 'up 0.5 kg a week');
+      expect(weeklyRateLabel(0.02, Units.metric), 'steady');
+      expect(weeklyRateLabel(null, Units.metric), isNull);
     });
   });
 
@@ -236,6 +236,7 @@ void main() {
               PersonMonth(userId: 1, name: 'A', color: 'green', improvements: [imp('Mine')]),
             ],
           ),
+          Units.metric,
         ),
         'Couple: 2 u, up from 1',
       );
@@ -248,11 +249,12 @@ void main() {
               PersonMonth(userId: 1, name: 'A', color: 'green', improvements: [imp('Mine')]),
             ],
           ),
+          Units.metric,
         ),
         'Mine: 2 u, up from 1',
       );
       expect(
-        lookbackHeadline(const Lookback(month: '2026-09', label: 'September 2026')),
+        lookbackHeadline(const Lookback(month: '2026-09', label: 'September 2026'), Units.metric),
         contains('how the month went'),
       );
     });
@@ -533,14 +535,14 @@ void main() {
 
   group('insights words', () {
     test('weight reads as one decimal and a trend', () {
-      expect(weightLabel(82.44), '82.4 kg');
+      expect(weightLabel(82.44, Units.metric), '82.4\u00a0kg');
       const falling = WeightInsights(smoothedKg: 82.4, weeklyRateKg: -0.4);
-      expect(weightTrendLabel(falling), 'down 0.4 kg a week');
+      expect(weightTrendLabel(falling, Units.metric), 'down 0.4 kg a week');
       expect(
         weightTrendIcon(falling).codePoint,
         isNot(weightTrendIcon(const WeightInsights()).codePoint),
       );
-      expect(weightTrendLabel(const WeightInsights(smoothedKg: 82.4)), isNull);
+      expect(weightTrendLabel(const WeightInsights(smoothedKg: 82.4), Units.metric), isNull);
     });
 
     test('aerobic minutes against the WHO range', () {
@@ -570,16 +572,18 @@ void main() {
       expect(
         proteinBasis(
           const ProteinHitRate(targetG: 100, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
+          Units.metric,
         ),
-        'Target 100 g. At 1.6 g per kg and 82.4 kg the default would be 130 g.',
+        'Target 100 g. At 1.6 g per kg and 82.4\u00a0kg the default would be 130 g.',
       );
       expect(
         proteinBasis(
           const ProteinHitRate(targetG: 130, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
+          Units.metric,
         ),
         'Target 130 g a day.',
       );
-      expect(proteinBasis(const ProteinHitRate()), isNull);
+      expect(proteinBasis(const ProteinHitRate(), Units.metric), isNull);
     });
   });
 }

@@ -1,7 +1,9 @@
 -- v10: the units a person reads, and each habit's worth toward the daily goal.
 
+-- Null until chosen, so the app can fill it once from the phone's region for people who joined
+-- before units existed.
 ALTER TABLE users
-    ADD COLUMN units TEXT NOT NULL DEFAULT 'metric' CHECK (units IN ('metric', 'imperial'));
+    ADD COLUMN units TEXT CHECK (units IN ('metric', 'imperial'));
 
 -- Points a due habit adds to the day's possible points: 0 tracks only, 10, 25 or 50 count.
 -- Existing habits start at the middle worth.

@@ -8,14 +8,16 @@ import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/dismiss_x.dart';
 import 'progress_logic.dart';
+import 'units_view.dart';
+import '../../widgets/units_scope.dart';
 
 /// One line about the month that just ended: its best improvement for the couple, else for the
 /// first person who has one.
-String lookbackHeadline(Lookback lb) {
+String lookbackHeadline(Lookback lb, Units units) {
   final best =
       lb.couple.improvements.firstOrNull ?? lb.people.expand((p) => p.improvements).firstOrNull;
   if (best == null) return 'See how the month went against the one before.';
-  return improvementSentence(best);
+  return improvementSentence(improvementInUnits(best, units));
 }
 
 /// The look-back as the Today "right now" card on the 1st of the month.
@@ -34,7 +36,7 @@ class LookbackNowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = accentById('violet');
-    final headline = lookbackHeadline(lookback);
+    final headline = lookbackHeadline(lookback, context.units);
     return AppCard(
       onTap: onTap,
       semanticLabel: '${lookback.label} look-back. $headline',

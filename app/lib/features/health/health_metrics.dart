@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../health/health_source.dart';
 import '../../theme/accent.dart';
 import '../../util/format.dart';
+import '../../util/units.dart';
 
 /// "7 h 12 min", "45 min" or "2 h".
 String formatDuration(num minutes) {
@@ -24,14 +25,22 @@ class HealthMetricSpec {
     required this.name,
     required this.icon,
     required this.format,
+    this.imperial,
   });
 
   final String key;
   final String name;
   final IconData icon;
 
-  /// "82.4 kg"
+  /// "82.4 kg": the value in the stored metric unit.
   final String Function(num value) format;
+
+  /// "181.7 lb": the same value for an imperial person, when the metric word differs.
+  final String Function(num value)? imperial;
+
+  /// The value the way the person reads it.
+  String display(num value, Units units) =>
+      units.isImperial && imperial != null ? imperial!(value) : format(value);
 }
 
 /// A band of the Health list, matching the groups onboarding shows.
@@ -68,6 +77,7 @@ final kHealthGroups = <HealthGroup>[
         name: 'Distance',
         icon: Icons.route_rounded,
         format: (v) => v < 1000 ? '${v.round()} m' : '${_tenths(v / 1000)} km',
+        imperial: (v) => v < 160.9 ? '${(v / 0.9144).round()} yd' : '${_tenths(v / 1609.344)} mi',
       ),
       HealthMetricSpec(
         key: HealthMetric.flights,
@@ -162,6 +172,7 @@ final kHealthGroups = <HealthGroup>[
         name: 'Weight',
         icon: Icons.monitor_weight_rounded,
         format: (v) => '${_tenths(v)} kg',
+        imperial: (v) => '${_tenths(v / kKgPerLb)} lb',
       ),
       HealthMetricSpec(
         key: HealthMetric.bodyFatPct,
@@ -174,6 +185,7 @@ final kHealthGroups = <HealthGroup>[
         name: 'Lean mass',
         icon: Icons.accessibility_new_rounded,
         format: (v) => '${_tenths(v)} kg',
+        imperial: (v) => '${_tenths(v / kKgPerLb)} lb',
       ),
     ],
   ),

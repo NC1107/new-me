@@ -10,6 +10,7 @@ import 'cached_resource.dart';
 import 'caches.dart';
 import 'local_prefs.dart';
 import 'session.dart';
+import 'units.dart';
 import 'targets.dart';
 import 'timezone.dart';
 import 'today.dart';
@@ -58,6 +59,14 @@ class MeNotifier extends CachedNotifier<Me> {
     await refresh();
     if (ref.exists(todayProvider)) unawaited(ref.read(todayProvider.notifier).refresh());
     if (ref.exists(boardProvider)) unawaited(ref.read(boardProvider.notifier).refresh());
+  }
+
+  /// Fills in units once for someone who joined before they existed, from the phone's region,
+  /// so server-written text and the app agree. A choice already made is never touched.
+  Future<void> fillUnitsFromRegion() async {
+    final me = (await future).data;
+    if (me.user.units != null) return;
+    await save(MePatch(units: ref.read(regionUnitsProvider)));
   }
 
   /// Follows the phone to a new time zone, but leaves a zone the user picked by hand alone:

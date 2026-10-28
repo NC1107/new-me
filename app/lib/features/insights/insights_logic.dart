@@ -168,4 +168,5 @@ String relativeDay(String date, String? today) {
 String workoutCountLabel(int n) => '$n ${n == 1 ? 'workout' : 'workouts'}';
 
 /// "5.2 km" or "850 m".
-String distanceLabel(int meters) => healthMetricSpec('distance_m')!.format(meters);
+String distanceLabel(int meters, Units units) =>
+    healthMetricSpec('distance_m')!.display(meters, units);

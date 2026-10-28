@@ -5,20 +5,20 @@ import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
-import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../board/person_card.dart' show kSuccessText;
 import '../progress/progress_logic.dart';
 import '../progress/sparkline.dart';
 import 'insights_widgets.dart';
+import '../../widgets/units_scope.dart';
 
-/// "82.4 kg": the smoothed weight, which is the number people should read.
-String weightLabel(double kg) => '${((kg * 10).round() / 10).formatted} kg';
+/// "82.4 kg" or "181.7 lb": the smoothed weight, which is the number people should read.
+String weightLabel(double kg, Units units) => units.weight(kg);
 
 /// How the smoothed weight is moving, in words: "down 0.3 kg a week", "steady", or null while
 /// there is too little history for a rate.
-String? weightTrendLabel(WeightInsights w) => weeklyRateLabel(w.weeklyRateKg);
+String? weightTrendLabel(WeightInsights w, Units units) => weeklyRateLabel(w.weeklyRateKg, units);
 
 IconData weightTrendIcon(WeightInsights w) {
   final rate = w.weeklyRateKg;
@@ -59,14 +59,17 @@ String proteinHitLabel(ProteinHitRate p) =>
 
 /// "Target 100 g. At 1.6 g per kg and 82.4 kg the default would be 130 g.", or just the target
 /// when it already is the default or there is no weight to work it out from.
-String? proteinBasis(ProteinHitRate p) {
+String? proteinBasis(ProteinHitRate p, Units units) {
   final target = p.targetG;
   if (target == null) return null;
   final suggested = p.suggestedG;
   if (suggested == null || suggested == target || p.weightKg == null || p.perKg == null) {
     return 'Target $target g a day.';
   }
-  return 'Target $target g. At ${p.perKg} g per kg and ${weightLabel(p.weightKg!)} the default '
+  final rate = units.isImperial
+      ? '${(p.perKg! * kKgPerLb * 100).round() / 100} g per lb'
+      : '${p.perKg} g per kg';
+  return 'Target $target g. At $rate and ${weightLabel(p.weightKg!, units)} the default '
       'would be $suggested g.';
 }
 
@@ -80,7 +83,7 @@ class WeightInsightCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = accentById('sky');
     final smoothed = weight.smoothedKg;
-    final trend = weightTrendLabel(weight);
+    final trend = weightTrendLabel(weight, context.units);
     final latest = weight.latestKg;
     final showLatest = latest != null && smoothed != null && (latest - smoothed).abs() >= 0.05;
     final points = weight.points.length > 30
@@ -88,7 +91,7 @@ class WeightInsightCard extends StatelessWidget {
         : weight.points;
     final label = smoothed == null
         ? 'Weight, no weigh-ins yet'
-        : 'Weight, ${weightLabel(smoothed)} smoothed${trend == null ? '' : ', $trend'}';
+        : 'Weight, ${weightLabel(smoothed, context.units)} smoothed${trend == null ? '' : ', $trend'}';
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Semantics(
@@ -116,7 +119,7 @@ class WeightInsightCard extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  weightLabel(smoothed),
+                  weightLabel(smoothed, context.units),
                   style: AppText.tabular(AppText.display.copyWith(color: palette.lip)),
                 ),
               ),
@@ -144,7 +147,7 @@ class WeightInsightCard extends StatelessWidget {
               ],
               if (showLatest)
                 Text(
-                  'Latest reading ${weightLabel(latest)}. A single weigh-in moves with water and '
+                  'Latest reading ${weightLabel(latest, context.units)}. A single weigh-in moves with water and '
                   'meals, so the trend is the number to follow.',
                   style: AppText.caption,
                 ),
@@ -291,7 +294,7 @@ class ProteinHitCard extends StatelessWidget {
     final p = protein;
     final palette = questPalette('protein');
     final rate = p.hitRate7;
-    final basis = proteinBasis(p);
+    final basis = proteinBasis(p, context.units);
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Semantics(

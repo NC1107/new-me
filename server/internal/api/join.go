@@ -25,8 +25,8 @@ type userJSON struct {
 	HeightCm *float64 `json:"heightCm"`
 	Sex      *string  `json:"sex"`
 	Goal     goalJSON `json:"goal"`
-	// Units is metric or imperial (v10).
-	Units string `json:"units"`
+	// Units is metric or imperial, or null before it was chosen (v10).
+	Units *string `json:"units"`
 }
 
 // goalJSON is the person's weight goal; the pace is kg a week and 0 for maintain.
@@ -37,7 +37,7 @@ type goalJSON struct {
 
 func toUserJSON(u db.User) userJSON {
 	return userJSON{ID: u.ID, Name: u.Name, Color: u.Color, Timezone: u.ChosenTimezone(), IsAdmin: u.IsAdmin, BirthYear: u.BirthYear,
-		HeightCm: u.HeightCm, Sex: u.Sex, Goal: goalJSON{Kind: u.GoalKind, PaceKgPerWeek: u.GoalPaceKg}, Units: u.Units}
+		HeightCm: u.HeightCm, Sex: u.Sex, Goal: goalJSON{Kind: u.GoalKind, PaceKgPerWeek: u.GoalPaceKg}, Units: unitsOrNull(u.Units)}
 }
 
 type joinRequest struct {
@@ -296,4 +296,11 @@ func (s *Server) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func unitsOrNull(units string) *string {
+	if units == "" {
+		return nil
+	}
+	return &units
 }

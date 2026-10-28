@@ -600,7 +600,7 @@ func TestDismissedCalorieProposalWaitsForTheNextMove(t *testing.T) {
 func TestUnitsAndImperialPaces(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	if got := h.get("/api/me", nick.Token).expect(http.StatusOK); got.str("user.units") != "metric" {
+	if got := h.get("/api/me", nick.Token).expect(http.StatusOK); !got.isNull("user.units") {
 		t.Fatalf("default units = %s", got.Body)
 	}
 	got := h.patch("/api/me", nick.Token, obj{"units": "imperial",

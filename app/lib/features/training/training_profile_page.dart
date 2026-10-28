@@ -15,6 +15,7 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../log/log_chip.dart';
 import '../me/number_field.dart';
+import '../../widgets/units_scope.dart';
 
 /// Session lengths offered, inside the server's 20 to 90 minutes.
 const kSessionMinutes = [20, 30, 45, 60, 75, 90];
@@ -34,7 +35,12 @@ class TrainingProfilePage extends ConsumerStatefulWidget {
 class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
   late final TrainingProfile _start = widget.initial ?? const TrainingProfile();
   late final Set<String> _equipment = {..._start.equipment};
-  late final _dumbbell = TextEditingController(text: _start.dumbbellMaxKg?.formatted ?? '');
+  late final Units _units = context.units;
+  late final _dumbbell = TextEditingController(
+    text: _start.dumbbellMaxKg == null
+        ? ''
+        : _units.weightIn(_start.dumbbellMaxKg!).round().formatted,
+  );
   late final _focus = TextEditingController(text: _start.focus);
   late int _days = _start.daysPerWeek;
   late int _minutes = kSessionMinutes.contains(_start.sessionMinutes) ? _start.sessionMinutes : 45;
@@ -42,7 +48,13 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
   bool _saving = false;
   String? _error;
 
-  double? get _dumbbellKg => double.tryParse(_dumbbell.text.replaceAll(',', '.'));
+  double? get _dumbbellValue => double.tryParse(_dumbbell.text.replaceAll(',', '.'));
+
+  /// The heaviest dumbbell in kg, to the hundredth so a whole number of pounds survives.
+  double? get _dumbbellKg {
+    final v = _dumbbellValue;
+    return v == null ? null : (_units.weightToKg(v) * 100).round() / 100;
+  }
 
   bool get _dumbbellValid {
     if (!_equipment.contains('dumbbells') || _dumbbell.text.trim().isEmpty) return true;
@@ -127,14 +139,14 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
             controller: _dumbbell,
             label: 'Heaviest dumbbell',
             hint: 'Not set',
-            unit: 'kg',
+            unit: _units.weightUnit,
             clearable: true,
             onChanged: () => setState(() {}),
           ),
           if (!_dumbbellValid) ...[
             const SizedBox(height: 6),
             Text(
-              'Between 0 and 200 kg',
+              'Between 0 and ${_units.weightIn(200).round()} ${_units.weightUnit}',
               style: AppText.caption.copyWith(color: kDangerText, fontWeight: FontWeight.w700),
             ),
           ],

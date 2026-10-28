@@ -21,6 +21,7 @@ import '../../widgets/skeletons.dart';
 import 'exercises_page.dart';
 import 'training_copy.dart';
 import 'training_profile_page.dart';
+import '../../widgets/units_scope.dart';
 
 /// The sources every plan is checked against (docs/design-v9.md).
 const kTrainingSources =
@@ -199,7 +200,7 @@ class _ProfileSummary extends StatelessWidget {
         : [
             for (final e in profile.equipment)
               e == 'dumbbells' && profile.dumbbellMaxKg != null
-                  ? 'Dumbbells to ${kgLabel(profile.dumbbellMaxKg!)}'
+                  ? 'Dumbbells to ${kgLabel(profile.dumbbellMaxKg!, context.units)}'
                   : equipmentLabel(e),
           ].join(', ');
     return AppCard(

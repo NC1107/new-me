@@ -7,6 +7,7 @@ import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/quest_copy.dart';
 import '../insights/body_insights.dart';
+import '../../widgets/units_scope.dart';
 
 /// What the Body row says under its title: last night's sleep and this week's workouts when
 /// there is data, else a plain pointer to what Insights holds. The smoothed weight rides on the
@@ -35,7 +36,7 @@ class BodyRow extends StatelessWidget {
     final palette = questPalette('exercise');
     return AppCard(
       onTap: onTap,
-      semanticLabel: 'Body, $summary${_weightWords(weight)}, open Insights',
+      semanticLabel: 'Body, $summary${_weightWords(weight, context.units)}, open Insights',
       padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,10 +76,10 @@ class BodyRow extends StatelessWidget {
   }
 }
 
-String _weightWords(WeightInsights? w) {
+String _weightWords(WeightInsights? w, Units units) {
   if (w == null || !w.hasData) return '';
-  final trend = weightTrendLabel(w);
-  return ', weight ${weightLabel(w.smoothedKg!)}${trend == null ? '' : ', $trend'}';
+  final trend = weightTrendLabel(w, units);
+  return ', weight ${weightLabel(w.smoothedKg!, units)}${trend == null ? '' : ', $trend'}';
 }
 
 /// The smoothed weight with its trend arrow and weekly rate, as a small tile on the Body row.
@@ -89,7 +90,7 @@ class WeightTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trend = weightTrendLabel(weight);
+    final trend = weightTrendLabel(weight, context.units);
     return ExcludeSemantics(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -106,7 +107,7 @@ class WeightTile extends StatelessWidget {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    weightLabel(weight.smoothedKg!),
+                    weightLabel(weight.smoothedKg!, context.units),
                     style: AppText.tabular(AppText.label.copyWith(fontWeight: FontWeight.w900)),
                   ),
                 ),

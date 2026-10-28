@@ -26,6 +26,7 @@ import '../../widgets/skeletons.dart';
 import '../log/log_chip.dart';
 import 'set_form.dart';
 import 'training_copy.dart';
+import '../../widgets/units_scope.dart';
 
 /// The muscle an exercise is listed under: its first primary muscle.
 String groupOf(Exercise e) => e.primaryMuscles.firstOrNull ?? 'other';
@@ -163,7 +164,7 @@ class _ExerciseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = exercise;
     final detail = e.best != null
-        ? bestLabel(e.best!)
+        ? bestLabel(e.best!, context.units)
         : e.equipment.isEmpty
         ? (e.timed ? 'Hold, bodyweight' : 'Bodyweight')
         : e.equipment.map(equipmentLabel).join(', ');
@@ -226,7 +227,7 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
     final ok = await confirmDialog(
       context,
       title: 'Delete this set?',
-      message: setLabel(set),
+      message: setLabel(set, context.units),
       confirmLabel: 'Delete',
       destructive: true,
     );
@@ -283,7 +284,10 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(e.best == null ? 'No sets yet' : bestLabel(e.best!), style: AppText.headline),
+              Text(
+                e.best == null ? 'No sets yet' : bestLabel(e.best!, context.units),
+                style: AppText.headline,
+              ),
               if (e.best?.e1rmKg != null) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -369,7 +373,7 @@ class _SetHistory extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              setLabel(s),
+                              setLabel(s, context.units),
                               style: AppText.tabular(AppText.label.copyWith(color: kInk)),
                             ),
                           ),

@@ -13,6 +13,7 @@ import '../../widgets/quest_copy.dart';
 import 'insights_logic.dart';
 import 'insights_widgets.dart';
 import 'workout_types.dart';
+import '../../widgets/units_scope.dart';
 
 Future<void> showWorkoutSheet(BuildContext context, {required Workout workout, String? zone}) =>
     showAppSheet<void>(
@@ -40,7 +41,7 @@ class WorkoutSheet extends StatelessWidget {
       if (w.kcal != null)
         (Icons.local_fire_department_rounded, 'Energy', '${w.kcal!.formatted} kcal'),
       if (w.distanceM != null && w.distanceM! > 0)
-        (Icons.straighten_rounded, 'Distance', distanceLabel(w.distanceM!)),
+        (Icons.straighten_rounded, 'Distance', distanceLabel(w.distanceM!, context.units)),
       if (w.avgHr != null) (Icons.favorite_rounded, 'Avg heart rate', '${w.avgHr} bpm'),
     ];
     return SafeArea(

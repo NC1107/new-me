@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../util/units.dart';
+
 import 'habit_models.dart';
 
 import 'together_models.dart';
@@ -7,6 +9,7 @@ import 'v6_models.dart';
 import 'v7_models.dart';
 import 'v8_models.dart';
 
+export '../util/units.dart';
 export 'food_models.dart';
 export 'together_models.dart';
 export 'v6_models.dart';
@@ -57,6 +60,7 @@ class AccountUser {
     this.heightCm,
     this.sex,
     this.goal,
+    this.units,
   });
 
   factory AccountUser.fromJson(Json j) => AccountUser(
@@ -69,6 +73,7 @@ class AccountUser {
     heightCm: (j['heightCm'] as num?)?.toDouble(),
     sex: j['sex'] is String ? j['sex'] as String : null,
     goal: j['goal'] is Map ? GoalSetting.parse(j['goal']) : null,
+    units: j['units'] is String ? Units.parse(j['units']) : null,
   );
 
   final int id;
@@ -91,6 +96,9 @@ class AccountUser {
 
   GoalSetting get goalSetting => goal ?? const GoalSetting();
 
+  /// What the person reads; null before it was chosen, and on servers older than v10.
+  final Units? units;
+
   Json toJson() => {
     'id': id,
     'name': name,
@@ -101,6 +109,7 @@ class AccountUser {
     'heightCm': ?heightCm,
     'sex': ?sex,
     'goal': ?goal?.toJson(),
+    'units': ?units?.name,
   };
 }
 
@@ -417,6 +426,7 @@ class MePatch {
     this.sex,
     this.clearSex = false,
     this.goal,
+    this.units,
   });
 
   /// Builds a targets-only patch where a null value clears that target on the server.
@@ -469,6 +479,8 @@ class MePatch {
   /// Replaces the goal as a whole; the server validates the pace for the kind.
   final GoalSetting? goal;
 
+  final Units? units;
+
   Json toJson() {
     final targets = <String, int?>{
       for (final key in clearTargets) key: null,
@@ -489,6 +501,7 @@ class MePatch {
       if (clearHeight) 'heightCm': null else 'heightCm': ?heightCm,
       if (clearSex) 'sex': null else 'sex': ?sex,
       'goal': ?goal?.toJson(),
+      'units': ?units?.name,
     };
   }
 }

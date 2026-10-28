@@ -20,6 +20,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import 'set_form.dart';
 import 'training_copy.dart';
+import '../../widgets/units_scope.dart';
 
 /// Today's planned session: each exercise with its target and the reason for it, a set log
 /// prefilled with the target, a rest timer after every set, and Finish.
@@ -73,7 +74,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final ok = await confirmDialog(
       context,
       title: 'Delete this set?',
-      message: setLabel(set),
+      message: setLabel(set, context.units),
       confirmLabel: 'Delete',
       destructive: true,
     );
@@ -180,7 +181,10 @@ class _ExerciseCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(targetLabel(e), style: AppText.tabular(AppText.label.copyWith(color: kInk))),
+          Text(
+            targetLabel(e, context.units),
+            style: AppText.tabular(AppText.label.copyWith(color: kInk)),
+          ),
           if (e.exercise != e.plan.exercise) ...[
             const SizedBox(height: 2),
             Text(
@@ -228,7 +232,8 @@ class _SetPill extends StatelessWidget {
     final rir = rirLabel(set.rir);
     return Semantics(
       container: true,
-      label: 'Set $index, ${setLabel(set)}${rir.isEmpty ? '' : ', $rir'}. Long press to delete.',
+      label:
+          'Set $index, ${setLabel(set, context.units)}${rir.isEmpty ? '' : ', $rir'}. Long press to delete.',
       excludeSemantics: true,
       child: Pressable(
         onTap: null,
@@ -240,7 +245,9 @@ class _SetPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(kRadiusField),
           ),
           child: Text(
-            rir.isEmpty ? setLabel(set) : '${setLabel(set)} · ${set.rir} RIR',
+            rir.isEmpty
+                ? setLabel(set, context.units)
+                : '${setLabel(set, context.units)} · ${set.rir} RIR',
             style: AppText.tabular(
               AppText.caption.copyWith(color: kInk, fontWeight: FontWeight.w700),
             ),
@@ -357,7 +364,7 @@ class _LogSetSheetState extends ConsumerState<_LogSetSheet> {
             Text(e.name, style: AppText.title),
             const SizedBox(height: 4),
             Text(
-              'Set ${e.logged.length + 1} of ${e.target.sets} · aim for ${perSetLabel(e)}',
+              'Set ${e.logged.length + 1} of ${e.target.sets} · aim for ${perSetLabel(e, context.units)}',
               style: AppText.caption,
             ),
             const SizedBox(height: 20),

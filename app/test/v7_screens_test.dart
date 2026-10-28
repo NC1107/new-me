@@ -274,7 +274,7 @@ void main() {
       expect(find.text('down 0.4 kg a week'), findsOneWidget);
       expect(find.byType(Sparkline), findsOneWidget);
       expect(
-        find.textContaining('Latest reading 82.4 kg'),
+        find.textContaining('Latest reading 82.4\u00a0kg'),
         findsOneWidget,
         reason: 'the raw reading is secondary, after the trend',
       );
@@ -295,10 +295,10 @@ void main() {
           },
         },
       );
-      expect(find.text('82.4 kg'), findsOneWidget);
+      expect(find.text('82.4\u00a0kg'), findsOneWidget);
       expect(find.textContaining('A weekly rate shows after a week'), findsOneWidget);
       expect(find.byType(Sparkline), findsNothing);
-      expect(find.textContaining('Latest reading 82.6 kg'), findsOneWidget);
+      expect(find.textContaining('Latest reading 82.6\u00a0kg'), findsOneWidget);
     });
 
     testWidgets('no weigh-ins at all says so', (tester) async {
@@ -387,11 +387,11 @@ void main() {
       final handle = tester.ensureSemantics();
       final app = TestApp(tester, _server(), surfaceHeight: 3200);
       await app.pump(const TodayScreen(), key: UniqueKey(), now: _morning);
-      expect(find.text('82.9 kg'), findsOneWidget);
+      expect(find.text('82.9\u00a0kg'), findsOneWidget);
       expect(find.text('down 0.4 kg a week'), findsOneWidget);
       expect(find.byIcon(Icons.trending_down_rounded), findsOneWidget);
       expect(
-        find.bySemanticsLabel(RegExp('Body, .*weight 82.9 kg, down 0.4 kg a week')),
+        find.bySemanticsLabel(RegExp('Body, .*weight 82.9\u00a0kg, down 0.4 kg a week')),
         findsOneWidget,
       );
       handle.dispose();

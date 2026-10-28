@@ -21,6 +21,7 @@ import 'insights_logic.dart';
 import 'insights_widgets.dart';
 import 'workout_sheet.dart';
 import 'workout_types.dart';
+import '../../widgets/units_scope.dart';
 
 class WorkoutsScreen extends ConsumerWidget {
   const WorkoutsScreen({super.key});
@@ -227,7 +228,7 @@ class WorkoutRow extends StatelessWidget {
     final facts = [
       durationLabel(w.durationMin),
       if (w.kcal != null) '${w.kcal!.formatted} kcal',
-      if (w.distanceM != null && w.distanceM! > 0) distanceLabel(w.distanceM!),
+      if (w.distanceM != null && w.distanceM! > 0) distanceLabel(w.distanceM!, context.units),
       if (w.avgHr != null) '${w.avgHr} bpm',
     ];
     return Semantics(

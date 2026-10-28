@@ -14,6 +14,7 @@ import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import 'health_metrics.dart';
 import 'metric_screen.dart';
+import '../../widgets/units_scope.dart';
 
 /// Every metric New Me reads from Apple Health with today's value; a tap opens its trend.
 class HealthScreen extends ConsumerWidget {
@@ -101,7 +102,7 @@ class _MetricRow extends StatelessWidget {
     final asOf = today == null && latest != null
         ? DateFormat.MMMd().format(parseLocalDate(latest.date))
         : null;
-    final text = value == null ? null : metric.format(value);
+    final text = value == null ? null : metric.display(value, context.units);
     final palette = group.palette;
     return Semantics(
       button: true,

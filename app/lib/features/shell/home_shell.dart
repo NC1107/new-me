@@ -86,6 +86,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     } on Object catch (e) {
       debugPrint('[NEWME] timezone sync skipped: $e');
     }
+    try {
+      await ref.read(meProvider.notifier).fillUnitsFromRegion();
+    } on Object catch (e) {
+      debugPrint('[NEWME] units fill skipped: $e');
+    }
   }
 
   static const _tabs = [

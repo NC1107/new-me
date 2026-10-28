@@ -7,6 +7,8 @@ import '../../widgets/chunky_button.dart';
 import '../log/big_number_stepper.dart';
 import '../log/log_chip.dart';
 import '../me/number_field.dart';
+import '../../util/units.dart';
+import '../../widgets/units_scope.dart';
 
 /// What one logged set holds before it is sent.
 typedef SetValues = ({int amount, double? loadKg, int? rir});
@@ -49,9 +51,21 @@ class SetForm extends StatefulWidget {
 
 class _SetFormState extends State<SetForm> {
   late final _amount = TextEditingController(text: _initialAmount);
-  late final _load = TextEditingController(text: widget.initialLoadKg?.formatted ?? '');
+  late final _load = TextEditingController(text: _initialLoad);
   late int? _rir = widget.initialRir;
   bool _busy = false;
+
+  // The units are read once: a set form lives inside one sheet.
+  late final Units _units = context.units;
+
+  String get _initialLoad {
+    final kg = widget.initialLoadKg;
+    if (kg == null) return '';
+    final v = _units.isImperial ? (_units.weightIn(kg) * 2).round() / 2 : (kg * 10).round() / 10;
+    return v.formatted;
+  }
+
+  double get _maxLoad => _units.weightIn(kMaxLoadKg).floorToDouble();
 
   String get _initialAmount {
     final a = widget.initialAmount;
@@ -71,8 +85,8 @@ class _SetFormState extends State<SetForm> {
   String? get _loadError {
     if (!widget.loaded || _load.text.trim().isEmpty) return null;
     final l = _loadValue;
-    if (l == null || l <= 0 || l > kMaxLoadKg) {
-      return 'Load must be above 0 and at most ${kMaxLoadKg.formatted} kg';
+    if (l == null || l <= 0 || l > _maxLoad) {
+      return 'Load must be above 0 and at most ${_maxLoad.formatted} ${_units.weightUnit}';
     }
     return null;
   }
@@ -97,7 +111,9 @@ class _SetFormState extends State<SetForm> {
     try {
       await widget.onLog((
         amount: _amountValue!,
-        loadKg: widget.loaded && _load.text.trim().isNotEmpty ? _loadValue : null,
+        loadKg: widget.loaded && _load.text.trim().isNotEmpty
+            ? (_units.weightToKg(_loadValue!) * 100).round() / 100
+            : null,
         rir: widget.timed ? null : _rir,
       ));
     } finally {
@@ -126,7 +142,7 @@ class _SetFormState extends State<SetForm> {
             controller: _load,
             label: 'Load',
             hint: 'Bodyweight',
-            unit: 'kg',
+            unit: _units.weightUnit,
             onChanged: () => setState(() {}),
           ),
           if (_loadError case final error?) ...[

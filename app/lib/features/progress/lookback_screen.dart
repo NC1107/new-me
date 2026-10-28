@@ -15,6 +15,8 @@ import '../../widgets/pressable.dart';
 import '../board/person_card.dart' show kSuccessText;
 import '../training/training_copy.dart';
 import 'progress_logic.dart';
+import 'units_view.dart';
+import '../../widgets/units_scope.dart';
 
 /// The monthly look-back: the three biggest improvements for the couple and for each person.
 /// [month] is YYYY-MM; null opens the last completed month.
@@ -80,7 +82,9 @@ class _LookbackScreenState extends ConsumerState<LookbackScreen> {
         _Section(
           title: 'Together',
           leading: const Icon(Icons.favorite_rounded, color: kFlame, size: 28),
-          improvements: lb.couple.improvements,
+          improvements: [
+            for (final i in lb.couple.improvements) improvementInUnits(i, context.units),
+          ],
           facts: _facts(points: lb.couple.points, days: lb.couple.bothCountedDays, both: true),
         ),
         const SizedBox(height: kCardGap),
@@ -90,7 +94,7 @@ class _LookbackScreenState extends ConsumerState<LookbackScreen> {
         _Section(
           title: p.name,
           leading: Avatar(name: p.name, palette: accentById(p.color), size: 32),
-          improvements: p.improvements,
+          improvements: [for (final i in p.improvements) improvementInUnits(i, context.units)],
           lifts: p.lifts,
           facts: _facts(points: p.points, days: p.countedDays),
         ),
@@ -215,7 +219,7 @@ class _Section extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      liftLine(l),
+                      liftLine(l, context.units),
                       style: AppText.label.copyWith(color: kInk, fontWeight: FontWeight.w600),
                     ),
                   ),

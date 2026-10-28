@@ -64,7 +64,8 @@ type User struct {
 	// GoalKind is lose, maintain or gain; GoalPaceKg is kg a week, 0 for maintain.
 	GoalKind   string
 	GoalPaceKg float64
-	// Units is metric or imperial: what the person reads. Everything is stored metric.
+	// Units is metric, imperial, or "" before the person (or their phone's region) chose.
+	// Everything is stored metric.
 	Units string
 }
 
@@ -122,7 +123,7 @@ const userColumns = `u.id, u.name, u.color, u.timezone, u.is_admin, u.kcal_targe
 	u.notify_behind_pace, u.notify_close_to_done, u.notify_wind_down, u.notify_morning_plan, u.notify_weekly_recap,
 	u.notify_milestones, u.notify_lookback, u.streak_rules_from::text, u.protein_auto, u.workdays,
 	u.workday_wake_min, u.workday_bed_min, u.dayoff_wake_min, u.dayoff_bed_min, u.first_notification_offset_min,
-	u.height_cm::float8, u.sex, u.goal_kind, u.goal_pace_kg::float8, u.units`
+	u.height_cm::float8, u.sex, u.goal_kind, u.goal_pace_kg::float8, COALESCE(u.units, '')`
 
 // scanUser reads userColumns, after any leading columns the query selected first.
 func scanUser(row pgx.Row, leading ...any) (User, error) {
@@ -245,7 +246,7 @@ func UpdateUser(ctx context.Context, q Querier, u User) error {
 		u.Notify.BehindPace, u.Notify.CloseToDone, u.Notify.WindDown, u.Notify.MorningPlan, u.Notify.WeeklyRecap,
 		u.Notify.Milestones, u.Notify.Lookback, u.Schedule.Workdays,
 		u.Schedule.Workday.WakeMin, u.Schedule.Workday.BedMin, u.Schedule.DayOff.WakeMin, u.Schedule.DayOff.BedMin,
-		u.Schedule.FirstOffsetMin, u.ProteinAuto, u.HeightCm, u.Sex, u.GoalKind, u.GoalPaceKg, u.Units)
+		u.Schedule.FirstOffsetMin, u.ProteinAuto, u.HeightCm, u.Sex, u.GoalKind, u.GoalPaceKg, nullIfEmpty(u.Units))
 	if err != nil {
 		switch violatedConstraint(err) {
 		case "users_name_live":
@@ -316,4 +317,12 @@ func SwitchTimezoneIfDue(ctx context.Context, q Querier, u User, now time.Time) 
 		return u, err
 	}
 	return GetUser(ctx, q, u.ID)
+}
+
+// nullIfEmpty stores an empty string as NULL.
+func nullIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

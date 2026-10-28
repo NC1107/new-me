@@ -18,6 +18,8 @@ import 'lookback_screen.dart';
 import 'metric_card.dart';
 import 'milestones_page.dart';
 import 'progress_logic.dart';
+import 'units_view.dart';
+import '../../widgets/units_scope.dart';
 
 const kProgressWindow = 30;
 
@@ -92,7 +94,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     final person =
         data.people.where((p) => p.userId == (_selected ?? myId)).firstOrNull ?? data.people.first;
     final palette = accentById(person.color);
-    final metrics = orderedMetrics(person.metrics);
+    final units = context.units;
+    final metrics = orderedMetrics([for (final m in person.metrics) metricInUnits(m, units)]);
     return [
       if (data.people.length > 1) ...[
         _PersonSwitcher(

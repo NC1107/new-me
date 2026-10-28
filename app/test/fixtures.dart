@@ -136,7 +136,14 @@ Map<String, dynamic> meJson({
   String color = 'violet',
   String timezone = 'America/New_York',
 }) => {
-  'user': {'id': 2, 'name': 'Sam', 'color': color, 'timezone': timezone, 'isAdmin': admin},
+  'user': {
+    'id': 2,
+    'name': 'Sam',
+    'color': color,
+    'timezone': timezone,
+    'isAdmin': admin,
+    'units': 'metric',
+  },
   'targets': {..._noTargets, 'kcal': 2200, 'protein': 150},
   'questTemplates': [
     _template('steps', 'Steps', 8000, 'steps', 100, 0),

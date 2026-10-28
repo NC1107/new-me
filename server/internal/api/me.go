@@ -229,7 +229,7 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 	out := make([]templateJSON, 0, len(templates))
 	for _, t := range templates {
 		out = append(out, templateJSON{
-			Key: t.Key, Title: titles[t.Key], Enabled: t.Enabled, Target: t.Target, Unit: t.Unit,
+			Key: t.Key, Title: questTitle(t.Key), Enabled: t.Enabled, Target: t.Target, Unit: t.Unit,
 			TargetAlt: t.TargetAlt, UnitAlt: t.UnitAlt, Points: t.Points, Position: t.Position,
 		})
 	}

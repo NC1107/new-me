@@ -106,8 +106,8 @@ func ComputeSleep(in SleepInput) Sleep {
 	wakes := make([]float64, len(last14))
 	for i, n := range last14 {
 		out.Nights = append(out.Nights, NightBar{Date: n.Date, AsleepMin: n.AsleepMin})
-		bedtimes[i] = minuteOfDay(n.BedAt, in.Loc)
-		wakes[i] = minuteOfDay(n.WakeAt, in.Loc)
+		bedtimes[i] = score.MinuteOfDay(n.BedAt, in.Loc)
+		wakes[i] = score.MinuteOfDay(n.WakeAt, in.Loc)
 	}
 	if len(last14) > 0 {
 		bed, wake := circularMean(bedtimes), circularMean(wakes)
@@ -131,12 +131,6 @@ func ComputeSleep(in SleepInput) Sleep {
 		}
 	}
 	return out
-}
-
-// minuteOfDay is the wall-clock time of t in loc as minutes after midnight.
-func minuteOfDay(t time.Time, loc *time.Location) float64 {
-	local := t.In(loc)
-	return float64(local.Hour()*60+local.Minute()) + float64(local.Second())/60
 }
 
 // circularMean averages times of day as angles on a 24 hour circle, so 23:00 and 01:00 average

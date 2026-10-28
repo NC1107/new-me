@@ -27,14 +27,14 @@ type OpenFoodFacts struct {
 	// searches and reads hold calls to Open Food Facts' published limits of 10 searches and 15
 	// product reads per minute per IP address, past which it answers 503 and may ban the address
 	// (API documentation, "Rate limits"). Nil means unlimited.
-	searches, reads *perMinute
+	searches, reads *sliding
 }
 
 // NewOpenFoodFacts builds a client that identifies itself as NewMe/<version>.
 func NewOpenFoodFacts(version string) *OpenFoodFacts {
 	return &OpenFoodFacts{
 		BaseURL: OFFBaseURL, UserAgent: offUserAgent(version), HTTP: &http.Client{Timeout: lookupTimeout},
-		searches: newPerMinute(10, time.Now), reads: newPerMinute(15, time.Now),
+		searches: newSliding(10, time.Minute, time.Now), reads: newSliding(15, time.Minute, time.Now),
 	}
 }
 

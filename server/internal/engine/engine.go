@@ -33,7 +33,7 @@ var healthMetric = map[string]string{
 func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 	results := make([]score.QuestResult, 0, len(quests))
 	for _, q := range quests {
-		if metric, fed := healthMetric[q.Key]; fed && !connected(q.Key, metric, in) {
+		if metric, fed := healthMetric[q.Key]; fed && !connected(q, metric, in) {
 			continue
 		}
 		actual, target := progress(q, in)
@@ -45,12 +45,13 @@ func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 // connected is whether a Health-fed quest has data to be measured against. Manual activity is
 // data for the exercise quest, so someone who logs a run by hand is scored on it before Health
 // has ever reported exercise minutes. Water logged by hand does the same for the water quest.
-func connected(key, metric string, in db.DayInputs) bool {
+func connected(q db.DayQuest, metric string, in db.DayInputs) bool {
+	key := q.Key
 	switch {
 	case key == db.QuestSleepRegularity:
 		// Only a night that can be compared with a routine is judged; a Health reading of
 		// sleep minutes alone says nothing about when the person slept.
-		return RegularityCheck(db.DayQuest{Key: key, Target: db.DefaultRegularityWindowMin}, in).Measurable
+		return RegularityCheck(q, in).Measurable
 	case in.Connected(metric):
 		return true
 	case key == db.QuestExercise:
@@ -182,6 +183,28 @@ type Scored struct {
 	Quests []db.DayQuest
 	Inputs db.DayInputs
 	Score  score.DayScore
+}
+
+// Counts reports whether a snapshotted quest is part of the day's score. A Health-fed quest
+// with no data yet is snapshotted but left out, so it must not read as a missed quest.
+func (s Scored) Counts(key string) bool {
+	for _, q := range s.Score.Quests {
+		if q.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+// ScoreWithStreak scores the user's day and their streak in one transaction, as a Today read
+// does, so the owner's view and the partner's view of a day never differ.
+func ScoreWithStreak(ctx context.Context, tx pgx.Tx, u db.User, date score.Date, loc *time.Location, now time.Time) (Scored, score.StreakResult, error) {
+	scored, err := ScoreAt(ctx, tx, u.ID, date, loc, now)
+	if err != nil {
+		return Scored{}, score.StreakResult{}, err
+	}
+	streak, err := StreakFor(ctx, tx, u, now, loc)
+	return scored, streak, err
 }
 
 // RecomputeDay rescores one user-day inside the caller's write transaction and stores the

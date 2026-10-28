@@ -35,14 +35,24 @@ type USDA struct {
 	BaseURL string
 	Key     string
 	HTTP    *http.Client
+	// calls holds requests under api.data.gov's 1,000 an hour per key, with room to spare, so a
+	// burst of cold lookups cannot spend the hour and leave food search empty. Nil is unlimited.
+	calls *sliding
 }
+
+// usdaPerHour is below api.data.gov's default 1,000 requests an hour per key.
+const usdaPerHour = 900
+
+// errUSDABusy is a call skipped to stay inside the key's hourly limit.
+var errUSDABusy = fmt.Errorf("%w: usda: over its hourly limit, skipped", ErrLookup)
 
 // NewUSDA builds a client; an empty key means DEMO_KEY.
 func NewUSDA(key string) *USDA {
 	if strings.TrimSpace(key) == "" {
 		key = DemoKey
 	}
-	return &USDA{BaseURL: USDABaseURL, Key: strings.TrimSpace(key), HTTP: &http.Client{Timeout: lookupTimeout}}
+	return &USDA{BaseURL: USDABaseURL, Key: strings.TrimSpace(key), HTTP: &http.Client{Timeout: lookupTimeout},
+		calls: newSliding(usdaPerHour, time.Hour, time.Now)}
 }
 
 // Nutrient ids in FoodData Central. Foundation foods carry Atwater energy (2047, 2048) instead
@@ -121,6 +131,9 @@ func (u *USDA) get(ctx context.Context, path string, q url.Values, out any) erro
 }
 
 func (u *USDA) do(ctx context.Context, method, path string, q url.Values, body any, out any) error {
+	if !u.calls.allow() {
+		return errUSDABusy
+	}
 	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)
 	defer cancel()
 	var reqBody io.Reader

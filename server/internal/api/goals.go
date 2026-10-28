@@ -99,7 +99,7 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		out = append(out, proposalJSON{Key: key, Kind: chosen.Kind, Title: titles[key], Unit: tmpl.Unit,
+		out = append(out, proposalJSON{Key: key, Kind: chosen.Kind, Title: questTitle(key), Unit: tmpl.Unit,
 			Current: chosen.Current, Proposed: chosen.Proposed, Reason: chosen.Reason})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"week": score.ISOWeekLabel(week), "weekStart": week, "proposals": out})

@@ -79,7 +79,7 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		earned := byKey[q.Key]
 		actual, actualAlt := engine.Actuals(q, s.Inputs)
 		item := questJSON{
-			Key: q.Key, Title: titles[q.Key], Target: q.Target, Unit: q.Unit,
+			Key: q.Key, Title: questTitle(q.Key), Target: q.Target, Unit: q.Unit,
 			TargetAlt: q.TargetAlt, UnitAlt: q.UnitAlt, Actual: actual, ActualAlt: actualAlt,
 			Points: q.Points, BasePoints: earned.Base, BonusPoints: earned.Bonus, Done: earned.Complete,
 		}

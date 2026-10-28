@@ -52,6 +52,22 @@ const (
 	DefaultBreathingMin        = 5
 )
 
+// QuestTitles are the display names of the quests, shared by the API and the day plan.
+var QuestTitles = map[string]string{
+	QuestSteps:           "Steps",
+	QuestPushups:         "Push-ups",
+	QuestReading:         "Reading",
+	QuestMealsLogged:     "Meals",
+	QuestProtein:         "Protein",
+	QuestYoga:            "Yoga",
+	QuestExercise:        "Exercise",
+	QuestSleep:           "Sleep",
+	QuestWater:           "Water",
+	QuestSleepRegularity: "Steady bedtime",
+	QuestProduce:         "Fruit and vegetables",
+	QuestBreathing:       "Breathing",
+}
+
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
 const DefaultProteinTarget = 100
 

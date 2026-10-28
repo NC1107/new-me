@@ -103,10 +103,7 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 	)
 	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if scored, err = s.scoreDay(ctx, tx, c, date); err != nil {
-			return err
-		}
-		streak, err = engine.StreakFor(ctx, tx, c.user, now, c.loc)
+		scored, streak, err = engine.ScoreWithStreak(ctx, tx, c.user, date, c.loc, now)
 		return err
 	})
 	if err != nil {

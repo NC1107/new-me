@@ -201,7 +201,7 @@ func readingMinutesLeft(q Quest) int {
 }
 
 func doneText(q Quest) string {
-	title := titles[q.Key]
+	title := db.QuestTitles[q.Key]
 	if title == "" {
 		title = q.Key
 	}
@@ -224,12 +224,6 @@ func doneText(q Quest) string {
 // litresText words millilitres as litres with one decimal. The plan has no unit setting, so the
 // water text stays in one unit that reads the same in both systems.
 func litresText(ml int) string { return fmt.Sprintf("%.1f L", float64(ml)/1000) }
-
-var titles = map[string]string{
-	db.QuestSteps: "Steps", db.QuestPushups: "Push-ups", db.QuestReading: "Reading", db.QuestMealsLogged: "Meals",
-	db.QuestProtein: "Protein", db.QuestYoga: "Yoga", db.QuestExercise: "Exercise", db.QuestSleep: "Sleep", db.QuestWater: "Water",
-	db.QuestSleepRegularity: "Steady bedtime", db.QuestProduce: "Fruit and vegetables", db.QuestBreathing: "Breathing",
-}
 
 func workoutTitle(t string) string {
 	switch t {

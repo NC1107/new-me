@@ -49,12 +49,11 @@ func (s *Server) handlePartnerToday(w http.ResponseWriter, r *http.Request) {
 		scored engine.Scored
 		streak score.StreakResult
 	)
+	// This rescores and stores the partner's day exactly as their own Today read would, repair
+	// included; scoring is deterministic, so reading it early changes nothing they would see.
 	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if scored, err = engine.ScoreAt(ctx, tx, partner.ID, today, loc, now); err != nil {
-			return err
-		}
-		streak, err = engine.StreakFor(ctx, tx, *partner, now, loc)
+		scored, streak, err = engine.ScoreWithStreak(ctx, tx, *partner, today, loc, now)
 		return err
 	})
 	if err != nil {
@@ -73,16 +72,12 @@ func (s *Server) handlePartnerToday(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// countingQuests leaves out Health-fed quests that are not part of the day yet. The partner
-// cannot connect Health for them, so "0 of 8,000 steps" would only read as a missed quest.
+// countingQuests leaves out quests that are not part of the day yet; the partner cannot
+// connect Health for them, so "0 of 8,000 steps" would only read as a missed quest.
 func countingQuests(s engine.Scored) []questJSON {
-	part := make(map[string]bool, len(s.Score.Quests))
-	for _, q := range s.Score.Quests {
-		part[q.Key] = true
-	}
 	out := make([]questJSON, 0, len(s.Score.Quests))
 	for _, q := range toQuestsJSON(s) {
-		if part[q.Key] {
+		if s.Counts(q.Key) {
 			out = append(out, q)
 		}
 	}

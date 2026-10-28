@@ -89,28 +89,24 @@ var wireActivity = map[string][2]string{
 }
 
 // storedActivity resolves the wire's type and unit to a stored type. The stored names are
-// accepted as types too, with the unit implied.
+// accepted as types too, with the unit implied. A wire type may leave out its unit only when it
+// has one; reading counts minutes or pages, so it must say which.
 func storedActivity(typ, unit string) (string, bool) {
 	if wire, ok := wireActivity[typ]; ok {
 		return typ, unit == "" || unit == wire[1]
 	}
-	switch {
-	case typ == "reading" && unit == "minutes":
-		return db.ActivityReadingMinutes, true
-	case typ == "reading" && unit == "pages":
-		return db.ActivityReadingPages, true
-	case typ == "yoga" && (unit == "" || unit == "minutes"):
-		return db.ActivityYogaMinutes, true
-	case typ == "water" && (unit == "" || unit == "ml"):
-		return db.ActivityWaterML, true
-	case typ == "produce" && (unit == "" || unit == "servings"):
-		return db.ActivityProduce, true
-	case typ == "breathing" && (unit == "" || unit == "minutes"):
-		return db.ActivityBreathing, true
-	case typ == "other" && (unit == "" || unit == "minutes"):
-		return db.ActivityOtherMinutes, true
+	found, matches := "", 0
+	for stored, wire := range wireActivity {
+		if wire[0] != typ {
+			continue
+		}
+		matches++
+		if unit == wire[1] {
+			return stored, true
+		}
+		found = stored
 	}
-	return "", false
+	return found, unit == "" && matches == 1
 }
 
 func activityCap(stored string) int {

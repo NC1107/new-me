@@ -99,3 +99,51 @@ func TestNoNamedRowFallsBackToTheUnspecifiedFood(t *testing.T) {
 		t.Fatalf("black coffee = %+v ok=%v", h, ok)
 	}
 }
+
+// The NFS row answers a bare name; a detail the person gave must still pick the specific row.
+func TestTheUnspecifiedRowLosesToTheDetailTheyGave(t *testing.T) {
+	almonds := []Food{
+		{ID: "2707485", Name: "Almonds, NFS", DataType: typeSurvey},
+		{ID: "2707491", Name: "Almonds, salted", DataType: typeSurvey},
+		{ID: "2707494", Name: "Almonds, unsalted", DataType: typeSurvey},
+	}
+	if best, _ := pickBest(Item{Food: "almonds, salted"}, almonds); best.Food.ID != "2707491" {
+		t.Fatalf("salted almonds = %+v", best.Food)
+	}
+	if best, _ := pickBest(Item{Food: "almonds"}, almonds); best.Food.ID != "2707485" {
+		t.Fatalf("almonds = %+v", best.Food)
+	}
+}
+
+// More rows from the 2026-10-28 corpus, so the everyday cases run without the live tag.
+func TestCorpusRowsRankOffline(t *testing.T) {
+	cases := []struct {
+		item string
+		rows []Food
+		want string
+	}{
+		{"milk, 2%", []Food{
+			{ID: "171302", Name: "Milk, evaporated, 2% fat, with added vitamin A and vitamin D", DataType: typeSRLegacy},
+			{ID: "168787", Name: "Egg custards, dry mix, prepared with 2% milk", DataType: typeSRLegacy},
+			{ID: "2705386", Name: "Milk, reduced fat (2%)", DataType: typeSurvey},
+		}, "2705386"},
+		{"white rice, cooked", []Food{
+			{ID: "2708422", Name: "Rice, white, cooked, glutinous", DataType: typeSurvey},
+			{ID: "169711", Name: "Rice, white, glutinous, unenriched, cooked", DataType: typeSRLegacy},
+			{ID: "2708403", Name: "Rice, white, cooked, NS as to fat", DataType: typeSurvey},
+		}, "2708403"},
+		{"orange", []Food{
+			{ID: "169103", Name: "Orange peel, raw", DataType: typeSRLegacy},
+			{ID: "2709171", Name: "Orange, raw", DataType: typeSurvey},
+		}, "2709171"},
+		{"cottage cheese", []Food{
+			{ID: "169078", Name: "Cheese, cottage, with vegetables", DataType: typeSRLegacy},
+			{ID: "2705747", Name: "Cheese, cottage, NFS", DataType: typeSurvey},
+		}, "2705747"},
+	}
+	for _, c := range cases {
+		if best, ok := pickBest(Item{Food: c.item}, c.rows); !ok || best.Food.ID != c.want {
+			t.Errorf("%s = %+v, want %s", c.item, best.Food, c.want)
+		}
+	}
+}

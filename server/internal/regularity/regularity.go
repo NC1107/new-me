@@ -61,8 +61,8 @@ func Evaluate(nights []Night, date score.Date, windowMin int, loc *time.Location
 		case n.Date == date:
 			tonight = &nights[i]
 		case !n.Date.Before(date.AddDays(-BaselineDays)) && n.Date.Before(date):
-			beds = append(beds, minuteOfDay(n.BedAt, loc))
-			wakes = append(wakes, minuteOfDay(n.WakeAt, loc))
+			beds = append(beds, score.MinuteOfDay(n.BedAt, loc))
+			wakes = append(wakes, score.MinuteOfDay(n.WakeAt, loc))
 		}
 	}
 	out.BaselineNights = len(beds)
@@ -72,8 +72,8 @@ func Evaluate(nights []Night, date score.Date, windowMin int, loc *time.Location
 	out.Measurable = true
 	bed, wake := circularMedian(beds), circularMedian(wakes)
 	out.BedMedian, out.WakeMedian = int(math.Round(bed)), int(math.Round(wake))
-	out.BedOffset = int(math.Round(signedGap(minuteOfDay(tonight.BedAt, loc), bed)))
-	out.WakeOffset = int(math.Round(signedGap(minuteOfDay(tonight.WakeAt, loc), wake)))
+	out.BedOffset = int(math.Round(signedGap(score.MinuteOfDay(tonight.BedAt, loc), bed)))
+	out.WakeOffset = int(math.Round(signedGap(score.MinuteOfDay(tonight.WakeAt, loc), wake)))
 	out.BedOK = abs(out.BedOffset) <= windowMin
 	out.WakeOK = abs(out.WakeOffset) <= windowMin
 	if out.BedOK {
@@ -90,11 +90,6 @@ func abs(n int) int {
 		return -n
 	}
 	return n
-}
-
-func minuteOfDay(t time.Time, loc *time.Location) float64 {
-	local := t.In(loc)
-	return float64(local.Hour()*60+local.Minute()) + float64(local.Second())/60
 }
 
 // signedGap is how far a is from b on the clock, in (-720, 720]; positive means a is later.

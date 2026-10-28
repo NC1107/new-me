@@ -3,6 +3,8 @@ package estimate
 import (
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -19,9 +21,10 @@ type cacheEntry struct {
 
 // ttlCache keeps successful lookups for an hour so a repeated meal costs no API calls.
 type ttlCache struct {
-	mu  sync.Mutex
-	now func() time.Time
-	m   map[string]cacheEntry
+	mu     sync.Mutex
+	now    func() time.Time
+	m      map[string]cacheEntry
+	flight singleflight.Group
 }
 
 func newTTLCache(now func() time.Time) *ttlCache {

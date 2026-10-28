@@ -203,20 +203,10 @@ func loadZone(name string) (*time.Location, *httpError) {
 	return loc, nil
 }
 
-// titles are the display names of the quests.
-var titles = map[string]string{
-	db.QuestSteps:       "Steps",
-	db.QuestPushups:     "Push-ups",
-	db.QuestReading:     "Reading",
-	db.QuestMealsLogged: "Meals",
-	db.QuestProtein:     "Protein",
-	db.QuestYoga:        "Yoga",
-	db.QuestExercise:    "Exercise",
-	db.QuestSleep:       "Sleep",
-	db.QuestWater:       "Water",
-
-	db.QuestSleepRegularity: "Steady bedtime",
-	db.QuestProduce:         "Fruit and vegetables",
-	db.QuestBreathing:       "Breathing",
-	proposalCalories:        "Calories",
+// questTitle is a quest's display name, or the calorie target's in a goal proposal.
+func questTitle(key string) string {
+	if key == proposalCalories {
+		return "Calories"
+	}
+	return db.QuestTitles[key]
 }

@@ -69,13 +69,24 @@ func cached[T any](c *ttlCache, key string, search func() (T, error)) (T, error)
 	if v, ok := c.get(key); ok {
 		return v.(T), nil
 	}
-	v, err := search()
+	// Items in one meal are looked up at once, and two of them can need the same search; one
+	// request answers both instead of spending the upstream limit twice.
+	v, err, _ := c.flight.Do(key, func() (any, error) {
+		if v, ok := c.get(key); ok {
+			return v, nil
+		}
+		v, err := search()
+		if err != nil {
+			return nil, err
+		}
+		c.set(key, v)
+		return v, nil
+	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
-	c.set(key, v)
-	return v, nil
+	return v.(T), nil
 }
 
 // Lookup finds the best database row for the item and converts its amount. ok is false when no

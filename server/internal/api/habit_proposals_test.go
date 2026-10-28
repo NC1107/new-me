@@ -194,3 +194,18 @@ func TestApprovedGemsNeverChangeAFinalizedDay(t *testing.T) {
 		t.Fatalf("today = %s", got.Body)
 	}
 }
+
+func TestDaysSummaryWordsDaysAsTheAppDoes(t *testing.T) {
+	cases := map[string][]int{
+		"Every day":     {7, 1, 2, 3, 4, 5, 6},
+		"Weekdays":      {5, 4, 3, 2, 1},
+		"Weekends":      {7, 6},
+		"Mon, Wed, Fri": {5, 1, 3},
+		"Thu":           {4},
+	}
+	for want, days := range cases {
+		if got := daysSummary(days); got != want {
+			t.Errorf("daysSummary(%v) = %q, want %q", days, got, want)
+		}
+	}
+}

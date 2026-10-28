@@ -172,7 +172,7 @@ func TestTargetsWorkedExampleForAMaintainer(t *testing.T) {
 	}
 
 	resting := targetPath(t, got, "restingEnergy")
-	if got.str(resting+".formula") != "Mifflin-St Jeor: 10 x 80 kg + 6.25 x 180 cm - 5 x 30 + 5 = 1,780 kcal." ||
+	if got.str(resting+".formula") != "Mifflin-St Jeor: 10 × 80 kg + 6.25 × 180 cm - 5 × 30 + 5 = 1,780 kcal." ||
 		got.str(resting+".label") != "guideline" {
 		t.Errorf("resting = %s", got.Body)
 	}
@@ -185,7 +185,7 @@ func TestTargetsWorkedExampleForAMaintainer(t *testing.T) {
 		t.Errorf("calories = %s", got.Body)
 	}
 	if got.str(targetPath(t, got, "protein")+".label") != "guideline" ||
-		got.str(targetPath(t, got, "fiber")+".formula") != "14 g per 1,000 kcal x 2.75 = 39 g, for context the adequate intake for your age and sex is 38 g." {
+		got.str(targetPath(t, got, "fiber")+".formula") != "14 g per 1,000 kcal × 2.75 = 39 g. The adequate intake for your age and sex is 38 g, for context." {
 		t.Errorf("targets = %s", got.Body)
 	}
 	if p := inputPath(t, got, "weightKg"); got.num(p+".value") != 80 || got.str(p+".source") != "health" {
@@ -215,7 +215,7 @@ func TestTargetsFollowTheGoalAndItsPaceCaps(t *testing.T) {
 			t.Errorf("lose %s = %d, want %d", key, got, v)
 		}
 	}
-	if f := got.str(targetPath(t, got, "calories") + ".formula"); !strings.Contains(f, "0.5 kg a week x 7,700 kcal per kg / 7 days (550 kcal)") {
+	if f := got.str(targetPath(t, got, "calories") + ".formula"); !strings.Contains(f, "0.5 kg a week × 7,700 kcal per kg / 7 days (550 kcal)") {
 		t.Errorf("formula = %s", f)
 	}
 

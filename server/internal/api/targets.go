@@ -371,10 +371,10 @@ func computeTargets(d targetData) targetsResponse {
 			sexTerm = "- 161"
 		}
 		resting.Value = intp(int(math.Round(chain.resting)))
-		resting.Formula = fmt.Sprintf("Mifflin-St Jeor: 10 x %s + 6.25 x %s - 5 x %d %s = %s kcal.",
+		resting.Formula = fmt.Sprintf("Mifflin-St Jeor: 10 × %s + 6.25 × %s - 5 × %d %s = %s kcal.",
 			d.kg(*d.WeightKg, 1), d.cm(*d.HeightCm), *d.Age, sexTerm, th(chain.resting))
 	} else {
-		resting.Formula = "Mifflin-St Jeor: 10 x kg + 6.25 x cm - 5 x age + 5 (male) or - 161 (female). " + needs(restingMissing)
+		resting.Formula = "Mifflin-St Jeor: 10 × kg + 6.25 × cm - 5 × age + 5 (male) or - 161 (female). " + needs(restingMissing)
 	}
 	add(resting)
 
@@ -386,12 +386,12 @@ func computeTargets(d targetData) targetsResponse {
 		chain.pal = targets.PALForSteps(d.StepAvg14)
 		maintenance := chain.resting * chain.pal.Value
 		maint.Value = intp(int(math.Round(maintenance)))
-		maint.Formula = fmt.Sprintf("Resting energy %s kcal x activity level %s (%s steps a day on average, in the %s band; the level inside the FAO/WHO/UNU 2004 range is our convention) = %s kcal.",
+		maint.Formula = fmt.Sprintf("Resting energy %s kcal × activity level %s (%s steps a day on average, in the %s band; the level inside the FAO/WHO/UNU 2004 range is our convention) = %s kcal.",
 			th(chain.resting), trim(chain.pal.Value, 2), th(d.StepAvg14), chain.pal.Band, th(maintenance))
 		maint.Details = map[string]any{"palValue": chain.pal.Value, "stepBand": chain.pal.Band,
 			"note": "Wearable active calories are not used: reported errors are roughly 28 to 43% with no published correction."}
 	} else {
-		maint.Formula = "Resting energy x physical activity level from the 14-day average steps. " + needs(maintMissing)
+		maint.Formula = "Resting energy × physical activity level from the 14-day average steps. " + needs(maintMissing)
 	}
 	add(maint)
 
@@ -404,7 +404,7 @@ func computeTargets(d targetData) targetsResponse {
 		"need": map[string]int{"weighIns": targets.BalanceMinWeighIns, "spanDays": targets.BalanceMinSpanDays, "loggedDays": targets.BalanceMinLogged},
 	}
 	if bal.Kcal != nil {
-		est.Formula = fmt.Sprintf("Estimated from your logs: average logged intake %s kcal minus the change in your weight trend (%s over %d days x 7,700 kcal per kg / %d days) = %s kcal, and logged intake is commonly under-reported.",
+		est.Formula = fmt.Sprintf("Estimated from your logs: average logged intake %s kcal minus the change in your weight trend (%s over %d days × 7,700 kcal per kg / %d days) = %s kcal, and logged intake is commonly under-reported.",
 			th(bal.AvgIntake), d.kg(bal.TrendChgKg, 2), bal.SpanDays, bal.SpanDays, th(float64(*bal.Kcal)))
 		est.Details["avgIntakeKcal"] = int(math.Round(bal.AvgIntake))
 		est.Details["trendChangeKg"] = math.Round(bal.TrendChgKg*100) / 100
@@ -434,7 +434,7 @@ func computeTargets(d targetData) targetsResponse {
 			"paceOptions": map[string]any{"lose": targets.LosePaces, "gainMaxKgPerWeek": targets.MaxGainPace(*d.WeightKg)},
 		}
 	} else {
-		cal.Formula = "Maintenance adjusted by the goal pace x 7,700 kcal per kg / 7 days, rounded to 50 kcal and never below the floor. " + needs(calMissing)
+		cal.Formula = "Maintenance adjusted by the goal pace × 7,700 kcal per kg / 7 days, rounded to 50 kcal and never below the floor. " + needs(calMissing)
 	}
 	add(cal)
 
@@ -474,12 +474,12 @@ func computeTargets(d targetData) targetsResponse {
 	if len(calMissing) == 0 {
 		fv := targets.FiberTarget(chain.calories.Target)
 		fiber.Value = intp(fv)
-		fiber.Formula = fmt.Sprintf("14 g per 1,000 kcal x %s = %d g.", trim(float64(chain.calories.Target)/1000, 2), fv)
+		fiber.Formula = fmt.Sprintf("14 g per 1,000 kcal × %s = %d g.", trim(float64(chain.calories.Target)/1000, 2), fv)
 		fiber.Details = map[string]any{"benefitObservedG": "25 to 29"}
 		if d.Age != nil && d.Sex != nil {
 			if ai := targets.FiberAI(*d.Age, *d.Sex); ai != nil {
 				fiber.Details["adequateIntakeG"] = *ai
-				fiber.Formula = strings.TrimSuffix(fiber.Formula, ".") + fmt.Sprintf(", for context the adequate intake for your age and sex is %d g.", *ai)
+				fiber.Formula += fmt.Sprintf(" The adequate intake for your age and sex is %d g, for context.", *ai)
 			}
 		}
 	} else {
@@ -503,9 +503,9 @@ func calorieFormula(d targetData, c targets.Calories, kind string) string {
 	fmt.Fprintf(&b, "Maintenance %s kcal (our step-band convention)", th(c.Maintenance))
 	switch kind {
 	case targets.Lose:
-		fmt.Fprintf(&b, " - %s a week x 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(-c.DeltaKcal))
+		fmt.Fprintf(&b, " - %s a week × 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(-c.DeltaKcal))
 	case targets.Gain:
-		fmt.Fprintf(&b, " + %s a week x 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(c.DeltaKcal))
+		fmt.Fprintf(&b, " + %s a week × 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(c.DeltaKcal))
 	}
 	if c.DeltaKcal != 0 {
 		fmt.Fprintf(&b, " = %s kcal", th(c.Maintenance+c.DeltaKcal))
@@ -539,14 +539,14 @@ func proteinTarget(d targetData, kind string) (*targets.Protein, targetJSON) {
 	}
 	p := targets.ComputeProtein(kind, *d.WeightKg, d.HeightCm)
 	t.Value = intp(p.G)
-	t.Formula = fmt.Sprintf("%s x %s = %s g, rounded to 5 g.", d.perKg(p.PerKg, "g"), d.kg(*d.WeightKg, 1), th(p.PerKg**d.WeightKg))
+	t.Formula = fmt.Sprintf("%s × %s = %s g, rounded to 5 g.", d.perKg(p.PerKg, "g"), d.kg(*d.WeightKg, 1), th(p.PerKg**d.WeightKg))
 	t.Details = map[string]any{"perKg": p.PerKg, "perMealG": p.PerMealG,
 		"perMealTip": fmt.Sprintf("About 0.4 g/kg a meal, %d g, across 4 meals.", p.PerMealG)}
 	if p.BMI != nil {
 		t.Details["bmi"] = math.Round(*p.BMI*10) / 10
 	}
 	if p.Capped {
-		t.Formula = fmt.Sprintf("%s x %s = %s g, capped at 2.2 g per kg of the weight at BMI 25 for your height (expert practice) = %s g, rounded to 5 g.",
+		t.Formula = fmt.Sprintf("%s × %s = %s g, capped at 2.2 g per kg of the weight at BMI 25 for your height (expert practice) = %s g, rounded to 5 g.",
 			d.perKg(p.PerKg, "g"), d.kg(*d.WeightKg, 1), th(p.PerKg**d.WeightKg), th(p.CapG))
 		t.Details["capped"] = true
 	}
@@ -570,7 +570,7 @@ func macroFormulas(kcal, proteinG int, m targets.Macros) (fat, sat, carbs string
 			fatPct, plan.Thousands(kcal), m.FatG)
 	}
 	sat = fmt.Sprintf("Under 10%% of %s kcal / 9 kcal per g = %d g.", plan.Thousands(kcal), m.SatFatMaxG)
-	carbs = fmt.Sprintf("The remaining energy (%s - 4 x %d - 9 x %d) kcal / 4 kcal per g = %d g, never below 130 g.",
+	carbs = fmt.Sprintf("The remaining energy (%s - 4 × %d - 9 × %d) kcal / 4 kcal per g = %d g, never below 130 g.",
 		plan.Thousands(kcal), proteinG, m.FatG, m.CarbsG)
 	if m.CarbsFloored {
 		carbs = fmt.Sprintf("The remaining energy would be under 130 g with fat at its 20%% floor, so carbohydrate stays at the 130 g floor (%d g), which adds up to a little more than the calorie target.", m.CarbsG)
@@ -656,10 +656,10 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 	}
 	p := targets.ComputePushups(d.PushupMax.Reps, perSet, completed)
 	t.Value = intp(p.Daily())
-	t.Formula = fmt.Sprintf("%d sets x %d reps, 75%% (the middle of 70 to 80%%) of your latest max of %d, a derivation from reps-in-reserve guidance rather than a published constant.",
+	t.Formula = fmt.Sprintf("%d sets × %d reps, 75%% (the middle of 70 to 80%%) of your latest max of %d, a derivation from reps-in-reserve guidance rather than a published constant.",
 		targets.PushupSets, p.RepsPerSet, p.Max)
 	if p.Progressed {
-		t.Formula = fmt.Sprintf("%d sets x %d reps: %d reps a set raised by 5%% (at least 1 rep) because every set was completed on %d of the last 7 days, a derivation from reps-in-reserve and progression guidance.",
+		t.Formula = fmt.Sprintf("%d sets × %d reps: %d reps a set raised by 5%% (at least 1 rep) because every set was completed on %d of the last 7 days, a derivation from reps-in-reserve and progression guidance.",
 			targets.PushupSets, p.RepsPerSet, p.ProgressedFrom, completed)
 	}
 	t.Details = map[string]any{"sets": targets.PushupSets, "repsPerSet": p.RepsPerSet, "rangePerSet": []int{p.Low, p.High},

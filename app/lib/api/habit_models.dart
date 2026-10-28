@@ -51,18 +51,16 @@ class HabitSlot {
 }
 
 /// A habit as the management screens see it, paused ones included.
-/// Habit worths toward the daily goal (v10); quests are worth 50 or 100.
+/// The gems a habit adds toward the day (v10); quests are worth 50 or 100. Zero only tracks it.
 enum HabitWorth {
-  track(0, 'Just track', 'Does not count toward your day'),
-  small(10, 'Small', '10 points'),
-  medium(25, 'Medium', '25 points'),
-  big(50, 'Big', '50 points, like half a quest');
+  track(0),
+  small(10),
+  medium(25),
+  big(50);
 
-  const HabitWorth(this.points, this.label, this.detail);
+  const HabitWorth(this.points);
 
   final int points;
-  final String label;
-  final String detail;
 
   static HabitWorth of(int points) =>
       HabitWorth.values.where((w) => w.points == points).firstOrNull ?? HabitWorth.medium;

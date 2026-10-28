@@ -340,22 +340,14 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ],
         ),
         const SizedBox(height: 20),
-        const FieldLabel('Counts toward your day'),
+        const FieldLabel('Gems'),
         Segmented<HabitWorth>(
-          options: [for (final w in HabitWorth.values) (w, w.label)],
+          options: [for (final w in HabitWorth.values) (w, '${w.points}')],
           selected: _worth,
           onChanged: (w) {
             HapticFeedback.selectionClick();
             setState(() => _worth = w);
           },
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _worth == HabitWorth.track
-              ? 'Kept on Today, but your day counts the same either way.'
-              : '${_worth.detail}. Doing it adds them, skipping it counts against your day, '
-                    'the same as a quest. Quests are worth 50 or 100.',
-          style: AppText.caption.copyWith(color: kInkMuted),
         ),
         if (!_editing) ...[
           const SizedBox(height: 20),

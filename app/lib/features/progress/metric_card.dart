@@ -80,9 +80,7 @@ class MetricCard extends StatelessWidget {
     final m = metric;
     final palette = metricPalette(m.key);
     final trend = trendOf(headlineChange(m));
-    final sentence = metricSentence(m, window: window);
-    final value = m.current == null ? null : formatMetricValue(m.key, m.current!);
-    final windowName = window == 30 ? '30-day' : '$window-day';
+    final value = formatMetricValue(m.key, m.current ?? 0);
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: MergeSemantics(
@@ -99,65 +97,45 @@ class MetricCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (value == null)
-              Text('No data yet', style: AppText.title.copyWith(color: kInkMuted))
-            else
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        value,
-                        style: AppText.tabular(AppText.display.copyWith(color: palette.lip)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      '${metricUnit(m.key, m.unit)} ($windowName average)',
-                      style: AppText.caption,
+                      value,
+                      style: AppText.tabular(AppText.display.copyWith(color: palette.lip)),
                     ),
                   ),
-                ],
-              ),
-            if (m.current == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text('Shows up once there is a reading.', style: AppText.caption),
-              )
-            else ...[
-              const SizedBox(height: 8),
-              Sparkline(
-                values: [for (final p in m.series) p.value],
-                color: color,
-                semanticLabel: seriesSummary(m),
-              ),
-              const SizedBox(height: 10),
-              Text(sentence, style: AppText.label.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              if (m.changeFromPrevious == null && m.changeFromFirst == null)
-                const Text(
-                  'Comparisons appear once there is a full month to compare.',
-                  style: AppText.caption,
-                )
-              else ...[
-                _Comparison(
-                  metricKey: m.key,
-                  against: previousWindowLabel(window),
-                  change: m.changeFromPrevious,
                 ),
-                const SizedBox(height: 4),
-                _Comparison(
-                  metricKey: m.key,
-                  against: firstWindowLabel(window),
-                  change: m.changeFromFirst,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text('${metricUnit(m.key, m.unit)}, $window days', style: AppText.caption),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Sparkline(
+              values: [for (final p in m.series) p.value],
+              color: color,
+              semanticLabel: seriesSummary(m),
+            ),
+            if (m.changeFromPrevious != null || m.changeFromFirst != null) ...[
+              const SizedBox(height: 10),
+              _Comparison(
+                metricKey: m.key,
+                against: previousWindowLabel(window),
+                change: m.changeFromPrevious,
+              ),
+              const SizedBox(height: 4),
+              _Comparison(
+                metricKey: m.key,
+                against: firstWindowLabel(window),
+                change: m.changeFromFirst,
+              ),
             ],
           ],
         ),

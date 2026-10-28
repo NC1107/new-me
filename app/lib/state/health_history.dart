@@ -1,3 +1,5 @@
+import '../util/errors.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -24,6 +26,13 @@ const kHistoryBatch = 200;
 
 /// Pause between uploads, so the import stays far inside the server's rate limit.
 const kHistoryPause = Duration(milliseconds: 400);
+
+/// How long to wait after the server says "slow down", doubled for each further refusal. A
+/// variable so tests do not have to sit through it.
+Duration kHistoryBackoff = const Duration(seconds: 15);
+
+/// How many times a batch is retried after "slow down" before the import stops for now.
+const kHistoryRetries = 4;
 
 class HealthHistoryState {
   const HealthHistoryState({this.running = false, this.reached, this.done = false, this.error});
@@ -66,9 +75,23 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
       await _import(client, restart ? null : saved.reached);
     } on ApiException catch (e) {
       debugPrint('[NEWME] health history stopped: $e');
-      state = HealthHistoryState(reached: state.reached, error: e.message);
+      state = HealthHistoryState(reached: state.reached, error: errorCopy(e));
     } finally {
       if (state.running) state = HealthHistoryState(reached: state.reached, done: state.done);
+    }
+  }
+
+  Future<void> _putWithBackoff(ApiClient client, List<HealthItem> items) async {
+    var wait = kHistoryBackoff;
+    for (var attempt = 0; ; attempt++) {
+      try {
+        await client.putHealthHistory(items);
+        return;
+      } on ApiException catch (e) {
+        if (e.statusCode != 429 || attempt >= kHistoryRetries || _stop) rethrow;
+        await Future<void>.delayed(wait);
+        wait *= 2;
+      }
     }
   }
 
@@ -87,7 +110,7 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
 
     Future<void> flush({required bool done}) async {
       if (batch.isNotEmpty) {
-        await client.putHealthHistory(List.of(batch));
+        await _putWithBackoff(client, List.of(batch));
         batch.clear();
         await Future<void>.delayed(kHistoryPause);
       }

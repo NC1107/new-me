@@ -27,10 +27,12 @@ import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
 import '../progress/progress_screen.dart';
 import '../recap/recap_screen.dart';
+import '../../state/session.dart';
 import '../streaks/cover_card.dart';
 import '../streaks/shared_streak_card.dart';
 import '../together/cheer_sheet.dart';
 import '../together/together_section.dart';
+import '../../util/people.dart';
 import 'person_card.dart';
 import 'week_chart.dart';
 
@@ -77,7 +79,8 @@ class _UsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(clockProvider)();
-    final users = board.users;
+    final myId = ref.watch(sessionProvider.select((s) => s.session?.userId));
+    final users = meFirst(board.users, myId, (u) => u.id);
     final ends = board.season.endsOn;
     final isAdmin = ref.watch(meProvider.select((m) => m.value?.data.user.isAdmin)) ?? false;
     final paired = users.length > 1;
@@ -407,19 +410,30 @@ class _HighlightValue extends StatelessWidget {
           Avatar(name: user.name, palette: accentById(user.color), size: 28),
           const SizedBox(width: 8),
           Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                text ?? '-',
-                maxLines: 1,
-                style: AppText.tabular(
-                  AppText.body.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: text == null ? kInkMuted : kInk,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption,
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    text ?? '-',
+                    maxLines: 1,
+                    style: AppText.tabular(
+                      AppText.body.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: text == null ? kInkMuted : kInk,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

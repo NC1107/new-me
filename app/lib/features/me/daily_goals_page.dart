@@ -1,3 +1,5 @@
+import '../../widgets/app_switch.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,16 +251,10 @@ class _QuestGoalCard extends StatelessWidget {
           ),
           Semantics(
             label: quest.title,
-            child: Switch(
+            child: AppSwitch(
               value: enabled,
               onChanged: editable ? onToggle : null,
-              activeThumbColor: palette.onFill,
-              activeTrackColor: palette.fill,
-              inactiveTrackColor: kSunken,
-              inactiveThumbColor: kInkMuted,
-              trackOutlineColor: WidgetStateProperty.resolveWith(
-                (s) => s.contains(WidgetState.selected) ? palette.fill : kBorder,
-              ),
+              palette: palette,
             ),
           ),
           const SizedBox(width: 6),

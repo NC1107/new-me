@@ -1,3 +1,5 @@
+import '../../widgets/app_switch.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -11,7 +13,6 @@ import '../../state/clock.dart';
 import '../../state/log_actions.dart';
 import '../../state/me.dart';
 import '../../state/today.dart';
-import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -382,14 +383,12 @@ class _BackdateToggle extends StatelessWidget {
                 style: AppText.label.copyWith(color: kInkSecondary),
               ),
             ),
-            Switch(
+            AppSwitch(
               value: value,
               onChanged: (v) {
                 HapticFeedback.selectionClick();
                 onChanged(v);
               },
-              activeThumbColor: context.onAccent,
-              activeTrackColor: context.accent,
             ),
           ],
         ),

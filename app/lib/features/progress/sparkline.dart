@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
-import '../../theme/typography.dart';
 
 /// A small line over the weekly values of a metric. Missing weeks break the line. Fewer than two
 /// readings is not a trend, so it says so instead of drawing a lone dot.
@@ -26,17 +25,7 @@ class Sparkline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_readings < 2) {
-      return Semantics(
-        label: semanticLabel,
-        excludeSemantics: true,
-        child: const SizedBox(
-          height: 28,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('A trend shows after a second week.', style: AppText.caption),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
     return Semantics(
       label: semanticLabel,

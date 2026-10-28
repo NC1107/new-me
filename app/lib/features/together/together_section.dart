@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../util/errors.dart';
+import '../../state/session.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
@@ -103,7 +105,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
     try {
       await ref.read(rewardsProvider.notifier).claim(reward.id);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _claimError = e.message);
+      if (mounted) setState(() => _claimError = errorCopy(e));
     } on Object {
       if (mounted) setState(() => _claimError = 'Could not save that. Try again.');
     }
@@ -127,7 +129,12 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
       children: [
         if (board.challenge case final challenge?) ...[
           const SizedBox(height: kCardGap),
-          ChallengeCard(challenge: challenge, today: today, people: people),
+          ChallengeCard(
+            challenge: challenge,
+            today: today,
+            people: people,
+            myId: ref.watch(sessionProvider.select((s) => s.session?.userId)),
+          ),
         ],
         const SizedBox(height: kCardGap),
         RewardCard(

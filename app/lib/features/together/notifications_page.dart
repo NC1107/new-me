@@ -1,3 +1,6 @@
+import '../../util/errors.dart';
+import '../../widgets/app_switch.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,11 +15,11 @@ import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
-import '../me/reminders_page.dart';
-import '../me/settings_row.dart';
+import '../../widgets/time_presets.dart';
 
 /// How many push switches the page has.
 const kNotificationSwitches = 11;
@@ -36,7 +39,7 @@ int notificationsOn(NotificationPrefs p) => [
   p.lookback,
 ].where((on) => on).length;
 
-/// Which events may notify this phone, plus a way into the evening reminder.
+/// Which events may notify this phone, and the evening reminder with its time.
 class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});
 
@@ -46,10 +49,20 @@ class NotificationsPage extends ConsumerWidget {
     try {
       await setNotificationPref(ref, patch);
     } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
     } on Object {
       messenger.showSnackBar(const SnackBar(content: Text('Could not save that')));
     }
+  }
+
+  Future<void> _pickTime(BuildContext context, WidgetRef ref, int minutes) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
+      helpText: 'Remind me at',
+    );
+    if (picked == null) return;
+    await ref.read(remindersProvider.notifier).setMinutes(picked.hour * 60 + picked.minute);
   }
 
   @override
@@ -165,6 +178,48 @@ class NotificationsPage extends ConsumerWidget {
           ),
           const SizedBox(height: kCardGap),
         ],
+        Semantics(header: true, child: const Text('Reminders', style: AppText.headline)),
+        const SizedBox(height: 4),
+        Text(
+          'One quiet note in the evening if your day has not counted yet. Nothing once it has.',
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: _SwitchRow(
+            icon: Icons.notifications_rounded,
+            palette: accentById('amber'),
+            title: 'Evening reminder',
+            subtitle: reminders.active ? formatReminderTime(reminders.minutes) : 'Off',
+            on: reminders.active,
+            onChanged: (on) => on
+                ? ref.read(remindersProvider.notifier).enable()
+                : ref.read(remindersProvider.notifier).disable(),
+          ),
+        ),
+        if (reminders.active) ...[
+          const SizedBox(height: 16),
+          const FieldLabel('What time?'),
+          TimePresets(
+            selected: reminders.minutes,
+            onChanged: (value) {
+              HapticFeedback.selectionClick();
+              ref.read(remindersProvider.notifier).setMinutes(value);
+            },
+          ),
+          const SizedBox(height: kCardGap),
+          ChunkyButton.secondary(
+            label: kReminderPresetMinutes.contains(reminders.minutes)
+                ? 'Pick another time'
+                : formatReminderTime(reminders.minutes),
+            icon: Icons.schedule_rounded,
+            onPressed: () => _pickTime(context, ref, reminders.minutes),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Semantics(header: true, child: const Text('Together', style: AppText.headline)),
+        const SizedBox(height: 12),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
@@ -208,18 +263,6 @@ class NotificationsPage extends ConsumerWidget {
               ],
             ],
           ),
-        ),
-        const SizedBox(height: 24),
-        SettingsGroup(
-          rows: [
-            SettingsRow(
-              icon: Icons.notifications_rounded,
-              palette: accentById('amber'),
-              title: 'Evening reminder',
-              subtitle: reminders.active ? formatReminderTime(reminders.minutes) : 'Off',
-              onTap: () => pushPage(context, const RemindersPage()),
-            ),
-          ],
         ),
       ],
     );
@@ -277,15 +320,7 @@ class _SwitchRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               IgnorePointer(
-                child: Switch(
-                  value: on,
-                  onChanged: onChanged,
-                  activeThumbColor: kSurface,
-                  activeTrackColor: context.accent,
-                  inactiveThumbColor: kSurface,
-                  inactiveTrackColor: kLip,
-                  trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
-                ),
+                child: AppSwitch(value: on, onChanged: onChanged),
               ),
             ],
           ),

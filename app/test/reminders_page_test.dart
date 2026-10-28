@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/onboarding/steps_finish.dart';
 import 'package:newme/theme/accent.dart';
-import 'package:newme/features/me/reminders_page.dart';
+import 'package:newme/features/together/notifications_page.dart';
 import 'package:newme/reminders/reminder_plan.dart';
 import 'package:newme/reminders/reminder_scheduler.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -34,18 +34,18 @@ Future<(TestApp, FakeReminderScheduler)> _open(
 void main() {
   setUp(() => Mascot.idleMotion = false);
 
-  testWidgets('the Me row says Off, then the time once reminders are on', (tester) async {
+  testWidgets('Me has no Reminders row, and the evening reminder says Off then the time', (
+    tester,
+  ) async {
     final (app, _) = await _open(tester);
-    final row = find.bySemanticsLabel('Reminders, Off');
     final handle = tester.ensureSemantics();
-    expect(find.text('Reminders'), findsOneWidget);
-    expect(row, findsOneWidget);
+    expect(find.text('Reminders'), findsNothing);
 
-    await app.tap(find.text('Reminders'));
+    await app.tap(find.text('Notifications'));
+    expect(find.bySemanticsLabel(RegExp('^Evening reminder, Off')), findsOneWidget);
     await app.tap(find.text('Evening reminder'));
-    await app.tap(find.byTooltip('Back'));
 
-    expect(find.bySemanticsLabel('Reminders, 8:00 PM'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Evening reminder, 8:00 PM')), findsOneWidget);
     handle.dispose();
   });
 
@@ -53,7 +53,7 @@ void main() {
     tester,
   ) async {
     final (app, scheduler) = await _open(tester);
-    await app.tap(find.text('Reminders'));
+    await app.tap(find.text('Notifications'));
 
     expect(find.text('What time?'), findsNothing, reason: 'the time only matters when on');
     await app.tap(find.text('Evening reminder'));
@@ -65,6 +65,11 @@ void main() {
     expect(scheduler.pending[kTomorrowReminderId]?.at.hour, 21);
     expect(find.text('PICK ANOTHER TIME'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.text('Evening reminder'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await app.tap(find.text('Evening reminder'));
     expect(scheduler.pending, isEmpty);
     expect(find.text('What time?'), findsNothing);
@@ -72,7 +77,7 @@ void main() {
 
   testWidgets('a denied permission explains how to enable it in iOS Settings', (tester) async {
     final (app, scheduler) = await _open(tester, grants: false);
-    await app.tap(find.text('Reminders'));
+    await app.tap(find.text('Notifications'));
     expect(find.textContaining('Open the Settings app'), findsNothing);
 
     await app.tap(find.text('Evening reminder'));
@@ -89,23 +94,23 @@ void main() {
       tester,
       prefs: {'remindersEnabled': true, 'reminderMinutes': 21 * 60 + 30},
     );
-    await app.tap(find.text('Reminders'));
+    await app.tap(find.text('Notifications'));
 
-    expect(find.text('9:30 PM'), findsOneWidget);
-    await app.tap(find.text('9:30 PM'));
+    expect(find.text('9:30 PM'), findsNWidgets(2), reason: 'the row and the button');
+    await app.tap(find.text('9:30 PM').last);
     expect(find.text('Remind me at'), findsOneWidget);
     expect(scheduler.pending[kTomorrowReminderId]?.at.minute, 30);
   });
 
   for (final scale in [1.0, 2.0]) {
-    testWidgets('the Reminders page fits 390 wide at text scale $scale', (tester) async {
+    testWidgets('the Notifications page fits 390 wide at text scale $scale', (tester) async {
       FakeStorage().install();
       SharedPreferences.setMockInitialValues({'remindersEnabled': true});
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final app = TestApp(tester, fullServer());
       await app.pump(
-        const RemindersPage(),
+        const NotificationsPage(),
         overrides: [reminderSchedulerProvider.overrideWithValue(FakeReminderScheduler())],
       );
       expect(tester.takeException(), isNull);
@@ -113,7 +118,7 @@ void main() {
 
       final blocked = TestApp(tester, fullServer());
       await blocked.pump(
-        const RemindersPage(),
+        const NotificationsPage(),
         key: UniqueKey(),
         overrides: [
           reminderSchedulerProvider.overrideWithValue(FakeReminderScheduler(allowed: false)),

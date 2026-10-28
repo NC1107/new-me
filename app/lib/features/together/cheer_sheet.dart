@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../util/errors.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
@@ -15,12 +16,13 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/confetti.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
+import '../board/person_card.dart' show kSuccessText;
 import 'cheer_style.dart';
 
 Future<void> showCheerSheet(BuildContext context, {required BoardUser partner}) =>
     showAppSheet<void>(context, builder: (_) => CheerSheet(partner: partner));
 
-/// Four reactions for the partner's day. Each can be sent once a day; a sent one stays marked.
+/// Four reactions for the partner's day. Each can be sent once a day; a sent one shows a check and stays disabled until tomorrow.
 class CheerSheet extends ConsumerStatefulWidget {
   const CheerSheet({super.key, required this.partner});
 
@@ -49,7 +51,7 @@ class _CheerSheetState extends ConsumerState<CheerSheet> {
           .read(cheerMemoryProvider.notifier)
           .send(to: widget.partner.id, kind: kind, date: _date);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = errorCopy(e));
     } on Object {
       if (mounted) setState(() => _error = 'Could not send that cheer');
     }
@@ -179,30 +181,30 @@ class _ReactionButton extends StatelessWidget {
                   width: _size,
                   height: _size,
                   decoration: BoxDecoration(
-                    color: sent ? palette.fill : palette.tint,
+                    color: sent ? kSunken : kSurface,
                     borderRadius: BorderRadius.circular(kRadiusCard),
-                    border: Border.all(color: palette.fill, width: kBorderWidth),
+                    border: Border.all(color: kBorder, width: kBorderWidth),
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Icon(kind.icon, size: 38, color: sent ? palette.onFill : palette.lip),
+                      Icon(kind.icon, size: 38, color: sent ? kInkMuted : palette.lip),
                       if (sent)
-                        Positioned(
+                        const Positioned(
                           right: 6,
                           bottom: 6,
-                          child: Icon(Icons.check_circle_rounded, size: 20, color: palette.onFill),
+                          child: Icon(Icons.check_circle_rounded, size: 20, color: kSuccessText),
                         ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  sent ? 'Sent' : kind.label,
+                  kind.label,
                   maxLines: 1,
                   style: AppText.label.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: sent ? palette.lip : kInk,
+                    color: sent ? kInkMuted : kInk,
                   ),
                 ),
               ],

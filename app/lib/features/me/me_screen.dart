@@ -9,7 +9,6 @@ import '../../state/clock.dart';
 import '../../state/habits.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
-import '../../state/reminders.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
@@ -18,6 +17,7 @@ import '../../theme/typography.dart';
 import '../../reminders/reminder_plan.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
@@ -32,7 +32,6 @@ import 'daily_goals_page.dart';
 import '../streaks/away_page.dart';
 import 'pairing_page.dart';
 import 'profile_page.dart';
-import 'reminders_page.dart';
 import 'schedule_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
@@ -74,7 +73,6 @@ class _MeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthSyncProvider);
-    final reminders = ref.watch(remindersProvider);
     final habitCount = ref.watch(habitsProvider.select((h) => h.value?.data.habits.length));
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
@@ -85,8 +83,10 @@ class _MeBody extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(kGutter, 16, kGutter, 96),
       children: [
+        Semantics(header: true, child: const Text('Me', style: AppText.display)),
+        const SizedBox(height: 16),
         _Header(me: me),
-        const SizedBox(height: 24),
+        Semantics(header: true, child: const SectionLabel('Plan')),
         SettingsGroup(
           rows: [
             SettingsRow(
@@ -108,13 +108,6 @@ class _MeBody extends ConsumerWidget {
               onTap: () => pushPage(context, const HabitsPage()),
             ),
             SettingsRow(
-              icon: Icons.insights_rounded,
-              palette: accentById('sky'),
-              title: 'Insights',
-              subtitle: 'Steps, sleep and workouts',
-              onTap: () => openInsights(context),
-            ),
-            SettingsRow(
               icon: Icons.science_rounded,
               palette: accentById('green'),
               title: 'Targets',
@@ -122,10 +115,22 @@ class _MeBody extends ConsumerWidget {
               onTap: () => pushPage(context, const TargetsPage()),
             ),
             SettingsRow(
+              icon: Icons.insights_rounded,
+              palette: accentById('sky'),
+              title: 'Insights',
+              subtitle: 'Steps, sleep and workouts',
+              onTap: () => openInsights(context),
+            ),
+          ],
+        ),
+        Semantics(header: true, child: const SectionLabel('You')),
+        SettingsGroup(
+          rows: [
+            SettingsRow(
               icon: Icons.person_rounded,
               palette: accent,
               title: 'About you',
-              subtitle: '${me.user.name}, ${accent.name}, units and body',
+              subtitle: '${me.user.name}, units and body',
               onTap: () => pushPage(context, const ProfilePage()),
             ),
             SettingsRow(
@@ -142,6 +147,11 @@ class _MeBody extends ConsumerWidget {
               subtitle: awaySummary(away),
               onTap: () => pushPage(context, const AwayPage()),
             ),
+          ],
+        ),
+        Semantics(header: true, child: const SectionLabel('Connections')),
+        SettingsGroup(
+          rows: [
             SettingsRow(
               icon: Icons.favorite_rounded,
               palette: accentById('rose'),
@@ -153,20 +163,6 @@ class _MeBody extends ConsumerWidget {
                   : 'Last sync ${relativeTime(synced, now)}',
               onTap: () => pushPage(context, const AppleHealthPage()),
             ),
-            SettingsRow(
-              icon: Icons.notifications_rounded,
-              palette: accentById('amber'),
-              title: 'Reminders',
-              subtitle: reminders.active ? formatReminderTime(reminders.minutes) : 'Off',
-              onTap: () => pushPage(context, const RemindersPage()),
-            ),
-            SettingsRow(
-              icon: Icons.notifications_active_rounded,
-              palette: accentById('rose'),
-              title: 'Notifications',
-              subtitle: '${notificationsOn(me.notifications)} of $kNotificationSwitches on',
-              onTap: () => pushPage(context, const NotificationsPage()),
-            ),
             if (me.audiobookshelf case final link?)
               SettingsRow(
                 icon: Icons.headphones_rounded,
@@ -175,6 +171,18 @@ class _MeBody extends ConsumerWidget {
                 subtitle: _audiobookshelfSubtitle(link, now),
                 onTap: () => pushPage(context, const AudiobookshelfPage()),
               ),
+          ],
+        ),
+        Semantics(header: true, child: const SectionLabel('App')),
+        SettingsGroup(
+          rows: [
+            SettingsRow(
+              icon: Icons.notifications_active_rounded,
+              palette: accentById('rose'),
+              title: 'Notifications',
+              subtitle: '${notificationsOn(me.notifications)} of $kNotificationSwitches on',
+              onTap: () => pushPage(context, const NotificationsPage()),
+            ),
             if (me.user.isAdmin)
               SettingsRow(
                 icon: Icons.group_add_rounded,
@@ -205,11 +213,11 @@ String awaySummary(AwayState away) {
   if (away.upcoming.isNotEmpty) {
     return 'Next: ${awayRangeLabel(away.upcoming.first.from, away.upcoming.first.to)}';
   }
-  return 'Pause streaks when sick or travelling';
+  return 'Pause streaks when sick or traveling';
 }
 
 String _audiobookshelfSubtitle(AudiobookshelfLink link, DateTime now) {
-  if (!link.linked) return 'Count audiobook listening';
+  if (!link.linked) return 'Not linked';
   final name = link.username ?? 'Linked';
   if (link.needsSignIn) return '$name, sign in again';
   final synced = link.syncedAt;

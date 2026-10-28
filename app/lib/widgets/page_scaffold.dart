@@ -17,7 +17,8 @@ Future<T?> pushPage<T>(BuildContext context, Widget page) {
 }
 
 /// A full page with a back arrow and a title above scrolling content and an optional footer
-/// pinned below it.
+/// pinned below it. The subtitle scrolls with the content; only the title row and the footer
+/// stay put, and the footer has an opaque background and a top border.
 class PageScaffold extends StatelessWidget {
   const PageScaffold({
     super.key,
@@ -82,14 +83,6 @@ class PageScaffold extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(subtitle!, style: AppText.caption),
-                    ),
-                  ),
                 ?banner,
                 Expanded(
                   child: ListView(
@@ -97,20 +90,32 @@ class PageScaffold extends StatelessWidget {
                       kGutter,
                       16,
                       kGutter,
-                      footer == null ? 32 + MediaQuery.paddingOf(context).bottom : 16,
+                      footer == null ? 32 + MediaQuery.paddingOf(context).bottom : 24,
                     ),
-                    children: children,
+                    children: [
+                      if (subtitle != null) ...[
+                        Text(subtitle!, style: AppText.caption),
+                        const SizedBox(height: 12),
+                      ],
+                      ...children,
+                    ],
                   ),
                 ),
                 if (footer != null)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      kGutter,
-                      8,
-                      kGutter,
-                      kGutter + MediaQuery.paddingOf(context).bottom,
+                  DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: kCanvas,
+                      border: Border(top: BorderSide(color: kBorder)),
                     ),
-                    child: footer,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        kGutter,
+                        12,
+                        kGutter,
+                        kGutter + MediaQuery.paddingOf(context).bottom,
+                      ),
+                      child: footer,
+                    ),
                   ),
               ],
             ),

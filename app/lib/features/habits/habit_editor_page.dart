@@ -1,3 +1,5 @@
+import '../../widgets/app_switch.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -650,7 +652,7 @@ class _SlotCard extends StatelessWidget {
                 child: Row(
                   children: [
                     const Expanded(child: Text('Remind me', style: AppText.body)),
-                    Switch(value: slot.reminder, onChanged: onReminder),
+                    AppSwitch(value: slot.reminder, onChanged: onReminder),
                   ],
                 ),
               ),

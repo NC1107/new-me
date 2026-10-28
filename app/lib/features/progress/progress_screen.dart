@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/models.dart';
 import '../../state/session.dart';
 import '../../state/v7.dart';
+import '../../util/people.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -91,19 +92,31 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     if (data.people.isEmpty) {
       return [Text('Nothing to compare yet.', style: AppText.body.copyWith(color: kInkSecondary))];
     }
-    final person =
-        data.people.where((p) => p.userId == (_selected ?? myId)).firstOrNull ?? data.people.first;
+    final people = meFirst(data.people, myId, (p) => p.userId);
+    final person = people.where((p) => p.userId == (_selected ?? myId)).firstOrNull ?? people.first;
     final palette = accentById(person.color);
     final units = context.units;
-    final metrics = orderedMetrics([for (final m in person.metrics) metricInUnits(m, units)]);
+    final metrics = orderedMetrics([
+      for (final m in person.metrics)
+        if (metricHasData(m)) metricInUnits(m, units),
+    ]);
     return [
       if (data.people.length > 1) ...[
         _PersonSwitcher(
-          people: data.people,
+          people: people,
           selected: person.userId,
           onChanged: (id) => setState(() => _selected = id),
         ),
         const SizedBox(height: 16),
+      ],
+      if (metrics.isEmpty)
+        Text('Nothing to show yet.', style: AppText.body.copyWith(color: kInkSecondary))
+      else if (metrics.any(metricIsSparse)) ...[
+        const Text(
+          'Trends show after a second week, and comparisons once there is a full month.',
+          style: AppText.caption,
+        ),
+        const SizedBox(height: 12),
       ],
       for (final (i, m) in metrics.indexed) ...[
         if (i > 0) const SizedBox(height: kCardGap),

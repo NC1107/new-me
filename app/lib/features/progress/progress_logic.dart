@@ -61,6 +61,18 @@ String firstWindowLabel(int window) =>
 String previousWindowLabel(int window) =>
     window == 30 ? 'the previous month' : 'the previous $window days';
 
+/// Whether a card has something to show: a reading, and for habits at least one kept.
+bool metricHasData(ProgressMetric m) {
+  final current = m.current;
+  if (current == null) return false;
+  return !(m.key == 'habits_kept' && current == 0);
+}
+
+/// Whether a card lacks a trend line or a comparison, so the page explains it once.
+bool metricIsSparse(ProgressMetric m) =>
+    m.series.where((p) => p.value != null).length < 2 ||
+    (m.changeFromPrevious == null && m.changeFromFirst == null);
+
 /// "Reading: 24 min a day, up from 11 in your first month". It compares with the first window
 /// when there is one, else with the previous.
 String metricSentence(ProgressMetric m, {int window = 30}) {

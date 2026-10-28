@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../util/errors.dart';
 import '../../api/api_client.dart';
 import '../../state/together.dart';
 import '../../theme/accent.dart';
@@ -68,7 +69,7 @@ class _StartRewardSheetState extends ConsumerState<StartRewardSheet> {
       }
       setState(() {
         _busy = false;
-        _error = e.message;
+        _error = errorCopy(e);
       });
     } on Object {
       if (mounted) {

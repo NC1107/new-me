@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../util/people.dart';
+
 import '../../api/models.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
@@ -67,10 +69,14 @@ class ChallengeCard extends StatelessWidget {
     required this.challenge,
     required this.today,
     required this.people,
+    this.myId,
   });
 
   final Challenge challenge;
   final String today;
+
+  /// The signed-in person, listed first.
+  final int? myId;
 
   /// The two people's colours, for the bar.
   final List<AccentPalette> people;
@@ -141,7 +147,7 @@ class ChallengeCard extends StatelessWidget {
               ),
             if (c.people.isNotEmpty) ...[
               const SizedBox(height: 14),
-              for (final (i, s) in c.people.indexed) ...[
+              for (final (i, s) in meFirst(c.people, myId, (s) => s.userId).indexed) ...[
                 if (i > 0) const SizedBox(height: 12),
                 _ShareRow(share: s, kind: c.kind),
               ],

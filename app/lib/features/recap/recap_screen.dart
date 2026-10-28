@@ -1,3 +1,5 @@
+import '../../util/people.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -101,7 +103,7 @@ class RecapScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         const _Heading('Each of you'),
         const SizedBox(height: 10),
-        for (final p in r.people) ...[
+        for (final p in meFirst(r.people, me, (p) => p.userId)) ...[
           _PersonCard(person: p, complete: r.complete),
           const SizedBox(height: kCardGap),
         ],

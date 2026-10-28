@@ -550,6 +550,11 @@ class ApiClient {
     (data) => LogResult.fromJson(data as Json),
   );
 
+  Future<LogResult> updateMeal(int id, MealEdit edit) => _send(
+    () => _dio.patch<dynamic>('/api/logs/$id', data: edit.toJson()),
+    (data) => LogResult.fromJson(data as Json),
+  );
+
   Future<LogDeleteResult> deleteLog(LogEntry entry) => _send(
     () => _dio.delete<dynamic>('/api/logs/${entry.id}'),
     (data) => LogDeleteResult.fromJson(data as Json),

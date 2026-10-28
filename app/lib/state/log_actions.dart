@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/models.dart';
 import 'board.dart';
+import 'meals_today.dart';
 import 'session.dart';
 import 'targets.dart';
 import 'today.dart';
@@ -36,6 +37,16 @@ class LogActions {
     final result = await _client.recordPushupMax(reps: reps, date: date);
     if (_ref.exists(targetsProvider)) unawaited(_ref.read(targetsProvider.notifier).refresh());
     _ref.invalidate(exerciseHistoryProvider);
+    return result;
+  }
+
+  /// Saves a corrected meal. Today is refetched rather than patched, since the old totals are
+  /// not known here, and the meal list is reloaded because a rename moves no total.
+  Future<LogResult> updateMeal(MealLog meal, MealEdit edit) async {
+    final result = await _client.updateMeal(meal.id, edit);
+    await _ref.read(todayProvider.notifier).refresh();
+    _ref.invalidate(mealsTodayProvider);
+    _refreshBoard();
     return result;
   }
 

@@ -1371,6 +1371,35 @@ class MealLog extends LogEntry {
   };
 }
 
+/// The body of PATCH /logs/{id} for a meal: only the fields that changed.
+class MealEdit {
+  const MealEdit({this.name, this.kcal, this.protein, this.carbs, this.fat, this.fiber});
+
+  final String? name;
+  final int? kcal;
+  final num? protein;
+  final num? carbs;
+  final num? fat;
+  final num? fiber;
+
+  bool get isEmpty =>
+      name == null &&
+      kcal == null &&
+      protein == null &&
+      carbs == null &&
+      fat == null &&
+      fiber == null;
+
+  Json toJson() => {
+    'name': ?name,
+    'kcal': ?kcal,
+    'protein': ?protein,
+    'carbs': ?carbs,
+    'fat': ?fat,
+    'fiber': ?fiber,
+  };
+}
+
 /// The body of POST /logs. The date is omitted for today: the server decides it.
 sealed class LogDraft {
   const LogDraft({required this.clientOpId, this.date});

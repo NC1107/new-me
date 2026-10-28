@@ -254,6 +254,13 @@ class _QuantityPaneState extends State<QuantityPane> {
   }
 }
 
+int scaleKcal(int v, double factor) => (v * factor).round();
+
+/// Macros keep one decimal, which is all the server stores.
+num scaleMacro(num v, double factor) => (v * factor * 10).round() / 10;
+
+String gramsText(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
+
 class MealPane extends StatefulWidget {
   const MealPane({
     super.key,
@@ -306,9 +313,9 @@ class _MealPaneState extends State<MealPane> {
     super.dispose();
   }
 
-  int _scaleKcal(int v) => (v * _portion).round();
+  int _scaleKcal(int v) => scaleKcal(v, _portion);
 
-  num _scaleMacro(num v) => (v * _portion * 10).round() / 10;
+  num _scaleMacro(num v) => scaleMacro(v, _portion);
 
   int get _kcalValue => int.tryParse(_kcal.text) ?? 0;
 
@@ -325,8 +332,6 @@ class _MealPaneState extends State<MealPane> {
       _kcalValue > 0 &&
       _kcalError == null &&
       [_protein, _carbs, _fat, _fiber].every((c) => _gramsError(c) == null);
-
-  static String _gramsText(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
 
   /// Adds the itemized result to what is already listed, since a food the databases lack is
   /// often described after the rest were picked from search. A server without itemizing answers
@@ -404,10 +409,10 @@ class _MealPaneState extends State<MealPane> {
       _estimate = e;
       _name.text = e.name;
       _kcal.text = '${e.kcal}';
-      _protein.text = _gramsText(e.protein);
-      _carbs.text = _gramsText(e.carbs);
-      _fat.text = _gramsText(e.fat);
-      _fiber.text = _gramsText(e.fiber);
+      _protein.text = gramsText(e.protein);
+      _carbs.text = gramsText(e.carbs);
+      _fat.text = gramsText(e.fat);
+      _fiber.text = gramsText(e.fiber);
       _more = _more || e.fiber > 0;
       _portion = 1;
     });
@@ -641,14 +646,14 @@ class _MealPaneState extends State<MealPane> {
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         errorText: _gramsError(controller),
         onChanged: (_) => setState(() {}),
-        inputFormatters: [_gramsFormatter],
+        inputFormatters: [gramsInputFormatter],
       ),
     ],
   );
 }
 
-final _gramsPattern = RegExp(r'^\d{0,4}(\.\d?)?$');
+final gramsPattern = RegExp(r'^\d{0,4}(\.\d?)?$');
 
-final _gramsFormatter = TextInputFormatter.withFunction(
-  (old, next) => _gramsPattern.hasMatch(next.text) ? next : old,
+final gramsInputFormatter = TextInputFormatter.withFunction(
+  (old, next) => gramsPattern.hasMatch(next.text) ? next : old,
 );

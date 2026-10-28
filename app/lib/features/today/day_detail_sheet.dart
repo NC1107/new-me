@@ -16,6 +16,7 @@ import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
+import '../food/edit_meal_sheet.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../shell/home_tab.dart';
@@ -97,6 +98,11 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
           action: SnackBarAction(label: 'Undo', onPressed: () => _undo(entry, messenger)),
         ),
       );
+  }
+
+  Future<void> _edit(MealLog meal) async {
+    final changed = await showEditMealSheet(context, meal, onUndone: _load);
+    if (changed && mounted) await _load();
   }
 
   Future<void> _undo(LogEntry entry, ScaffoldMessengerState messenger) async {
@@ -222,7 +228,11 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
             customSemanticsActions: {
               const CustomSemanticsAction(label: 'Delete'): () => _delete(entry, messenger),
             },
-            child: _EntryRow(entry: entry, units: ref.watch(unitsProvider)),
+            child: _EntryRow(
+              entry: entry,
+              units: ref.watch(unitsProvider),
+              onTap: entry is MealLog ? () => _edit(entry) : null,
+            ),
           ),
         );
       },
@@ -231,17 +241,20 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
 }
 
 class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.entry, required this.units});
+  const _EntryRow({required this.entry, required this.units, this.onTap});
 
   final LogEntry entry;
   final Units units;
+
+  /// Set for a meal, which opens its editor.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final (key, title, quantity, detail) = _describe(entry, units);
     final palette = questPalette(key);
     final time = formatClock(entry.loggedAt.toLocal());
-    return Container(
+    final row = Container(
       color: kSurface,
       constraints: const BoxConstraints(minHeight: 56),
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -271,6 +284,19 @@ class _EntryRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(quantity, style: AppText.tabular(AppText.label.copyWith(fontSize: 15))),
         ],
+      ),
+    );
+    final tap = onTap;
+    if (tap == null) return row;
+    return Semantics(
+      button: true,
+      onTapHint: 'Edit',
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          tap();
+        },
+        child: row,
       ),
     );
   }

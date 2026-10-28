@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
 import '../../state/meals_today.dart';
@@ -11,8 +10,6 @@ import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
-import '../../util/client_op_id.dart';
-import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/cached_view.dart';
@@ -23,7 +20,9 @@ import '../me/food_targets_page.dart';
 import '../me/my_foods_page.dart';
 import '../me/settings_row.dart';
 import 'add_sheet.dart';
+import 'edit_meal_sheet.dart';
 import 'food_card.dart';
+import 'meal_actions.dart';
 
 /// The Food tab: what was eaten today against the targets, today's meals, and the food settings.
 class FoodScreen extends ConsumerWidget {
@@ -115,37 +114,6 @@ class _FoodBody extends ConsumerWidget {
 class _MealsToday extends ConsumerWidget {
   const _MealsToday();
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, MealLog meal) async {
-    HapticFeedback.mediumImpact();
-    final messenger = ScaffoldMessenger.of(context);
-    final actions = ref.read(logActionsProvider);
-    try {
-      await actions.delete(meal);
-    } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
-      return;
-    }
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Deleted ${meal.name}'),
-          persist: false,
-          duration: kUndoWindow,
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              try {
-                await actions.create(meal.toDraft(newClientOpId()));
-              } on ApiException catch (e) {
-                messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
-              }
-            },
-          ),
-        ),
-      );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (ref.watch(mealsTodayProvider)) {
@@ -159,7 +127,15 @@ class _MealsToday extends ConsumerWidget {
           children: [
             for (final (i, m) in value.indexed) ...[
               if (i > 0) const Divider(height: 1, thickness: kBorderWidth, color: kBorder),
-              _MealRow(meal: m, onDelete: () => _delete(context, ref, m)),
+              _MealRow(
+                meal: m,
+                onEdit: () => showEditMealSheet(context, m),
+                onDelete: () => deleteMealWithUndo(
+                  ScaffoldMessenger.of(context),
+                  ref.read(logActionsProvider),
+                  m,
+                ),
+              ),
             ],
           ],
         ),
@@ -175,9 +151,10 @@ class _MealsToday extends ConsumerWidget {
 }
 
 class _MealRow extends StatelessWidget {
-  const _MealRow({required this.meal, required this.onDelete});
+  const _MealRow({required this.meal, required this.onEdit, required this.onDelete});
 
   final MealLog meal;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -186,22 +163,41 @@ class _MealRow extends StatelessWidget {
     final macros = '${meal.kcal.formatted} kcal · ${meal.protein.round()} g protein';
     return Semantics(
       container: true,
+      button: true,
       label: '${meal.name}, $macros, $time',
+      onTapHint: 'Edit',
+      onTap: onEdit,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
         child: Row(
           children: [
             Expanded(
-              child: ExcludeSemantics(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(meal.name, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      '$macros · $time',
-                      style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onEdit();
+                },
+                borderRadius: BorderRadius.circular(kRadiusField),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ExcludeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            meal.name,
+                            style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '$macros · $time',
+                            style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

@@ -361,7 +361,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   autofocusSearch: widget.focusSearch,
                 ),
               },
-              if (_error != null) ...[const SizedBox(height: 12), _ErrorLine(message: _error!)],
+              if (_error != null) ...[const SizedBox(height: 12), LogErrorLine(message: _error!)],
             ],
           ),
         ),
@@ -409,8 +409,9 @@ class _BackdateToggle extends StatelessWidget {
   }
 }
 
-class _ErrorLine extends StatelessWidget {
-  const _ErrorLine({required this.message});
+/// An inline failure line under a sheet's save button.
+class LogErrorLine extends StatelessWidget {
+  const LogErrorLine({super.key, required this.message});
 
   final String message;
 

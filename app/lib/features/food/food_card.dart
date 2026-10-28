@@ -109,7 +109,12 @@ class _Macro extends StatelessWidget {
       children: [
         Text(label, style: AppText.caption),
         const SizedBox(height: 4),
-        MiniBar(value: goal == null || goal <= 0 ? 0 : (eaten / goal).toDouble(), color: color),
+        // Without a target there is nothing to fill toward, and an empty bar would read as none
+        // eaten; the space stays so the three columns line up.
+        if (goal == null || goal <= 0)
+          const SizedBox(height: kMiniBarHeight)
+        else
+          MiniBar(value: (eaten / goal).toDouble(), color: color),
         const SizedBox(height: 4),
         FittedBox(
           fit: BoxFit.scaleDown,

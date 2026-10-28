@@ -160,7 +160,7 @@ class _MealRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final time = DateFormat.jm().format(meal.loggedAt.toLocal());
-    final macros = '${meal.kcal.formatted} kcal · ${meal.protein.round()} g protein';
+    final macros = '${meal.kcal.formatted} kcal · ${meal.protein.formatted} g protein';
     return Semantics(
       container: true,
       button: true,

@@ -480,6 +480,31 @@ void main() {
       expect(app.body('PATCH /api/me'), {'timezone': 'Asia/Tokyo'});
       expect(scheduler.calls, contains('timezone'));
     });
+
+    testWidgets('a zone change whose save fails is tried again on the next resume', (tester) async {
+      testDeviceTimezone = 'America/New_York';
+      addTearDown(() => testDeviceTimezone = 'America/New_York');
+      SharedPreferences.setMockInitialValues({'deviceTimezone': 'America/New_York'});
+      final scheduler = FakeReminderScheduler();
+      final adapter = fullServer()
+        ..on('PATCH /api/me', const StubResponse(500, {'error': 'database unavailable'}));
+      final app = TestApp(tester, adapter, surfaceHeight: 2800);
+      await app.pump(
+        const HomeShell(),
+        overrides: [reminderSchedulerProvider.overrideWithValue(scheduler)],
+      );
+
+      testDeviceTimezone = 'Asia/Tokyo';
+      resume();
+      await app.settle();
+      expect(adapter.to('PATCH /api/me'), hasLength(1));
+
+      adapter.on('PATCH /api/me', StubResponse(200, meJson()));
+      resume();
+      await app.settle();
+      expect(adapter.to('PATCH /api/me'), hasLength(2));
+      expect(scheduler.calls, contains('timezone'));
+    });
   });
 
   group('Log sheet', () {

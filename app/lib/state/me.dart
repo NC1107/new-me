@@ -77,9 +77,15 @@ class MeNotifier extends CachedNotifier<Me> {
     final device = await ref.read(deviceTimezoneProvider)();
     if (device == null) return false;
     final known = await LocalPrefs.deviceTimezone();
-    await LocalPrefs.setDeviceTimezone(device);
-    if (known == null || known == device) return false;
+    if (known == device) return false;
+    if (known == null) {
+      await LocalPrefs.setDeviceTimezone(device);
+      return false;
+    }
+    // The zone is remembered only once the server has it, so a failed save is retried on the
+    // next resume instead of being forgotten.
     if (me.user.timezone != device) await save(MePatch(timezone: device));
+    await LocalPrefs.setDeviceTimezone(device);
     return true;
   }
 }

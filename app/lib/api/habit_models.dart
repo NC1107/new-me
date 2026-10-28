@@ -51,6 +51,25 @@ class HabitSlot {
 }
 
 /// A habit as the management screens see it, paused ones included.
+/// Habit worths toward the daily goal (v10); quests are worth 50 or 100.
+enum HabitWorth {
+  track(0, 'Just track', 'Does not count toward your day'),
+  small(10, 'Small', '10 points'),
+  medium(25, 'Medium', '25 points'),
+  big(50, 'Big', '50 points, like half a quest');
+
+  const HabitWorth(this.points, this.label, this.detail);
+
+  final int points;
+  final String label;
+  final String detail;
+
+  static HabitWorth of(int points) =>
+      HabitWorth.values.where((w) => w.points == points).firstOrNull ?? HabitWorth.medium;
+}
+
+const kDefaultHabitPoints = 25;
+
 class Habit {
   const Habit({
     required this.id,
@@ -62,6 +81,7 @@ class Habit {
     required this.target,
     required this.position,
     required this.paused,
+    this.points = kDefaultHabitPoints,
   });
 
   factory Habit.fromJson(Json j) => Habit(
@@ -77,6 +97,7 @@ class Habit {
     target: (j['target'] as num?)?.toInt(),
     position: _int(j['position']),
     paused: j['paused'] as bool? ?? false,
+    points: _int(j['points'], kDefaultHabitPoints),
   );
 
   final int id;
@@ -90,6 +111,9 @@ class Habit {
   final int? target;
   final int position;
   final bool paused;
+
+  /// The habit's worth toward the daily goal (v10): 0, 10, 25 or 50.
+  final int points;
 
   bool get isCount => kind == HabitKind.count;
 
@@ -107,6 +131,7 @@ class Habit {
     target: target,
     position: position ?? this.position,
     paused: paused ?? this.paused,
+    points: points,
   );
 
   Json toJson() => {
@@ -119,6 +144,7 @@ class Habit {
     'target': target,
     'position': position,
     'paused': paused,
+    'points': points,
   };
 }
 
@@ -131,6 +157,7 @@ class HabitDraft {
     required this.weekdays,
     this.slots = const [],
     this.target,
+    this.points = kDefaultHabitPoints,
   });
 
   final String name;
@@ -139,6 +166,7 @@ class HabitDraft {
   final List<int> weekdays;
   final List<HabitSlot> slots;
   final int? target;
+  final int points;
 
   Json toJson() => {
     'name': name,
@@ -147,6 +175,7 @@ class HabitDraft {
     'weekdays': weekdays,
     if (kind == HabitKind.check) 'slots': [for (final s in slots) s.toJson()],
     if (kind == HabitKind.count) 'target': target,
+    'points': points,
   };
 
   /// A PATCH cannot change the kind, so it leaves it out.

@@ -236,10 +236,10 @@ void main() {
     testWidgets('shows each habit with its schedule and the count in order', (tester) async {
       await open(tester, habitsServer(), page: const HabitsPage());
       expect(find.text('Brush teeth'), findsOneWidget);
-      expect(find.text('Every day · 7:30 AM, 10:00 PM'), findsOneWidget);
-      expect(find.text('Weekdays · 12:00 PM'), findsOneWidget);
-      expect(find.text('Every day · 8 a day'), findsOneWidget);
-      expect(find.text('Every day · Once a day'), findsOneWidget);
+      expect(find.text('Every day · 7:30 AM, 10:00 PM · 25 points'), findsOneWidget);
+      expect(find.text('Weekdays · 12:00 PM · 25 points'), findsOneWidget);
+      expect(find.text('Every day · 8 a day · 25 points'), findsOneWidget);
+      expect(find.text('Every day · Once a day · 25 points'), findsOneWidget);
     });
 
     testWidgets('an empty list says so', (tester) async {

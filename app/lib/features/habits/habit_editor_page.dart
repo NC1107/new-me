@@ -57,6 +57,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
   String _kind = HabitKind.check;
   final List<_SlotForm> _slots = [_SlotForm(label: 'Daily')];
   int _target = 8;
+  HabitWorth _worth = HabitWorth.medium;
   HabitTemplate? _template;
   String? _error;
   bool _busy = false;
@@ -79,6 +80,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
       _days = {...habit.weekdays};
       _kind = habit.kind;
       _target = habit.target ?? 8;
+      _worth = HabitWorth.of(habit.points);
       _slots
         ..clear()
         ..addAll([
@@ -152,6 +154,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ]
         : const [],
     target: _kind == HabitKind.count ? _target : null,
+    points: _worth.points,
   );
 
   Future<void> _save() async {
@@ -335,6 +338,31 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
                 },
               ),
           ],
+        ),
+        const SizedBox(height: 20),
+        const FieldLabel('Counts toward your day'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final w in HabitWorth.values)
+              _Pill(
+                label: w.label,
+                selected: _worth == w,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _worth = w);
+                },
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _worth == HabitWorth.track
+              ? 'Kept on Today, but your day counts the same either way.'
+              : '${_worth.detail}. Doing it adds them, skipping it counts against your day, '
+                    'the same as a quest. Quests are worth 50 or 100.',
+          style: AppText.caption.copyWith(color: kInkMuted),
         ),
         if (!_editing) ...[
           const SizedBox(height: 20),

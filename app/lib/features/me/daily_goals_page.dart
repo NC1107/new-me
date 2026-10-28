@@ -103,7 +103,7 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
 
   Future<void> _save() async {
     if (await saveMe(MePatch(questTemplates: _edits)) && mounted) {
-      toast('Saved. Your new goals start tomorrow.');
+      toast('Saved');
       Navigator.of(context).maybePop();
     }
   }

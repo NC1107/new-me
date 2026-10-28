@@ -82,14 +82,16 @@ void main() {
       expect(find.text('S'), findsOneWidget);
       expect(find.text('4 day streak'), findsOneWidget);
       expect(find.text('900 season points'), findsOneWidget);
-      for (final row in ['Daily goals', 'Profile', 'Time zone', 'Apple Health']) {
+      for (final row in ['Daily goals', 'About you', 'Schedule', 'Apple Health']) {
         expect(find.text(row), findsOneWidget);
       }
       expect(find.text('3 of 6 on'), findsOneWidget);
       for (final moved in ['Training', 'Food targets', 'My foods']) {
         expect(find.text(moved), findsNothing, reason: '$moved moved to its own tab');
       }
-      expect(find.text('America/New_York'), findsOneWidget);
+      for (final merged in ['Profile', 'Time zone']) {
+        expect(find.text(merged), findsNothing, reason: '$merged is part of another page');
+      }
       expect(find.text('Not connected'), findsOneWidget);
       expect(find.text('Pairing code'), findsNothing);
       expect(find.text('SIGN OUT OF THIS PHONE'), findsOneWidget);
@@ -109,8 +111,7 @@ void main() {
 
       for (final label in [
         'Daily goals, 3 of 6 on',
-        'Profile, Sam, Iris',
-        'Time zone, America/New_York',
+        'About you, Sam, Iris, units and body',
         'Pairing code, Invite your partner',
       ]) {
         final row = find.bySemanticsLabel(label);
@@ -203,7 +204,7 @@ void main() {
           {'key': 'exercise', 'enabled': true},
         ],
       });
-      expect(find.text('Saved. Your new goals start tomorrow.'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
       expect(find.text('Daily goals'), findsOneWidget);
     });
 
@@ -347,7 +348,7 @@ void main() {
       final adapter = _server()..on('PATCH /api/me', StubResponse(200, _me(color: 'amber')));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
 
       await app.tap(find.text('Honey'));
       await app.tap(find.text('SAVE'));
@@ -366,7 +367,7 @@ void main() {
         );
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
 
       expect(find.byIcon(Icons.block_rounded), findsOneWidget);
       await app.tap(find.text('Sky'));
@@ -379,7 +380,7 @@ void main() {
         ..on('PATCH /api/me', const StubResponse(409, {'error': 'That name is taken'}));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
 
       await app.enter(find.byType(TextField).first, 'Ana');
       await app.tap(find.text('SAVE'));
@@ -392,7 +393,7 @@ void main() {
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
       final loads = adapter.to('GET /api/me').length;
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
 
       await app.tap(find.text('Honey'));
       await app.tap(find.text('SAVE'));
@@ -405,7 +406,7 @@ void main() {
       final adapter = _server()..on('PATCH /api/me', StubResponse(200, _me(color: 'amber')));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Profile'));
+      await app.tap(find.text('About you'));
       await app.enter(find.byType(TextField).first, 'Samantha');
 
       unawaited(
@@ -418,13 +419,17 @@ void main() {
   });
 
   group('time zone', () {
-    testWidgets('lists zones and shows the server verdict on free text', (tester) async {
+    testWidgets('lives on the Schedule page and saves with it', (tester) async {
       final adapter = _server();
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Time zone'));
+      await app.tap(find.text('Schedule'));
 
-      expect(find.text('This phone'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('This phone'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Europe/London'), findsOneWidget);
 
       adapter.on(
@@ -432,13 +437,13 @@ void main() {
         const StubResponse(422, {'error': 'unknown zone', 'code': 'invalid_timezone'}),
       );
       await app.enter(find.byType(TextField).first, 'Mars/Base');
-      await app.tap(find.text('USE THIS ZONE'));
+      await app.tap(find.text('SAVE'));
       expect(find.text('The server does not know "Mars/Base".'), findsOneWidget);
 
       adapter.on('PATCH /api/me', StubResponse(200, _me()));
       await app.tap(find.text('Europe/London'));
+      await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {'timezone': 'Europe/London'});
-      expect(find.text('USE THIS ZONE'), findsNothing);
     });
   });
 

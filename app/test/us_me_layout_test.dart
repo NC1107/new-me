@@ -131,7 +131,7 @@ void _suite(double scale) {
       await app.pump(const MeScreen(), tall: false);
       noOverflow(tester, 'Me');
 
-      for (final row in ['Daily goals', 'Profile', 'Time zone', 'Apple Health', 'Pairing code']) {
+      for (final row in ['Daily goals', 'About you', 'Schedule', 'Apple Health', 'Pairing code']) {
         await app.tap(find.text(row));
         noOverflow(tester, row);
         if (row == 'Daily goals') {

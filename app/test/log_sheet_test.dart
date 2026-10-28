@@ -240,10 +240,13 @@ void main() {
     final app = await _open(tester, adapter, LogKind.yoga);
     expect(find.text('Log yoga'), findsOneWidget);
 
-    await app.tap(find.text('+10'));
+    for (final minutes in ['15', '30', '45', '60', '75', '90']) {
+      expect(find.text(minutes), findsWidgets, reason: 'a $minutes minute choice');
+    }
+    await app.tap(find.text('90'));
     await app.tap(_save());
     expect(app.body('POST /api/logs')['type'], 'yoga');
-    expect(app.body('POST /api/logs')['quantity'], 25);
+    expect(app.body('POST /api/logs')['quantity'], 90);
     expect(app.body('POST /api/logs')['unit'], 'minutes');
   });
 

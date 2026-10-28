@@ -23,7 +23,7 @@ import '../../state/units.dart';
 
 const _kMaxName = 40;
 
-/// Name and colour. A colour the other person has is shown as taken.
+/// About you: name, colour, units and the body and goal fields. A colour the other person has is shown as taken.
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
@@ -151,12 +151,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
 
   @override
   Widget build(BuildContext context) {
-    final view = readMe(ref, title: 'Profile');
+    final view = readMe(ref, title: 'About you');
     if (view.placeholder != null) return view.placeholder!;
     final editable = view.editable;
     final palette = accentById(_color);
     return PageScaffold(
-      title: 'Profile',
+      title: 'About you',
       banner: view.banner,
       footer: Column(
         mainAxisSize: MainAxisSize.min,

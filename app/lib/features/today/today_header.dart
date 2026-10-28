@@ -28,18 +28,16 @@ String mascotLine(Today t) {
   if (t.day.points == 0 && t.streak.restAvailable && t.streak.restUsedOn == null) {
     return 'A freeze is ready';
   }
-  return left == 1 ? '1 quest to go' : '$left quests to go';
+  return t.day.points == 0 ? 'A fresh day. Start with one.' : 'Nice, keep it rolling.';
 }
 
 MascotState mascotStateFor(Today t) => t.day.counted ? MascotState.happy : MascotState.idle;
 
-/// What the mascot says: the plan's sentence when there is one, else a line about the day.
-String bubbleLine(Today t) {
-  final summary = t.plan?.summary.trim() ?? '';
-  return summary.isEmpty ? mascotLine(t) : summary;
-}
+/// What the mascot says. The plan's full summary lives in the plan sheet, so the bubble stays one
+/// short line that never restates quest progress.
+String bubbleLine(Today t) => mascotLine(t);
 
-/// The greeting, the date, and the mascot whose bubble carries the plan's sentence. With a plan
+/// The greeting, the date, and the mascot whose bubble carries one short line. With a plan
 /// the bubble is a button that opens it.
 class TodayHeader extends StatelessWidget {
   const TodayHeader({

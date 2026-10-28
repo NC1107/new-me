@@ -64,7 +64,7 @@ void main() {
     expect(find.text('62%'), findsOneWidget);
     expect(find.text('130 of 400 points'), findsOneWidget);
     expect(find.textContaining('Reach 70% to keep your streak going'), findsOneWidget);
-    expect(find.text('3 quests to go'), findsOneWidget);
+    expect(find.text('Nice, keep it rolling.'), findsOneWidget);
 
     expect(find.text('Get stronger'), findsOneWidget);
     expect(find.text('+20'), findsOneWidget);
@@ -73,7 +73,6 @@ void main() {
     expect(find.text('Read 20 min or 15 pages'), findsOneWidget);
     expect(find.text('12 min + 5 pages'), findsOneWidget);
     expect(find.text('Log 2 meals'), findsOneWidget);
-    expect(find.text('1 of 2 meals'), findsOneWidget);
 
     expect(_chunky('Connect Health'), findsOneWidget);
     expect(find.text('Walk 8,000 steps'), findsNothing);
@@ -99,7 +98,7 @@ void main() {
     expect(find.text('Health synced 13h ago'), findsOneWidget);
   });
 
-  testWidgets('manual quests get a plus, automatic ones an Apple Health chip', (tester) async {
+  testWidgets('manual quests get a plus, automatic ones one Health note', (tester) async {
     final today = richTodayJson(stepsEverSynced: true);
     today['quests'] = [
       ...today['quests']! as List<dynamic>,
@@ -111,9 +110,10 @@ void main() {
 
     expect(find.text('Walk 8,000 steps'), findsOneWidget);
     expect(find.text('Sleep 7 h'), findsOneWidget);
-    expect(find.text('5 h 30 min of 7 h'), findsOneWidget);
+    expect(find.text('5 h 30 min of 7 h'), findsNothing, reason: 'the title states the target');
     expect(find.text('Exercise 30 min'), findsOneWidget);
-    expect(find.text('Apple Health'), findsNWidgets(3));
+    expect(find.text('From Apple Health'), findsOneWidget, reason: 'once, not on every card');
+    expect(find.text('Apple Health'), findsNothing);
     expect(
       find.byIcon(Icons.add_rounded),
       findsNWidgets(4),
@@ -250,7 +250,8 @@ void main() {
     await _app(tester, adapter).pump(const TodayScreen());
 
     expect(_chunky('Connect Health'), findsNothing);
-    expect(find.text('2,000 of 8,000 steps'), findsOneWidget);
+    expect(find.text('2,000 of 8,000 steps'), findsNothing);
+    expect(find.text('Walk 8,000 steps'), findsOneWidget);
   });
 
   testWidgets('the connect card asks Health for access from a tap', (tester) async {

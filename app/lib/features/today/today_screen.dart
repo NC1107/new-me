@@ -269,6 +269,10 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
         );
       }
     }
+    if (today.quests.any((q) => isAutomaticQuest(q.key))) {
+      cards.add(const SizedBox(height: 12));
+      cards.add(const HealthNote());
+    }
     if (!today.health.stepsEverSynced && !connectShown) {
       cards.insert(0, connect());
       cards.insert(0, const SizedBox(height: kCardGap));

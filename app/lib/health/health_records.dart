@@ -22,6 +22,7 @@ const _workoutTypes = <String, String>{
   'YOGA': WorkoutType.yoga,
   'PILATES': WorkoutType.yoga,
   'FLEXIBILITY': WorkoutType.yoga,
+  'MIND_AND_BODY': WorkoutType.yoga,
   'SWIMMING': WorkoutType.swimming,
   'SWIMMING_POOL': WorkoutType.swimming,
   'SWIMMING_OPEN_WATER': WorkoutType.swimming,

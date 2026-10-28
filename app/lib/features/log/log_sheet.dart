@@ -315,9 +315,10 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                     UnitSpec(
                       unit: 'minutes',
                       label: 'Minutes',
-                      start: 15,
+                      start: 30,
                       step: 5,
-                      chips: [5, 10, 15],
+                      chips: [],
+                      choices: [15, 30, 45, 60, 75, 90],
                     ),
                   ],
                   busy: _busy,

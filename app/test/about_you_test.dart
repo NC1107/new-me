@@ -473,12 +473,16 @@ void main() {
   });
 
   group('Me', () {
-    testWidgets('has an About you row that opens the flow at the first question', (tester) async {
+    testWidgets('has one About you row that opens the page with name, colour and body', (
+      tester,
+    ) async {
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
       await app.pump(const MeScreen());
       await app.tap(find.text('About you'));
-      expect(find.byType(AboutYouPage), findsOneWidget);
-      expect(find.text('What year were you born?'), findsOneWidget);
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Colour'), findsOneWidget);
+      expect(find.text('Birth year (optional)'), findsOneWidget);
+      expect(find.text('Profile'), findsNothing);
     });
   });
 }

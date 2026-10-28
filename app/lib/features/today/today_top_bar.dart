@@ -9,7 +9,6 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/pressable.dart';
-import '../streaks/streak_visuals.dart';
 
 /// Dark enough to read on the canvas; the flame fill itself is too light for text.
 const _kFlameText = Color(0xFFB45309);
@@ -29,7 +28,6 @@ class TodayTopBar extends StatelessWidget {
     required this.onOpenMe,
     required this.onOpenUs,
     required this.onStreak,
-    this.freezes = 0,
   });
 
   final String name;
@@ -40,9 +38,6 @@ class TodayTopBar extends StatelessWidget {
   final VoidCallback onOpenMe;
   final VoidCallback onOpenUs;
   final VoidCallback onStreak;
-
-  /// Streak freezes held, drawn as snowflakes beside the streak.
-  final int freezes;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +78,6 @@ class TodayTopBar extends StatelessWidget {
                       onTap: onStreak,
                     ),
                   ),
-                  _Flakes(held: freezes, onTap: onStreak),
                   const SizedBox(width: 6),
                   Flexible(
                     child: _Stat(
@@ -117,28 +111,6 @@ class TodayTopBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Flakes extends StatelessWidget {
-  const _Flakes({required this.held, required this.onTap});
-
-  final int held;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: freezesLabel(held),
-    excludeSemantics: true,
-    onTap: onTap,
-    child: Pressable(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-        child: Center(child: FreezeFlakes(held: held)),
-      ),
-    ),
-  );
 }
 
 class _Stat extends StatelessWidget {

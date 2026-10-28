@@ -313,6 +313,18 @@ void main() {
       expect(find.text('Long breath out through your mouth'), findsOneWidget);
     });
 
+    testWidgets('the time left counts down once a second', (tester) async {
+      final app = await _open(tester, LogKind.breathing);
+      await app.tap(_chunky('Start 5-minute session'));
+      await _begin(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('4:59 left'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('4:58 left'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('4:57 left'), findsOneWidget);
+    });
+
     testWidgets('ending inside the first minute logs nothing', (tester) async {
       final app = await _open(tester, LogKind.breathing);
       await app.tap(_chunky('Start 5-minute session'));

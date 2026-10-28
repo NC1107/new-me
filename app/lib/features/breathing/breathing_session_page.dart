@@ -29,35 +29,40 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
   late final Ticker _ticker = createTicker(_tick);
   _Stage _stage = _Stage.ready;
   Duration _carried = Duration.zero;
-  Duration _elapsed = Duration.zero;
+  // Moves every frame; only the pacer listens, so the page rebuilds on whole seconds and stages.
+  final ValueNotifier<Duration> _elapsed = ValueNotifier(Duration.zero);
   int _lastStep = -1;
 
   @override
   void dispose() {
     _ticker.dispose();
+    _elapsed.dispose();
     super.dispose();
   }
 
-  int get _minutes => _elapsed.inMinutes;
+  int get _minutes => _elapsed.value.inMinutes;
+
+  String _leftText(Duration elapsed) => '${clockText(widget.length - elapsed)} left';
 
   void _tick(Duration sinceStart) {
     final elapsed = _carried + sinceStart;
     if (elapsed >= widget.length) {
       _ticker.stop();
       HapticFeedback.heavyImpact();
-      setState(() {
-        _elapsed = widget.length;
-        _stage = _Stage.done;
-      });
+      _elapsed.value = widget.length;
+      setState(() => _stage = _Stage.done);
       return;
     }
     final cue = widget.pace.at(elapsed);
     final key = cue.breaths * widget.pace.steps.length + cue.stepIndex;
-    if (key != _lastStep) {
+    final stepChanged = key != _lastStep;
+    if (stepChanged) {
       _lastStep = key;
       _pulse(cue.step.phase);
     }
-    setState(() => _elapsed = elapsed);
+    final shownBefore = _leftText(_elapsed.value);
+    _elapsed.value = elapsed;
+    if (stepChanged || _leftText(elapsed) != shownBefore) setState(() {});
   }
 
   /// Each phase has its own feel, so the breath can be followed with eyes closed.
@@ -77,7 +82,7 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
     _ticker.stop();
     HapticFeedback.selectionClick();
     setState(() {
-      _carried = _elapsed;
+      _carried = _elapsed.value;
       _stage = _Stage.paused;
     });
   }
@@ -94,7 +99,7 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
   @override
   Widget build(BuildContext context) {
     final palette = questPalette('breathing');
-    final cue = widget.pace.at(_elapsed);
+    final cue = widget.pace.at(_elapsed.value);
     final reduce = MediaQuery.disableAnimationsOf(context);
     final started = _stage != _Stage.ready;
     final done = _stage == _Stage.done;
@@ -104,7 +109,6 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
       _Stage.done => 'Well done',
       _Stage.running => phaseCue(cue.step.phase),
     };
-    final left = widget.length - _elapsed;
 
     return PopScope(
       canPop: false,
@@ -152,12 +156,18 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Center(
-                                child: _Pacer(
-                                  scale: !started || done || reduce ? 0.75 : cue.scale,
-                                  word: started && !done ? phaseWord(cue.step.phase) : null,
-                                  count: _stage == _Stage.running ? cue.secondsLeft : null,
-                                  fill: palette.tint,
-                                  edge: palette.fill,
+                                child: ValueListenableBuilder<Duration>(
+                                  valueListenable: _elapsed,
+                                  builder: (context, elapsed, _) {
+                                    final live = widget.pace.at(elapsed);
+                                    return _Pacer(
+                                      scale: !started || done || reduce ? 0.75 : live.scale,
+                                      word: started && !done ? phaseWord(live.step.phase) : null,
+                                      count: _stage == _Stage.running ? live.secondsLeft : null,
+                                      fill: palette.tint,
+                                      edge: palette.fill,
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(height: 28),
@@ -175,7 +185,7 @@ class _BreathingSessionPageState extends State<BreathingSessionPage>
                                     ? '${widget.pace.blurb} ${durationWords(widget.length)}.'
                                     : done
                                     ? '${widget.length.inMinutes} minutes of breathing.'
-                                    : '${clockText(left)} left',
+                                    : _leftText(_elapsed.value),
                                 textAlign: TextAlign.center,
                                 style: AppText.body.copyWith(color: kInkSecondary),
                               ),

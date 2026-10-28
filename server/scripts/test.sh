@@ -13,7 +13,7 @@ PASSWORD=test-$$
 
 cleanup() {
   # -v drops the anonymous data volume the postgres image declares, which would otherwise leak.
-  docker rm -f -v "$CONTAINER" >/dev/null 2>  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true1 || true
+  docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 

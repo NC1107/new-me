@@ -23,6 +23,7 @@ import '../board/board_screen.dart';
 import '../me/me_screen.dart';
 import '../today/today_screen.dart';
 import 'home_tab.dart';
+import '../../state/health_history.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -44,6 +45,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.read(pushProvider);
     ref.read(companionProvider);
     unawaited(_followDeviceTimezone());
+    // History resumes each launch, and starts as soon as Health is connected.
+    unawaited(ref.read(healthHistoryProvider.notifier).run());
+    ref.listenManual(healthSyncProvider.select((h) => h.prompted), (was, now) {
+      if (now && was != true) unawaited(ref.read(healthHistoryProvider.notifier).run());
+    });
     unawaited(ref.read(listeningSyncProvider).syncThenRefreshToday(onlyIfSynced: true));
     _lifecycle = AppLifecycleListener(onResume: _onResume);
   }

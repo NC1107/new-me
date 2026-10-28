@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,6 +18,7 @@ import '../../widgets/page_scaffold.dart';
 import '../health/health_metrics.dart';
 import '../health/health_screen.dart';
 import 'settings_row.dart';
+import '../../state/health_history.dart';
 
 /// Whether Apple Health is connected, when it last synced and what New Me reads from it.
 class AppleHealthPage extends ConsumerWidget {
@@ -82,6 +87,10 @@ class AppleHealthPage extends ConsumerWidget {
           ),
         ),
         if (connected) ...[
+          const SizedBox(height: kCardGap),
+          const _HistoryCard(),
+          const SizedBox(height: kCardGap),
+          const _AccessCard(),
           const SizedBox(height: kCardGap),
           SettingsGroup(
             rows: [
@@ -161,6 +170,84 @@ class _ReadGroup extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// "Imported back to March 2021": the Health history import, and a way to start or re-run it.
+class _HistoryCard extends ConsumerWidget {
+  const _HistoryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final h = ref.watch(healthHistoryProvider);
+    final reached = h.reached == null
+        ? null
+        : DateFormat('MMMM y').format(parseLocalDate(h.reached!));
+    final line = h.running
+        ? 'Importing your history${reached == null ? '' : ', back to $reached so far'}.'
+        : h.done
+        ? 'All of your Health history is in${reached == null ? '' : ', back to $reached'}.'
+        : reached == null
+        ? 'Bring in every day Apple Health holds, so insights and look-backs start from your past.'
+        : 'Imported back to $reached. It carries on when you open New Me.';
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Health history', style: AppText.headline.copyWith(fontSize: 18)),
+          const SizedBox(height: 4),
+          Text(line, style: AppText.label.copyWith(color: kInkSecondary)),
+          if (h.error case final error?) ...[
+            const SizedBox(height: 6),
+            Text(error, style: AppText.caption.copyWith(color: kDangerText)),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            'Past days fill your insights and look-backs. They never change a score.',
+            style: AppText.caption.copyWith(color: kInkMuted),
+          ),
+          const SizedBox(height: 12),
+          ChunkyButton.secondary(
+            label: h.done ? 'Import again' : 'Import history',
+            icon: Icons.history_rounded,
+            busy: h.running,
+            onPressed: () => ref.read(healthHistoryProvider.notifier).run(restart: h.done),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Apple Health shows its permission sheet once per kind of data, so this asks again for
+/// anything not yet decided and says where to turn on what was declined.
+class _AccessCard extends ConsumerWidget {
+  const _AccessCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => AppCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('What New Me can read', style: AppText.headline.copyWith(fontSize: 18)),
+        const SizedBox(height: 4),
+        Text(
+          'Apple asks only once for each kind of data. To share something you turned off, open '
+          'Settings, then Health, then Data Access and Devices, then New Me, and turn on '
+          'All Categories.',
+          style: AppText.label.copyWith(color: kInkSecondary),
+        ),
+        const SizedBox(height: 12),
+        ChunkyButton.secondary(
+          label: 'Ask again',
+          icon: Icons.favorite_border_rounded,
+          onPressed: () async {
+            await ref.read(healthSyncProvider.notifier).connect();
+            unawaited(ref.read(healthHistoryProvider.notifier).run());
+          },
         ),
       ],
     ),

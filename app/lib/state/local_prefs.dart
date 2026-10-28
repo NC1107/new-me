@@ -2,6 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'together_prefs.dart';
 
+const _kHistoryReached = 'health.history.reached';
+const _kHistoryDone = 'health.history.done';
 const _kHealthPrompted = 'healthPrompted';
 const _kLastSyncedAt = 'lastSyncedAt';
 const _kLastLogKind = 'lastLogKind';
@@ -15,6 +17,21 @@ const _kRightNowDismissed = 'rightNowDismissed';
 /// Non-secret, per-install values. The Keychain blob in session.dart holds everything secret.
 class LocalPrefs {
   const LocalPrefs._();
+
+  /// The oldest day the Health history import has reached (YYYY-MM-DD), and whether it is done.
+  static Future<({String? reached, bool done})> healthHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (
+      reached: prefs.getString(_kHistoryReached),
+      done: prefs.getBool(_kHistoryDone) ?? false,
+    );
+  }
+
+  static Future<void> setHealthHistory({required String reached, required bool done}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kHistoryReached, reached);
+    await prefs.setBool(_kHistoryDone, done);
+  }
 
   static Future<bool> healthPrompted() async =>
       (await SharedPreferences.getInstance()).getBool(_kHealthPrompted) ?? false;

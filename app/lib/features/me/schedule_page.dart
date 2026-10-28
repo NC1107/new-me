@@ -25,7 +25,6 @@ const _kWeekdayNames = [
   'Sunday',
 ];
 
-
 /// "10 min after you wake", or "as soon as you wake" at zero.
 String offsetLabel(int minutes) {
   if (minutes == 0) return 'As soon as you wake';

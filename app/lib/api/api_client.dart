@@ -556,6 +556,18 @@ class ApiClient {
   Future<void> dismissGoalProposal(String key) =>
       _send(() => _dio.post<dynamic>('/api/goals/proposals/$key/dismiss'), (_) {});
 
+  /// Stores past days' readings where the server has none, without rescoring; answers with how
+  /// many were new.
+  Future<int> putHealthHistory(List<HealthItem> items) => _send(
+    () => _dio.put<dynamic>(
+      '/api/health/history',
+      data: {
+        'items': [for (final i in items) i.toJson()],
+      },
+    ),
+    (data) => ((data as Json)['stored'] as num?)?.toInt() ?? 0,
+  );
+
   Future<HealthDailyResult> putHealthDaily(List<HealthItem> items) => _send(
     () => _dio.put<dynamic>(
       '/api/health/daily',

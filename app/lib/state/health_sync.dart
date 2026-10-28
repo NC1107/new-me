@@ -33,6 +33,35 @@ const kResumeSyncInterval = Duration(minutes: 5);
 /// Before this local hour, yesterday is still open on the server and gets its final totals.
 const kYesterdayGraceHour = 10;
 
+/// The upload items for one local day's Health totals; nothing for an unreadable day.
+List<HealthItem> healthItemsFor(DateTime day, HealthTotals? totals, DateTime measuredAt) {
+  if (totals == null) return [];
+  final date = formatLocalDate(day);
+  return [
+    for (final key in HealthMetric.all)
+      if (totals[key] case final value?)
+        HealthItem(
+          date: date,
+          metric: key,
+          value: _roundHealth(key, value),
+          source: 'healthkit',
+          measuredAt: measuredAt,
+        ),
+  ];
+}
+
+/// Body composition and fitness readings carry a meaningful decimal; the rest are whole.
+const _tenths = {
+  HealthMetric.weightKg,
+  HealthMetric.leanMassKg,
+  HealthMetric.bodyFatPct,
+  HealthMetric.vo2max,
+  HealthMetric.heightCm,
+};
+
+double _roundHealth(String key, double value) =>
+    _tenths.contains(key) ? (value * 10).roundToDouble() / 10 : value.roundToDouble();
+
 /// Workouts and sleep nights are re-read for this many days on every sync.
 const kWorkoutSyncDays = 14;
 
@@ -249,41 +278,13 @@ class HealthSyncController extends Notifier<HealthSyncState> {
   Future<List<HealthItem>> _readItems(DateTime now) async {
     final source = ref.read(healthSourceProvider);
     final midnight = DateTime(now.year, now.month, now.day);
-    final items = _itemsFor(midnight, await source.totals(midnight, now), now);
+    final items = healthItemsFor(midnight, await source.totals(midnight, now), now);
     if (now.hour < kYesterdayGraceHour) {
       final yesterday = DateTime(now.year, now.month, now.day - 1);
-      items.addAll(_itemsFor(yesterday, await source.totals(yesterday, midnight), now));
+      items.addAll(healthItemsFor(yesterday, await source.totals(yesterday, midnight), now));
     }
     return items;
   }
-
-  List<HealthItem> _itemsFor(DateTime day, HealthTotals? totals, DateTime measuredAt) {
-    if (totals == null) return [];
-    final date = formatLocalDate(day);
-    return [
-      for (final key in HealthMetric.all)
-        if (totals[key] case final value?)
-          HealthItem(
-            date: date,
-            metric: key,
-            value: _round(key, value),
-            source: 'healthkit',
-            measuredAt: measuredAt,
-          ),
-    ];
-  }
-
-  /// Body composition and fitness readings carry a meaningful decimal; the rest are whole.
-  static const _tenths = {
-    HealthMetric.weightKg,
-    HealthMetric.leanMassKg,
-    HealthMetric.bodyFatPct,
-    HealthMetric.vo2max,
-    HealthMetric.heightCm,
-  };
-
-  double _round(String key, double value) =>
-      _tenths.contains(key) ? (value * 10).roundToDouble() / 10 : value.roundToDouble();
 
   String _keyOf(HealthItem item) => '${item.date}|${item.metric}';
 

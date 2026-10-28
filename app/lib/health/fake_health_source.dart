@@ -65,6 +65,9 @@ class FakeHealthSource implements HealthSource {
   bool workoutsUnreadable = false;
   bool sleepUnreadable = false;
 
+  /// Days before this have no readings, like a Health record that starts on a date.
+  DateTime? dataSince;
+
   int workoutReads = 0;
   int sleepReads = 0;
 
@@ -82,6 +85,8 @@ class FakeHealthSource implements HealthSource {
     reads.add((start: start, end: end));
     if (latency > Duration.zero) await Future<void>.delayed(latency);
     if (unreadable) return null;
+    final since = dataSince;
+    if (since != null && start.isBefore(since)) return HealthTotals(const {});
     return HealthTotals(metrics);
   }
 

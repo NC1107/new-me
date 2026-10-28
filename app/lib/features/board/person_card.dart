@@ -20,13 +20,26 @@ const _kRingSize = 104.0;
 /// freezes, last sync). Text follows Dynamic Type up to a limit, because the card is half the
 /// screen wide.
 class PersonCard extends StatelessWidget {
-  const PersonCard({super.key, required this.user, required this.now, this.onCheer});
+  const PersonCard({
+    super.key,
+    required this.user,
+    required this.now,
+    this.onCheer,
+    this.inviteStreak = false,
+    this.isMe = false,
+  });
 
   final BoardUser user;
   final DateTime now;
 
   /// Set on the partner's card: the Cheer button opens the cheer sheet.
   final VoidCallback? onCheer;
+
+  /// Whether a zero streak says "Start a streak today". Paired, the Us header says it once.
+  final bool inviteStreak;
+
+  /// Marks my own card in a pair, so it ends with the same height as the partner's Cheer row.
+  final bool isMe;
 
   /// What a screen reader hears for the card: the same facts the card shows.
   String get semanticLabel {
@@ -74,29 +87,44 @@ class PersonCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       _GoalLine(user: user, counted: counted),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.local_fire_department_rounded, size: 20, color: kFlame),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              user.streak < 1
-                                  ? 'Start a streak today'
-                                  : '${user.streak}-day streak',
-                              textAlign: TextAlign.center,
-                              style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                      if (user.streak >= 1 || inviteStreak) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 20,
+                              color: kFlame,
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                user.streak < 1
+                                    ? 'Start a streak today'
+                                    : '${user.streak}-day streak',
+                                textAlign: TextAlign.center,
+                                style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 if (onCheer != null) ...[
                   const SizedBox(height: 12),
                   _CheerButton(name: user.name, palette: palette, onTap: onCheer!),
+                ] else if (isMe) ...[
+                  const SizedBox(height: 12),
+                  ExcludeSemantics(
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      alignment: Alignment.center,
+                      child: const Text('You', style: AppText.caption),
+                    ),
+                  ),
                 ],
               ],
             ),

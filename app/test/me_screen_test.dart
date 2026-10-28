@@ -103,7 +103,7 @@ void main() {
       await app.pump(const MeScreen());
       expect(find.text('Me'), findsOneWidget);
       var last = -1.0;
-      for (final label in ['PLAN', 'YOU', 'CONNECTIONS', 'APP']) {
+      for (final label in ['Plan', 'You', 'Connections', 'App']) {
         final y = tester.getTopLeft(find.text(label)).dy;
         expect(y, greaterThan(last), reason: label);
         last = y;

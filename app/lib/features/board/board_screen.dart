@@ -21,6 +21,7 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../habits/habit_proposals_card.dart';
@@ -96,11 +97,11 @@ class _UsBody extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(kGutter, 16, kGutter, 96),
       children: [
         Semantics(header: true, child: const Text('Us', style: AppText.display)),
-        Text(
-          ends == null
+        _SeasonLine(
+          name: board.season.name,
+          text: ends == null
               ? seasonLabel(board.season.name)
               : '${seasonLabel(board.season.name)}, ends ${DateFormat.MMMd().format(parseLocalDate(ends))}',
-          style: AppText.caption,
         ),
         const SizedBox(height: 16),
         if (paired) ...[
@@ -118,7 +119,7 @@ class _UsBody extends ConsumerWidget {
             children: [
               if (users.isNotEmpty)
                 Expanded(
-                  child: PersonCard(user: users[0], now: now),
+                  child: PersonCard(user: users[0], now: now, inviteStreak: !paired, isMe: paired),
                 ),
               const SizedBox(width: kCardGap),
               Expanded(
@@ -442,4 +443,65 @@ class _HighlightValue extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Preseason, ends Dec 31" under the title. The preseason is explained with a tap, because the
+/// word means nothing until the first season has started.
+class _SeasonLine extends StatelessWidget {
+  const _SeasonLine({required this.name, required this.text});
+
+  final String name;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    if (seasonLabel(name) == name) return Text(text, style: AppText.caption);
+    return Semantics(
+      button: true,
+      label: '$text. What is the preseason?',
+      excludeSemantics: true,
+      onTap: () => _show(context),
+      child: Pressable(
+        onTap: () => _show(context),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(text, style: AppText.caption)),
+                const SizedBox(width: 4),
+                const Icon(Icons.info_outline_rounded, size: 16, color: kInkSecondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _show(BuildContext context) => showAppSheet<void>(
+    context,
+    builder: (_) => Padding(
+      padding: EdgeInsets.fromLTRB(
+        kGutter,
+        4,
+        kGutter,
+        kGutter + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Semantics(header: true, child: const Text('Preseason', style: AppText.title)),
+          const SizedBox(height: 8),
+          const Text(
+            'Seasons are scored stretches of weeks; the preseason is the warm-up before the first one.',
+            style: AppText.body,
+          ),
+        ],
+      ),
+    ),
+  );
 }

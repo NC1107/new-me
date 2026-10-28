@@ -91,8 +91,6 @@ class AppleHealthPage extends ConsumerWidget {
           const SizedBox(height: kCardGap),
           const _HistoryCard(),
           const SizedBox(height: kCardGap),
-          const _AccessCard(),
-          const SizedBox(height: kCardGap),
           SettingsGroup(
             rows: [
               SettingsRow(
@@ -122,6 +120,7 @@ class AppleHealthPage extends ConsumerWidget {
             ],
           ),
         ),
+        if (connected) ...[const SizedBox(height: kCardGap), const _AccessCard()],
         const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,8 +231,6 @@ class _AccessCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('What New Me can read', style: AppText.headline.copyWith(fontSize: 18)),
-        const SizedBox(height: 4),
         Text(
           'Apple asks only once. To change it, open Health, tap your picture, then Apps, '
           'New Me, and Turn On All.',

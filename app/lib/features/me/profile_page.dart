@@ -268,8 +268,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
         ),
         const SizedBox(height: 6),
         const Text(
-          'The resting energy equation and the fiber and calorie floor tables differ by sex. '
-          'Tap again to clear.',
+          'Used in the calorie formulas, which differ by sex. Tap again to clear.',
           style: AppText.caption,
         ),
         const SizedBox(height: 24),
@@ -290,7 +289,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           ),
         ),
         if (_goalKind != GoalKind.maintain) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           const FieldLabel('Pace'),
           IgnorePointer(
             ignoring: !editable,

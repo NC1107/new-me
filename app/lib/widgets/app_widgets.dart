@@ -229,15 +229,8 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(2, 20, 2, 8),
-    child: Text(
-      text.toUpperCase(),
-      style: AppText.caption.copyWith(
-        fontSize: 12,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0.8,
-      ),
-    ),
+    padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
+    child: Text(text, style: AppText.caption),
   );
 }
 

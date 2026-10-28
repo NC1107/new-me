@@ -202,7 +202,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
               children: [
                 for (final o in help.options)
                   _Pill(
-                    label: '${o.price.formatted} - ${o.span}',
+                    label: '${o.price.formatted} · ${o.span}',
                     selected: _priceValue == o.price,
                     palette: person,
                     onTap: () => setState(() => _price.text = '${o.price}'),

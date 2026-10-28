@@ -7,7 +7,7 @@ import '../../theme/accent.dart';
 /// and render the same everywhere.
 extension CheerKindStyle on CheerKind {
   IconData get icon => switch (this) {
-    CheerKind.clap => Icons.celebration_rounded,
+    CheerKind.clap => Icons.waving_hand_rounded,
     CheerKind.fire => Icons.local_fire_department_rounded,
     CheerKind.flex => Icons.fitness_center_rounded,
     CheerKind.heart => Icons.favorite_rounded,

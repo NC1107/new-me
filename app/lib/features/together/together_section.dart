@@ -153,16 +153,17 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         ],
         const SizedBox(height: kCardGap),
         const RewardProposalsCard(),
-        RewardCard(
-          reward: reward,
-          people: people,
-          claiming: _claiming,
-          error: _claimError,
-          onAdd: () => showRewardSheet(context),
-          onClaim: () => _claim(reward!),
-        ),
+        if (reward != null || waiting.isEmpty)
+          RewardCard(
+            reward: reward,
+            people: people,
+            claiming: _claiming,
+            error: _claimError,
+            onAdd: () => showRewardSheet(context),
+            onClaim: () => _claim(reward!),
+          ),
         if (reward != null || waiting.isNotEmpty) ...[
-          const SizedBox(height: kCardGap),
+          if (reward != null) const SizedBox(height: kCardGap),
           RewardWishlist(
             rewards: waiting,
             partner: ref.watch(partnerNameProvider),

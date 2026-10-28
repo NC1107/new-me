@@ -207,10 +207,12 @@ class _MissingCard extends StatelessWidget {
       children: [
         Semantics(
           header: true,
-          child: Text('Needed to work these out', style: AppText.headline.copyWith(fontSize: 17)),
+          child: Text(
+            'Add these to work out your targets',
+            style: AppText.headline.copyWith(fontSize: 17),
+          ),
         ),
-        const SizedBox(height: 2),
-        const Text('Nothing is guessed.', style: AppText.caption),
+        const SizedBox(height: 4),
         for (final item in items)
           Semantics(
             container: true,

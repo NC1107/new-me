@@ -141,7 +141,7 @@ void main() {
       final app = await open(tester, adapter, const HabitEditorPage());
       await app.tap(find.bySemanticsLabel('Brush teeth'));
       await app.tap(find.bySemanticsLabel('Only track'));
-      expect(find.text('0 gems'), findsOneWidget);
+      expect(find.text('Only tracked, no gems'), findsOneWidget);
       await app.tap(_button('Save'));
       final body = app.body('POST /api/habits');
       expect(body.containsKey('minutes'), isTrue);

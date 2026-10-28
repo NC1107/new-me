@@ -521,10 +521,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await _seconds(tester, 10);
-      await tester.tap(find.widgetWithText(TextButton, 'End'));
+      await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
       expect(find.text('End Yoga 10?'), findsOneWidget);
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.text('End')));
+      await tester.tap(find.text('END'));
       await tester.pumpAndSettle();
       expect(server.to('POST /api/logs'), isEmpty);
     });
@@ -541,7 +541,7 @@ void main() {
       await tester.tap(_button('Start'));
       await _seconds(tester, 5);
       _noOverflow(tester);
-      for (final label in ['Previous', 'End', 'Skip']) {
+      for (final label in ['Previous', 'Skip']) {
         final size = tester.getSize(find.widgetWithText(TextButton, label));
         expect(size.width, greaterThanOrEqualTo(44), reason: label);
         expect(size.height, greaterThanOrEqualTo(44), reason: label);

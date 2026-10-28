@@ -45,11 +45,14 @@ Finder _button(String label) => find.text(label.toUpperCase());
 
 /// The big countdown number, not a step number that happens to read the same.
 Finder _digits(String value) => find.byWidgetPredicate(
-  (w) => w is Text && w.data == value && w.style?.fontSize == 72,
+  (w) => w is Text && w.data == value && w.style?.fontSize == 28,
   description: 'countdown $value',
 );
 
 Finder _action(String label) => find.widgetWithText(TextButton, label);
+
+/// The back arrow ends a session, after asking.
+Finder _end() => find.byTooltip('Back');
 
 class _Recorder {
   final haptics = <String>[];
@@ -133,7 +136,16 @@ void main() {
       expect(c.phase, GuidedPhase.hold);
       expect(c.holdLeft, 30);
       for (var i = 0; i < 29; i++) {
-        expect(c.tick(), isNull);
+        final left = 29 - i;
+        expect(
+          c.tick(),
+          left == 15
+              ? GuidedEvent.halfway
+              : left <= 3
+              ? GuidedEvent.countdown
+              : isNull,
+          reason: '$left seconds left',
+        );
       }
       expect(c.tick(), GuidedEvent.nextHold);
       expect(c.index, 1);
@@ -243,7 +255,7 @@ void main() {
       expect(recorder.announcements.first, contains('Cat stretch'));
 
       await _seconds(tester, 3);
-      expect(find.byType(Image), findsNWidgets(2));
+      expect(find.byType(Image), findsOneWidget);
       expect(_digits('30'), findsOneWidget);
       expect(find.text('seconds left'), findsOneWidget);
       expect(recorder.announcements, contains('Go'));
@@ -366,10 +378,10 @@ void main() {
       await tester.tap(_button('Start'));
       await _seconds(tester, 100);
 
-      await tester.tap(_action('End'));
+      await tester.tap(_end());
       await tester.pumpAndSettle();
       expect(find.text('End Mobility early?'), findsOneWidget);
-      expect(find.textContaining('You have done 2 minutes'), findsOneWidget);
+      expect(find.text('You\'ve done 2 minutes. Log them to your yoga quest?'), findsOneWidget);
 
       await tester.tap(find.text('Keep going'));
       await tester.pumpAndSettle();
@@ -378,9 +390,9 @@ void main() {
       await _seconds(tester, 1);
       expect(find.text('Stretch 2 of 10'), findsOneWidget);
 
-      await tester.tap(_action('End'));
+      await tester.tap(_end());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Log 2 min and end'));
+      await tester.tap(_button('Log 2 min and end'));
       await tester.pumpAndSettle();
       expect(find.text('Logged 2 minutes to your yoga quest.'), findsOneWidget);
       expect(app.body('POST /api/logs')['quantity'], 2);
@@ -393,9 +405,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await _seconds(tester, 100);
-      await tester.tap(_action('End'));
+      await tester.tap(_end());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('End without logging'));
+      await tester.tap(_button('End without logging'));
       await tester.pumpAndSettle();
       expect(find.byType(MobilityPage), findsNothing);
       expect(server.to('POST /api/logs'), isEmpty);
@@ -408,11 +420,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await _seconds(tester, 5);
-      await tester.tap(_action('End'));
+      await tester.tap(_end());
       await tester.pumpAndSettle();
       expect(find.text('End Mobility?'), findsOneWidget);
       expect(find.textContaining('nothing will be logged'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'End').last);
+      await tester.tap(_button('End'));
       await tester.pumpAndSettle();
       expect(find.byType(MobilityPage), findsNothing);
       expect(server.to('POST /api/logs'), isEmpty);
@@ -534,7 +546,7 @@ void main() {
       expect(find.bySemanticsLabel('Hold timer running'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp(r'^\d+$')), findsNothing);
       expect(find.bySemanticsLabel('Session progress'), findsOneWidget);
-      for (final label in ['Previous', 'End', 'Skip']) {
+      for (final label in ['Previous', 'Skip']) {
         final size = tester.getSize(_action(label));
         expect(size.width, greaterThanOrEqualTo(44), reason: label);
         expect(size.height, greaterThanOrEqualTo(44), reason: label);

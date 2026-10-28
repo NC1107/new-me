@@ -33,8 +33,16 @@ class GuidedHold {
 
 enum GuidedPhase { leadIn, hold, done }
 
-/// What a tick did, so the page can answer with a haptic and an announcement.
-enum GuidedEvent { leadInTick, go, nextHold, finished }
+/// What a tick did, so the page can answer with a haptic, a sound and an announcement.
+/// [countdown] is 3, 2 and 1 seconds before a hold ends and [halfway] the midpoint of a hold of
+/// [kGuidedHalfwayMinSeconds] or more.
+enum GuidedEvent { leadInTick, go, countdown, halfway, nextHold, finished }
+
+/// Shorter holds get no halfway tone, so they are not noisy.
+const kGuidedHalfwayMinSeconds = 20;
+
+/// The last seconds of a hold that tick.
+const kGuidedCountdownSeconds = 3;
 
 /// Seconds a routine takes with its lead-ins, for the intro's "about N minutes".
 int guidedTotalSeconds(List<GuidedHold> holds) =>
@@ -59,6 +67,9 @@ class GuidedController extends ChangeNotifier {
 
   int get index => _index;
   GuidedHold get current => holds[_index];
+
+  /// The hold after this one, or null on the last.
+  GuidedHold? get next => _index + 1 < holds.length ? holds[_index + 1] : null;
   GuidedPhase get phase => _phase;
   int get leadLeft => _leadLeft;
   int get holdLeft => _holdLeft;
@@ -102,6 +113,11 @@ class GuidedController extends ChangeNotifier {
     _holdLeft -= 1;
     if (_holdLeft > 0) {
       notifyListeners();
+      if (_holdLeft <= kGuidedCountdownSeconds) return GuidedEvent.countdown;
+      if (current.seconds >= kGuidedHalfwayMinSeconds &&
+          current.seconds - _holdLeft == current.seconds ~/ 2) {
+        return GuidedEvent.halfway;
+      }
       return null;
     }
     if (_index == holds.length - 1) {

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'guided_page.dart';
 import 'mobility_session.dart';
 
-final _mobilityRoutine = GuidedRoutine(
+/// Mobility 10's words and holds on the shared runner.
+final mobilityRoutine = GuidedRoutine(
   title: 'Mobility',
   stepNoun: 'stretch',
   stepNounPlural: 'stretches',
@@ -25,5 +26,5 @@ class MobilityPage extends StatelessWidget {
   final DateTime Function() now;
 
   @override
-  Widget build(BuildContext context) => GuidedPage(routine: _mobilityRoutine, now: now);
+  Widget build(BuildContext context) => GuidedPage(routine: mobilityRoutine, now: now);
 }

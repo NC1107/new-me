@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/audio/session_audio.dart';
 import 'package:newme/health/fake_health_source.dart';
 import 'package:newme/health/health_source_factory.dart';
 import 'package:newme/state/clock.dart';
@@ -282,6 +283,45 @@ Map<String, dynamic> exerciseHistoryJson(String key) => {
 /// The zone the test phone reports; a test may change it between launch and a resume.
 String testDeviceTimezone = 'America/New_York';
 
+/// Records the cues a guided session asks for, in place of playing them.
+class FakeSessionAudio implements SessionAudio {
+  final cues = <String>[];
+
+  @override
+  Future<void> prepare() async => cues.add('prepare');
+
+  @override
+  void tick() => cues.add('tick');
+
+  @override
+  void halfway() => cues.add('halfway');
+
+  @override
+  void chime() => cues.add('chime');
+
+  @override
+  void speak(String text) => cues.add('say: $text');
+
+  @override
+  void stopSpeaking() => cues.add('stop');
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// Counts how often a session holds the screen on and lets it go.
+class FakeScreenAwake implements ScreenAwake {
+  final calls = <String>[];
+
+  bool get on => calls.isNotEmpty && calls.last == 'enable';
+
+  @override
+  Future<void> enable() async => calls.add('enable');
+
+  @override
+  Future<void> disable() async => calls.add('disable');
+}
+
 class TestApp {
   TestApp(
     this.tester,
@@ -289,9 +329,14 @@ class TestApp {
     FakeHealthSource? health,
     this.accent = 'violet',
     this.surfaceHeight = 1500,
+    this.surfaceWidth = 390,
   }) : health = health ?? FakeHealthSource();
 
   final double surfaceHeight;
+  final double surfaceWidth;
+
+  final audio = FakeSessionAudio();
+  final awake = FakeScreenAwake();
 
   final WidgetTester tester;
   final StubAdapter adapter;
@@ -300,7 +345,7 @@ class TestApp {
 
   /// A tall phone-width surface so a lazily built list shows every card.
   void tallSurface() {
-    tester.view.physicalSize = Size(390, surfaceHeight);
+    tester.view.physicalSize = Size(surfaceWidth, surfaceHeight);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
   }
@@ -325,6 +370,8 @@ class TestApp {
           clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
           healthSourceProvider.overrideWithValue(health),
           deviceTimezoneProvider.overrideWithValue(() async => testDeviceTimezone),
+          sessionAudioProvider.overrideWithValue(audio),
+          screenAwakeProvider.overrideWithValue(awake),
           ...overrides,
         ],
         child: MaterialApp(

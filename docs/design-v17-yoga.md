@@ -151,6 +151,53 @@ A pose the server lacks is skipped, so an older server still runs a shorter flow
 | Yoga 20 | 23 | about 20 minutes | Corpse 120 s |
 | Yoga 30 | 26 | about 29 minutes | Legs up the wall 90 s, Corpse 180 s |
 
+## The runner on a phone set down
+
+Nick tried Mobility on his iPhone and found that the steps ran off the screen under the Pause button and that nothing made a sound.
+The shared runner, which Mobility and yoga both use, changed as follows.
+
+### One screen
+
+- The tall timer card is a 64 point ring with the seconds inside it, which fills as the hold passes, and a one-word status under it ("seconds left", "Get ready" or "Paused").
+- The pose name, the side or hold label and a "Next: ..." line sit beside the ring, and "Pose 3 of 14" sits above them.
+- A hold shows one photo, small and whole, with its credit under it.
+  A stretch shows its end position, and a yoga pose shows all its photos, so cat-cow keeps its two.
+- All the steps show at body size with their numbers, followed by the form cues, with no sheet or fold between them.
+- Pause sits in the middle of the footer with Previous and Skip beside it and the speaker button, so the footer is one row.
+  The back arrow is how a session ends, and it asks first.
+- At text scales above 1.3 the footer returns to its stacked, wrapping form and the page scrolls.
+- Widget tests load the real Nunito and check that every pose of Yoga 30 and every Mobility stretch fits without scrolling, with every step on screen, at 390 by 844 and at 375 by 667 (iPhone SE).
+  A test at text scale 2.0 checks that nothing overflows and that scrolling takes over.
+
+### Screen awake
+
+The screen is held on from Start until the session finishes, is ended or the page goes away, through `wakelock_plus` behind a `ScreenAwake` interface.
+
+### Sound cues
+
+- The audio sits behind a `SessionAudio` interface, so tests record the cues a session asks for and play nothing.
+  A later spoken-instruction or time-call cue needs only a new method there.
+- A short tick plays at 3, 2 and 1 seconds left.
+- A single soft tone plays at the midpoint of a hold of 20 seconds or longer, so shorter holds stay quiet.
+- A chime plays when a hold ends and the next pose or side starts, and at the end of the session.
+- The voice says "Starting with ..." at the start and "Next: ..." at each change, naming the pose and, where there is one, the side.
+  It says only the label when the next hold is the same pose.
+- Ticks, tones and chimes are bundled WAV files made for New Me, about 40 KB in all.
+  The voice is the platform text-to-speech through `flutter_tts`, and playback uses `audioplayers`.
+- The audio session is `playback` with `mixWithOthers` and `duckOthers`, so Apple Music or Spotify dips while a cue plays and comes back, and cues sound through the silent switch and while the screen dims.
+  The app stays in the foreground with the screen held on, so no background audio mode is declared.
+- The speaker button cycles sounds and voice, tones only, and silent, is remembered on the phone, and starts on.
+- With VoiceOver on, nothing is spoken by the voice, because the page already announces each change to VoiceOver, but the tones still play.
+- Time replayed after the app was in the background plays no catch-up cues, and pausing cuts speech off.
+- Music is not part of this change.
+
+### Ending early
+
+The stock three-button dialog is a bottom sheet in the app's own pattern.
+It has a title, one line of copy with the right singular or plural ("You've done 1 minute. Log it to your yoga quest?" or "... 6 minutes. Log them ..."), a primary "Log 1 min and end", a secondary "End without logging" and "Keep going" as a text button.
+Dismissing the sheet also keeps going, so the safe choice is the default.
+Under 30 seconds, where nothing can be logged, the sheet says so and offers only "End" and "Keep going".
+
 ## Weekly plan
 
 `GET /api/yoga/plan` and `PUT /api/yoga/plan` are owner-only like every authenticated route, and the plan lives in the `yoga_plans` table, one row per person.

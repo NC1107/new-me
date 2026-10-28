@@ -171,33 +171,125 @@ class HowToPhotosOf extends StatelessWidget {
   }
 }
 
+/// Opens a photo's file page, which the license's attribution links to.
+Future<void> openPhotoCredit(ImageCredit credit) async {
+  final uri = Uri.tryParse(credit.sourceUrl);
+  if (uri == null || uri.scheme != 'https') return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+/// A small whole photo with its credit under it, for the guided runner. The whole block opens the
+/// file page, so it is at least 44 points tall.
+class PoseThumb extends ConsumerWidget {
+  const PoseThumb({
+    super.key,
+    required this.url,
+    required this.name,
+    this.credit,
+    this.openOnTap,
+    this.width = 96,
+  });
+
+  final String url;
+  final String name;
+  final ImageCredit? credit;
+
+  /// Where tapping the photo goes when its credit is shown elsewhere.
+  final ImageCredit? openOnTap;
+  final double width;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final image = ref.watch(exerciseImageProvider(url));
+    final credit = this.credit;
+    final photo = Container(
+      width: width,
+      height: width * 3 / 4,
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(kRadiusField),
+        border: Border.all(color: kBorder, width: kBorderWidth),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(kRadiusField),
+        child: ColoredBox(
+          color: Colors.white,
+          child: switch (image) {
+            AsyncValue(:final value?) => Image.memory(
+              value,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
+            ),
+            AsyncValue(hasError: true) => const _PhotoPlaceholder(),
+            _ => const SizedBox.shrink(),
+          },
+        ),
+      ),
+    );
+    final child = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(image: true, label: name, excludeSemantics: true, child: photo),
+        if (credit != null) ...[
+          const SizedBox(height: 2),
+          SizedBox(
+            width: width,
+            child: Text(
+              credit.label,
+              style: const TextStyle(
+                fontFamily: kFontFamily,
+                fontSize: 11,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: kInkSecondary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+    if (credit == null) {
+      final target = openOnTap;
+      return target == null ? child : InkWell(onTap: () => openPhotoCredit(target), child: child);
+    }
+    return Semantics(
+      link: true,
+      label: '${credit.label}. Opens the photo page',
+      excludeSemantics: true,
+      onTap: () => openPhotoCredit(credit),
+      child: InkWell(onTap: () => openPhotoCredit(credit), child: child),
+    );
+  }
+}
+
 /// "Photo: author, license", a link to the photo's file page.
 class PhotoCredit extends StatelessWidget {
-  const PhotoCredit({super.key, required this.credit});
+  const PhotoCredit({super.key, required this.credit, this.plural = false});
 
   final ImageCredit credit;
 
-  Future<void> _open() async {
-    final uri = Uri.tryParse(credit.sourceUrl);
-    if (uri == null || uri.scheme != 'https') return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
+  /// "Photos:" for a credit that covers several photos.
+  final bool plural;
+
+  String get _text => plural ? credit.label.replaceFirst('Photo:', 'Photos:') : credit.label;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       link: true,
-      label: '${credit.label}. Opens the photo page',
+      label: '$_text. Opens the photo page',
       excludeSemantics: true,
-      onTap: _open,
+      onTap: () => openPhotoCredit(credit),
       child: InkWell(
-        onTap: _open,
+        onTap: () => openPhotoCredit(credit),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              credit.label,
+              _text,
               style: AppText.caption.copyWith(
                 color: kInkSecondary,
                 decoration: TextDecoration.underline,

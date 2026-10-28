@@ -94,6 +94,32 @@ void main() {
       expect(c.read(todayProvider).requireValue.data.day.points, 999);
     });
 
+    test('a refresh that loses to a replace leaves the newer value in the offline cache', () async {
+      final slow = Completer<void>();
+      var calls = 0;
+      final adapter = StubAdapter({
+        'GET /api/today': (_) async {
+          if (++calls == 2) await slow.future;
+          return StubResponse(200, todayJson(points: 100));
+        },
+      });
+      final c = _container(adapter);
+      final notifier = c.read(todayProvider.notifier);
+      await c.read(todayProvider.future);
+
+      final refresh = notifier.refresh();
+      await pumpEventQueue();
+      await notifier.replace(Today.fromJson(todayJson(points: 999)));
+      slow.complete();
+      await refresh;
+
+      final stored = await todayCache.read(
+        userId: testSession.userId,
+        baseUrl: testSession.baseUrl,
+      );
+      expect(stored!.data.day.points, 999);
+    });
+
     test('a response that arrives after dispose writes nothing and throws nothing', () async {
       final slow = Completer<void>();
       var calls = 0;

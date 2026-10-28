@@ -19,16 +19,20 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
   @override
   Future<Cached<T>> build() {
     ref.watch(apiClientProvider);
-    return _load();
+    return _load(++_generation);
   }
 
-  Future<Cached<T>> _load() async {
+  /// Loads and caches, writing the cache only while [generation] is still the newest, so a
+  /// slow fetch never stores an older value over a newer one.
+  Future<Cached<T>> _load(int generation) async {
     final session = ref.read(sessionProvider).session;
     final client = ref.read(apiClientProvider);
     if (session == null || client == null) throw StateError('Not signed in');
     try {
       final value = await fetch(client);
-      if (ref.mounted && ref.read(sessionProvider).session?.userId == session.userId) {
+      if (ref.mounted &&
+          generation == _generation &&
+          ref.read(sessionProvider).session?.userId == session.userId) {
         await cache.write(
           value,
           userId: session.userId,
@@ -49,7 +53,7 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
   Future<void> refresh() async {
     final generation = ++_generation;
     try {
-      final loaded = await _load();
+      final loaded = await _load(generation);
       if (ref.mounted && generation == _generation) state = AsyncData(loaded);
     } on Object catch (e, st) {
       if (ref.mounted && generation == _generation) state = AsyncError<Cached<T>>(e, st);

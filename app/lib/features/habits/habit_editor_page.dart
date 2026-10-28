@@ -341,20 +341,13 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
         ),
         const SizedBox(height: 20),
         const FieldLabel('Counts toward your day'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final w in HabitWorth.values)
-              _Pill(
-                label: w.label,
-                selected: _worth == w,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _worth = w);
-                },
-              ),
-          ],
+        Segmented<HabitWorth>(
+          options: [for (final w in HabitWorth.values) (w, w.label)],
+          selected: _worth,
+          onChanged: (w) {
+            HapticFeedback.selectionClick();
+            setState(() => _worth = w);
+          },
         ),
         const SizedBox(height: 6),
         Text(

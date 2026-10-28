@@ -728,6 +728,16 @@ All additive; the formulas, labels and citations are in `docs/design-v8.md`.
 - `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
 - `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
 
+### Endpoints, v10 additions
+
+All additive; the reasons are in `docs/design-v10.md`.
+
+- Habits carry `points` (0, 10, 25 or 50, default 25) on `GET/POST/PATCH /habits` and in Today's habit states; a due habit adds its points to the day's `maxBase` and its completed share to `basePoints`, replacing the flat habit bonus.
+- `GET /me` and `PATCH /me` carry `units` (`metric`, `imperial`, or null before it was chosen); goal paces accept 0.2 to 0.5 kg a week to lose and 0.05 to 1 to gain.
+- `schedule.firstNotificationOffsetMin` accepts 0 to 360.
+- `PUT /health/history {items}`: up to 200 readings for closed days up to ten years back, stored only where none exists and never rescored; answers `{stored, received}`.
+- Server-written text (target formulas, the protein goal reason, training reasons, the look-back push) follows the person's units.
+
 ### Endpoints, v9 additions
 
 All additive; the rules and citations are in `docs/design-v9.md`.
@@ -984,6 +994,11 @@ Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
 - `plan_polish` (primary key user + `local_date`, `facts_key`, `text` nullable, `attempted_at`): the row is the claim on the day's single Claude call and `text` the cached wording.
 - `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
 - The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
+
+#### Migrations 0015 and 0016 (v10)
+
+- `users.units` (null until chosen) and `habits.points` (0, 10, 25 or 50, default 25).
+- `first_notification_offset_min` may be up to 360.
 
 #### Migrations 0013 and 0014 (v9)
 

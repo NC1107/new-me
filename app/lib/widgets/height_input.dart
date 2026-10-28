@@ -124,7 +124,7 @@ class _HeightInputState extends State<HeightInput> {
               Expanded(
                 child: AppTextField(
                   controller: _feet,
-                  hint: 'ft',
+                  hint: '5',
                   semanticLabel: 'Height, feet',
                   keyboardType: TextInputType.number,
                   onChanged: (_) => _changed(),
@@ -134,17 +134,19 @@ class _HeightInputState extends State<HeightInput> {
                   ],
                 ),
               ),
+              const _Unit('ft'),
               const SizedBox(width: 12),
               Expanded(
                 child: AppTextField(
                   controller: _inches,
-                  hint: 'in',
+                  hint: '10',
                   semanticLabel: 'Height, inches',
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) => _changed(),
                   inputFormatters: [LengthLimitingTextInputFormatter(4)],
                 ),
               ),
+              const _Unit('in'),
             ],
           ),
           if (error != null) ...[
@@ -158,4 +160,19 @@ class _HeightInputState extends State<HeightInput> {
       ),
     );
   }
+}
+
+/// The unit beside a box, so a filled-in "5" still reads as feet.
+class _Unit extends StatelessWidget {
+  const _Unit(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Text(text, style: AppText.headline.copyWith(color: kInkSecondary)),
+    ),
+  );
 }

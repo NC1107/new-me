@@ -143,7 +143,7 @@ List<PlanGoal> planGoals(List<String> questKeys, bool wantsFood, TargetsReport? 
           _value(report, 'protein'),
           100,
           5,
-          'Per kilogram of your weight for your goal (ISSN and ACSM ranges).',
+          'For your weight and goal, from the ISSN and ACSM ranges.',
         ),
         'sleep' => goal(
           k,
@@ -246,11 +246,23 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
         ),
         if (goals == null)
           const SkeletonBlock(height: 200, radius: 16)
-        else
+        else ...[
           for (final (i, g) in goals.indexed) ...[
             if (i > 0) const SizedBox(height: 10),
             _GoalRow(goal: g, onLess: () => _change(i, -1), onMore: () => _change(i, 1)),
           ],
+          if (s.wantsFood && !goals.any((g) => g.key == 'calories')) ...[
+            const SizedBox(height: 10),
+            AppCard(
+              color: kSunken,
+              child: Text(
+                'Calories are worked out once Apple Health has about five days of steps, from '
+                'your resting energy and how active you are. They appear in Me > Targets.',
+                style: AppText.caption.copyWith(color: kInkSecondary),
+              ),
+            ),
+          ],
+        ],
         if (s.error != null) StepError(s.error!),
         const SizedBox(height: 12),
         const Text('General guidance, not medical advice.', style: AppText.caption),

@@ -221,7 +221,7 @@ void main() {
       await app.tap(find.text('Daily goals'));
 
       await app.tap(find.text('Sleep'));
-      await app.tap(find.text('8h'));
+      await app.tap(find.text('8 h'));
       await app.tap(find.text('DONE'));
       await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {

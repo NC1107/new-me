@@ -39,7 +39,7 @@ String _minutes(int v) => '$v min';
 String _sleep(int minutes) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  return m == 0 ? '${h}h' : '${h}h ${m}m';
+  return m == 0 ? '$h h' : '$h h $m min';
 }
 
 const _four = ['Casual', 'Regular', 'Serious', 'Intense'];

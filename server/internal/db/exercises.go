@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -19,10 +20,12 @@ const (
 	LoadExternal   = "external"
 )
 
-// Exercise kinds. Stretches belong to mobility sessions and never to strength plans or counts.
+// Exercise kinds. Stretches belong to mobility sessions and yoga poses to yoga flows; neither
+// ever enters strength plans or counts.
 const (
 	KindStrength = "strength"
 	KindStretch  = "stretch"
+	KindYoga     = "yoga"
 )
 
 // Muscles and Equipment are the fixed vocabularies the exercises table accepts.
@@ -54,25 +57,51 @@ type Exercise struct {
 	Steps  []string
 	Cues   []string
 	Images []string
-	// Kind is KindStrength or KindStretch; PerSide marks a stretch done once on each side.
+	// Kind is KindStrength, KindStretch or KindYoga; PerSide marks a hold done once on each side.
 	Kind    string
 	PerSide bool
+	// The rest is set for yoga poses only: names, library group, what the pose works, how long to
+	// hold it, cautions, and one credit per photo in the order of Images.
+	Sanskrit     string
+	PoseGroup    string
+	Effect       string
+	HoldNote     string
+	Cautions     []string
+	ImageCredits []ImageCredit
 }
 
-// Stretch reports whether the exercise is a stretch rather than a strength exercise.
-func (e Exercise) Stretch() bool { return e.Kind == KindStretch }
+// ImageCredit is the attribution a Creative Commons photo requires.
+type ImageCredit struct {
+	Author     string `json:"author"`
+	License    string `json:"license"`
+	LicenseURL string `json:"licenseUrl"`
+	SourceURL  string `json:"sourceUrl"`
+}
+
+// Stretch reports whether the exercise is a mobility or yoga hold rather than a strength
+// exercise, which is what keeps it out of plans and weekly set counts.
+func (e Exercise) Stretch() bool { return e.Kind != KindStrength }
+
+// Yoga reports whether the exercise is a yoga pose.
+func (e Exercise) Yoga() bool { return e.Kind == KindYoga }
 
 // Custom reports whether the exercise belongs to a person rather than the catalog.
 func (e Exercise) Custom() bool { return e.UserID != nil }
 
 const exerciseColumns = `id, key, user_id, name, primary_muscles, secondary_muscles, measure, load,
-	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position, steps, cues, images, kind, per_side`
+	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position, steps, cues, images, kind, per_side,
+	COALESCE(sanskrit, ''), COALESCE(pose_group, ''), COALESCE(effect, ''), COALESCE(hold_note, ''), cautions, image_credits`
 
 func scanExercise(row pgx.Row) (Exercise, error) {
 	var e Exercise
+	var credits []byte
 	err := row.Scan(&e.ID, &e.Key, &e.UserID, &e.Name, &e.PrimaryMuscles, &e.SecondaryMuscles, &e.Measure,
-		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position, &e.Steps, &e.Cues, &e.Images, &e.Kind, &e.PerSide)
-	return e, err
+		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position, &e.Steps, &e.Cues, &e.Images, &e.Kind, &e.PerSide,
+		&e.Sanskrit, &e.PoseGroup, &e.Effect, &e.HoldNote, &e.Cautions, &credits)
+	if err != nil {
+		return e, err
+	}
+	return e, json.Unmarshal(credits, &e.ImageCredits)
 }
 
 // ListExercises returns the catalog and the person's live custom exercises in catalog order,

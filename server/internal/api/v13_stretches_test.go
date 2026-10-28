@@ -14,7 +14,7 @@ func TestCatalogCarriesKindAndPerSide(t *testing.T) {
 	for i := 0; i < got.length("exercises"); i++ {
 		p := fmt.Sprintf("exercises.%d.", i)
 		kind := got.str(p + "kind")
-		if kind != "strength" && kind != "stretch" {
+		if kind != "strength" && kind != "stretch" && kind != "yoga" {
 			t.Fatalf("%s has kind %q", got.str(p+"key"), kind)
 		}
 		if kind == "stretch" {

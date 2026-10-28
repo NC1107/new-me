@@ -61,6 +61,11 @@ func TestWriteV9Contract(t *testing.T) {
 	write("training_progress", h.get("/api/training/progress", nick.Token).expect(http.StatusOK))
 	write("lookback_lifts", h.get("/api/lookback?month=2026-11", nick.Token).expect(http.StatusOK))
 
+	write("yoga_plan_none", h.get("/api/yoga/plan", nick.Token).expect(http.StatusOK))
+	h.put("/api/yoga/plan", nick.Token, obj{"daysPerWeek": 3, "flowMinutes": 10}).expect(http.StatusOK)
+	h.logActivity(nick, "yoga", "minutes", 10).expect(http.StatusCreated)
+	write("yoga_plan", h.get("/api/yoga/plan", nick.Token).expect(http.StatusOK))
+
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	write("training_today_rest", h.get("/api/training/today", nick.Token).expect(http.StatusOK))
 }

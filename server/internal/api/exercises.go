@@ -63,11 +63,35 @@ type exerciseJSON struct {
 	Steps            []string     `json:"steps"`
 	Cues             []string     `json:"cues"`
 	ImageURLs        []string     `json:"imageUrls"`
+	Pose             *poseJSON    `json:"pose"`
 	Best             *bestJSON    `json:"best"`
 	MaxTest          *maxTestJSON `json:"maxTest"`
 }
 
+// poseJSON is what a yoga pose has beyond a how-to; absent for every other exercise.
+type poseJSON struct {
+	Sanskrit     string           `json:"sanskrit"`
+	Group        string           `json:"group"`
+	Effect       string           `json:"effect"`
+	HoldNote     string           `json:"holdNote"`
+	Cautions     []string         `json:"cautions"`
+	ImageCredits []db.ImageCredit `json:"imageCredits"`
+}
+
 func toExerciseJSON(e db.Exercise) exerciseJSON {
+	out := baseExerciseJSON(e)
+	if e.Yoga() {
+		credits := e.ImageCredits
+		if credits == nil {
+			credits = []db.ImageCredit{}
+		}
+		out.Pose = &poseJSON{Sanskrit: e.Sanskrit, Group: e.PoseGroup, Effect: e.Effect, HoldNote: e.HoldNote,
+			Cautions: nonNil(e.Cautions), ImageCredits: credits}
+	}
+	return out
+}
+
+func baseExerciseJSON(e db.Exercise) exerciseJSON {
 	return exerciseJSON{Key: e.Key, Name: e.Name, PrimaryMuscles: nonNil(e.PrimaryMuscles),
 		SecondaryMuscles: nonNil(e.SecondaryMuscles), Measure: e.Measure, Load: e.Load,
 		Equipment: nonNil(e.Equipment), EasierKey: optString(e.EasierKey), HarderKey: optString(e.HarderKey),

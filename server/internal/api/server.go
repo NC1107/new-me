@@ -229,6 +229,8 @@ func (s *Server) Router() http.Handler {
 		r.With(s.settleAfter).Post("/api/training/sessions/{id}/complete", s.handleCompleteSession)
 		r.Get("/api/training/progress", s.handleTrainingProgress)
 		r.Get("/api/training/history", s.handleTrainingHistory)
+		r.Get("/api/yoga/plan", s.handleGetYogaPlan)
+		r.Put("/api/yoga/plan", s.handlePutYogaPlan)
 		r.Get("/api/exercises/{key}/history", s.handleExerciseHistory)
 		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)

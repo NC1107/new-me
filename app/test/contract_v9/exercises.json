@@ -31,6 +31,7 @@
       "measure": "reps",
       "name": "Incline push-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "chest"
       ],
@@ -66,6 +67,7 @@
       "measure": "reps",
       "name": "Push-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "chest"
       ],
@@ -102,6 +104,7 @@
       "measure": "reps",
       "name": "Decline push-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "chest",
         "shoulders"
@@ -141,6 +144,7 @@
       "measure": "reps",
       "name": "Band-assisted pull-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -174,6 +178,7 @@
       "measure": "reps",
       "name": "Negative pull-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -215,6 +220,7 @@
       "measure": "reps",
       "name": "Pull-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -252,6 +258,7 @@
       "measure": "reps",
       "name": "Chin-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back",
         "biceps"
@@ -287,6 +294,7 @@
       "measure": "reps",
       "name": "Inverted row",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -320,6 +328,7 @@
       "measure": "seconds",
       "name": "Dead hang",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "forearms"
       ],
@@ -357,6 +366,7 @@
       "measure": "reps",
       "name": "Bench dip",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "triceps"
       ],
@@ -394,6 +404,7 @@
       "measure": "reps",
       "name": "Dip",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "triceps",
         "chest"
@@ -429,6 +440,7 @@
       "measure": "reps",
       "name": "Air squat",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads"
       ],
@@ -460,6 +472,7 @@
       "measure": "reps",
       "name": "Split squat",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -494,6 +507,7 @@
       "measure": "reps",
       "name": "Bulgarian split squat",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -529,6 +543,7 @@
       "measure": "reps",
       "name": "Lunge",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -566,6 +581,7 @@
       "measure": "reps",
       "name": "Step-up",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -599,6 +615,7 @@
       "measure": "reps",
       "name": "Glute bridge",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "glutes"
       ],
@@ -633,6 +650,7 @@
       "measure": "reps",
       "name": "Single-leg glute bridge",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "glutes"
       ],
@@ -665,6 +683,7 @@
       "measure": "reps",
       "name": "Good morning",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "hamstrings"
       ],
@@ -697,6 +716,7 @@
       "measure": "reps",
       "name": "Calf raise",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "calves"
       ],
@@ -735,6 +755,7 @@
       "measure": "seconds",
       "name": "Plank",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "core"
       ],
@@ -769,6 +790,7 @@
       "measure": "seconds",
       "name": "Side plank",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "core"
       ],
@@ -799,6 +821,7 @@
       "measure": "seconds",
       "name": "Hollow hold",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "core"
       ],
@@ -828,6 +851,7 @@
       "measure": "reps",
       "name": "Burpee",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "chest"
@@ -866,6 +890,7 @@
       "measure": "reps",
       "name": "Goblet squat",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -903,6 +928,7 @@
       "measure": "reps",
       "name": "Dumbbell Romanian deadlift",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "hamstrings",
         "glutes"
@@ -941,6 +967,7 @@
       "measure": "reps",
       "name": "Dumbbell bench press",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "chest"
       ],
@@ -984,6 +1011,7 @@
       "measure": "reps",
       "name": "Dumbbell row",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -1020,6 +1048,7 @@
       "measure": "reps",
       "name": "Dumbbell overhead press",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1056,6 +1085,7 @@
       "measure": "reps",
       "name": "Lateral raise",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1090,6 +1120,7 @@
       "measure": "reps",
       "name": "Biceps curl",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "biceps"
       ],
@@ -1126,6 +1157,7 @@
       "measure": "reps",
       "name": "Triceps extension",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "triceps"
       ],
@@ -1160,6 +1192,7 @@
       "measure": "reps",
       "name": "Barbell back squat",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -1198,6 +1231,7 @@
       "measure": "reps",
       "name": "Barbell deadlift",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "hamstrings",
         "glutes",
@@ -1238,6 +1272,7 @@
       "measure": "reps",
       "name": "Barbell bench press",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "chest"
       ],
@@ -1275,6 +1310,7 @@
       "measure": "reps",
       "name": "Barbell overhead press",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1309,6 +1345,7 @@
       "measure": "seconds",
       "name": "Hangboard hang",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "forearms"
       ],
@@ -1343,6 +1380,7 @@
       "measure": "seconds",
       "name": "Cat stretch",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back",
         "core"
@@ -1376,6 +1414,7 @@
       "measure": "seconds",
       "name": "Child's pose",
       "perSide": false,
+      "pose": null,
       "primaryMuscles": [
         "back"
       ],
@@ -1410,6 +1449,7 @@
       "measure": "seconds",
       "name": "Kneeling hip flexor stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "quads"
       ],
@@ -1443,6 +1483,7 @@
       "measure": "seconds",
       "name": "Seated hamstring stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "hamstrings"
       ],
@@ -1477,6 +1518,7 @@
       "measure": "seconds",
       "name": "Figure-four stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "glutes"
       ],
@@ -1509,6 +1551,7 @@
       "measure": "seconds",
       "name": "Knee across the body",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "glutes",
         "back"
@@ -1544,6 +1587,7 @@
       "measure": "seconds",
       "name": "One knee to chest",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "glutes",
         "back"
@@ -1579,6 +1623,7 @@
       "measure": "seconds",
       "name": "Side-lying quad stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "quads"
       ],
@@ -1611,6 +1656,7 @@
       "measure": "seconds",
       "name": "Wall calf stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "calves"
       ],
@@ -1643,6 +1689,7 @@
       "measure": "seconds",
       "name": "Standing trunk twist",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "back",
         "core"
@@ -1676,6 +1723,7 @@
       "measure": "seconds",
       "name": "Cross-body shoulder stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1710,6 +1758,7 @@
       "measure": "seconds",
       "name": "Triceps stretch",
       "perSide": true,
+      "pose": null,
       "primaryMuscles": [
         "triceps"
       ],
@@ -1721,6 +1770,1302 @@
         "Hold that elbow with your other hand.",
         "Gently pull the elbow back and toward the other side.",
         "Hold, then switch arms."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Spread your toes and press evenly through all four corners of each foot.",
+        "Keep your knees soft, not locked."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_mountain/images/0"
+      ],
+      "key": "yoga_mountain",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Mountain",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Builds standing posture and body awareness; lightly works the legs and core.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds, around 5 slow breaths.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tadasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Tadasana"
+      },
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "quads",
+        "calves"
+      ],
+      "steps": [
+        "Stand with your feet hip width apart and your weight even across both feet.",
+        "Let your arms hang by your sides with your palms facing forward.",
+        "Lengthen the crown of your head toward the ceiling and relax your shoulders away from your ears.",
+        "Breathe slowly and hold."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your knees over your ankles, not past your toes.",
+        "Let your weight sit in your heels."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_chair/images/0"
+      ],
+      "key": "yoga_chair",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Chair",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the thighs, glutes and back.",
+        "group": "standing",
+        "holdNote": "Hold 15 to 30 seconds; sit higher if your thighs burn before then.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Utkatasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Utkatasana"
+      },
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "back"
+      ],
+      "steps": [
+        "Stand with your feet hip width apart.",
+        "Bend your knees and sit your hips back as if lowering into a chair.",
+        "Raise your arms alongside your ears.",
+        "Keep your chest lifted, hold, then press through your feet to stand."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep the front knee in line with your second toe.",
+        "Lift your chest without arching your lower back."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_warrior_i/images/0"
+      ],
+      "key": "yoga_warrior_i",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Warrior I",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the legs; stretches the hip flexors and chest.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "OrenBochman",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Virabhadrasana_I_-_Warrior_Pose_I.jpg"
+          }
+        ],
+        "sanskrit": "Virabhadrasana I"
+      },
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "calves",
+        "shoulders"
+      ],
+      "steps": [
+        "Step one foot back about a leg's length and turn the back foot out slightly, heel down.",
+        "Bend the front knee over the ankle.",
+        "Square your hips toward the front as far as is comfortable.",
+        "Raise both arms overhead, hold, then step together and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Stack your shoulders over your hips, not leaning toward the front leg.",
+        "Keep the front knee pointing the way your toes point."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_warrior_ii/images/0"
+      ],
+      "key": "yoga_warrior_ii",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Warrior II",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the thighs and shoulders; stretches the inner thighs.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "lululemon athletica",
+            "license": "CC BY 2.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Virabhadrasana_II_-_Warrior_II_Pose.jpg"
+          }
+        ],
+        "sanskrit": "Virabhadrasana II"
+      },
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "shoulders",
+        "core"
+      ],
+      "steps": [
+        "Stand with your feet about a leg's length apart and turn your front foot out, back foot slightly in.",
+        "Bend the front knee over the ankle.",
+        "Stretch your arms out level with the floor and look over your front hand.",
+        "Hold, then straighten the leg and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep both legs straight but the knees unlocked.",
+        "Rest your hand on your shin, not on the knee joint."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_triangle/images/0"
+      ],
+      "key": "yoga_triangle",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Triangle",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses).",
+          "With glaucoma or severe high blood pressure, ask your provider first, because the head sits below the heart (NCCIH lists both among reasons to modify poses)."
+        ],
+        "effect": "Stretches the hamstrings, hips and side body.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Trikonasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Trikonasana"
+      },
+      "primaryMuscles": [
+        "hamstrings",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "core"
+      ],
+      "steps": [
+        "Stand with your feet about a leg's length apart, front foot turned out.",
+        "Reach your front arm forward, then tip from your hip and rest that hand on your shin or a block.",
+        "Stretch your top arm toward the ceiling.",
+        "Hold, then come up on an inhale and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep the front knee over the ankle.",
+        "Turn your chest toward the ceiling."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_side_angle/images/0"
+      ],
+      "key": "yoga_side_angle",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Extended side angle",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the legs; stretches the side body and groin.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Utthita-Parshvakonasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Utthita Parsvakonasana"
+      },
+      "primaryMuscles": [
+        "quads",
+        "core"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "shoulders"
+      ],
+      "steps": [
+        "Start in Warrior II with the front knee bent.",
+        "Lower your front forearm to your front thigh, or your hand to a block.",
+        "Reach the other arm long over your ear.",
+        "Hold, then return to Warrior II and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Fix your eyes on one still point.",
+        "Press the foot and leg into each other."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_tree/images/0"
+      ],
+      "key": "yoga_tree",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Tree",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Trains balance and the standing leg and hip.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Vriksasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Vrksasana"
+      },
+      "primaryMuscles": [
+        "glutes",
+        "core"
+      ],
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "steps": [
+        "Stand tall and shift your weight onto one foot.",
+        "Place the other foot on your calf or inner thigh, never on the knee.",
+        "Bring your palms together at your chest, or raise them overhead.",
+        "Hold, then lower the foot and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Bend your knees rather than rounding hard.",
+        "Come up slowly to avoid light-headedness."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_standing_forward_fold/images/0"
+      ],
+      "key": "yoga_standing_forward_fold",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Standing forward fold",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With glaucoma or severe high blood pressure, ask your provider first, because the head sits below the heart (NCCIH lists both among reasons to modify poses).",
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "Stretches the hamstrings, calves and back.",
+        "group": "standing",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Nicholas A. Tonelli",
+            "license": "CC BY 2.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Flickr_-_Nicholas_T_-_Uttanasana.jpg"
+          }
+        ],
+        "sanskrit": "Uttanasana"
+      },
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "calves"
+      ],
+      "steps": [
+        "Stand with your feet hip width apart.",
+        "Hinge forward from your hips with a long spine and bend your knees as much as you need.",
+        "Let your head and arms hang, or hold opposite elbows.",
+        "Hold, then roll up slowly with your knees bent."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your front knee over the ankle.",
+        "Tuck your tailbone slightly so your lower back stays long."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_low_lunge/images/0"
+      ],
+      "key": "yoga_low_lunge",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Low lunge",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Poor balance can make this unsafe; keep a wall or chair within reach (NCCIH lists balance issues among reasons to modify poses)."
+        ],
+        "effect": "Stretches the hip flexors and thighs.",
+        "group": "kneeling",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "Julija Zora Mazover",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:%C4%80%C3%B1janey%C4%81sana,_Julija_Zora_Mazover,_2023.jpg"
+          }
+        ],
+        "sanskrit": "Anjaneyasana"
+      },
+      "primaryMuscles": [
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "steps": [
+        "From hands and knees, step one foot forward between your hands.",
+        "Lower your back knee to the floor, on a folded mat if you like.",
+        "Sink your hips forward and down, then raise your torso and arms.",
+        "Hold, then step back and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Move slowly, one breath per movement.",
+        "Press the floor away so your shoulder blades spread."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_cat_cow/images/0",
+        "/api/exercises/yoga_cat_cow/images/1"
+      ],
+      "key": "yoga_cat_cow",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Cat-cow",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses).",
+          "Rest on your forearms if your wrists complain."
+        ],
+        "effect": "Mobilizes the spine; gently works the core.",
+        "group": "kneeling",
+        "holdNote": "Move for about 30 seconds, around 5 breaths each way.",
+        "imageCredits": [
+          {
+            "author": "Mary O'Neill",
+            "license": "Public domain",
+            "licenseUrl": "",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yoga_at_Your_Park_-_Bidalasana.jpg"
+          },
+          {
+            "author": "Mary O'Neill",
+            "license": "Public domain",
+            "licenseUrl": "",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yoga_at_Your_Park_-_Bitilasana.jpg"
+          }
+        ],
+        "sanskrit": "Marjaryasana-Bitilasana"
+      },
+      "primaryMuscles": [
+        "back",
+        "core"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Start on your hands and knees with your wrists under your shoulders and knees under your hips.",
+        "Inhale and let your belly drop as you lift your chest and tailbone (cow).",
+        "Exhale and round your back toward the ceiling, tucking your chin (cat).",
+        "Move between the two with your breath."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Put a folded towel behind your knees if they complain.",
+        "Let your shoulders sink away from your ears."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_childs/images/0"
+      ],
+      "key": "yoga_childs",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Child's pose",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "With glaucoma or severe high blood pressure, ask your provider first, because the head sits below the heart (NCCIH lists both among reasons to modify poses)."
+        ],
+        "effect": "Gently stretches the back, hips and thighs; a resting pose.",
+        "group": "kneeling",
+        "holdNote": "Hold 30 to 60 seconds; it is a resting pose, so longer is fine.",
+        "imageCredits": [
+          {
+            "author": "Iveto",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Balasana.JPG"
+          }
+        ],
+        "sanskrit": "Balasana"
+      },
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "steps": [
+        "Kneel and sit your hips back toward your heels, knees apart if that is more comfortable.",
+        "Fold your torso forward and rest your forehead on the floor.",
+        "Let your arms lie forward or alongside your legs.",
+        "Breathe into your back and hold."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Spread your fingers and press through your whole hand.",
+        "Bend your knees to keep your back long rather than chasing straight legs."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_downward_dog/images/0"
+      ],
+      "key": "yoga_downward_dog",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Downward dog",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With glaucoma or severe high blood pressure, ask your provider first, because the head sits below the heart (NCCIH lists both among reasons to modify poses).",
+          "Take weight off your wrists by pressing into your fingertips, or use child's pose instead if they hurt."
+        ],
+        "effect": "Stretches the hamstrings, calves and back; loads the shoulders and arms.",
+        "group": "kneeling",
+        "holdNote": "Hold about 30 seconds, around 5 breaths.",
+        "imageCredits": [
+          {
+            "author": "Iveto",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Downward-Facing-Dog.JPG"
+          }
+        ],
+        "sanskrit": "Adho Mukha Svanasana"
+      },
+      "primaryMuscles": [
+        "shoulders",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "calves",
+        "back"
+      ],
+      "steps": [
+        "Start on your hands and knees, hands shoulder width apart.",
+        "Tuck your toes and lift your hips up and back.",
+        "Press the floor away and lengthen your spine, bending your knees as much as you need.",
+        "Hold, then lower your knees to rest."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your elbows bent and close to your ribs.",
+        "Keep your neck long, looking down or slightly forward."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_cobra/images/0"
+      ],
+      "key": "yoga_cobra",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Cobra",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the back and stretches the front of the chest and abdomen.",
+        "group": "prone",
+        "holdNote": "Hold about 15 to 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bhujangasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Bhujangasana"
+      },
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "shoulders"
+      ],
+      "steps": [
+        "Lie face down with your palms under your shoulders and elbows tucked in.",
+        "Press your pubic bone and the tops of your feet into the floor.",
+        "Peel your head and chest up, using your back muscles more than your hands.",
+        "Hold, then lower down slowly."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your shoulders away from your ears.",
+        "Stop where you feel a gentle arch, never a pinch."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_sphinx/images/0"
+      ],
+      "key": "yoga_sphinx",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Sphinx",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "A gentler back extension than cobra; stretches the front of the torso.",
+        "group": "prone",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Christy Collins",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:IMG_0549_2_Sphinx.jpg"
+          }
+        ],
+        "sanskrit": "Salamba Bhujangasana"
+      },
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "steps": [
+        "Lie face down and bring your forearms to the floor with your elbows under your shoulders.",
+        "Press your forearms down and lift your chest.",
+        "Keep your legs relaxed and your hips on the floor.",
+        "Hold, breathing slowly, then lower down."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Lift only as high as stays comfortable in your lower back.",
+        "Reach your arms back and your legs long."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_locust/images/0"
+      ],
+      "key": "yoga_locust",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Locust",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "Strengthens the back and glutes.",
+        "group": "prone",
+        "holdNote": "Hold 10 to 15 seconds.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Salabhasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Salabhasana"
+      },
+      "primaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "steps": [
+        "Lie face down with your arms by your sides and your forehead on the floor.",
+        "Lift your head, chest and arms a little off the floor, or lift your legs one at a time.",
+        "Keep your neck long.",
+        "Hold, then lower with control."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Squeeze your glutes rather than arching your lower back.",
+        "Keep your neck relaxed and your gaze toward the ceiling."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_bridge/images/0"
+      ],
+      "key": "yoga_bridge",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Bridge",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses).",
+          "In pregnancy, avoid long periods lying on your back (NCCIH).",
+          "Do not turn your head while your hips are lifted."
+        ],
+        "effect": "Strengthens the glutes and hamstrings; stretches the front of the hips.",
+        "group": "supine",
+        "holdNote": "Hold 15 to 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Joseph RENGER",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dvipada_pitham.jpg"
+          }
+        ],
+        "sanskrit": "Setu Bandha Sarvangasana"
+      },
+      "primaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "core"
+      ],
+      "steps": [
+        "Lie on your back with your knees bent and your feet hip width apart, close to your hips.",
+        "Press your feet down and lift your hips.",
+        "Keep your arms by your sides and your knees over your ankles.",
+        "Hold, then lower your spine down one bone at a time."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Sit on a cushion until your knees are lower than your hips.",
+        "Switch which shin is in front halfway."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_easy/images/0"
+      ],
+      "key": "yoga_easy",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Easy pose",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses).",
+          "Never force your knees down into a deeper cross-legged or lotus position; Cramer et al. found lotus variations among the postures reported in adverse event cases."
+        ],
+        "effect": "A comfortable base for breathing and for the start or end of a flow.",
+        "group": "seated",
+        "holdNote": "Hold 30 to 60 seconds.",
+        "imageCredits": [
+          {
+            "author": "Joseph RENGER",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sukkasana.jpg"
+          }
+        ],
+        "sanskrit": "Sukhasana"
+      },
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "steps": [
+        "Sit on a folded blanket with your legs loosely crossed at the shins.",
+        "Rest your hands on your knees.",
+        "Lengthen your spine and relax your shoulders.",
+        "Breathe slowly."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Sit on a folded blanket if your lower back rounds.",
+        "Keep your thighs gently pressing down."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_staff/images/0"
+      ],
+      "key": "yoga_staff",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Staff",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "Builds sitting posture; prepares for seated folds.",
+        "group": "seated",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Thamizhpparithi Maari",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:A_style_of_Dandasana.JPG"
+          }
+        ],
+        "sanskrit": "Dandasana"
+      },
+      "primaryMuscles": [
+        "core",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "quads"
+      ],
+      "steps": [
+        "Sit with your legs straight in front of you and your feet flexed.",
+        "Press your palms into the floor beside your hips.",
+        "Sit tall, lifting through the crown of your head.",
+        "Breathe and hold."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Sit on a folded blanket to ease your hips.",
+        "Never push your knees down with your hands."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_butterfly/images/0"
+      ],
+      "key": "yoga_butterfly",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Butterfly",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses)."
+        ],
+        "effect": "Stretches the inner thighs and hips.",
+        "group": "seated",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Jfbongarçon",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Baddha_Ko%E1%B9%87%C4%81sana-bound_angle.jpg"
+          }
+        ],
+        "sanskrit": "Baddha Konasana"
+      },
+      "primaryMuscles": [
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "back"
+      ],
+      "steps": [
+        "Sit tall and bring the soles of your feet together, knees falling out to the sides.",
+        "Hold your feet or ankles.",
+        "Lengthen your spine and let your knees lower on their own.",
+        "Hold, breathing slowly."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Lead with your chest, not your head.",
+        "Keep a soft bend in your knees to protect your hamstrings."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_seated_forward_fold/images/0"
+      ],
+      "key": "yoga_seated_forward_fold",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Seated forward fold",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses)."
+        ],
+        "effect": "Stretches the hamstrings and back.",
+        "group": "seated",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Thamizhpparithi Maari",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:An_art_of_Paschimottanasana_1.JPG"
+          }
+        ],
+        "sanskrit": "Paschimottanasana"
+      },
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "calves"
+      ],
+      "steps": [
+        "Sit with your legs straight and your knees slightly bent if needed.",
+        "Hinge forward from your hips with a long spine.",
+        "Hold your shins, ankles or feet, or loop a strap around your feet.",
+        "Hold, then roll up slowly."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Lengthen your spine on each inhale and twist on each exhale.",
+        "Keep both sit bones on the floor."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_seated_twist/images/0"
+      ],
+      "key": "yoga_seated_twist",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Seated twist",
+      "perSide": true,
+      "pose": {
+        "cautions": [
+          "With lumbar spine disease, ask your provider first (NCCIH lists it among reasons to modify poses).",
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses)."
+        ],
+        "effect": "Rotates and stretches the spine and outer hip.",
+        "group": "seated",
+        "holdNote": "Hold about 30 seconds per side.",
+        "imageCredits": [
+          {
+            "author": "Kennguru",
+            "license": "CC BY 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ardha-Matsyendrasana_Yoga-Asana_Nina-Mel.jpg"
+          }
+        ],
+        "sanskrit": "Ardha Matsyendrasana"
+      },
+      "primaryMuscles": [
+        "back",
+        "core"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "steps": [
+        "Sit with your legs straight, then cross one foot over the opposite thigh with the knee up.",
+        "Hug that knee with the opposite arm, or place your elbow outside it.",
+        "Press the other hand into the floor behind you and sit tall.",
+        "Turn gently from your ribs, hold, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your head and tailbone on the floor.",
+        "Hold your shins instead of your feet if your shoulders strain."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_happy_baby/images/0"
+      ],
+      "key": "yoga_happy_baby",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Happy baby",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "In pregnancy, avoid long periods lying on your back (NCCIH).",
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses)."
+        ],
+        "effect": "Stretches the inner thighs, hips and lower back.",
+        "group": "supine",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Christy Collins",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:IMG_0377_2_Happy_Baby.jpg"
+          }
+        ],
+        "sanskrit": "Ananda Balasana"
+      },
+      "primaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "back"
+      ],
+      "steps": [
+        "Lie on your back and bring your knees toward your armpits.",
+        "Hold the outsides of your feet or your shins.",
+        "Let your knees open wide and gently pull them toward the floor.",
+        "Rock slightly from side to side if it feels good."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Hold under the knees rather than pulling on the kneecaps.",
+        "Rock gently side to side to massage your lower back if it feels good."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_knees_to_chest/images/0"
+      ],
+      "key": "yoga_knees_to_chest",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Knees to chest",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "In pregnancy, avoid long periods lying on your back (NCCIH).",
+          "With a knee or other preexisting injury, shorten the range or skip it (NCCIH lists preexisting injuries among reasons to modify poses)."
+        ],
+        "effect": "Gently stretches the lower back and hips.",
+        "group": "supine",
+        "holdNote": "Hold about 30 seconds.",
+        "imageCredits": [
+          {
+            "author": "Thamizhpparithi Maari",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:A_style_of_pavanamuktasana_1.JPG"
+          }
+        ],
+        "sanskrit": "Apanasana"
+      },
+      "primaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "steps": [
+        "Lie on your back and draw both knees toward your chest.",
+        "Hold your shins or hug your knees with both arms.",
+        "Keep your head and shoulders relaxed on the floor.",
+        "Breathe slowly and hold."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Put a folded blanket under your hips if it is comfortable.",
+        "Come out by bending your knees and rolling to one side."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_legs_up_wall/images/0"
+      ],
+      "key": "yoga_legs_up_wall",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Legs up the wall",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "With glaucoma or severe high blood pressure, ask your provider first, because the head sits below the heart (NCCIH lists both among reasons to modify poses).",
+          "In pregnancy, avoid long periods lying on your back (NCCIH)."
+        ],
+        "effect": "A restful pose that eases tired legs.",
+        "group": "supine",
+        "holdNote": "Hold 1 to 3 minutes where time allows; the New Me flow holds it for its rest time.",
+        "imageCredits": [
+          {
+            "author": "Shixart1985",
+            "license": "CC BY 2.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Woman_reading_a_book._Legs_up_the_wall_pose.jpg"
+          }
+        ],
+        "sanskrit": "Viparita Karani (supported)"
+      },
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "steps": [
+        "Sit sideways beside a wall with one hip touching it.",
+        "Swing your legs up the wall as you lower your back to the floor.",
+        "Shuffle your hips close to the wall, bending your knees if your hamstrings pull.",
+        "Rest your arms by your sides and breathe slowly."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Put a pillow under your knees if your lower back is tight.",
+        "Cover up if you cool down."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/yoga_corpse/images/0"
+      ],
+      "key": "yoga_corpse",
+      "kind": "yoga",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Corpse",
+      "perSide": false,
+      "pose": {
+        "cautions": [
+          "In pregnancy, avoid long periods lying on your back (NCCIH)."
+        ],
+        "effect": "Rest to finish a practice.",
+        "group": "supine",
+        "holdNote": "Rest 1 minute or longer.",
+        "imageCredits": [
+          {
+            "author": "Joseph RENGER",
+            "license": "CC BY-SA 3.0",
+            "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+            "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shavasana.jpg"
+          }
+        ],
+        "sanskrit": "Savasana"
+      },
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Lie on your back with your legs hip width apart and your feet falling open.",
+        "Rest your arms a little away from your sides with your palms up.",
+        "Close your eyes and let your body feel heavy.",
+        "Breathe naturally and let go of effort."
       ]
     }
   ],

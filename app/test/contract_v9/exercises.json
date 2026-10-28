@@ -25,10 +25,12 @@
         "/api/exercises/incline_push_up/images/1"
       ],
       "key": "incline_push_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Incline push-up",
+      "perSide": false,
       "primaryMuscles": [
         "chest"
       ],
@@ -58,10 +60,12 @@
         "/api/exercises/push_up/images/1"
       ],
       "key": "push_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Push-up",
+      "perSide": false,
       "primaryMuscles": [
         "chest"
       ],
@@ -92,10 +96,12 @@
         "/api/exercises/decline_push_up/images/1"
       ],
       "key": "decline_push_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Decline push-up",
+      "perSide": false,
       "primaryMuscles": [
         "chest",
         "shoulders"
@@ -129,10 +135,12 @@
         "/api/exercises/band_pull_up/images/1"
       ],
       "key": "band_pull_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Band-assisted pull-up",
+      "perSide": false,
       "primaryMuscles": [
         "back"
       ],
@@ -160,10 +168,12 @@
       "harderKey": "pull_up",
       "imageUrls": [],
       "key": "negative_pull_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Negative pull-up",
+      "perSide": false,
       "primaryMuscles": [
         "back"
       ],
@@ -195,6 +205,7 @@
         "/api/exercises/pull_up/images/1"
       ],
       "key": "pull_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": {
         "date": "2026-11-02",
@@ -203,6 +214,7 @@
       },
       "measure": "reps",
       "name": "Pull-up",
+      "perSide": false,
       "primaryMuscles": [
         "back"
       ],
@@ -234,10 +246,12 @@
         "/api/exercises/chin_up/images/1"
       ],
       "key": "chin_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Chin-up",
+      "perSide": false,
       "primaryMuscles": [
         "back",
         "biceps"
@@ -267,10 +281,12 @@
         "/api/exercises/inverted_row/images/1"
       ],
       "key": "inverted_row",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Inverted row",
+      "perSide": false,
       "primaryMuscles": [
         "back"
       ],
@@ -298,10 +314,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "dead_hang",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "seconds",
       "name": "Dead hang",
+      "perSide": false,
       "primaryMuscles": [
         "forearms"
       ],
@@ -333,10 +351,12 @@
         "/api/exercises/bench_dip/images/1"
       ],
       "key": "bench_dip",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Bench dip",
+      "perSide": false,
       "primaryMuscles": [
         "triceps"
       ],
@@ -368,10 +388,12 @@
         "/api/exercises/dip/images/1"
       ],
       "key": "dip",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Dip",
+      "perSide": false,
       "primaryMuscles": [
         "triceps",
         "chest"
@@ -401,10 +423,12 @@
         "/api/exercises/air_squat/images/1"
       ],
       "key": "air_squat",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Air squat",
+      "perSide": false,
       "primaryMuscles": [
         "quads"
       ],
@@ -430,10 +454,12 @@
       "harderKey": "bulgarian_split_squat",
       "imageUrls": [],
       "key": "split_squat",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Split squat",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -462,10 +488,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "bulgarian_split_squat",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Bulgarian split squat",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -495,10 +523,12 @@
         "/api/exercises/lunge/images/1"
       ],
       "key": "lunge",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Lunge",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -530,10 +560,12 @@
         "/api/exercises/step_up/images/1"
       ],
       "key": "step_up",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Step-up",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -561,10 +593,12 @@
         "/api/exercises/glute_bridge/images/1"
       ],
       "key": "glute_bridge",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Glute bridge",
+      "perSide": false,
       "primaryMuscles": [
         "glutes"
       ],
@@ -593,10 +627,12 @@
         "/api/exercises/single_leg_glute_bridge/images/1"
       ],
       "key": "single_leg_glute_bridge",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Single-leg glute bridge",
+      "perSide": false,
       "primaryMuscles": [
         "glutes"
       ],
@@ -623,10 +659,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "good_morning",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Good morning",
+      "perSide": false,
       "primaryMuscles": [
         "hamstrings"
       ],
@@ -653,10 +691,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "calf_raise",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Calf raise",
+      "perSide": false,
       "primaryMuscles": [
         "calves"
       ],
@@ -689,10 +729,12 @@
         "/api/exercises/plank/images/1"
       ],
       "key": "plank",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "seconds",
       "name": "Plank",
+      "perSide": false,
       "primaryMuscles": [
         "core"
       ],
@@ -721,10 +763,12 @@
         "/api/exercises/side_plank/images/1"
       ],
       "key": "side_plank",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "seconds",
       "name": "Side plank",
+      "perSide": false,
       "primaryMuscles": [
         "core"
       ],
@@ -749,10 +793,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "hollow_hold",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "seconds",
       "name": "Hollow hold",
+      "perSide": false,
       "primaryMuscles": [
         "core"
       ],
@@ -776,10 +822,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "burpee",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "reps",
       "name": "Burpee",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "chest"
@@ -812,10 +860,12 @@
         "/api/exercises/goblet_squat/images/1"
       ],
       "key": "goblet_squat",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Goblet squat",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -847,10 +897,12 @@
         "/api/exercises/db_romanian_deadlift/images/1"
       ],
       "key": "db_romanian_deadlift",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Dumbbell Romanian deadlift",
+      "perSide": false,
       "primaryMuscles": [
         "hamstrings",
         "glutes"
@@ -883,10 +935,12 @@
         "/api/exercises/db_bench_press/images/1"
       ],
       "key": "db_bench_press",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Dumbbell bench press",
+      "perSide": false,
       "primaryMuscles": [
         "chest"
       ],
@@ -924,10 +978,12 @@
         "/api/exercises/db_row/images/1"
       ],
       "key": "db_row",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Dumbbell row",
+      "perSide": false,
       "primaryMuscles": [
         "back"
       ],
@@ -958,10 +1014,12 @@
         "/api/exercises/db_overhead_press/images/1"
       ],
       "key": "db_overhead_press",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Dumbbell overhead press",
+      "perSide": false,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -992,10 +1050,12 @@
         "/api/exercises/lateral_raise/images/1"
       ],
       "key": "lateral_raise",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Lateral raise",
+      "perSide": false,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1024,10 +1084,12 @@
         "/api/exercises/biceps_curl/images/1"
       ],
       "key": "biceps_curl",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Biceps curl",
+      "perSide": false,
       "primaryMuscles": [
         "biceps"
       ],
@@ -1058,10 +1120,12 @@
         "/api/exercises/triceps_extension/images/1"
       ],
       "key": "triceps_extension",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Triceps extension",
+      "perSide": false,
       "primaryMuscles": [
         "triceps"
       ],
@@ -1090,10 +1154,12 @@
         "/api/exercises/back_squat/images/1"
       ],
       "key": "back_squat",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Barbell back squat",
+      "perSide": false,
       "primaryMuscles": [
         "quads",
         "glutes"
@@ -1126,10 +1192,12 @@
         "/api/exercises/deadlift/images/1"
       ],
       "key": "deadlift",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Barbell deadlift",
+      "perSide": false,
       "primaryMuscles": [
         "hamstrings",
         "glutes",
@@ -1164,10 +1232,12 @@
         "/api/exercises/bench_press/images/1"
       ],
       "key": "bench_press",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Barbell bench press",
+      "perSide": false,
       "primaryMuscles": [
         "chest"
       ],
@@ -1199,10 +1269,12 @@
         "/api/exercises/overhead_press/images/1"
       ],
       "key": "overhead_press",
+      "kind": "strength",
       "load": "external",
       "maxTest": null,
       "measure": "reps",
       "name": "Barbell overhead press",
+      "perSide": false,
       "primaryMuscles": [
         "shoulders"
       ],
@@ -1231,10 +1303,12 @@
       "harderKey": null,
       "imageUrls": [],
       "key": "hangboard_hang",
+      "kind": "strength",
       "load": "bodyweight",
       "maxTest": null,
       "measure": "seconds",
       "name": "Hangboard hang",
+      "perSide": false,
       "primaryMuscles": [
         "forearms"
       ],
@@ -1246,6 +1320,407 @@
         "Step off the floor with your feet clear of the ground and your arms nearly straight.",
         "Keep your shoulders engaged, not shrugged.",
         "Hang for the planned time, then step down."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Push the floor away so your shoulder blades spread.",
+        "Keep the stretch gentle, never sharp."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/cat_stretch/images/0",
+        "/api/exercises/cat_stretch/images/1"
+      ],
+      "key": "cat_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Cat stretch",
+      "perSide": false,
+      "primaryMuscles": [
+        "back",
+        "core"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Get on your hands and knees, hands under your shoulders and knees under your hips.",
+        "Tuck your chin and let your head drop.",
+        "Pull your belly in and round your whole back toward the ceiling.",
+        "Hold, breathing slowly, then relax."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "If your knees complain, skip this one or put a folded towel behind them.",
+        "Let your shoulders sink away from your ears."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/childs_pose/images/0",
+        "/api/exercises/childs_pose/images/1"
+      ],
+      "key": "childs_pose",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Child's pose",
+      "perSide": false,
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "steps": [
+        "Start on your hands and knees and walk your hands forward.",
+        "Sit your hips back toward your heels.",
+        "Rest your forehead on the floor and let your arms lie relaxed.",
+        "Breathe into your back and hold."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Squeeze the glute of the back leg.",
+        "Do not arch your lower back."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/kneeling_hip_flexor_stretch/images/0",
+        "/api/exercises/kneeling_hip_flexor_stretch/images/1"
+      ],
+      "key": "kneeling_hip_flexor_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Kneeling hip flexor stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "steps": [
+        "Kneel on a mat, then step one foot forward so that knee is bent at about 90 degrees.",
+        "Keep your back knee on the floor and your torso upright.",
+        "Tuck your tailbone under and shift your weight forward until you feel the front of your back hip stretch.",
+        "Hold, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Hinge at the hips and keep your back long, not rounded.",
+        "Reach only as far as is comfortable."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/seated_hamstring_stretch/images/0"
+      ],
+      "key": "seated_hamstring_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Seated hamstring stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "steps": [
+        "Sit on the floor with one leg straight in front of you.",
+        "Bend the other knee and rest that foot against your inner thigh.",
+        "Lean forward from your hips and reach toward your ankle.",
+        "Stop when you feel a stretch behind the straight knee, then hold and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep the top foot flexed to protect the knee.",
+        "Pull only until you feel the stretch in the outer hip."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/figure_four_stretch/images/0",
+        "/api/exercises/figure_four_stretch/images/1"
+      ],
+      "key": "figure_four_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Figure-four stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "glutes"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Lie on your back with your knees bent and your feet on the floor.",
+        "Rest one ankle on the opposite knee.",
+        "Reach through and hold the bottom thigh, then pull both legs gently toward your chest.",
+        "Keep your head and shoulders relaxed, hold, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "The knee does not need to reach the floor.",
+        "Keep both shoulders on the floor."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/knee_across_body_stretch/images/0",
+        "/api/exercises/knee_across_body_stretch/images/1"
+      ],
+      "key": "knee_across_body_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Knee across the body",
+      "perSide": true,
+      "primaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "steps": [
+        "Lie on your back with one leg straight and the other knee bent.",
+        "Guide the bent knee across your body with the opposite hand.",
+        "Open your other arm out to the side and turn your head the other way.",
+        "Hold, breathing slowly, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Hold under the knee, not on the kneecap.",
+        "Keep your lower back resting on the floor."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/one_knee_to_chest_stretch/images/0",
+        "/api/exercises/one_knee_to_chest_stretch/images/1"
+      ],
+      "key": "one_knee_to_chest_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "One knee to chest",
+      "perSide": true,
+      "primaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "steps": [
+        "Lie on your back with your legs straight.",
+        "Bring one knee up and hold it just below the kneecap.",
+        "Gently pull the knee toward your chest and your nose.",
+        "Keep the other leg relaxed on the floor, hold, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your knees close together.",
+        "Do not twist your lower back."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/side_lying_quad_stretch/images/0",
+        "/api/exercises/side_lying_quad_stretch/images/1"
+      ],
+      "key": "side_lying_quad_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Side-lying quad stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "quads"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Lie on your side with your bottom knee bent for balance and your head on your arm.",
+        "Bend your top knee and hold that foot with your top hand.",
+        "Press your hip forward as you gently pull your heel toward your glute.",
+        "Hold, then roll over and switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your heel down and toes pointing forward.",
+        "Keep your head, hips and back heel in one line."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/standing_calf_stretch/images/0",
+        "/api/exercises/standing_calf_stretch/images/1"
+      ],
+      "key": "standing_calf_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Wall calf stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "calves"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand facing a wall and place your hands on it at chest height.",
+        "Step one foot back, with your front knee bent.",
+        "Press the back heel into the floor and lean toward the wall.",
+        "Keep your back leg straight, hold, then switch sides."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Turn from your ribs, not by swinging your arms.",
+        "Keep your knees soft."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/standing_trunk_twist/images/0",
+        "/api/exercises/standing_trunk_twist/images/1"
+      ],
+      "key": "standing_trunk_twist",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Standing trunk twist",
+      "perSide": true,
+      "primaryMuscles": [
+        "back",
+        "core"
+      ],
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand with your feet shoulder width apart and your hands on your hips.",
+        "Keep your hips facing forward.",
+        "Slowly turn your upper body to one side until you feel a stretch.",
+        "Hold, return to the middle, then turn to the other side."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your shoulder down, not shrugged.",
+        "Pull on the arm, not the elbow joint."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/cross_body_shoulder_stretch/images/0",
+        "/api/exercises/cross_body_shoulder_stretch/images/1"
+      ],
+      "key": "cross_body_shoulder_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Cross-body shoulder stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "back"
+      ],
+      "steps": [
+        "Stand tall and bring one arm straight across your chest.",
+        "Hold that arm just above the elbow with your other hand.",
+        "Gently pull it toward your chest until you feel the back of your shoulder stretch.",
+        "Hold, then switch arms."
+      ]
+    },
+    {
+      "best": null,
+      "cues": [
+        "Keep your ribs down and do not arch your back.",
+        "Stop at a comfortable stretch."
+      ],
+      "custom": false,
+      "easierKey": null,
+      "equipment": [],
+      "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/triceps_stretch/images/0",
+        "/api/exercises/triceps_stretch/images/1"
+      ],
+      "key": "triceps_stretch",
+      "kind": "stretch",
+      "load": "bodyweight",
+      "maxTest": null,
+      "measure": "seconds",
+      "name": "Triceps stretch",
+      "perSide": true,
+      "primaryMuscles": [
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "back"
+      ],
+      "steps": [
+        "Stand tall and raise one arm, then bend the elbow so your hand reaches down your back.",
+        "Hold that elbow with your other hand.",
+        "Gently pull the elbow back and toward the other side.",
+        "Hold, then switch arms."
       ]
     }
   ],

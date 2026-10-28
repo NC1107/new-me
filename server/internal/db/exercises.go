@@ -19,6 +19,12 @@ const (
 	LoadExternal   = "external"
 )
 
+// Exercise kinds. Stretches belong to mobility sessions and never to strength plans or counts.
+const (
+	KindStrength = "strength"
+	KindStretch  = "stretch"
+)
+
 // Muscles and Equipment are the fixed vocabularies the exercises table accepts.
 var (
 	Muscles = []string{"chest", "back", "shoulders", "biceps", "triceps", "forearms",
@@ -48,18 +54,24 @@ type Exercise struct {
 	Steps  []string
 	Cues   []string
 	Images []string
+	// Kind is KindStrength or KindStretch; PerSide marks a stretch done once on each side.
+	Kind    string
+	PerSide bool
 }
+
+// Stretch reports whether the exercise is a stretch rather than a strength exercise.
+func (e Exercise) Stretch() bool { return e.Kind == KindStretch }
 
 // Custom reports whether the exercise belongs to a person rather than the catalog.
 func (e Exercise) Custom() bool { return e.UserID != nil }
 
 const exerciseColumns = `id, key, user_id, name, primary_muscles, secondary_muscles, measure, load,
-	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position, steps, cues, images`
+	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position, steps, cues, images, kind, per_side`
 
 func scanExercise(row pgx.Row) (Exercise, error) {
 	var e Exercise
 	err := row.Scan(&e.ID, &e.Key, &e.UserID, &e.Name, &e.PrimaryMuscles, &e.SecondaryMuscles, &e.Measure,
-		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position, &e.Steps, &e.Cues, &e.Images)
+		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position, &e.Steps, &e.Cues, &e.Images, &e.Kind, &e.PerSide)
 	return e, err
 }
 

@@ -21,6 +21,7 @@ import '../../widgets/skeletons.dart';
 import '../../state/today.dart';
 import '../me/settings_row.dart';
 import 'exercises_page.dart';
+import 'mobility_page.dart';
 import 'training_card.dart';
 import 'training_history_page.dart';
 import 'training_progress_page.dart';
@@ -125,6 +126,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             Semantics(header: true, child: const Text('Train', style: AppText.display)),
             const SizedBox(height: 16),
             if (localToday != null) TrainingSlot(localToday: localToday, onTrainTab: true),
+            const _MobilityCard(),
             switch (setup) {
               AsyncValue(:final value?) => _body(value, catalog),
               AsyncValue(:final error?) => ErrorBlock(
@@ -225,6 +227,42 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
         const SizedBox(height: 20),
         Text(kTrainingSources, style: AppText.caption.copyWith(color: kInkMuted)),
       ],
+    );
+  }
+}
+
+/// The way into the guided Mobility 10 routine, which needs no plan.
+class _MobilityCard extends StatelessWidget {
+  const _MobilityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = accentById('rose');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: AppCard(
+        onTap: () => pushPage(context, const MobilityPage()),
+        child: Row(
+          children: [
+            Icon(Icons.self_improvement_rounded, color: accent.lip, size: 28),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mobility 10', style: AppText.headline),
+                  SizedBox(height: 2),
+                  Text(
+                    'Guided stretching, about 11 minutes. Counts toward yoga.',
+                    style: AppText.caption,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+          ],
+        ),
+      ),
     );
   }
 }

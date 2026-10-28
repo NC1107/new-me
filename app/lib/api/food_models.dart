@@ -72,6 +72,8 @@ class SavedFood {
     this.servings = const [],
     this.useCount = 0,
     this.lastUsedAt,
+    this.imageUrl,
+    this.sourceUrl,
   });
 
   factory SavedFood.fromJson(Map<String, dynamic> j) => SavedFood(
@@ -94,6 +96,8 @@ class SavedFood {
     ],
     useCount: _int(j['useCount']),
     lastUsedAt: _time(j['lastUsedAt']),
+    imageUrl: _url(j['imageUrl']),
+    sourceUrl: _url(j['sourceUrl']),
   );
 
   final int? id;
@@ -113,6 +117,10 @@ class SavedFood {
   final List<FoodServing> servings;
   final int useCount;
   final DateTime? lastUsedAt;
+
+  /// Open Food Facts photo and product page; null for saved foods and USDA rows.
+  final String? imageUrl;
+  final String? sourceUrl;
 
   bool get saved => id != null;
 
@@ -338,3 +346,5 @@ class MealBreakdown {
   final List<MealItem> items;
   final MealEstimate legacy;
 }
+
+String? _url(Object? v) => v is String && v.isNotEmpty ? v : null;

@@ -42,6 +42,8 @@ type offProduct struct {
 	ServingSize     string          `json:"serving_size"`
 	ServingQuantity json.RawMessage `json:"serving_quantity"`
 	Nutriments      map[string]any  `json:"nutriments"`
+	ImageSmallURL   string          `json:"image_front_small_url"`
+	ImageFrontURL   string          `json:"image_front_url"`
 }
 
 // Search returns up to five products for the query.
@@ -52,7 +54,7 @@ func (o *OpenFoodFacts) Search(ctx context.Context, query string) ([]Food, error
 	q.Set("action", "process")
 	q.Set("json", "1")
 	q.Set("page_size", "5")
-	q.Set("fields", "code,product_name,brands,serving_size,serving_quantity,nutriments")
+	q.Set("fields", "code,product_name,brands,serving_size,serving_quantity,nutriments,image_front_small_url,image_front_url")
 	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/cgi/search.pl?"+q.Encode(), nil)
@@ -139,6 +141,8 @@ func (p offProduct) toFood() (Food, bool) {
 		Source: SourceOpenFoodFacts, ID: p.Code, Name: name,
 		Brand: strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " ")), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
 	}
+	f.ImageURL = firstOFFImage(p.ImageSmallURL, p.ImageFrontURL)
+	f.SourceURL = OFFBaseURL + "/product/" + url.PathEscape(p.Code)
 	f.Per100g, _ = offBasis(p.Nutriments, "_100g")
 	f.PerServing, _ = offBasis(p.Nutriments, "_serving")
 	if f.Per100g == nil && f.PerServing == nil {
@@ -151,4 +155,18 @@ func (p offProduct) toFood() (Food, bool) {
 		}
 	}
 	return f, true
+}
+
+func firstOFFImage(candidates ...string) string {
+	for _, c := range candidates {
+		if u, err := url.Parse(strings.TrimSpace(c)); err == nil && u.Scheme == "https" && isOFFHost(u.Hostname()) {
+			return u.String()
+		}
+	}
+	return ""
+}
+
+func isOFFHost(host string) bool {
+	host = strings.ToLower(host)
+	return host == "openfoodfacts.org" || strings.HasSuffix(host, ".openfoodfacts.org")
 }

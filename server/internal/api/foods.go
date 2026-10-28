@@ -54,6 +54,9 @@ type libFoodJSON struct {
 	Servings     []servingJSON `json:"servings"`
 	UseCount     int           `json:"useCount"`
 	LastUsedAt   *time.Time    `json:"lastUsedAt"`
+	// ImageURL and SourceURL are set on Open Food Facts candidates only; saved foods keep neither.
+	ImageURL  *string `json:"imageUrl"`
+	SourceURL *string `json:"sourceUrl"`
 }
 
 func toLibFoodJSON(f db.Food) libFoodJSON {
@@ -89,7 +92,14 @@ func candidateJSON(f estimate.Food) (libFoodJSON, bool) {
 	return libFoodJSON{Name: name, Brand: truncate(f.Brand, maxFoodBrand), ServingText: truncate(v.Text, maxServingText),
 		ServingGrams: roundTenth(v.Grams), Kcal: int(math.Round(v.N.Kcal)), Protein: roundTenth(v.N.Protein),
 		Carbs: roundTenth(v.N.Carbs), Fat: roundTenth(v.N.Fat), Fiber: roundTenth(v.N.Fiber),
-		Source: f.Source, SourceID: f.ID, Servings: servings}, true
+		Source: f.Source, SourceID: f.ID, Servings: servings, ImageURL: nonEmpty(f.ImageURL), SourceURL: nonEmpty(f.SourceURL)}, true
+}
+
+func nonEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func truncate(s string, n int) string {

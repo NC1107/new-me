@@ -151,7 +151,8 @@ func TestMorningPlanPushCarriesReadinessAndThePlan(t *testing.T) {
 	h.runNudges(ny(2026, time.November, 2, 7, 10))
 	got := push.of(together.EventMorningPlan, nick.ID)
 	if len(got) != 1 || got[0].Title != "Take it easy today" ||
-		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 4 quests done.") {
+		// The night record also fills the sleep quest, so it is among the quests counted.
+		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 5 quests done.") {
 		t.Fatalf("morning plan = %+v", got)
 	}
 	h.runNudges(ny(2026, time.November, 2, 8, 5))

@@ -18,6 +18,7 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
+import 'eased_note.dart';
 import 'set_form.dart';
 import 'training_copy.dart';
 import '../../widgets/units_scope.dart';
@@ -144,6 +145,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           Text(error, style: AppText.label.copyWith(color: kDangerText)),
           const SizedBox(height: 12),
         ],
+        if (session.eased) ...[EasedNote(session: session), const SizedBox(height: kCardGap)],
         for (final e in session.exercises) ...[
           _ExerciseCard(exercise: e, onLog: () => _log(session, e), onDelete: _delete),
           const SizedBox(height: kCardGap),

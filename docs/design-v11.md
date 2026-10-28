@@ -36,8 +36,12 @@ Nick's feedback after v0.11.0:
 ## Readiness changes the session
 
 - On an Easy readiness morning, the day's training session drops one set from each exercise (never below one) and holds every load and rep target where it was instead of progressing.
-- This is HRV-guided training: adjusting load on mornings when HRV is below its baseline (Kiviniemi et al., Eur J Appl Physiol 2007;101:743; Manresa-Rocamora et al., Int J Environ Res Public Health 2021;18:10299).
-- The session says why in one line, and a person can take the full session instead with one tap.
+- This is HRV-guided training: adjusting load on mornings when HRV is below its baseline (Kiviniemi et al., Eur J Appl Physiol 2007;101:743-751; Manresa-Rocamora et al., Int J Environ Res Public Health 2021;18(19):10299).
+- Both citations check out, but both are endurance evidence: Kiviniemi was a four-week running trial in 26 men, and Manresa-Rocamora a meta-analysis finding a clear benefit for vagal HRV indices and fewer negative responders, with only a small, non-significant edge in aerobic capacity.
+- Evidence for strength training is thin and neutral: Bittencourt et al., Front Physiol 2024;15:1472702 (21 older women, 7 weeks) found that RMSSD-guided recovery periods gave no more strength, muscle size or function than a fixed schedule.
+  The easing is therefore a cautious default rather than a proven gain, which is why it is one tap to override.
+- The eased session holds load and reps at the previous session's values, and the decision is kept once the first set is logged so a session never changes under a person.
+- The session says why in one line, and a person can take the full session instead with one tap (`POST /api/training/today/full`); the choice sticks for the day.
 
 ## Food photos
 

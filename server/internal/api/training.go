@@ -17,6 +17,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/planner"
+	"github.com/nc1107/new-me/server/internal/readiness"
 	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/training"
 )
@@ -352,11 +353,25 @@ type sessionJSON struct {
 	Label     string                `json:"label"`
 	Completed bool                  `json:"completed"`
 	Exercises []sessionExerciseJSON `json:"exercises"`
+	// Eased is true when an Easy readiness morning lightened the session, and EasedReason says why
+	// in one line.
+	Eased       bool   `json:"eased"`
+	EasedReason string `json:"easedReason"`
 }
 
 // handleTrainingToday returns today's planned session with each exercise's target from the
 // progression rules, or says it is a rest day.
 func (s *Server) handleTrainingToday(w http.ResponseWriter, r *http.Request) {
+	s.trainingToday(w, r, false)
+}
+
+// handleTakeFullSession answers today's session as handleTrainingToday does, after choosing the
+// full session for the day. A session that already has sets logged keeps what it was shown.
+func (s *Server) handleTakeFullSession(w http.ResponseWriter, r *http.Request) {
+	s.trainingToday(w, r, true)
+}
+
+func (s *Server) trainingToday(w http.ResponseWriter, r *http.Request, takeFull bool) {
 	c := callerFrom(r)
 	ctx := r.Context()
 	today := score.LocalToday(s.now(), c.loc)
@@ -399,6 +414,12 @@ func (s *Server) handleTrainingToday(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, fmt.Errorf("session %d points past its plan's days", session.ID))
 		return
 	}
+	if takeFull {
+		if err := s.takeFullSession(r, session); err != nil {
+			fail(w, r, err)
+			return
+		}
+	}
 	out, err := s.sessionDetail(r, sessionPlan, session, today)
 	if err != nil {
 		fail(w, r, err)
@@ -424,6 +445,61 @@ func planDayFor(plan db.StoredPlan, date score.Date) int {
 		}
 	}
 	return -1
+}
+
+// takeFullSession stores the choice for a session that has not started.
+func (s *Server) takeFullSession(r *http.Request, session db.TrainingSession) error {
+	c := callerFrom(r)
+	ctx := r.Context()
+	logged, err := db.ListExerciseSets(ctx, s.db.Pool, c.user.ID, session.LocalDate, session.LocalDate, 0)
+	if err != nil {
+		return err
+	}
+	if len(logged) > 0 || session.CompletedAt != nil {
+		return nil
+	}
+	return db.TakeFullSession(ctx, s.db.Pool, session.ID)
+}
+
+// sessionEased decides whether the session is shown eased. An unstarted session of today follows
+// the morning's readiness, which can still change as readings sync; once sets are logged the
+// stored decision stands so the session never changes under the person.
+func (s *Server) sessionEased(r *http.Request, session db.TrainingSession, today score.Date, started bool) (bool, string, error) {
+	c := callerFrom(r)
+	ctx := r.Context()
+	eased, full, err := db.SessionEase(ctx, s.db.Pool, session.ID)
+	if err != nil || full {
+		return false, "", err
+	}
+	live := !started && session.LocalDate == today
+	if !eased && !live {
+		return false, "", nil
+	}
+	ready, err := engine.ReadinessOn(ctx, s.db.Pool, c.user.ID, session.LocalDate)
+	if err != nil {
+		return false, "", err
+	}
+	if live {
+		now := ready != nil && ready.Level == readiness.LevelEasy
+		if now != eased {
+			if err := db.SetSessionEased(ctx, s.db.Pool, session.ID, now); err != nil {
+				return false, "", err
+			}
+		}
+		eased = now
+	}
+	if !eased {
+		return false, "", nil
+	}
+	var strain []string
+	if ready != nil {
+		for _, reason := range ready.Reasons {
+			if reason.Strain {
+				strain = append(strain, reason.Kind)
+			}
+		}
+	}
+	return true, training.EasedReason(strain), nil
 }
 
 func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.TrainingSession, today score.Date) (sessionJSON, error) {
@@ -467,6 +543,10 @@ func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.T
 	if err != nil {
 		return out, err
 	}
+	out.Eased, out.EasedReason, err = s.sessionEased(r, session, today, len(logged) > 0 || out.Completed)
+	if err != nil {
+		return out, err
+	}
 	for _, p := range day.Exercises {
 		planned := p.Exercise
 		e, ok := infos[p.Exercise]
@@ -481,7 +561,12 @@ func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.T
 			}
 		}
 		p.Exercise = e.Key
-		target := training.Next(p, exerciseInfo(e), history[e.Key], eq)
+		var target training.Target
+		if out.Eased {
+			target = training.Ease(p, history[e.Key])
+		} else {
+			target = training.Next(p, exerciseInfo(e), history[e.Key], eq)
+		}
 		targetInfo := e
 		if target.Exercise != e.Key {
 			if v, err := db.ExerciseByKey(ctx, s.db.Pool, c.user.ID, target.Exercise); err == nil {

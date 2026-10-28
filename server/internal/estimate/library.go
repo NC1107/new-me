@@ -330,12 +330,18 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 	return out
 }
 
+var gramsEcho = regexp.MustCompile(`(?i)^([\d.]+) (?:g|gm|grm|grams?) \(([\d.]+) g\)$`)
+
 var servingEcho = regexp.MustCompile(`^(?:1 )?(.+?) \((?:1 )?(.+)\)$`)
 
 // tidyServing cleans database serving wording for display: "1 serving (1 serving)" becomes
 // "1 serving", and household text in capitals ("1 POUCH RECONSTITUTED") is lowered.
 func tidyServing(text string) string {
 	text = strings.Join(strings.Fields(text), " ")
+	// A label serving that is only a weight ("100 GRAM") gains the same weight in grams.
+	if m := gramsEcho.FindStringSubmatch(text); m != nil && m[1] == m[2] {
+		return m[1] + " g"
+	}
 	if m := servingEcho.FindStringSubmatch(text); m != nil && strings.EqualFold(m[1], m[2]) {
 		text = strings.TrimSuffix(text, text[strings.LastIndex(text, " ("):])
 	}

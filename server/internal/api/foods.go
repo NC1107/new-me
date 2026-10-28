@@ -59,6 +59,8 @@ type libFoodJSON struct {
 	// ImageURL and SourceURL are set on Open Food Facts candidates only; saved foods keep neither.
 	ImageURL  *string `json:"imageUrl"`
 	SourceURL *string `json:"sourceUrl"`
+	// Category is the USDA food category on USDA candidates, null elsewhere.
+	Category *string `json:"category"`
 }
 
 func toLibFoodJSON(f db.Food) libFoodJSON {
@@ -72,6 +74,9 @@ func toLibFoodJSON(f db.Food) libFoodJSON {
 		Fiber: f.Fiber, Source: f.Source, SourceID: f.SourceID, Servings: servings, UseCount: f.UseCount,
 		LastUsedAt: f.LastUsedAt}
 }
+
+// maxCategory bounds a category from USDA, whose longest names run to about 50 characters.
+const maxCategory = 80
 
 func roundTenth(v float64) float64 { return math.Round(v*10) / 10 }
 
@@ -94,7 +99,8 @@ func candidateJSON(f estimate.Food) (libFoodJSON, bool) {
 	return libFoodJSON{Name: name, Brand: truncate(f.Brand, maxFoodBrand), ServingText: truncate(v.Text, maxServingText),
 		ServingGrams: roundTenth(v.Grams), Kcal: int(math.Round(v.N.Kcal)), Protein: roundTenth(v.N.Protein),
 		Carbs: roundTenth(v.N.Carbs), Fat: roundTenth(v.N.Fat), Fiber: roundTenth(v.N.Fiber),
-		Source: f.Source, SourceID: f.ID, Servings: servings, ImageURL: nonEmpty(f.ImageURL), SourceURL: nonEmpty(f.SourceURL)}, true
+		Source: f.Source, SourceID: f.ID, Servings: servings, ImageURL: nonEmpty(f.ImageURL), SourceURL: nonEmpty(f.SourceURL),
+		Category: nonEmpty(truncate(f.Category, maxCategory))}, true
 }
 
 func nonEmpty(s string) *string {

@@ -13,6 +13,7 @@ import '../../widgets/app_widgets.dart';
 import '../../widgets/pressable.dart';
 import '../scan/barcode_scan_page.dart';
 import '../scan/barcode_scanner.dart';
+import 'food_category_icon.dart';
 
 /// Saved foods are searched on every keystroke; the databases wait for a pause in typing.
 const _remoteDelay = Duration(milliseconds: 500);
@@ -249,7 +250,9 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
               food: food,
               enabled: widget.enabled,
               onTap: () => _pick(food),
-              reserveThumbnail: _candidates.any((c) => c.imageUrl != null),
+              reserveThumbnail: _candidates.any(
+                (c) => c.imageUrl != null || foodCategoryIcon(c.category) != null,
+              ),
             ),
           if (_remoteDone && !_remoteFailed && _candidates.isEmpty)
             _note('Nothing found in the databases.'),
@@ -319,7 +322,8 @@ class FoodTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = food.imageUrl;
     final sourceUrl = food.sourceUrl;
-    final showThumb = imageUrl != null || reserveThumbnail;
+    final categoryIcon = foodCategoryIcon(food.category);
+    final showThumb = imageUrl != null || categoryIcon != null || reserveThumbnail;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -339,7 +343,7 @@ class FoodTile extends StatelessWidget {
                 child: Row(
                   children: [
                     if (showThumb) ...[
-                      FoodThumbnail(url: imageUrl),
+                      FoodThumbnail(url: imageUrl, icon: categoryIcon),
                       const SizedBox(width: _thumbGap),
                     ],
                     Expanded(
@@ -411,16 +415,19 @@ class FoodTile extends StatelessWidget {
 /// A rounded product photo that fades in, with the food icon behind it while it loads and in
 /// its place when the photo is missing or fails.
 class FoodThumbnail extends StatelessWidget {
-  const FoodThumbnail({super.key, required this.url});
+  const FoodThumbnail({super.key, required this.url, this.icon});
 
   final String? url;
+
+  /// The food's category icon, drawn when there is no photo; the plain food icon otherwise.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     final placeholder = Container(
       color: kBorder,
       alignment: Alignment.center,
-      child: const Icon(Icons.restaurant_rounded, size: 20, color: kInkSecondary),
+      child: Icon(icon ?? Icons.restaurant_rounded, size: 20, color: kInkSecondary),
     );
     final cacheWidth = (_thumbSize * MediaQuery.devicePixelRatioOf(context)).round();
     return ExcludeSemantics(

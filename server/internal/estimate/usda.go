@@ -70,6 +70,23 @@ type usdaFood struct {
 	FoodNutrients []usdaNutrient `json:"foodNutrients"`
 	FoodPortions  []usdaPortion  `json:"foodPortions"`
 	FoodMeasures  []usdaMeasure  `json:"foodMeasures"`
+	// FoodCategory is a plain string in search results and {"description": ...} in a food's
+	// detail, depending on the data type.
+	FoodCategory json.RawMessage `json:"foodCategory"`
+}
+
+func (f usdaFood) category() string {
+	var name string
+	if json.Unmarshal(f.FoodCategory, &name) == nil {
+		return strings.TrimSpace(name)
+	}
+	var obj struct {
+		Description string `json:"description"`
+	}
+	if json.Unmarshal(f.FoodCategory, &obj) == nil {
+		return strings.TrimSpace(obj.Description)
+	}
+	return ""
 }
 
 type usdaNutrient struct {
@@ -271,24 +288,34 @@ func (f usdaFood) toFood() (Food, bool) {
 	}
 	food := Food{
 		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID),
-		Name:  tidyName(strings.TrimSpace(usdaNote.ReplaceAllString(f.Description, ""))),
+		Name:  tidySegments(strings.TrimSpace(usdaNote.ReplaceAllString(f.Description, ""))),
 		Brand: tidyBrand(f.BrandName, f.BrandOwner), DataType: f.DataType,
 		Per100g: &per100, Portions: f.portions(), UnspecifiedGrams: f.unspecifiedGrams(),
+		Category: f.category(),
 	}
 	switch strings.ToLower(f.ServingUnit) {
 	case "g", "grm":
 		food.ServingGrams = f.ServingSize
 	}
 	if food.ServingGrams > 0 {
-		food.ServingText = firstNonEmpty(f.Household, "1 serving")
+		household := cleanHousehold(f.Household)
+		food.ServingText = firstNonEmpty(household, "1 serving")
 		food.PerServing = &Nutrients{}
 		*food.PerServing = per100.scale(food.ServingGrams / 100)
 		food.Portions = append(food.Portions, Portion{Label: "serving", Grams: food.ServingGrams})
-		if p, ok := portionFromLabel(f.Household, food.ServingGrams); ok {
+		if p, ok := portionFromLabel(household, food.ServingGrams); ok {
 			food.Portions = append(food.Portions, p)
 		}
 	}
 	return food, true
+}
+
+// perContainer matches the package count some labels append to the serving ("1.96 OZ SERVING,
+// About 82 Servings Per Container"), which says nothing about one serving.
+var perContainer = regexp.MustCompile(`(?i),?\s*(about\s+)?[\d.]+\s+servings?\s+per\s+container.*$`)
+
+func cleanHousehold(s string) string {
+	return strings.TrimSpace(perContainer.ReplaceAllString(s, ""))
 }
 
 // usdaNote drops notes such as "(Includes foods for USDA's Food Distribution Program)", which
@@ -324,6 +351,17 @@ func tidyBrand(name, owner string) string {
 		}
 	}
 	return tidyName(brand)
+}
+
+// tidySegments tidies each comma-separated part on its own, since branded rows often shout only
+// the brand ("JIMMY DEAN, Sausage, Egg, and Cheese Biscuit").
+func tidySegments(s string) string {
+	parts := strings.Split(s, ",")
+	for i, p := range parts {
+		lead := p[:len(p)-len(strings.TrimLeft(p, " "))]
+		parts[i] = lead + tidyName(strings.TrimLeft(p, " "))
+	}
+	return strings.Join(parts, ",")
 }
 
 // tidyName turns an all-capitals label ("TOTINO'S SAUSAGE PIZZA ROLLS") into normal capitals

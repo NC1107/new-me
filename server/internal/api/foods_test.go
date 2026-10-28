@@ -100,7 +100,7 @@ func TestFoodSearchReturnsRemoteCandidatesOnlyOnRequest(t *testing.T) {
 		foods := []obj{}
 		if !slices.Contains(req.DataType, "Branded") {
 			foods = append(foods, obj{"fdcId": 171688, "description": "Apples, raw, with skin", "dataType": "SR Legacy",
-				"foodNutrients": []obj{{"nutrientId": 1008, "value": 52}, {"nutrientId": 1003, "value": 0.26}}})
+				"foodCategory": "Fruits and Fruit Juices", "foodNutrients": []obj{{"nutrientId": 1008, "value": 52}, {"nutrientId": 1003, "value": 0.26}}})
 		}
 		writeJSON(w, http.StatusOK, obj{"foods": foods})
 	}))
@@ -117,7 +117,8 @@ func TestFoodSearchReturnsRemoteCandidatesOnlyOnRequest(t *testing.T) {
 	}
 	remote := h.get("/api/foods?q=apple&remote=1", nick.Token).expect(http.StatusOK)
 	c := remote.at("candidates.0").(map[string]any)
-	if c["id"] != nil || c["saved"] != false || c["source"] != "usda" || c["sourceId"] != "171688" || c["servingText"] != "100 g" || c["kcal"] != 52.0 {
+	if c["id"] != nil || c["saved"] != false || c["source"] != "usda" || c["sourceId"] != "171688" || c["servingText"] != "100 g" || c["kcal"] != 52.0 ||
+		c["category"] != "Fruits and Fruit Juices" || c["imageUrl"] != nil {
 		t.Fatalf("candidate = %v", c)
 	}
 

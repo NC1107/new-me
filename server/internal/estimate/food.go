@@ -63,6 +63,9 @@ type Food struct {
 	// ImageURL and SourceURL are the product photo and page, set only for Open Food Facts rows.
 	ImageURL  string
 	SourceURL string
+	// Category is USDA's food category, such as "Sausages, Hotdogs & Brats", which the app draws
+	// as an icon in place of the photo USDA does not have.
+	Category string
 }
 
 func (f Food) per100() (Nutrients, bool) {

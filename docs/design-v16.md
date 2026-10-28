@@ -63,3 +63,14 @@ Checking 30 common foods against live USDA found the same kinds of faults: 8 fl 
 
 - "Drink enough water" is a focus of its own, and its daily goal starts from the person's National Academies figure, in their units.
 - The About you review applies the water target with the others.
+
+## USDA results get a category icon
+
+- USDA publishes no food photos, and of 12 branded USDA barcodes checked against Open Food Facts only one had a photo, so borrowing photos by barcode would spend the shared Open Food Facts read budget for little.
+- USDA's food category ("Sausages, Hotdogs & Brats", "Fruits and Fruit Juices", "Coffee") now travels with each USDA candidate, and the app draws it as a Material food icon in the photo's place.
+- Words match at the start of a word, in a fixed order, so "Fruit & Vegetable Juice" is a drink and "veggie" never reads as egg; a category without a fitting icon keeps the plain food icon.
+- USDA serving text drops the package count ("1.96 OZ SERVING, About 82 Servings Per Container" reads "1.96 oz serving (55 g)"), "100 GRAM (100 g)" reads "100 g", and a shouted brand at the start of a name gets normal capitals.
+
+## Health import
+
+- Workout minutes for a day are the time workouts cover within that day, not their summed lengths, so overlapping recordings count once and an overnight or forgotten workout cannot put more than a day on one date, which the server rejected along with the rest of that day.

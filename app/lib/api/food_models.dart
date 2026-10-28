@@ -73,6 +73,7 @@ class SavedFood {
     this.useCount = 0,
     this.lastUsedAt,
     this.imageUrl,
+    this.category,
     this.sourceUrl,
   });
 
@@ -97,6 +98,7 @@ class SavedFood {
     useCount: _int(j['useCount']),
     lastUsedAt: _time(j['lastUsedAt']),
     imageUrl: _url(j['imageUrl']),
+    category: j['category'] as String?,
     sourceUrl: _url(j['sourceUrl']),
   );
 
@@ -120,6 +122,9 @@ class SavedFood {
 
   /// Open Food Facts photo and product page; null for saved foods and USDA rows.
   final String? imageUrl;
+
+  /// USDA's food category on a USDA candidate, drawn as an icon since USDA has no photos.
+  final String? category;
   final String? sourceUrl;
 
   bool get saved => id != null;

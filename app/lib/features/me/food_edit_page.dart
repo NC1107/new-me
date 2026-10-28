@@ -188,9 +188,9 @@ class _FoodEditPageState extends ConsumerState<FoodEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isNew = _food == null;
+    final isNew = _food?.id == null;
     return PageScaffold(
-      title: isNew ? 'New food' : 'Edit food',
+      title: _food == null ? 'New food' : (isNew ? 'Save food' : 'Edit food'),
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

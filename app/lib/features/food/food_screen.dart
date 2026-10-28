@@ -71,7 +71,7 @@ class _FoodBody extends ConsumerWidget {
           ChunkyButton(
             label: 'Log a meal',
             icon: Icons.add_rounded,
-            onPressed: () => showLogSheet(context, kind: LogKind.meal),
+            onPressed: () => showLogSheet(context, kind: LogKind.meal, focusSearch: true),
           ),
           const SizedBox(height: 24),
           Semantics(header: true, child: const Text('Meals today', style: AppText.headline)),

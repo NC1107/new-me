@@ -25,19 +25,26 @@ import 'log_kind.dart';
 import 'log_panes.dart';
 
 /// Opens the log sheet for [kind], from a quest card's + or the food card.
-Future<void> showLogSheet(BuildContext context, {required LogKind kind, bool maxTest = false}) =>
-    showAppSheet<void>(
-      context,
-      builder: (_) => LogSheet(kind: kind, maxTest: maxTest),
-    );
+Future<void> showLogSheet(
+  BuildContext context, {
+  required LogKind kind,
+  bool maxTest = false,
+  bool focusSearch = false,
+}) => showAppSheet<void>(
+  context,
+  builder: (_) => LogSheet(kind: kind, maxTest: maxTest, focusSearch: focusSearch),
+);
 
 class LogSheet extends ConsumerStatefulWidget {
-  const LogSheet({super.key, required this.kind, this.maxTest = false});
+  const LogSheet({super.key, required this.kind, this.maxTest = false, this.focusSearch = false});
 
   final LogKind kind;
 
   /// Opens the push-up form on its max test, for the Targets page's link.
   final bool maxTest;
+
+  /// Puts the cursor in the meal pane's food search.
+  final bool focusSearch;
 
   @override
   ConsumerState<LogSheet> createState() => _LogSheetState();
@@ -341,6 +348,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   failed: _error != null,
                   onLog: _submit,
                   onLogMany: _submitMany,
+                  autofocusSearch: widget.focusSearch,
                 ),
               },
               if (_error != null) ...[const SizedBox(height: 12), _ErrorLine(message: _error!)],

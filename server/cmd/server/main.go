@@ -23,6 +23,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/coach"
 	"github.com/nc1107/new-me/server/internal/config"
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/estimate"
 	"github.com/nc1107/new-me/server/internal/listening"
 	"github.com/nc1107/new-me/server/internal/lookback"
 	"github.com/nc1107/new-me/server/internal/milestone"
@@ -64,6 +65,11 @@ func main() {
 
 	if err := database.Migrate(ctx); err != nil {
 		log.Fatalf("migrate: %v", err)
+	}
+	if n, err := database.TidyFoodNames(ctx, estimate.TidySaved); err != nil {
+		log.Printf("tidy food names: %v", err)
+	} else if n > 0 {
+		log.Printf("tidied %d saved food names", n)
 	}
 	if err := database.SeedServerName(ctx, cfg.ServerName); err != nil {
 		log.Printf("seed server name: %v", err)

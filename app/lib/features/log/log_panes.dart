@@ -263,11 +263,15 @@ class MealPane extends StatefulWidget {
     required this.onLog,
     required this.onLogMany,
     this.canEstimate = false,
+    this.autofocusSearch = false,
   });
 
   /// Shows "Describe it"; the server switches it on with its Claude key. Searching the food
   /// library needs no key, so it is always there.
   final bool canEstimate;
+
+  /// Opens with the food search focused, for the Food tab's "Log a meal".
+  final bool autofocusSearch;
 
   final Future<List<RecentMeal>> recent;
   final bool busy;
@@ -459,7 +463,7 @@ class _MealPaneState extends State<MealPane> {
           ),
           const SizedBox(height: 12),
         ],
-        FoodSearchBox(onAdd: _addFood, enabled: !widget.busy),
+        FoodSearchBox(onPick: _addFood, enabled: !widget.busy, autofocus: widget.autofocusSearch),
         const SizedBox(height: 16),
         if (_entries.isNotEmpty)
           ItemizedMeal(

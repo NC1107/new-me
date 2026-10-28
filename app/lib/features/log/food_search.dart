@@ -10,18 +10,34 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
-import '../../widgets/chunky_button.dart';
 import '../../widgets/pressable.dart';
 
-const _debounce = Duration(milliseconds: 250);
+/// Saved foods are searched on every keystroke; the databases wait for a pause in typing.
+const _remoteDelay = Duration(milliseconds: 500);
+const _remoteMinChars = 3;
 
-/// "Search your foods": the household library, most used first, with USDA and Open Food Facts
-/// results below on request. Tapping a food hands it to [onAdd] as one serving.
+/// "Search foods": the household library first, most used first, then USDA and Open Food Facts
+/// results under their own heading once typing pauses. Tapping a food hands it to [onPick].
 class FoodSearchBox extends ConsumerStatefulWidget {
-  const FoodSearchBox({super.key, required this.onAdd, this.enabled = true});
+  const FoodSearchBox({
+    super.key,
+    required this.onPick,
+    this.enabled = true,
+    this.autofocus = false,
+    this.browseOnFocus = true,
+    this.remoteDelay = _remoteDelay,
+  });
 
-  final ValueChanged<SavedFood> onAdd;
+  final ValueChanged<SavedFood> onPick;
   final bool enabled;
+
+  /// Puts the cursor in the field as soon as it appears.
+  final bool autofocus;
+
+  /// Lists the most used saved foods when the field is focused and still empty.
+  final bool browseOnFocus;
+
+  final Duration remoteDelay;
 
   @override
   ConsumerState<FoodSearchBox> createState() => _FoodSearchBoxState();
@@ -30,138 +46,177 @@ class FoodSearchBox extends ConsumerStatefulWidget {
 class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
   final _text = TextEditingController();
   final _focus = FocusNode();
-  Timer? _timer;
-  int _generation = 0;
-  FoodSearch _result = const FoodSearch();
+  Timer? _remoteTimer;
+  int _savedGeneration = 0;
+  int _remoteGeneration = 0;
+  List<SavedFood> _saved = const [];
   List<SavedFood> _candidates = const [];
-  bool _searchingRemote = false;
+  bool _remotePending = false;
+  bool _remoteDone = false;
   bool _failed = false;
+  bool _remoteFailed = false;
 
   String get _query => _text.text.trim();
+
+  bool get _wantsRemote => _query.length >= _remoteMinChars;
 
   @override
   void initState() {
     super.initState();
     _focus.addListener(() {
-      if (_focus.hasFocus && _result.foods.isEmpty && _query.isEmpty) _search();
+      if (_focus.hasFocus && widget.browseOnFocus && _saved.isEmpty && _query.isEmpty) {
+        _searchSaved();
+      }
       setState(() {});
     });
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _remoteTimer?.cancel();
     _text.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   void _typed(String _) {
-    _timer?.cancel();
-    setState(() => _candidates = const []);
-    _timer = Timer(_debounce, _search);
+    _remoteTimer?.cancel();
+    _remoteGeneration++;
+    setState(() {
+      _candidates = const [];
+      _remoteDone = false;
+      _remoteFailed = false;
+      _remotePending = _wantsRemote;
+    });
+    if (_query.isEmpty && !widget.browseOnFocus) {
+      _savedGeneration++;
+      setState(() => _saved = const []);
+    } else {
+      _searchSaved();
+    }
+    if (_wantsRemote) _remoteTimer = Timer(widget.remoteDelay, _searchDatabases);
   }
 
-  Future<void> _search() async {
-    final generation = ++_generation;
+  Future<void> _searchSaved() async {
+    final generation = ++_savedGeneration;
     try {
       final result = await ref.read(logActionsProvider).searchFoods(_query);
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _savedGeneration) return;
       setState(() {
-        _result = result;
+        _saved = result.foods;
         _failed = false;
       });
     } on Object {
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _savedGeneration) return;
       setState(() => _failed = true);
     }
   }
 
   Future<void> _searchDatabases() async {
-    final generation = ++_generation;
-    setState(() => _searchingRemote = true);
+    final generation = ++_remoteGeneration;
+    final query = _query;
     try {
-      final result = await ref.read(logActionsProvider).searchFoods(_query, remote: true);
-      if (!mounted || generation != _generation) return;
+      final result = await ref.read(logActionsProvider).searchFoods(query, remote: true);
+      if (!mounted || generation != _remoteGeneration) return;
       setState(() {
-        _result = result;
         _candidates = result.candidates;
-        _searchingRemote = false;
-        _failed = false;
+        _remotePending = false;
+        _remoteDone = true;
+        _remoteFailed = false;
       });
     } on Object {
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _remoteGeneration) return;
       setState(() {
-        _searchingRemote = false;
-        _failed = true;
+        _remotePending = false;
+        _remoteDone = true;
+        _remoteFailed = true;
       });
     }
   }
 
-  void _add(SavedFood food) {
-    widget.onAdd(food);
-    _generation++;
+  void _pick(SavedFood food) {
+    widget.onPick(food);
+    _remoteTimer?.cancel();
+    _savedGeneration++;
+    _remoteGeneration++;
     _text.clear();
     _focus.unfocus();
     setState(() {
-      _result = const FoodSearch();
+      _saved = const [];
       _candidates = const [];
+      _remotePending = false;
+      _remoteDone = false;
     });
   }
+
+  Widget _note(String text, {bool danger = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Text(
+      text,
+      style: AppText.label.copyWith(
+        color: danger ? kDangerText : kInkSecondary,
+        fontWeight: danger ? FontWeight.w700 : null,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final open = _focus.hasFocus || _query.isNotEmpty;
+    final showHeading = _remotePending || _remoteDone;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppTextField(
           controller: _text,
-          hint: 'Search your foods',
-          semanticLabel: 'Search your foods',
+          hint: 'Search foods',
+          semanticLabel: 'Search foods',
           onChanged: _typed,
           focusNode: _focus,
         ),
         if (open) ...[
           const SizedBox(height: 8),
-          for (final food in _result.foods.take(6))
-            FoodTile(food: food, enabled: widget.enabled, onTap: () => _add(food)),
-          if (_result.foods.isEmpty && !_failed)
+          for (final food in _saved.take(6))
+            FoodTile(food: food, enabled: widget.enabled, onTap: () => _pick(food)),
+          if (_saved.isEmpty && !_failed && (widget.browseOnFocus || _query.isNotEmpty))
+            _note(_query.isEmpty ? 'Foods you save will show up here.' : 'Nothing saved matches.'),
+          if (_failed) _note('Could not search right now.', danger: true),
+          if (showHeading) ...[const SizedBox(height: 8), const FieldLabel('From the databases')],
+          if (_remotePending)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                _query.isEmpty ? 'Foods you save will show up here.' : 'Nothing saved matches.',
-                style: AppText.label.copyWith(color: kInkSecondary),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: kInkSecondary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Searching USDA and Open Food Facts',
+                      style: AppText.label.copyWith(color: kInkSecondary),
+                    ),
+                  ),
+                ],
               ),
             ),
-          if (_failed)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                'Could not search right now.',
-                style: AppText.label.copyWith(color: kDangerText, fontWeight: FontWeight.w700),
-              ),
+          if (_remoteFailed) _note('Could not search the databases right now.', danger: true),
+          for (final food in _candidates)
+            FoodTile(
+              food: food,
+              enabled: widget.enabled,
+              onTap: () => _pick(food),
+              reserveThumbnail: _candidates.any((c) => c.imageUrl != null),
             ),
-          if (_query.isNotEmpty && _candidates.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: ChunkyButton.secondary(
-                label: 'Search USDA and Open Food Facts',
-                busy: _searchingRemote,
-                onPressed: _searchingRemote ? null : _searchDatabases,
-              ),
-            ),
-          if (_candidates.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            const FieldLabel('From the databases'),
-            for (final food in _candidates)
-              FoodTile(
-                food: food,
-                enabled: widget.enabled,
-                onTap: () => _add(food),
-                reserveThumbnail: _candidates.any((c) => c.imageUrl != null),
-              ),
-          ],
+          if (_remoteDone && !_remoteFailed && _candidates.isEmpty)
+            _note('Nothing found in the databases.'),
         ],
       ],
     );

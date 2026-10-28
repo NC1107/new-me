@@ -51,6 +51,18 @@ List<Object?> _captureHaptics(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('automatic quests show the amount so far beside the bar', (tester) async {
+    Quest q(String key, String unit, int target, int actual) => Quest.fromJson(
+      quest(key, key, {'unit': unit, 'target': target, 'actual': actual, 'done': false}),
+    );
+    await tester.pumpWidget(_host(q('steps', 'steps', 7000, 4321), withAdd: false));
+    expect(find.text('4,321'), findsOneWidget);
+    await tester.pumpWidget(_host(q('sleep', 'min', 450, 432), withAdd: false));
+    expect(find.text('7 h 12 min'), findsOneWidget);
+    await tester.pumpWidget(_host(q('steps', 'steps', 7000, 0), withAdd: false));
+    expect(find.text('0'), findsNothing);
+  });
+
   testWidgets('the add button is a 44pt touch target', (tester) async {
     await tester.pumpWidget(_host(_quest(completed: false)));
     final size = tester.getSize(find.bySemanticsLabel('Add entry for Get stronger'));

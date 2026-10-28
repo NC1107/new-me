@@ -72,6 +72,17 @@ String questProgress(Quest q) {
   return '${q.actual.formatted} of ${q.target.formatted} ${_unitWord(q, q.target)}';
 }
 
+/// The amount so far, beside the bar, for a card whose title already states the target:
+/// "4,321", "7 h 12 min", "25 min". Null when there is nothing yet.
+String? questActualLabel(Quest q) {
+  if (q.actual <= 0 || q.unitAlt != null) return null;
+  return switch (q.unit) {
+    'min' || 'minutes' => durationLabel(q.actual),
+    'steps' => q.actual.formatted,
+    _ => '${q.actual.formatted} ${_unitWord(q, q.actual)}',
+  };
+}
+
 String _workoutName(String type) => switch (type) {
   'strength' => 'Strength',
   'hiit' => 'HIIT',

@@ -190,9 +190,25 @@ class _QuestCardState extends State<QuestCard> {
                 if (widget.listeningNote case final note?)
                   _NoteLine(icon: Icons.sync_rounded, color: category.lip, text: note),
                 const SizedBox(height: 8),
-                ThickProgressBar(
-                  value: questFraction(q),
-                  color: q.done ? person.fill : category.fill,
+                Row(
+                  children: [
+                    Expanded(
+                      child: ThickProgressBar(
+                        value: questFraction(q),
+                        color: q.done ? person.fill : category.fill,
+                      ),
+                    ),
+                    // The card's spoken label already carries the progress.
+                    if (titleStatesTarget(q) && questActualLabel(q) != null) ...[
+                      const SizedBox(width: 10),
+                      ExcludeSemantics(
+                        child: Text(
+                          questActualLabel(q)!,
+                          style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

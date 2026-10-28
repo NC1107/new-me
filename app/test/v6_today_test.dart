@@ -215,7 +215,7 @@ void main() {
         find.text('62%'),
         find.text('Take it easy today'),
         find.text('Habits'),
-        find.text('Do 30 push-ups'),
+        find.text('Get stronger'),
         find.text('Food'),
         find.text('Body'),
       ];

@@ -151,7 +151,10 @@ void main() {
   test('a failed push is retried because it was never recorded as pushed', () async {
     await prompted();
     final h = _Harness();
-    h.adapter.on('PUT /api/health/daily', const StubResponse(503));
+    h.adapter.on(
+      'PUT /api/health/daily',
+      const StubResponse(503, {'error': 'database unavailable'}),
+    );
     await h.boot();
     expect(h.puts, 1);
     expect(h.container.read(healthSyncProvider).lastSyncedAt, isNull);

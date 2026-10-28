@@ -27,7 +27,9 @@ String questTitle(Quest q) {
   final t = q.target;
   return switch (q.key) {
     'steps' => 'Walk ${t.formatted} steps',
-    'pushups' => 'Do ${t.formatted} push-ups',
+    // A planned session or a Health strength workout completes it too, so push-ups are only the
+    // fallback and never the headline.
+    'pushups' => 'Get stronger',
     'reading' =>
       q.targetAlt == null
           ? 'Read ${t.formatted} ${shortUnit(q.unit)}'
@@ -49,6 +51,11 @@ String questProgress(Quest q) {
     final actualAlt = q.actualAlt ?? 0;
     if (q.actual == 0 && actualAlt == 0) return 'Not started';
     return '${q.actual.formatted} ${shortUnit(q.unit)} + ${actualAlt.formatted} ${shortUnit(alt)}';
+  }
+  if (q.key == 'pushups' && !q.done) {
+    return q.actual == 0
+        ? 'A strength workout, a training session, or ${q.target.formatted} push-ups'
+        : '${q.actual.formatted} of ${q.target.formatted} push-ups, or a strength workout';
   }
   if (q.key == 'sleep') {
     return q.actual == 0

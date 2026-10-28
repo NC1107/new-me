@@ -106,7 +106,7 @@ void _layoutSuite(double textScale) {
     await app.closeSheet();
 
     for (final (label, name) in [
-      ('Add entry for Do 30 push-ups', 'push-ups'),
+      ('Add entry for Get stronger', 'push-ups'),
       ('Add entry for Read 20 min or 15 pages', 'reading'),
       ('Add entry for Stretch for 20 min', 'yoga'),
     ]) {

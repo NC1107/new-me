@@ -197,7 +197,8 @@ void main() {
     });
 
     testWidgets('a failed first load says so and can retry', (tester) async {
-      final server = _server()..on('GET /api/targets', const StubResponse(404));
+      final server = _server()
+        ..on('GET /api/targets', const StubResponse(404, {'error': 'not found'}));
       final app = await _open(tester, server);
       expect(find.text('Could not load your targets'), findsOneWidget);
       server.on('GET /api/targets', StubResponse(200, _fixture('targets')));

@@ -65,7 +65,7 @@ void main() {
     expect(find.textContaining('Reach 70% to keep your streak going'), findsOneWidget);
     expect(find.text('3 quests to go'), findsOneWidget);
 
-    expect(find.text('Do 30 push-ups'), findsOneWidget);
+    expect(find.text('Get stronger'), findsOneWidget);
     expect(find.text('+20'), findsOneWidget);
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
     expect(find.text('30 of 30 push-ups'), findsOneWidget);

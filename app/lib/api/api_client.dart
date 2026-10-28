@@ -67,6 +67,14 @@ class ApiException implements Exception {
 
   factory ApiException.fromDio(DioException e) {
     final response = e.response;
+    // Before the format check: a proxy page labelled as JSON fails to parse, yet is a restart.
+    if (isProxyError(response)) {
+      return ApiException.offline(
+        statusCode: response!.statusCode,
+        message: 'New Me is updating. Try again in a moment.',
+        code: 'unavailable',
+      );
+    }
     if (e.error is FormatException) {
       return const ApiException('Unexpected response from the server');
     }
@@ -75,6 +83,7 @@ class ApiException implements Exception {
     final status = response.statusCode;
     final data = response.data;
     final body = data is Map<String, dynamic> ? data : const <String, dynamic>{};
+
     final code = body['code'] as String?;
     final serverMessage = body['error'] as String?;
 
@@ -119,6 +128,16 @@ class ApiException implements Exception {
 
 int _int(Object? v) => (v as num?)?.toInt() ?? 0;
 
+/// True for an answer from the proxy in front of the server rather than the server itself: a
+/// 404, 502, 503 or 504 without the server's JSON error envelope, which is what a restart looks
+/// like while the new container comes up.
+bool isProxyError(Response<dynamic>? response) {
+  final status = response?.statusCode;
+  if (status == null || !const {404, 502, 503, 504}.contains(status)) return false;
+  final data = response!.data;
+  return data is! Map || data['error'] is! String;
+}
+
 class ApiClient {
   ApiClient({
     required String baseUrl,
@@ -142,16 +161,35 @@ class ApiClient {
     if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onError: (e, handler) {
+        onError: (e, handler) async {
           final status = e.response?.statusCode;
           // Only a rejected token means the session is dead; a 401 without one is a login error.
           if (status == 401 && token != null) onUnauthorized?.call();
           if (status == 426) onUpdateRequired?.call();
+          // A restart answers from the proxy for a second or two; idempotent requests try once
+          // more, so a deploy mid-tap goes unnoticed.
+          final options = e.requestOptions;
+          if (isProxyError(e.response) &&
+              options.method != 'POST' &&
+              options.extra[_kRetried] != true) {
+            await Future<void>.delayed(retryDelay);
+            options.extra[_kRetried] = true;
+            try {
+              return handler.resolve(await _dio.fetch<dynamic>(options));
+            } on DioException catch (again) {
+              return handler.next(again);
+            }
+          }
           handler.next(e);
         },
       ),
     );
   }
+
+  static const _kRetried = 'newme.retried';
+
+  /// How long a request waits before its one retry after a proxy error. Tests shorten it.
+  static Duration retryDelay = const Duration(milliseconds: 1500);
 
   final Dio _dio;
 

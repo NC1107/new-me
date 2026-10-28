@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -121,9 +123,10 @@ class _ChunkyIconButtonState extends State<ChunkyIconButton> {
                 widget.onPressed!();
               }
             : null,
+        // Tall enough for the lip below the disc, which a parent would otherwise clip.
         child: SizedBox(
           width: hit,
-          height: hit,
+          height: max(hit, widget.size + lipHeight),
           child: Center(child: disc),
         ),
       ),

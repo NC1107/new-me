@@ -19,7 +19,7 @@ StubAdapter _server() => fullServer()
 
 Finder _save() => find.byWidgetPredicate((w) => w is ChunkyButton && w.label == 'Save');
 
-Finder _logPushups() => find.bySemanticsLabel('Add entry for Do 30 push-ups');
+Finder _logPushups() => find.bySemanticsLabel('Add entry for Get stronger');
 
 void main() {
   setUp(() {

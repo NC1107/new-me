@@ -11,16 +11,25 @@ import 'package:newme/state/session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StubResponse {
-  const StubResponse(this.status, [this.body = const <String, dynamic>{}]) : unreachable = false;
+  const StubResponse(this.status, [this.body = const <String, dynamic>{}])
+    : unreachable = false,
+      contentType = 'application/json';
+
+  /// A plain-text answer, the way a proxy in front of the server replies during a restart.
+  const StubResponse.text(this.status, String this.body)
+    : unreachable = false,
+      contentType = 'text/plain';
 
   const StubResponse.unreachable()
     : status = 0,
       body = const <String, dynamic>{},
-      unreachable = true;
+      unreachable = true,
+      contentType = 'application/json';
 
   final int status;
   final Object body;
   final bool unreachable;
+  final String contentType;
 }
 
 typedef StubHandler = FutureOr<StubResponse> Function(RequestOptions request);
@@ -57,7 +66,7 @@ class StubAdapter implements HttpClientAdapter {
       response.body is String ? response.body as String : jsonEncode(response.body),
       response.status,
       headers: {
-        Headers.contentTypeHeader: ['application/json'],
+        Headers.contentTypeHeader: [response.contentType],
       },
     );
   }
@@ -90,6 +99,7 @@ class FakeStorage {
 
   void install() {
     TestWidgetsFlutterBinding.ensureInitialized();
+    ApiClient.retryDelay = Duration.zero;
     SharedPreferences.setMockInitialValues({});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),

@@ -53,7 +53,7 @@ List<Object?> _captureHaptics(WidgetTester tester) {
 void main() {
   testWidgets('the add button is a 44pt touch target', (tester) async {
     await tester.pumpWidget(_host(_quest(completed: false)));
-    final size = tester.getSize(find.bySemanticsLabel('Add entry for Do 30 push-ups'));
+    final size = tester.getSize(find.bySemanticsLabel('Add entry for Get stronger'));
     expect(size.width, greaterThanOrEqualTo(44));
     expect(size.height, greaterThanOrEqualTo(44));
   });
@@ -126,7 +126,7 @@ void main() {
 
     test('titles are plain sentences', () {
       expect(questTitle(q('steps', {'unit': 'steps', 'target': 8000})), 'Walk 8,000 steps');
-      expect(questTitle(q('pushups', {'target': 30})), 'Do 30 push-ups');
+      expect(questTitle(q('pushups', {'target': 30})), 'Get stronger');
       expect(
         questTitle(
           q('reading', {'unit': 'minutes', 'unitAlt': 'pages', 'target': 20, 'targetAlt': 15}),

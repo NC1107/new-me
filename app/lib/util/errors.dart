@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 String errorCopy(Object error) {
   if (error is! ApiException) return 'Something went wrong.';
   return switch (error.kind) {
+    ApiErrorKind.offline when error.code == 'unavailable' => error.message,
     ApiErrorKind.offline => 'You are offline. Check your connection and try again.',
     ApiErrorKind.badAppKey =>
       'This build is not accepted by the server. Update it from TestFlight.',

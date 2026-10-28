@@ -116,7 +116,8 @@ class _Body extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'The range is ${p.rangeLabel}. Source: ${p.source}.',
+          'Target ${p.rangeMin} to ${p.rangeMax} sets a week per muscle: ${p.rangeLabel}. '
+          'Source: ${p.source}.',
           style: AppText.caption.copyWith(color: kInkMuted),
         ),
       ],

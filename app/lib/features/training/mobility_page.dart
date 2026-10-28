@@ -339,7 +339,7 @@ class _Intro extends StatelessWidget {
         ? 10
         : (list.length * (kMobilityHoldSeconds + kHoldLeadInSeconds) / 60).round();
     return PageScaffold(
-      title: 'Mobility 10',
+      title: 'Mobility',
       footer: ChunkyButton(label: 'Start', icon: Icons.play_arrow_rounded, onPressed: onStart),
       children: [
         Text(
@@ -424,7 +424,7 @@ class _Running extends StatelessWidget {
     final digits = leadIn ? session.leadLeft : session.holdLeft;
     final caption = paused ? 'Paused' : (leadIn ? 'Get ready' : 'seconds left');
     return PageScaffold(
-      title: 'Mobility 10',
+      title: 'Mobility',
       subtitle: 'Stretch ${hold.stretchIndex + 1} of ${session.stretchCount}',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
@@ -542,7 +542,7 @@ class _Finished extends StatelessWidget {
     final failed = logging == _Logging.failed;
     final nothing = logging == _Logging.nothing;
     return PageScaffold(
-      title: 'Mobility 10',
+      title: 'Mobility',
       footer: failed
           ? Column(
               mainAxisSize: MainAxisSize.min,

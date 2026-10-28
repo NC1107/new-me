@@ -195,7 +195,7 @@ void main() {
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
       await app.pump(const MobilityPage());
       await tester.pumpAndSettle();
-      expect(find.text('Mobility 10'), findsOneWidget);
+      expect(find.text('Mobility'), findsOneWidget);
       expect(find.textContaining('not from a trial'), findsOneWidget);
       expect(find.textContaining('Garber et al., ACSM position stand'), findsOneWidget);
       expect(find.textContaining('at least 2 days a week'), findsOneWidget);
@@ -562,8 +562,8 @@ void main() {
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
       await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
-      expect(find.text('Mobility 10'), findsOneWidget);
-      await tester.tap(find.text('Mobility 10'));
+      expect(find.text('Mobility'), findsOneWidget);
+      await tester.tap(find.text('Mobility'));
       await tester.pumpAndSettle();
       expect(find.byType(MobilityPage), findsOneWidget);
       expect(find.textContaining('not from a trial'), findsOneWidget);

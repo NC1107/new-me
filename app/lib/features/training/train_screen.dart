@@ -308,10 +308,10 @@ class _MobilityCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mobility 10', style: AppText.headline),
+                  Text('Mobility', style: AppText.headline),
                   SizedBox(height: 2),
                   Text(
-                    'Guided stretching, about 11 minutes. Counts toward yoga.',
+                    '10 guided stretches, about 11 minutes. Counts toward yoga.',
                     style: AppText.caption,
                   ),
                 ],

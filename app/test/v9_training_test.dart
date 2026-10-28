@@ -255,11 +255,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Rest day'), findsOneWidget);
       expect(find.text('Next: Full body B, Thu'), findsOneWidget);
-      expect(find.text('Log sets'), findsOneWidget);
+      expect(find.text('Train'), findsOneWidget);
+      expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
       await tester.tap(find.text('Rest day'));
       await tester.pumpAndSettle();
-      expect(find.text('Search exercises'), findsWidgets, reason: 'the card opens the Exercises');
-      expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
+      expect(find.text('Train today'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Full body B')).dy,
+        lessThan(tester.getTopLeft(find.text('Full body A')).dy),
+        reason: 'Thursday comes up before Monday after a Tuesday',
+      );
+      await tester.tap(find.text('Log single sets instead'));
+      await tester.pumpAndSettle();
+      expect(find.text('Search exercises'), findsWidgets);
+    });
+
+    testWidgets('a rest day can start a plan session', (tester) async {
+      final pulled = _load('training_today');
+      final server = _server(today: 'training_today_rest')
+        ..on('POST /api/training/today/pull', StubResponse(200, pulled));
+      final app = TestApp(tester, server);
+      await app.pump(const TrainingSlot(localToday: '2026-11-03', onTrainTab: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rest day'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full body B'));
+      await tester.pumpAndSettle();
+      expect(_sentBody(server, 'POST /api/training/today/pull'), {'dayIndex': 1});
+      expect(find.text('Train today'), findsNothing, reason: 'the sheet closes');
+      expect(find.byType(SessionPage), findsOneWidget);
     });
 
     testWidgets('a finished session leaves Today but stays on Train', (tester) async {

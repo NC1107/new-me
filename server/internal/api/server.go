@@ -223,6 +223,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/training/plan", s.handleDeletePlan)
 		r.Get("/api/training/today", s.handleTrainingToday)
 		r.Post("/api/training/today/full", s.handleTakeFullSession)
+		r.Post("/api/training/today/pull", s.handlePullDay)
 		r.With(s.settleAfter).Post("/api/training/sessions/{id}/complete", s.handleCompleteSession)
 		r.Get("/api/training/progress", s.handleTrainingProgress)
 		r.Get("/api/training/history", s.handleTrainingHistory)

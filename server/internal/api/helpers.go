@@ -27,6 +27,7 @@ const (
 	codeNameTaken        = "name_taken"
 	codeColorTaken       = "color_taken"
 	codeServerFull       = "server_full"
+	codeSessionExists    = "session_exists"
 	codeInitialized      = "server_initialized"
 	codeDateClosed       = "date_closed"
 	codeInvalidTimezone  = "invalid_timezone"

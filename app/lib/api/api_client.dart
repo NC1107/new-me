@@ -500,6 +500,12 @@ class ApiClient {
   Future<TrainingToday> takeFullSession() =>
       _send(() => _dio.post<dynamic>('/api/training/today/full'), TrainingToday.parse);
 
+  /// Starts plan day [dayIndex] as today's session on a rest day.
+  Future<TrainingToday> pullTrainingDay(int dayIndex) => _send(
+    () => _dio.post<dynamic>('/api/training/today/pull', data: {'dayIndex': dayIndex}),
+    TrainingToday.parse,
+  );
+
   /// Completes a session; the rescored day has the strength quest done by the session.
   Future<DayDetail> completeSession(int id) => _send(
     () => _dio.post<dynamic>('/api/training/sessions/$id/complete'),

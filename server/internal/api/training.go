@@ -362,16 +362,37 @@ type sessionJSON struct {
 // handleTrainingToday returns today's planned session with each exercise's target from the
 // progression rules, or says it is a rest day.
 func (s *Server) handleTrainingToday(w http.ResponseWriter, r *http.Request) {
-	s.trainingToday(w, r, false)
+	s.trainingToday(w, r, false, -1)
+}
+
+type pullDayRequest struct {
+	DayIndex *int `json:"dayIndex"`
+}
+
+// handlePullDay starts one of the plan's days as today's session on a rest day, for someone who
+// wants to train anyway. The plan keeps that day on its own weekday too.
+func (s *Server) handlePullDay(w http.ResponseWriter, r *http.Request) {
+	var req pullDayRequest
+	if err := decodeJSON(r, &req); err != nil {
+		fail(w, r, err)
+		return
+	}
+	if req.DayIndex == nil || *req.DayIndex < 0 {
+		fail(w, r, invalid("dayIndex is required"))
+		return
+	}
+	s.trainingToday(w, r, false, *req.DayIndex)
 }
 
 // handleTakeFullSession answers today's session as handleTrainingToday does, after choosing the
 // full session for the day. A session that already has sets logged keeps what it was shown.
 func (s *Server) handleTakeFullSession(w http.ResponseWriter, r *http.Request) {
-	s.trainingToday(w, r, true)
+	s.trainingToday(w, r, true, -1)
 }
 
-func (s *Server) trainingToday(w http.ResponseWriter, r *http.Request, takeFull bool) {
+// trainingToday answers today's training. pullDay, when not -1, is the plan day to start today
+// on a rest day.
+func (s *Server) trainingToday(w http.ResponseWriter, r *http.Request, takeFull bool, pullDay int) {
 	c := callerFrom(r)
 	ctx := r.Context()
 	today := score.LocalToday(s.now(), c.loc)
@@ -391,8 +412,32 @@ func (s *Server) trainingToday(w http.ResponseWriter, r *http.Request, takeFull 
 		return
 	}
 	dayIndex := planDayFor(plan, today)
-	if dayIndex < 0 {
-		body["restDay"] = true
+	existing, err := db.SessionOn(ctx, s.db.Pool, c.user.ID, today)
+	hasSession := err == nil
+	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		fail(w, r, err)
+		return
+	}
+	body["restDay"] = dayIndex < 0
+	switch {
+	case pullDay >= 0:
+		if dayIndex >= 0 {
+			fail(w, r, newErr(http.StatusConflict, codeSessionExists, "today already has its own session"))
+			return
+		}
+		if pullDay >= len(plan.Days) {
+			fail(w, r, invalid("dayIndex is not a day of the plan"))
+			return
+		}
+		if hasSession && existing.DayIndex != pullDay {
+			fail(w, r, newErr(http.StatusConflict, codeSessionExists, "today already has a session"))
+			return
+		}
+		dayIndex = pullDay
+	case dayIndex < 0 && hasSession:
+		// A rest day keeps the session pulled into it.
+		dayIndex = existing.DayIndex
+	case dayIndex < 0:
 		writeJSON(w, http.StatusOK, body)
 		return
 	}

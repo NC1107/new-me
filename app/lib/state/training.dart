@@ -86,6 +86,9 @@ class TrainingTodayNotifier extends CachedNotifier<TrainingToday> {
   /// Swaps the eased session for the full one.
   Future<void> takeFullSession() async => replace(await _client(ref).takeFullSession());
 
+  /// Trains plan day [dayIndex] today instead of resting.
+  Future<void> pullDay(int dayIndex) async => replace(await _client(ref).pullTrainingDay(dayIndex));
+
   /// Completes today's session, which completes the strength quest.
   Future<void> complete() async {
     final today = state.value?.data;

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/food/food_screen.dart';
 import 'package:newme/features/log/log_sheet.dart';
@@ -78,6 +79,8 @@ void main() {
     await app.tap(_chunky('Log a meal'));
     expect(find.byType(LogSheet), findsOneWidget);
     expect(find.text('Portion'), findsOneWidget);
+    final search = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));
+    expect(tester.widget<TextField>(search).focusNode?.hasFocus, isTrue);
   });
 
   testWidgets('deleting a meal calls DELETE and offers an Undo that logs it again', (tester) async {

@@ -11,6 +11,7 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
+import '../log/food_search.dart';
 import 'food_edit_page.dart';
 
 /// Foods saved for the household, so the same food has the same numbers every time.
@@ -29,12 +30,13 @@ class MyFoodsPage extends ConsumerWidget {
       title: 'My foods',
       children: [
         Text(
-          'Foods you and your partner use. A saved food always logs with the same numbers, '
-          'with no lookup and no AI. Foods from the databases are saved when you log them.',
+          'Saved foods always log with the same numbers.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
-        ChunkyButton(
+        FoodSearchBox(browseOnFocus: false, onPick: (food) => _open(context, ref, food)),
+        const SizedBox(height: 16),
+        ChunkyButton.secondary(
           label: 'New food',
           icon: Icons.add_rounded,
           onPressed: () => _open(context, ref),

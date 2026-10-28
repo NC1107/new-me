@@ -71,6 +71,48 @@ void main() {
     expect(find.textContaining('used 1 time'), findsOneWidget);
   });
 
+  testWidgets('a database result opens the edit page prefilled and saves without logging', (
+    tester,
+  ) async {
+    final server = _server()
+      ..routes['GET /api/foods'] = (o) => StubResponse(200, {
+        'foods': <Object>[],
+        'candidates': o.queryParameters['remote'] == 1
+            ? [
+                {
+                  'id': null,
+                  'name': 'Apple sauce',
+                  'brand': "Mott's",
+                  'servingText': '1 cup (240 g)',
+                  'servingGrams': 240,
+                  'kcal': 100,
+                  'source': 'openfoodfacts',
+                  'sourceId': '9',
+                  'servings': [],
+                },
+              ]
+            : <Object>[],
+      });
+    server.on(
+      'POST /api/foods',
+      const StubResponse(201, {'id': 12, 'name': 'Apple sauce', 'servingText': '1 cup', 'kcal': 100}),
+    );
+    final app = await _open(tester, server);
+
+    await app.enter(_searchBox(), 'sauce');
+    await app.settle(14);
+    expect(find.text('From the databases'), findsOneWidget);
+    await app.tap(find.textContaining('1 cup (240 g)'));
+
+    expect(find.text('Save food'), findsOneWidget);
+    expect(find.text('DELETE FOOD'), findsNothing);
+    expect(find.text('Apple sauce'), findsOneWidget);
+    await app.tap(find.text('SAVE'));
+    final body = app.body('POST /api/foods');
+    expect((body['sourceId'], body['source']), ('9', 'openfoodfacts'));
+    expect(server.to('POST /api/logs'), isEmpty);
+  });
+
   testWidgets('New food saves a manual food from a label', (tester) async {
     final server = _server()..on('POST /api/foods', StubResponse(201, _oat));
     final app = await _open(tester, server);
@@ -161,6 +203,8 @@ void main() {
     expect(size.height, greaterThanOrEqualTo(44));
   });
 }
+
+Finder _searchBox() => _hinted('Search foods');
 
 Finder _hinted(String hint) =>
     find.byWidgetPredicate((w) => w is TextField && w.decoration?.hintText == hint);

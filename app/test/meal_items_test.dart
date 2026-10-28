@@ -259,7 +259,7 @@ void main() {
     await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
 
     await app.enter(_searchField, 'app');
-    await app.settle(10);
+    await app.settle(4);
     expect(server.to('GET /api/foods').last.queryParameters, {'q': 'app'});
     await app.tap(find.textContaining('1 medium (182 g)  -  95 kcal'));
 
@@ -272,7 +272,7 @@ void main() {
     expect(server.to('POST /api/foods/4/use'), hasLength(1));
   });
 
-  testWidgets('database results come only when asked for, and are added as unsaved candidates', (
+  testWidgets('database results follow a pause in typing, and are added as unsaved candidates', (
     tester,
   ) async {
     final server = _server()
@@ -300,17 +300,56 @@ void main() {
     await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
 
     await app.enter(_searchField, 'sauce');
-    await app.settle(10);
+    await app.settle(4);
     expect(find.text('Nothing saved matches.'), findsOneWidget);
+    expect(find.text('Searching USDA and Open Food Facts'), findsOneWidget);
     expect(server.to('GET /api/foods').every((r) => r.queryParameters['remote'] == null), isTrue);
 
-    await app.tap(find.text('SEARCH USDA AND OPEN FOOD FACTS'));
+    await app.settle(10);
+    expect(find.text('Searching USDA and Open Food Facts'), findsNothing);
     expect(find.text('From the databases'), findsOneWidget);
+    expect(find.text('SEARCH USDA AND OPEN FOOD FACTS'), findsNothing);
     await app.tap(find.textContaining('1 cup (240 g)'));
     expect(find.text('Label'), findsOneWidget);
 
     await app.tap(find.text('LOG AS ONE MEAL'));
     expect((app.body('POST /api/foods'))['sourceId'], '9');
+  });
+
+  testWidgets('two characters search saved foods only, and typing on drops a stale answer', (
+    tester,
+  ) async {
+    final server = _server()
+      ..routes['GET /api/foods'] = (o) => StubResponse(200, {
+        'foods': <Object>[],
+        'candidates': o.queryParameters['q'] == 'sauce'
+            ? [
+                {
+                  'id': null,
+                  'name': 'Apple sauce',
+                  'servingText': '1 cup',
+                  'kcal': 100,
+                  'source': 'usda',
+                  'sourceId': '9',
+                  'servings': [],
+                },
+              ]
+            : <Object>[],
+      });
+    final app = TestApp(tester, server, surfaceHeight: 2400);
+    await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
+
+    await app.enter(_searchField, 'sa');
+    await app.settle(14);
+    expect(server.to('GET /api/foods').every((r) => r.queryParameters['remote'] == null), isTrue);
+    expect(find.text('From the databases'), findsNothing);
+
+    await app.enter(_searchField, 'sauce');
+    await app.settle(4);
+    await app.enter(_searchField, 'sauces');
+    await app.settle(14);
+    expect(find.text('Apple sauce'), findsNothing);
+    expect(find.text('Nothing found in the databases.'), findsOneWidget);
   });
 
   testWidgets('an older server still pre-fills the form from the single meal', (tester) async {
@@ -347,7 +386,7 @@ void main() {
       await app.enter(_searchField, 'app');
       await app.settle(10);
       expect(tester.takeException(), isNull);
-      await app.tap(find.text('SEARCH USDA AND OPEN FOOD FACTS'));
+      await app.settle(14);
       expect(tester.takeException(), isNull);
       await app.enter(_searchField, '');
       await app.tap(find.text('DESCRIBE IT'));
@@ -374,7 +413,4 @@ void main() {
   }
 }
 
-final _searchField = find.ancestor(
-  of: find.text('Search your foods'),
-  matching: find.byType(TextField),
-);
+final _searchField = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));

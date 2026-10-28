@@ -145,6 +145,12 @@ class _ReadGroup extends StatelessWidget {
 
   final HealthGroup group;
 
+  /// The group's items other than one named like the group itself ("Sleep" under Sleep).
+  List<String> get _others => [
+    for (final m in group.metrics)
+      if (m.name != group.name) m.name,
+  ];
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -163,10 +169,8 @@ class _ReadGroup extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(group.name, style: AppText.label.copyWith(fontWeight: FontWeight.w800)),
-              Text(
-                group.metrics.map((m) => m.name).join(', '),
-                style: AppText.caption.copyWith(color: kInkSecondary),
-              ),
+              if (_others.isNotEmpty)
+                Text(_others.join(', '), style: AppText.caption.copyWith(color: kInkSecondary)),
             ],
           ),
         ),

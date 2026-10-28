@@ -195,6 +195,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/api/partner/today", s.handlePartnerToday)
 		r.With(s.settleAfter).Post("/api/logs", s.handleCreateLog)
 		r.Get("/api/logs", s.handleListLogs)
+		r.With(s.settleAfter).Patch("/api/logs/{id}", s.handlePatchLog)
 		r.With(s.settleAfter).Delete("/api/logs/{id}", s.handleDeleteLog)
 		r.Get("/api/meals/recent", s.handleRecentMeals)
 		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/daily", s.handlePutHealthDaily)

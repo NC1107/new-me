@@ -163,17 +163,15 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 		}
 		v.activity = &activity
 	case db.KindMeal:
-		name := strings.TrimSpace(req.Name)
-		if n := utf8.RuneCountInString(name); n < 1 || n > maxMealName || hasControlChars(name) {
-			return v, invalid("name must be 1 to 80 characters without control characters")
+		name, herr := validMealName(req.Name)
+		if herr != nil {
+			return v, herr
 		}
-		if req.Kcal < 1 || req.Kcal > maxKcal {
-			return v, invalid("kcal must be between 1 and 10000")
+		if herr := validKcal(req.Kcal); herr != nil {
+			return v, herr
 		}
-		for _, grams := range []float64{req.Protein, req.Carbs, req.Fat, req.Fiber} {
-			if grams < 0 || grams > maxMacroGrams {
-				return v, invalid("macros must be between 0 and 5000 grams")
-			}
+		if herr := validMacros(req.Protein, req.Carbs, req.Fat, req.Fiber); herr != nil {
+			return v, herr
 		}
 		v.meal = &db.NewMealLog{Name: name, Kcal: req.Kcal, ProteinG: req.Protein, CarbsG: req.Carbs,
 			FatG: req.Fat, FiberG: req.Fiber, ClientOpID: v.opID}
@@ -181,6 +179,30 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 		return v, invalid("kind must be activity or meal")
 	}
 	return v, nil
+}
+
+func validMealName(raw string) (string, *httpError) {
+	name := strings.TrimSpace(raw)
+	if n := utf8.RuneCountInString(name); n < 1 || n > maxMealName || hasControlChars(name) {
+		return "", invalid("name must be 1 to 80 characters without control characters")
+	}
+	return name, nil
+}
+
+func validKcal(kcal int) *httpError {
+	if kcal < 1 || kcal > maxKcal {
+		return invalid("kcal must be between 1 and 10000")
+	}
+	return nil
+}
+
+func validMacros(grams ...float64) *httpError {
+	for _, g := range grams {
+		if g < 0 || g > maxMacroGrams {
+			return invalid("macros must be between 0 and 5000 grams")
+		}
+	}
+	return nil
 }
 
 // intensities are the effort levels of a manual activity.
@@ -352,6 +374,100 @@ func (s *Server) handleDeleteLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"day": toDayDetailJSON(date, scored)})
+}
+
+// patchMealRequest carries only the fields to change. Absent fields keep their stored value.
+type patchMealRequest struct {
+	Name    *string  `json:"name"`
+	Kcal    *int     `json:"kcal"`
+	Protein *float64 `json:"protein"`
+	Carbs   *float64 `json:"carbs"`
+	Fat     *float64 `json:"fat"`
+	Fiber   *float64 `json:"fiber"`
+}
+
+func (req patchMealRequest) validate() (db.MealPatch, *httpError) {
+	patch := db.MealPatch{Kcal: req.Kcal, ProteinG: req.Protein, CarbsG: req.Carbs, FatG: req.Fat, FiberG: req.Fiber}
+	if req.Name == nil && req.Kcal == nil && req.Protein == nil && req.Carbs == nil && req.Fat == nil && req.Fiber == nil {
+		return patch, invalid("send at least one of name, kcal, protein, carbs, fat or fiber")
+	}
+	if req.Name != nil {
+		name, herr := validMealName(*req.Name)
+		if herr != nil {
+			return patch, herr
+		}
+		patch.Name = &name
+	}
+	if req.Kcal != nil {
+		if herr := validKcal(*req.Kcal); herr != nil {
+			return patch, herr
+		}
+	}
+	for _, g := range []*float64{req.Protein, req.Carbs, req.Fat, req.Fiber} {
+		if g == nil {
+			continue
+		}
+		if herr := validMacros(*g); herr != nil {
+			return patch, herr
+		}
+	}
+	return patch, nil
+}
+
+// handlePatchLog corrects one of the caller's meals and rescores its day, under the same day
+// window as creating it. Activities are not editable: they answer 422 rather than 404 because
+// the entry exists and is the caller's, and the message tells the app what to do instead.
+func (s *Server) handlePatchLog(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id < 1 {
+		fail(w, r, newErr(http.StatusNotFound, codeNotFound, "no such log"))
+		return
+	}
+	var req patchMealRequest
+	if err := decodeJSON(r, &req); err != nil {
+		fail(w, r, err)
+		return
+	}
+	patch, herr := req.validate()
+	if herr != nil {
+		fail(w, r, herr)
+		return
+	}
+	c := callerFrom(r)
+	ctx := r.Context()
+	var (
+		entry  logJSON
+		date   score.Date
+		scored engine.Scored
+	)
+	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		meal, err := db.UpdateMealLog(ctx, tx, c.user.ID, id, patch)
+		if errors.Is(err, db.ErrNotFound) {
+			isActivity, aerr := db.ActivityLogExists(ctx, tx, c.user.ID, id)
+			if aerr != nil {
+				return aerr
+			}
+			if isActivity {
+				return invalid("only meals can be edited; delete the entry and log it again")
+			}
+			return newErr(http.StatusNotFound, codeNotFound, "no such log")
+		}
+		if err != nil {
+			return err
+		}
+		date = meal.LocalDate
+		if !s.writable(c.user, c.loc, date) {
+			return errDateClosed
+		}
+		entry = toMealJSON(meal)
+		scored, err = s.scoreDay(ctx, tx, c, date)
+		return err
+	})
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"log": entry, "day": toDayDetailJSON(date, scored)})
 }
 
 type recentMealJSON struct {

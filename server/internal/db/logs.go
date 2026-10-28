@@ -129,6 +129,42 @@ func InsertMealLog(ctx context.Context, q Querier, n NewMealLog) (log MealLog, c
 	return log, false, err
 }
 
+// MealPatch lists the fields of a meal to change; nil leaves a field as it is.
+type MealPatch struct {
+	Name     *string
+	Kcal     *int
+	ProteinG *float64
+	CarbsG   *float64
+	FatG     *float64
+	FiberG   *float64
+}
+
+// UpdateMealLog changes the user's live meal and returns it. A meal that is deleted, missing or
+// someone else's is ErrNotFound.
+func UpdateMealLog(ctx context.Context, q Querier, userID, id int64, p MealPatch) (MealLog, error) {
+	l, err := scanMeal(q.QueryRow(ctx, `
+		UPDATE meal_logs SET
+			name = COALESCE($3, name),
+			kcal = COALESCE($4, kcal),
+			protein_g = COALESCE($5, protein_g),
+			carbs_g = COALESCE($6, carbs_g),
+			fat_g = COALESCE($7, fat_g),
+			fiber_g = COALESCE($8, fiber_g),
+			updated_at = now()
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+		RETURNING `+mealColumns, id, userID, p.Name, p.Kcal, p.ProteinG, p.CarbsG, p.FatG, p.FiberG))
+	return l, notFound(err)
+}
+
+// ActivityLogExists reports whether the user has a live activity entry with this id.
+func ActivityLogExists(ctx context.Context, q Querier, userID, id int64) (bool, error) {
+	var exists bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity_logs WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL)`,
+		id, userID).Scan(&exists)
+	return exists, err
+}
+
 // ListActivityLogs returns the user's live activity entries for a date, oldest first.
 func ListActivityLogs(ctx context.Context, q Querier, userID int64, date score.Date) ([]ActivityLog, error) {
 	rows, err := q.Query(ctx, `

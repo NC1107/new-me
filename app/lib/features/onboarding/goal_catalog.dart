@@ -53,8 +53,9 @@ final Map<String, GoalSpec> kGoalSpecs = {
     GoalSpec(
       questKey: 'steps',
       question: 'How many steps a day?',
-      options: _named([5000, 8000, 10000, 12000]),
-      defaultValue: 8000,
+      // 7,000 is where the benefit of walking starts to level off (Paluch et al. 2022).
+      options: _named([5000, 7000, 10000, 12000]),
+      defaultValue: 7000,
       label: (v) => '${v.formatted} steps',
     ),
     GoalSpec(
@@ -111,15 +112,7 @@ final Map<String, GoalSpec> kGoalSpecs = {
     s.questKey: s,
 };
 
-/// Daily calorie presets for the optional food step.
-const List<GoalOption> kCalorieOptions = [
-  GoalOption('Lighter', 1600),
-  GoalOption('Balanced', 2000),
-  GoalOption('Active', 2400),
-  GoalOption('Hearty', 2800),
-];
-
-/// A thing to work on. Picking one turns on its quests and asks for their goals.
+/// A thing to work on. Picking one turns on its quests; the daily goals screen sets them.
 class Focus {
   const Focus({
     required this.id,
@@ -157,7 +150,7 @@ const List<Focus> kFocuses = [
   Focus(
     id: 'strength',
     title: 'Get stronger',
-    subtitle: 'Push-ups, every day',
+    subtitle: 'A strength workout, a training session or push-ups',
     icon: Icons.fitness_center_rounded,
     questKeys: ['pushups'],
   ),

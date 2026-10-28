@@ -43,15 +43,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep.who => const WhoStep(),
     OnboardingStep.name => const NameStep(),
     OnboardingStep.color => const ColorStep(),
-    OnboardingStep.schedule => const ScheduleStep(),
-    OnboardingStep.focus => const FocusStep(),
-    OnboardingStep.goals => const GoalStep(),
-    OnboardingStep.food => const FoodStep(),
+    OnboardingStep.units => const UnitsStep(),
     OnboardingStep.health => const HealthStep(),
-    OnboardingStep.about => AboutStep(
-      question: AboutQuestion.values[state.goalIndex],
+    OnboardingStep.body => AboutBodyStep(
       onNext: ref.read(onboardingProvider.notifier).advanceAbout,
     ),
+    OnboardingStep.weightGoal => AboutStep(
+      question: AboutQuestion.goal,
+      onNext: ref.read(onboardingProvider.notifier).advanceAbout,
+    ),
+    OnboardingStep.schedule => const ScheduleStep(),
+    OnboardingStep.focus => const FocusStep(),
+    OnboardingStep.targets => const TargetsStep(),
     OnboardingStep.reminders => const ReminderStep(),
     OnboardingStep.done => const DoneStep(),
   };

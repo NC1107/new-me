@@ -13,6 +13,8 @@ import '../../theme/accent.dart';
 import '../setup/about_you.dart';
 import 'goal_catalog.dart';
 import 'onboarding_store.dart';
+import '../../state/me.dart';
+import '../../state/units.dart';
 
 /// The server a fresh install probes before the user types anything.
 const String kDefaultServer = String.fromEnvironment(
@@ -29,12 +31,13 @@ enum OnboardingStep {
   who,
   name,
   color,
+  units,
+  health,
+  body,
+  weightGoal,
   schedule,
   focus,
-  goals,
-  food,
-  health,
-  about,
+  targets,
   reminders,
   done,
 }
@@ -58,10 +61,13 @@ extension ProbeFailureCopy on ProbeFailure {
   };
 }
 
-/// The "About you" questions plus the targets screen.
-final kAboutScreens = AboutQuestion.values.length;
+/// The "About you" screens of onboarding: the body measurements, then the weight goal.
+const kAboutScreens = 2;
 
 const kMaxNameLength = 40;
+
+/// The day starts this long after waking unless the person says otherwise.
+const kDefaultStartOffset = 10;
 const kInviteCodeLength = 16;
 
 class OnboardingState {
@@ -90,6 +96,9 @@ class OnboardingState {
     this.wakeMinutes = kDefaultWake,
     this.bedMinutes = kDefaultBed,
     this.scheduleAnswered = false,
+    this.startOffsetMin = kDefaultStartOffset,
+    this.units,
+    this.unitsAnswered = false,
     this.aboutDone = 0,
     this.displayName = '',
     this.error,
@@ -143,6 +152,13 @@ class OnboardingState {
   final int bedMinutes;
   final bool scheduleAnswered;
 
+  /// How long after waking the day starts, which is when its first notification comes.
+  final int startOffsetMin;
+
+  /// The units chosen on their step, or null before it.
+  final Units? units;
+  final bool unitsAnswered;
+
   /// How many of the [kAboutScreens] "About you" screens were passed.
   final int aboutDone;
 
@@ -172,69 +188,57 @@ class OnboardingState {
 
   bool get wantsFood => focuses.contains(kEatFocus);
 
-  bool get hasChoose => invite != null && invite!.canJoinNew && invite!.users.isNotEmpty;
+  /// Whether the step is part of the profile set up after joining, which Back may return to.
+  static const afterJoin = {
+    OnboardingStep.units,
+    OnboardingStep.health,
+    OnboardingStep.body,
+    OnboardingStep.weightGoal,
+    OnboardingStep.schedule,
+    OnboardingStep.focus,
+    OnboardingStep.targets,
+    OnboardingStep.reminders,
+  };
 
-  int selectedGoal(String questKey) =>
-      drafts[questKey] ?? goals[questKey] ?? kGoalSpecs[questKey]!.defaultValue;
+  bool get hasChoose => invite != null && invite!.canJoinNew && invite!.users.isNotEmpty;
 
   /// The screens this person will walk through, as (step, goal index) pairs.
   List<(OnboardingStep, int)> get flow {
     const welcome = (OnboardingStep.welcome, 0);
     const code = (OnboardingStep.code, 0);
     const choose = (OnboardingStep.choose, 0);
-    final plan = [
+    // What people know comes first: units, then Health (which can fill in height and weight),
+    // then the body and goal, and only then the daily goals worked out from them.
+    const profile = [
+      (OnboardingStep.name, 0),
+      (OnboardingStep.color, 0),
+      (OnboardingStep.units, 0),
+      (OnboardingStep.health, 0),
+      (OnboardingStep.body, 0),
+      (OnboardingStep.weightGoal, 0),
+      (OnboardingStep.schedule, 0),
       (OnboardingStep.focus, 0),
-      for (var i = 0; i < questKeys.length; i++) (OnboardingStep.goals, i),
-      if (wantsFood) (OnboardingStep.food, 0),
+      (OnboardingStep.targets, 0),
+      (OnboardingStep.reminders, 0),
+      (OnboardingStep.done, 0),
     ];
-    const schedule = (OnboardingStep.schedule, 0);
-    const health = (OnboardingStep.health, 0);
-    // After Health, so height and weight can be prefilled from what it shared.
-    final about = [for (var i = 0; i < kAboutScreens; i++) (OnboardingStep.about, i)];
-    const reminders = (OnboardingStep.reminders, 0);
-    const done = (OnboardingStep.done, 0);
     return switch (path) {
       null => [welcome, code, if (hasChoose) choose],
-      OnboardingPath.first => [
-        welcome,
-        (OnboardingStep.name, 0),
-        (OnboardingStep.color, 0),
-        schedule,
-        ...plan,
-        health,
-        ...about,
-        reminders,
-        done,
-      ],
-      OnboardingPath.invitedNew => [
-        welcome,
-        code,
-        if (hasChoose) choose,
-        (OnboardingStep.name, 0),
-        (OnboardingStep.color, 0),
-        schedule,
-        ...plan,
-        health,
-        ...about,
-        reminders,
-        done,
-      ],
+      OnboardingPath.first => [welcome, ...profile],
+      OnboardingPath.invitedNew => [welcome, code, if (hasChoose) choose, ...profile],
       OnboardingPath.returning => [
         welcome,
         code,
         if (hasChoose) choose,
         (OnboardingStep.who, 0),
-        health,
-        reminders,
-        done,
+        (OnboardingStep.health, 0),
+        (OnboardingStep.reminders, 0),
+        (OnboardingStep.done, 0),
       ],
     };
   }
 
-  int get _flowIndex => flow.indexOf((
-    step,
-    step == OnboardingStep.goals || step == OnboardingStep.about ? goalIndex : 0,
-  ));
+  int get _flowIndex => flow.indexOf((step, 0));
 
   /// 0 to 1 across the whole flow.
   double get progress {
@@ -250,15 +254,6 @@ class OnboardingState {
     final i = _flowIndex;
     if (i <= 0 || busy || step == OnboardingStep.done) return false;
     final previous = f[i - 1].$1;
-    const afterJoin = {
-      OnboardingStep.schedule,
-      OnboardingStep.focus,
-      OnboardingStep.goals,
-      OnboardingStep.food,
-      OnboardingStep.health,
-      OnboardingStep.about,
-      OnboardingStep.reminders,
-    };
     return !pending || afterJoin.contains(previous);
   }
 
@@ -289,6 +284,9 @@ class OnboardingState {
     int? wakeMinutes,
     int? bedMinutes,
     bool? scheduleAnswered,
+    int? startOffsetMin,
+    Units? units,
+    bool? unitsAnswered,
     int? aboutDone,
     String? displayName,
     String? error,
@@ -321,6 +319,9 @@ class OnboardingState {
     wakeMinutes: wakeMinutes ?? this.wakeMinutes,
     bedMinutes: bedMinutes ?? this.bedMinutes,
     scheduleAnswered: scheduleAnswered ?? this.scheduleAnswered,
+    startOffsetMin: startOffsetMin ?? this.startOffsetMin,
+    units: units ?? this.units,
+    unitsAnswered: unitsAnswered ?? this.unitsAnswered,
     aboutDone: aboutDone ?? this.aboutDone,
     displayName: displayName ?? this.displayName,
     error: clearError ? null : (error ?? this.error),
@@ -390,6 +391,7 @@ class OnboardingController extends Notifier<OnboardingState> {
       foodAnswered: saved.foodAnswered,
       planSaved: saved.planSaved,
       scheduleAnswered: saved.scheduleAnswered,
+      unitsAnswered: saved.unitsAnswered,
       aboutDone: saved.aboutDone,
     );
     state = _resumeAt(
@@ -399,31 +401,35 @@ class OnboardingController extends Notifier<OnboardingState> {
     );
   }
 
-  /// The first screen the saved answers do not cover.
+  /// The first screen the saved answers do not cover, in the order of [OnboardingState.flow].
   OnboardingState _resumeAt(
     OnboardingState s, {
     required bool healthAnswered,
     required bool reminderAnswered,
   }) {
-    final afterAbout = reminderAnswered ? OnboardingStep.done : OnboardingStep.reminders;
-    final afterPlan = !healthAnswered ? OnboardingStep.health : afterAbout;
-    if (s.path == OnboardingPath.returning) return s.copyWith(step: afterPlan);
-    if (!s.scheduleAnswered) return s.copyWith(step: OnboardingStep.schedule);
-    if (s.focuses.isEmpty) return s.copyWith(step: OnboardingStep.focus);
-    final keys = s.questKeys;
-    final nextGoal = keys.indexWhere((k) => !s.goals.containsKey(k));
-    if (nextGoal >= 0) return s.copyWith(step: OnboardingStep.goals, goalIndex: nextGoal);
-    if (s.wantsFood && !s.foodAnswered) return s.copyWith(step: OnboardingStep.food);
-    if (!s.planSaved) {
-      return s.wantsFood
-          ? s.copyWith(step: OnboardingStep.food)
-          : s.copyWith(step: OnboardingStep.goals, goalIndex: keys.length - 1);
+    final OnboardingStep step;
+    if (s.path == OnboardingPath.returning) {
+      step = !healthAnswered
+          ? OnboardingStep.health
+          : (reminderAnswered ? OnboardingStep.done : OnboardingStep.reminders);
+    } else if (!s.unitsAnswered) {
+      step = OnboardingStep.units;
+    } else if (!healthAnswered) {
+      step = OnboardingStep.health;
+    } else if (s.aboutDone < 1) {
+      step = OnboardingStep.body;
+    } else if (s.aboutDone < 2) {
+      step = OnboardingStep.weightGoal;
+    } else if (!s.scheduleAnswered) {
+      step = OnboardingStep.schedule;
+    } else if (s.focuses.isEmpty) {
+      step = OnboardingStep.focus;
+    } else if (!s.planSaved) {
+      step = OnboardingStep.targets;
+    } else {
+      step = reminderAnswered ? OnboardingStep.done : OnboardingStep.reminders;
     }
-    if (afterPlan == OnboardingStep.health) return s.copyWith(step: afterPlan);
-    if (s.aboutDone < kAboutScreens && !reminderAnswered) {
-      return s.copyWith(step: OnboardingStep.about, goalIndex: s.aboutDone);
-    }
-    return s.copyWith(step: afterAbout);
+    return s.copyWith(step: step);
   }
 
   ApiClient _client() => ref.read(apiClientFactoryProvider)(baseUrl: state.serverUrl);
@@ -438,12 +444,19 @@ class OnboardingController extends Notifier<OnboardingState> {
         foodAnswered: state.foodAnswered,
         planSaved: state.planSaved,
         scheduleAnswered: state.scheduleAnswered,
+        unitsAnswered: state.unitsAnswered,
         aboutDone: state.aboutDone,
         healthAnswered:
             healthAnswered ||
-            state.step == OnboardingStep.about ||
-            state.step == OnboardingStep.reminders ||
-            state.step == OnboardingStep.done,
+            const {
+              OnboardingStep.body,
+              OnboardingStep.weightGoal,
+              OnboardingStep.schedule,
+              OnboardingStep.focus,
+              OnboardingStep.targets,
+              OnboardingStep.reminders,
+              OnboardingStep.done,
+            }.contains(state.step),
         reminderAnswered: reminderAnswered || state.step == OnboardingStep.done,
       ).save();
 
@@ -634,7 +647,7 @@ class OnboardingController extends Notifier<OnboardingState> {
         pending: true,
         color: result.user.color,
         displayName: result.user.name,
-        step: returning ? OnboardingStep.health : OnboardingStep.schedule,
+        step: returning ? OnboardingStep.health : OnboardingStep.units,
         goalIndex: 0,
         forward: true,
       );
@@ -662,6 +675,34 @@ class OnboardingController extends Notifier<OnboardingState> {
     _ => e.message,
   };
 
+  void chooseUnits(Units units) {
+    state = state.copyWith(units: units);
+    ref.read(signupUnitsProvider.notifier).choose(units);
+  }
+
+  /// Saves the units on the profile so every later screen, and the server's words, follow them.
+  Future<void> continueUnits() async {
+    final client = ref.read(apiClientProvider);
+    if (client == null || state.busy) return;
+    final Units units = state.units ?? ref.read(unitsProvider);
+    chooseUnits(units);
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      await ref.read(meProvider.notifier).save(MePatch(units: units));
+      state = state.copyWith(busy: false, unitsAnswered: true);
+      await _persist();
+      _next();
+    } on ApiException catch (e) {
+      state = state.copyWith(busy: false, error: _joinError(e));
+    }
+  }
+
+  /// The chosen start time, as minutes after midnight, becomes the wait after waking.
+  void setDayStart(int minutes) {
+    final gap = (minutes - state.wakeMinutes) % (24 * 60);
+    state = state.copyWith(startOffsetMin: gap > kMaxFirstOffsetMin ? 0 : gap);
+  }
+
   void setWake(int minutes) => state = state.copyWith(wakeMinutes: minutes);
 
   void setBed(int minutes) => state = state.copyWith(bedMinutes: minutes);
@@ -676,7 +717,11 @@ class OnboardingController extends Notifier<OnboardingState> {
     try {
       await client.patchMe(
         MePatch(
-          schedule: Schedule(workday: times, dayOff: times),
+          schedule: Schedule(
+            workday: times,
+            dayOff: times,
+            firstNotificationOffsetMin: state.startOffsetMin,
+          ),
         ),
       );
       state = state.copyWith(busy: false, scheduleAnswered: true);
@@ -718,33 +763,18 @@ class OnboardingController extends Notifier<OnboardingState> {
     _next();
   }
 
-  void setGoal(String questKey, int value) =>
-      state = state.copyWith(drafts: {...state.drafts, questKey: value});
+  void setKcal(int? value) =>
+      state = value == null ? state.copyWith(clearKcal: true) : state.copyWith(kcal: value);
 
-  Future<void> continueGoal() async {
-    final keys = state.questKeys;
-    if (state.goalIndex >= keys.length) return;
-    final key = keys[state.goalIndex];
-    state = state.copyWith(goals: {...state.goals, key: state.selectedGoal(key)}, planSaved: false);
-    await _persist();
-    if (state.goalIndex == keys.length - 1 && !state.wantsFood) {
-      await _commitPlan();
-    } else {
-      _next();
-    }
-  }
-
-  void setKcal(int value) => state = state.copyWith(kcal: value);
-
-  Future<void> continueFood() async {
-    if (state.kcal == null) return;
-    state = state.copyWith(foodAnswered: true, planSaved: false);
-    await _persist();
-    await _commitPlan();
-  }
-
-  Future<void> skipFood() async {
-    state = state.copyWith(clearKcal: true, foodAnswered: true, planSaved: false);
+  /// Saves the daily goals the targets screen shows, as adjusted.
+  Future<void> commitTargets(Map<String, int> goals, {int? kcal}) async {
+    state = state.copyWith(
+      goals: goals,
+      kcal: kcal,
+      clearKcal: kcal == null,
+      foodAnswered: true,
+      planSaved: false,
+    );
     await _persist();
     await _commitPlan();
   }
@@ -776,10 +806,12 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
   }
 
+  /// Asks for access and moves on as soon as Apple answers; the first sync carries on behind
+  /// the next screens instead of holding this one.
   Future<void> connectHealth() async {
     state = state.copyWith(busy: true);
     try {
-      await ref.read(healthSyncProvider.notifier).connect();
+      await ref.read(healthSyncProvider.notifier).connect(waitForSync: false);
     } finally {
       await _healthDone();
     }
@@ -789,15 +821,13 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   Future<void> _healthDone() async {
     state = state.copyWith(busy: false);
-    // A re-paired person already has their answers, so only new people are asked.
-    final asksAbout = state.path != OnboardingPath.returning;
-    _go(asksAbout ? OnboardingStep.about : OnboardingStep.reminders);
+    _next();
     await _persist(healthAnswered: true);
   }
 
   /// Moves past an "About you" screen, answered or skipped, remembering how far the person got.
   Future<void> advanceAbout() async {
-    final passed = state.goalIndex + 1;
+    final passed = state.step == OnboardingStep.body ? 1 : 2;
     if (passed > state.aboutDone) state = state.copyWith(aboutDone: passed);
     _next();
     await _persist();

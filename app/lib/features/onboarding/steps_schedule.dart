@@ -73,6 +73,23 @@ class ScheduleStep extends ConsumerWidget {
           icon: Icons.bedtime_rounded,
           onPressed: () => _pick(context, s.bedMinutes, 'I go to bed at', c.setBed),
         ),
+        const SizedBox(height: 24),
+        const FieldLabel('Your day starts'),
+        ChunkyButton.secondary(
+          label: formatReminderTime((s.wakeMinutes + s.startOffsetMin) % (24 * 60)),
+          icon: Icons.wb_sunny_rounded,
+          onPressed: () => _pick(
+            context,
+            (s.wakeMinutes + s.startOffsetMin) % (24 * 60),
+            'My day starts at',
+            c.setDayStart,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Your first note waits until then, even if you are up earlier.',
+          style: AppText.caption,
+        ),
         if (sameTime) const StepError('Wake up and bedtime need to be different.'),
         if (s.error != null) StepError(s.error!),
         const SizedBox(height: 16),

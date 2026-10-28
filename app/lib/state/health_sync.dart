@@ -144,7 +144,10 @@ class HealthSyncController extends Notifier<HealthSyncState> {
   }
 
   /// Asks for access from an explicit tap, then syncs once without the resume throttle.
-  Future<bool> connect() async {
+  ///
+  /// [waitForSync] false returns once Apple answers and leaves the first sync running, for a
+  /// screen that should move on straight away.
+  Future<bool> connect({bool waitForSync = true}) async {
     // A restore still reading prefs would otherwise overwrite the prompt state set below.
     await _ready;
     final bool granted;
@@ -158,7 +161,12 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     if (_disposed) return granted;
     state = state.copyWith(prompted: true);
     if (granted) unawaited(ref.read(backgroundHealthBridgeProvider).enable());
-    await sync(SyncTrigger.connect);
+    final first = sync(SyncTrigger.connect);
+    if (waitForSync) {
+      await first;
+    } else {
+      unawaited(first);
+    }
     return granted;
   }
 

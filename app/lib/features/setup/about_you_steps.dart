@@ -18,6 +18,7 @@ import '../log/log_chip.dart';
 import '../me/targets_logic.dart';
 import '../onboarding/step_layout.dart';
 import 'about_you.dart';
+import '../../widgets/height_input.dart';
 
 /// One "About you" screen. [onNext] moves the host (onboarding or the standalone page) on, and
 /// is called after a save, a skip or the final choice.
@@ -30,6 +31,7 @@ class AboutYouStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ready = ref.watch(aboutYouProvider.select((s) => s.ready));
+    final units = ref.watch(aboutYouProvider.select((s) => s.units));
     if (!ready) return const _Loading();
     return switch (question) {
       AboutQuestion.birthYear => _NumberQuestion(
@@ -46,30 +48,18 @@ class AboutYouStep extends ConsumerWidget {
         maxLength: 4,
       ),
       AboutQuestion.sex => _SexQuestion(onNext: onNext),
-      AboutQuestion.height => _NumberQuestion(
-        question: question,
-        onNext: onNext,
-        mascot: 'Your tallest self, please.',
-        title: 'How tall are you?',
-        why:
-            'Used by the Mifflin-St Jeor equation for your resting energy, and to keep protein '
-            'in range for your height.',
-        hint: 'For example 178',
-        semanticLabel: 'Height in centimetres',
-        unit: 'cm',
-        maxLength: 5,
-      ),
+      AboutQuestion.height => _HeightQuestion(onNext: onNext),
       AboutQuestion.weight => _NumberQuestion(
         question: question,
         onNext: onNext,
         mascot: 'Just a number, no judging.',
         title: 'What do you weigh?',
         why:
-            'Used by the Mifflin-St Jeor equation for your resting energy and to set protein per '
-            'kilogram. A new weigh-in later keeps it current.',
-        hint: 'For example 72.5',
-        semanticLabel: 'Weight in kilograms',
-        unit: 'kg',
+            'Used by the Mifflin-St Jeor equation for your resting energy and to set protein for '
+            'your weight. A new weigh-in later keeps it current.',
+        hint: units.isImperial ? 'For example 160' : 'For example 72.5',
+        semanticLabel: units.isImperial ? 'Weight in pounds' : 'Weight in kilograms',
+        unit: units.weightUnit,
         maxLength: 6,
       ),
       AboutQuestion.goal => _GoalQuestion(onNext: onNext),
@@ -151,11 +141,7 @@ class _NumberQuestionState extends ConsumerState<_NumberQuestion> {
 
   String get _stored {
     final s = ref.read(aboutYouProvider);
-    return switch (_q) {
-      AboutQuestion.birthYear => s.birthYear,
-      AboutQuestion.height => s.height,
-      _ => s.weight,
-    };
+    return _q == AboutQuestion.birthYear ? s.birthYear : s.weight;
   }
 
   @override
@@ -166,13 +152,10 @@ class _NumberQuestionState extends ConsumerState<_NumberQuestion> {
 
   void _changed(String v) {
     final c = ref.read(aboutYouProvider.notifier);
-    switch (_q) {
-      case AboutQuestion.birthYear:
-        c.setBirthYear(v);
-      case AboutQuestion.height:
-        c.setHeight(v);
-      default:
-        c.setWeight(v);
+    if (_q == AboutQuestion.birthYear) {
+      c.setBirthYear(v);
+    } else {
+      c.setWeight(v);
     }
   }
 
@@ -191,15 +174,10 @@ class _NumberQuestionState extends ConsumerState<_NumberQuestion> {
         typed = s.birthYear.trim().length == 4;
         rangeError = 'Between $kEarliestBirthYear and $thisYear';
         fromHealth = false;
-      case AboutQuestion.height:
-        valid = s.heightValid;
-        typed = s.height.trim().isNotEmpty;
-        rangeError = 'Between ${kHeightRange.min.round()} and ${kHeightRange.max.round()} cm';
-        fromHealth = s.heightFromHealth;
       default:
         valid = s.weightValid;
         typed = s.weight.trim().isNotEmpty;
-        rangeError = 'Between ${kWeightRange.min.round()} and ${kWeightRange.max.round()} kg';
+        rangeError = weightRangeError(s.units);
         fromHealth = s.weightFromHealth;
     }
     return StepLayout(
@@ -241,16 +219,164 @@ class _NumberQuestionState extends ConsumerState<_NumberQuestion> {
             ],
           ],
         ),
-        if (fromHealth) ...[
-          const SizedBox(height: 10),
-          const Row(
-            children: [
-              Icon(Icons.favorite_rounded, size: 16, color: kInkMuted),
-              SizedBox(width: 6),
-              Flexible(child: Text('From Apple Health', style: AppText.caption)),
+        if (fromHealth) ...[const SizedBox(height: 10), const _FromHealth()],
+        if (s.error != null) StepError(s.error!),
+      ],
+    );
+  }
+}
+
+/// "Between 44 and 882 lb": the weights the server accepts, in the person's units.
+String weightRangeError(Units units) =>
+    'Between ${units.weightIn(kWeightRange.min).round()} and ${units.weightIn(kWeightRange.max).round()} ${units.weightUnit}';
+
+class _HeightQuestion extends ConsumerWidget {
+  const _HeightQuestion({required this.onNext});
+
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(aboutYouProvider);
+    return StepLayout(
+      footer: _footer(
+        busy: s.busy,
+        onContinue: s.heightValid ? () => _confirm(ref, AboutQuestion.height, onNext) : null,
+        onSkip: onNext,
+      ),
+      children: [
+        const MascotLine(line: 'Your tallest self, please.', state: MascotState.thinking),
+        const StepTitle(
+          'How tall are you?',
+          subtitle:
+              'Used by the Mifflin-St Jeor equation for your resting energy, and to keep protein '
+              'in range for your height.',
+        ),
+        HeightInput(
+          units: s.units,
+          initialCm: s.heightCm,
+          onChanged: (cm, {required valid}) =>
+              ref.read(aboutYouProvider.notifier).setHeight(cm, valid: valid),
+        ),
+        if (s.heightFromHealth) ...[const SizedBox(height: 10), const _FromHealth()],
+        if (s.error != null) StepError(s.error!),
+      ],
+    );
+  }
+}
+
+class _FromHealth extends StatelessWidget {
+  const _FromHealth();
+
+  @override
+  Widget build(BuildContext context) => const Row(
+    children: [
+      Icon(Icons.favorite_rounded, size: 16, color: kInkMuted),
+      SizedBox(width: 6),
+      Flexible(child: Text('From Apple Health', style: AppText.caption)),
+    ],
+  );
+}
+
+/// Birth year, sex, height and weight on one screen, for onboarding: everything the formulas
+/// need that a person knows by heart, prefilled from Apple Health where it shared them.
+class AboutYouBodyStep extends ConsumerStatefulWidget {
+  const AboutYouBodyStep({super.key, required this.onNext});
+
+  final VoidCallback onNext;
+
+  @override
+  ConsumerState<AboutYouBodyStep> createState() => _AboutYouBodyStepState();
+}
+
+class _AboutYouBodyStepState extends ConsumerState<AboutYouBodyStep> {
+  late final _year = TextEditingController(text: ref.read(aboutYouProvider).birthYear);
+  late final _weight = TextEditingController(text: ref.read(aboutYouProvider).weight);
+
+  @override
+  void dispose() {
+    _year.dispose();
+    _weight.dispose();
+    super.dispose();
+  }
+
+  Future<void> _continue() async {
+    final ok = await ref.read(aboutYouProvider.notifier).confirmBody();
+    if (ok) widget.onNext();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(aboutYouProvider);
+    if (!s.ready) return const _Loading();
+    final c = ref.read(aboutYouProvider.notifier);
+    final thisYear = ref.watch(clockProvider)().year;
+    final year = s.birthYearValue;
+    final yearTyped = s.birthYear.trim().length == 4;
+    final yearOk = s.birthYear.trim().isEmpty || (year != null && year <= thisYear);
+    final weightOk = s.weight.trim().isEmpty || s.weightValid;
+    final ok = yearOk && weightOk && s.heightTyped;
+    return StepLayout(
+      footer: [
+        ChunkyButton(label: 'Continue', busy: s.busy, onPressed: ok ? _continue : null),
+        ChunkyButton.secondary(label: 'Skip for now', onPressed: s.busy ? null : widget.onNext),
+      ],
+      children: [
+        const MascotLine(line: 'Only what you know already.', state: MascotState.thinking),
+        const StepTitle(
+          'About you',
+          subtitle:
+              'New Me works out your calories, protein and more from these with published '
+              'formulas. Never shown to anyone else.',
+        ),
+        const FieldLabel('Year you were born'),
+        AppTextField(
+          controller: _year,
+          hint: 'For example 1990',
+          semanticLabel: 'Birth year',
+          keyboardType: TextInputType.number,
+          errorText: yearTyped && !yearOk ? 'Between $kEarliestBirthYear and $thisYear' : null,
+          onChanged: c.setBirthYear,
+          inputFormatters: [
+            LengthLimitingTextInputFormatter(4),
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+        ),
+        const SizedBox(height: 20),
+        const FieldLabel('Sex'),
+        Row(
+          children: [
+            for (final (i, (value, label)) in const [
+              ('male', 'Male'),
+              ('female', 'Female'),
+            ].indexed) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: LogChip(
+                  label: label,
+                  selected: s.sex == value,
+                  onTap: () => c.setSex(value),
+                ),
+              ),
             ],
-          ),
-        ],
+          ],
+        ),
+        const SizedBox(height: 20),
+        const FieldLabel('Height'),
+        HeightInput(units: s.units, initialCm: s.heightCm, onChanged: c.setHeight),
+        if (s.heightFromHealth) ...[const SizedBox(height: 6), const _FromHealth()],
+        const SizedBox(height: 20),
+        FieldLabel('Weight in ${s.units.isImperial ? 'pounds' : 'kilograms'}'),
+        AppTextField(
+          controller: _weight,
+          hint: s.units.isImperial ? 'For example 160' : 'For example 72.5',
+          semanticLabel: s.units.isImperial ? 'Weight in pounds' : 'Weight in kilograms',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          errorText: weightOk ? null : weightRangeError(s.units),
+          onChanged: c.setWeight,
+          inputFormatters: [LengthLimitingTextInputFormatter(6)],
+        ),
+        if (s.weightFromHealth) ...[const SizedBox(height: 6), const _FromHealth()],
         if (s.error != null) StepError(s.error!),
       ],
     );
@@ -326,7 +452,7 @@ class _GoalQuestion extends ConsumerWidget {
           'What is your weight goal?',
           subtitle:
               'Sets how far your calories sit from maintenance and how much protein you need '
-              'per kilogram.',
+              'for your weight.',
         ),
         for (final (i, (kind, title, sub, icon)) in const [
           (GoalKind.lose, 'Lose', 'Eat a little under maintenance', Icons.trending_down_rounded),
@@ -349,9 +475,9 @@ class _GoalQuestion extends ConsumerWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final pace in s.kind == GoalKind.lose ? kLosePaces : kGainPaces)
+              for (final pace in s.kind == GoalKind.lose ? s.units.losePaces : s.units.gainPaces)
                 LogChip(
-                  label: '$pace kg a week',
+                  label: s.units.pace(pace),
                   selected: s.pace == pace,
                   onTap: () => c.setPace(pace),
                 ),

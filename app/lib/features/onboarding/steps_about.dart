@@ -30,3 +30,26 @@ class _AboutStepState extends ConsumerState<AboutStep> {
   Widget build(BuildContext context) =>
       AboutYouStep(question: widget.question, onNext: widget.onNext);
 }
+
+/// The one-screen "About you" of onboarding, read fresh once Health has had its say.
+class AboutBodyStep extends ConsumerStatefulWidget {
+  const AboutBodyStep({super.key, required this.onNext});
+
+  final VoidCallback onNext;
+
+  @override
+  ConsumerState<AboutBodyStep> createState() => _AboutBodyStepState();
+}
+
+class _AboutBodyStepState extends ConsumerState<AboutBodyStep> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) ref.read(aboutYouProvider.notifier).ensureBegun();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => AboutYouBodyStep(onNext: widget.onNext);
+}

@@ -11,6 +11,7 @@ import '../../state/me.dart';
 import '../../state/session.dart';
 import '../../state/targets.dart';
 import '../../state/today.dart';
+import '../../state/units.dart';
 import '../../util/errors.dart';
 import '../insights/birth_year_sheet.dart' show kEarliestBirthYear;
 
@@ -62,7 +63,9 @@ class AboutYouState {
     this.ready = false,
     this.birthYear = '',
     this.sex,
-    this.height = '',
+    this.units = Units.metric,
+    this.heightCm,
+    this.heightTyped = true,
     this.heightFromHealth = false,
     this.weight = '',
     this.weightFromHealth = false,
@@ -78,10 +81,20 @@ class AboutYouState {
   final bool ready;
   final String birthYear;
   final String? sex;
-  final String height;
+
+  /// What the person reads; the weight is typed in it.
+  final Units units;
+
+  /// The height in cm, or null while empty or impossible.
+  final double? heightCm;
+
+  /// False while the height field holds something impossible, so Continue waits.
+  final bool heightTyped;
 
   /// The prefilled value came from Apple Health and has not been edited.
   final bool heightFromHealth;
+
+  /// The weight as typed, in [units].
   final String weight;
   final bool weightFromHealth;
   final GoalKind kind;
@@ -95,11 +108,16 @@ class AboutYouState {
     return year != null && year >= kEarliestBirthYear ? year : null;
   }
 
-  double? get heightValue => parseDecimal(height);
-  double? get weightValue => parseDecimal(weight);
+  double? get heightValue => heightCm;
+
+  /// The typed weight in kg.
+  double? get weightValue {
+    final v = parseDecimal(weight);
+    return v == null ? null : (units.weightToKg(v) * 10).round() / 10;
+  }
 
   bool get heightValid =>
-      heightValue != null && heightValue! >= kHeightRange.min && heightValue! <= kHeightRange.max;
+      heightCm != null && heightCm! >= kHeightRange.min && heightCm! <= kHeightRange.max;
   bool get weightValid =>
       weightValue != null && weightValue! >= kWeightRange.min && weightValue! <= kWeightRange.max;
 
@@ -110,7 +128,10 @@ class AboutYouState {
     String? birthYear,
     String? sex,
     bool clearSex = false,
-    String? height,
+    Units? units,
+    double? heightCm,
+    bool clearHeight = false,
+    bool? heightTyped,
     bool? heightFromHealth,
     String? weight,
     bool? weightFromHealth,
@@ -125,7 +146,9 @@ class AboutYouState {
     ready: ready ?? this.ready,
     birthYear: birthYear ?? this.birthYear,
     sex: clearSex ? null : (sex ?? this.sex),
-    height: height ?? this.height,
+    units: units ?? this.units,
+    heightCm: clearHeight ? null : (heightCm ?? this.heightCm),
+    heightTyped: heightTyped ?? this.heightTyped,
     heightFromHealth: heightFromHealth ?? this.heightFromHealth,
     weight: weight ?? this.weight,
     weightFromHealth: weightFromHealth ?? this.weightFromHealth,
@@ -173,13 +196,15 @@ class AboutYouController extends Notifier<AboutYouState> {
     final height = user?.heightCm ?? _health(healthHeight);
     final weight = _health(healthWeight);
     final goal = user?.goalSetting ?? const GoalSetting();
+    final units = ref.read(unitsProvider);
     state = AboutYouState(
       ready: true,
+      units: units,
       birthYear: user?.birthYear?.toString() ?? '',
       sex: user?.sex,
-      height: height == null ? '' : _plain(height),
+      heightCm: height,
       heightFromHealth: user?.heightCm == null && height != null,
-      weight: weight == null ? '' : _plain(weight),
+      weight: weight == null ? '' : _plain(units.weightIn(weight)),
       weightFromHealth: weight != null,
       kind: goal.kind,
       pace: goal.paceKgPerWeek,
@@ -197,8 +222,13 @@ class AboutYouController extends Notifier<AboutYouState> {
 
   void setSex(String v) => state = state.copyWith(sex: v, clearError: true);
 
-  void setHeight(String v) =>
-      state = state.copyWith(height: v, heightFromHealth: false, clearError: true);
+  void setHeight(double? cm, {required bool valid}) => state = state.copyWith(
+    heightCm: cm,
+    clearHeight: cm == null,
+    heightTyped: valid,
+    heightFromHealth: false,
+    clearError: true,
+  );
 
   void setWeight(String v) =>
       state = state.copyWith(weight: v, weightFromHealth: false, clearError: true);
@@ -208,8 +238,8 @@ class AboutYouController extends Notifier<AboutYouState> {
     state = state.copyWith(
       kind: kind,
       pace: switch (kind) {
-        GoalKind.lose => kLosePaces.first,
-        GoalKind.gain => kGainPaces[1],
+        GoalKind.lose => state.units.losePaces.first,
+        GoalKind.gain => state.units.gainPaces[1],
         GoalKind.maintain => 0,
       },
     );
@@ -258,6 +288,34 @@ class AboutYouController extends Notifier<AboutYouState> {
         }
       case AboutQuestion.review:
         break;
+    }
+  }
+
+  /// Saves birth year, sex, height and weight from the one-screen version in onboarding: one
+  /// profile PATCH and, for a typed weight, one reading. True when the flow may move on.
+  Future<bool> confirmBody() async {
+    if (state.busy) return false;
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final me = ref.read(meProvider).value?.data;
+      final user = me?.user;
+      final year = state.birthYearValue;
+      final cm = state.heightValid && !state.heightFromHealth ? state.heightCm : null;
+      final patch = MePatch(
+        birthYear: year != null && year != user?.birthYear ? year : null,
+        sex: state.sex != null && state.sex != user?.sex ? state.sex : null,
+        heightCm: cm != null && cm != user?.heightCm ? cm : null,
+      );
+      if (patch.birthYear != null || patch.sex != null || patch.heightCm != null) {
+        await ref.read(meProvider.notifier).save(patch);
+      }
+      final kg = state.weightValue;
+      if (state.weightValid && !state.weightFromHealth && kg != null) await _saveWeight(kg, me);
+      state = state.copyWith(busy: false);
+      return true;
+    } on ApiException catch (e) {
+      state = state.copyWith(busy: false, error: errorCopy(e));
+      return false;
     }
   }
 

@@ -18,6 +18,7 @@ class OnboardingProgress {
     this.foodAnswered = false,
     this.planSaved = false,
     this.scheduleAnswered = false,
+    this.unitsAnswered = false,
     this.healthAnswered = false,
     this.aboutDone = 0,
     this.reminderAnswered = false,
@@ -35,6 +36,7 @@ class OnboardingProgress {
     foodAnswered: j['foodAnswered'] as bool? ?? false,
     planSaved: j['planSaved'] as bool? ?? false,
     scheduleAnswered: j['scheduleAnswered'] as bool? ?? false,
+    unitsAnswered: j['unitsAnswered'] as bool? ?? false,
     healthAnswered: j['healthAnswered'] as bool? ?? false,
     aboutDone: (j['aboutDone'] as num?)?.toInt() ?? 0,
     reminderAnswered: j['reminderAnswered'] as bool? ?? false,
@@ -51,6 +53,9 @@ class OnboardingProgress {
 
   /// The "When do you usually wake up?" screen, which follows the colour step.
   final bool scheduleAnswered;
+
+  /// The units screen, which follows the colour step (v10).
+  final bool unitsAnswered;
   final bool healthAnswered;
 
   /// How many "About you" screens were passed, so a resume lands on the next one.
@@ -66,6 +71,7 @@ class OnboardingProgress {
     'foodAnswered': foodAnswered,
     'planSaved': planSaved,
     'scheduleAnswered': scheduleAnswered,
+    'unitsAnswered': unitsAnswered,
     'healthAnswered': healthAnswered,
     'aboutDone': aboutDone,
     'reminderAnswered': reminderAnswered,

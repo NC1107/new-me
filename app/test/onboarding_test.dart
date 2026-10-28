@@ -87,18 +87,53 @@ class _App {
   Map<String, dynamic> lastBody(String route) =>
       (adapter.to(route).last.data as Map).cast<String, dynamic>();
 
-  /// Skips the five questions of About you and leaves its targets screen.
-  Future<void> skipAbout() async {
-    for (var i = 0; i < 5; i++) {
-      await tapButton('Skip');
-    }
-    await tapButton(find.text('NOT NOW').evaluate().isEmpty ? 'Done' : 'Not now');
+  /// From a fresh first run to the units step: Get started, a name, the default colour.
+  Future<void> joinFirst() async {
+    await launch();
+    await tapButton('Get started');
+    await enter('Ana');
+    await tapButton('Continue');
+    await tapButton('Continue');
+  }
+
+  /// From the units step to the schedule: keeps the units, answers Health, skips About you.
+  Future<void> unitsToSchedule({bool connect = false}) async {
+    await tapButton('Continue');
+    await tapButton(connect ? 'Connect Apple Health' : 'Not now');
+    await tapButton('Skip for now');
+    await tapButton('Skip');
+  }
+
+  /// From the schedule to reminders: the default times, [focus], and the daily goals as shown.
+  Future<void> scheduleToReminders(String focus) async {
+    await tapButton('Use 7:00 AM and 11:00 PM');
+    await tapText(focus);
+    await tapButton('Continue');
+    await tapButton('Use these');
   }
 
   Future<void> expectSignedIn() async {
     expect(find.text('Today'), findsWidgets);
   }
 }
+
+/// Answers profile PATCHes the way the server does, keeping the units once they are chosen.
+StubHandler _patchMe() {
+  var units = 'metric';
+  return (req) {
+    final body = req.data;
+    if (body is Map && body['units'] is String) units = body['units'] as String;
+    final me = meJson();
+    return StubResponse(200, {
+      ...me,
+      'user': {...(me['user'] as Map<String, dynamic>), 'units': units},
+    });
+  };
+}
+
+Map<String, dynamic> _targets(String name) =>
+    (jsonDecode(File('test/contract_v8/$name.json').readAsStringSync()) as Map)['body']!
+        as Map<String, dynamic>;
 
 StubAdapter _server({Map<String, dynamic> info = _info}) => StubAdapter()
   ..on('GET /api/server-info', StubResponse(200, info))
@@ -115,7 +150,7 @@ StubAdapter _server({Map<String, dynamic> info = _info}) => StubAdapter()
       'token': 'new-token',
     }),
   )
-  ..on('PATCH /api/me', StubResponse(200, meJson()))
+  ..routes['PATCH /api/me'] = _patchMe()
   ..on(
     'POST /api/invites/check',
     const StubResponse(200, {
@@ -126,121 +161,134 @@ StubAdapter _server({Map<String, dynamic> info = _info}) => StubAdapter()
   );
 
 void main() {
-  testWidgets(
-    'first join walks name, colour, focus and goals, saves one PATCH and lands in the app',
-    (tester) async {
-      final adapter = _server(info: {..._info, 'initialized': false});
-      final app = _App(tester, adapter);
-      await app.launch();
-
-      expect(adapter.to('GET /api/server-info').single.uri.host, 'new-me.npc-server.top');
-      expect(find.byType(TextField), findsNothing, reason: 'no server address in the normal flow');
-      expect(find.text('GET STARTED'), findsOneWidget);
-      expect(find.text('I HAVE AN INVITE CODE'), findsNothing, reason: 'nobody to invite from yet');
-      await app.tapButton('Get started');
-
-      expect(find.text('What should we call you?'), findsOneWidget);
-      expect(app.enabled('Continue'), isFalse);
-      await app.enter('Ana');
-      await app.tapButton('Continue');
-
-      expect(find.text('Pick your colour'), findsOneWidget);
-      await app.tapText('Sky');
-      await app.tapButton('Continue');
-      expect(app.lastBody('POST /api/join'), {
-        'name': 'Ana',
-        'color': 'sky',
-        'timezone': 'America/New_York',
-      });
-      expect(app.storage.values[kSessionKey], contains('new-token'));
-
-      expect(find.text('When do you usually wake up?'), findsOneWidget);
-      await app.tapButton('Use 7:00 AM and 11:00 PM');
-      expect(find.text('What do you want to work on?'), findsOneWidget);
-      expect(app.enabled('Continue'), isFalse, reason: 'one focus is required');
-      await app.tapText('Move more');
-      await app.tapText('Sleep better');
-      await app.tapButton('Continue');
-
-      expect(find.text('How many steps a day?'), findsOneWidget);
-      await app.tapText('Serious');
-      await app.tapButton('Continue');
-      expect(find.text('How much sleep are you aiming for?'), findsOneWidget);
-      expect(adapter.to('PATCH /api/me'), isEmpty, reason: 'saved once, after the last goal');
-      await app.tapButton('Continue');
-
-      final patch = app.lastBody('PATCH /api/me');
-      final templates = {for (final t in patch['questTemplates'] as List) (t as Map)['key']: t};
-      expect(templates['steps'], {'key': 'steps', 'enabled': true, 'target': 10000});
-      expect(templates['sleep'], {'key': 'sleep', 'enabled': true, 'target': 420});
-      expect(templates['exercise'], {'key': 'exercise', 'enabled': false});
-      expect(templates['pushups'], {'key': 'pushups', 'enabled': false});
-      expect(patch.containsKey('targets'), isFalse);
-
-      expect(find.text('NOT NOW'), findsOneWidget);
-      await app.tapButton('Not now');
-      expect(app.health.accessRequests, 0);
-      expect(find.text('What year were you born?'), findsOneWidget);
-      await app.skipAbout();
-      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
-      await app.tapButton('Not now');
-      expect(app.reminders.permissionRequests, 0, reason: 'NOT NOW never asks the system');
-      expect(app.reminders.pending, isEmpty);
-      expect(find.text("You're in, Ana!"), findsOneWidget);
-      expect(find.text('Day 1 starts now.'), findsOneWidget);
-      await app.tapButton("Let's go");
-      await app.expectSignedIn();
-    },
-  );
-
-  testWidgets('eating well asks for meals, protein and an optional calorie target', (tester) async {
+  testWidgets('first join walks name, colour, units, Health, About you, schedule, focus and daily '
+      'goals, and lands in the app', (tester) async {
     final adapter = _server(info: {..._info, 'initialized': false});
     final app = _App(tester, adapter);
     await app.launch();
+
+    expect(adapter.to('GET /api/server-info').single.uri.host, 'new-me.npc-server.top');
+    expect(find.byType(TextField), findsNothing, reason: 'no server address in the normal flow');
+    expect(find.text('GET STARTED'), findsOneWidget);
+    expect(find.text('I HAVE AN INVITE CODE'), findsNothing, reason: 'nobody to invite from yet');
     await app.tapButton('Get started');
-    await app.enter('Ana');
-    await app.tapButton('Continue');
-    await app.tapButton('Continue');
-    await app.tapButton('Use 7:00 AM and 11:00 PM');
-    await app.tapText('Eat well');
-    await app.tapButton('Continue');
 
-    expect(find.text('How many meals will you log?'), findsOneWidget);
-    await app.tapText('Regular');
-    await app.tapButton('Continue');
-    expect(find.text('How much protein a day?'), findsOneWidget);
-    await app.tapText('Intense');
-    await app.tapButton('Continue');
-
-    expect(find.text('Want a daily calorie target?'), findsOneWidget);
+    expect(find.text('What should we call you?'), findsOneWidget);
     expect(app.enabled('Continue'), isFalse);
-    await app.tapText('Balanced');
-    await app.tapButton('Continue');
-
-    final patch = app.lastBody('PATCH /api/me');
-    expect(patch['targets'], {'kcal': 2000});
-    final templates = {for (final t in patch['questTemplates'] as List) (t as Map)['key']: t};
-    expect(templates['meals_logged'], {'key': 'meals_logged', 'enabled': true, 'target': 3});
-    expect(templates['protein'], {'key': 'protein', 'enabled': true, 'target': 160});
-  });
-
-  testWidgets('skipping the calorie target saves no target', (tester) async {
-    final adapter = _server(info: {..._info, 'initialized': false});
-    final app = _App(tester, adapter);
-    await app.launch();
-    await app.tapButton('Get started');
     await app.enter('Ana');
     await app.tapButton('Continue');
+
+    expect(find.text('Pick your colour'), findsOneWidget);
+    await app.tapText('Sky');
     await app.tapButton('Continue');
-    await app.tapButton('Use 7:00 AM and 11:00 PM');
-    await app.tapText('Eat well');
+    expect(app.lastBody('POST /api/join'), {
+      'name': 'Ana',
+      'color': 'sky',
+      'timezone': 'America/New_York',
+    });
+    expect(app.storage.values[kSessionKey], contains('new-token'));
+
+    expect(find.text('Which units do you use?'), findsOneWidget);
+    await app.tapText('Pounds and feet');
     await app.tapButton('Continue');
-    await app.tapButton('Continue');
-    await app.tapButton('Continue');
+    expect(app.lastBody('PATCH /api/me'), {'units': 'imperial'});
+
+    expect(find.text('Connect Apple Health'), findsWidgets);
+    await app.tapButton('Not now');
+    expect(app.health.accessRequests, 0);
+    expect(find.text('About you'), findsOneWidget);
+    await app.tapButton('Skip for now');
+    expect(find.text('What is your weight goal?'), findsOneWidget);
     await app.tapButton('Skip');
 
-    expect(app.lastBody('PATCH /api/me').containsKey('targets'), isFalse);
-    expect(find.text('NOT NOW'), findsOneWidget);
+    expect(find.text('When do you usually wake up?'), findsOneWidget);
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
+    expect(find.text('What do you want to work on?'), findsOneWidget);
+    expect(app.enabled('Continue'), isFalse, reason: 'one focus is required');
+    await app.tapText('Move more');
+    await app.tapText('Sleep better');
+    await app.tapButton('Continue');
+
+    expect(find.text('Your daily goals'), findsOneWidget);
+    expect(find.text('How many steps a day?'), findsNothing, reason: 'no number screens any more');
+    expect(find.text('7,000 steps'), findsOneWidget);
+    await app.tap(find.bySemanticsLabel('More Steps'));
+    expect(find.text('7,500 steps'), findsOneWidget);
+    expect(adapter.to('PATCH /api/me'), hasLength(1), reason: 'only the units so far');
+    await app.tapButton('Use these');
+
+    final patch = app.lastBody('PATCH /api/me');
+    final templates = {for (final t in patch['questTemplates'] as List) (t as Map)['key']: t};
+    expect(templates['steps'], {'key': 'steps', 'enabled': true, 'target': 7500});
+    expect(templates['sleep'], {'key': 'sleep', 'enabled': true, 'target': 450});
+    expect(templates['exercise'], {'key': 'exercise', 'enabled': false});
+    expect(templates['pushups'], {'key': 'pushups', 'enabled': false});
+    expect(patch.containsKey('targets'), isFalse);
+
+    expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+    await app.tapButton('Not now');
+    expect(app.reminders.permissionRequests, 0, reason: 'NOT NOW never asks the system');
+    expect(app.reminders.pending, isEmpty);
+    expect(find.text("You're in, Ana!"), findsOneWidget);
+    expect(find.text('Day 1 starts now.'), findsOneWidget);
+    await app.tapButton("Let's go");
+    await app.expectSignedIn();
+  });
+
+  testWidgets('daily goals come from the formulas once the answers allow, with food targets', (
+    tester,
+  ) async {
+    final adapter = _server(info: {..._info, 'initialized': false})
+      ..on('GET /api/me', StubResponse(200, meJson()))
+      ..on('GET /api/targets', StubResponse(200, _targets('targets')))
+      ..on(
+        'POST /api/targets/apply',
+        StubResponse(200, {
+          ...meJson(),
+          'applied': ['fat', 'carbs'],
+        }),
+      );
+    final app = _App(tester, adapter);
+    await app.joinFirst();
+    await app.unitsToSchedule();
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
+    await app.tapText('Move more');
+    await app.tapText('Eat well');
+    await app.tapButton('Continue');
+
+    expect(find.text('7,000 steps'), findsOneWidget);
+    expect(find.textContaining('Paluch'), findsOneWidget);
+    expect(find.text('165 g'), findsOneWidget, reason: 'protein per kilogram for the goal');
+    expect(find.text('2,350 kcal'), findsOneWidget);
+    expect(find.text('3 meals'), findsOneWidget);
+    expect(
+      find.textContaining('A starting point'),
+      findsOneWidget,
+      reason: 'meals have no formula',
+    );
+    await app.tapButton('Use these');
+
+    final patch = app.lastBody('PATCH /api/me');
+    expect(patch['targets'], {'kcal': 2350});
+    final templates = {for (final t in patch['questTemplates'] as List) (t as Map)['key']: t};
+    expect(templates['protein'], {'key': 'protein', 'enabled': true, 'target': 165});
+    expect(templates['meals_logged'], {'key': 'meals_logged', 'enabled': true, 'target': 3});
+    expect(app.lastBody('POST /api/targets/apply'), {
+      'keys': ['fat', 'carbs'],
+    });
+    expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+  });
+
+  testWidgets('Get stronger asks for no number and reads as more than push-ups', (tester) async {
+    final app = _App(tester, _server(info: {..._info, 'initialized': false}));
+    await app.joinFirst();
+    await app.unitsToSchedule();
+    await app.tapButton('Use 7:00 AM and 11:00 PM');
+    expect(find.text('A strength workout, a training session or push-ups'), findsOneWidget);
+    await app.tapText('Get stronger');
+    await app.tapButton('Continue');
+    expect(find.text('Push-ups, or a strength workout'), findsOneWidget);
+    expect(find.text('20 push-ups'), findsOneWidget);
   });
 
   testWidgets('a code leads to "I am new", with taken colours disabled, then connects Health', (
@@ -278,13 +326,9 @@ void main() {
       'timezone': 'America/New_York',
     });
 
-    await app.tapButton('Use 7:00 AM and 11:00 PM');
-    await app.tapText('Read more');
-    await app.tapButton('Continue');
-    await app.tapButton('Continue');
-    await app.tapButton('Connect Apple Health');
+    await app.unitsToSchedule(connect: true);
     expect(app.health.accessRequests, 1);
-    await app.skipAbout();
+    await app.scheduleToReminders('Read more');
 
     expect(find.text('Want a nudge in the evening?'), findsOneWidget);
     expect(find.text('8:00 PM'), findsOneWidget);
@@ -441,24 +485,12 @@ void main() {
     expect(find.text('Time to update'), findsOneWidget);
   });
 
-  testWidgets('leaving after the profile exists resumes at the first unanswered step', (
-    tester,
-  ) async {
-    final adapter = _server(info: {..._info, 'initialized': false});
-    final first = _App(tester, adapter);
-    await first.launch();
-    await first.tapButton('Get started');
-    await first.enter('Ana');
-    await first.tapButton('Continue');
-    await first.tapButton('Continue');
-    await first.tapButton('Use 7:00 AM and 11:00 PM');
-    await first.tapText('Move more');
-    await first.tapText('Read more');
-    await first.tapButton('Continue');
-    await first.tapButton('Continue');
-    expect(find.text('How long will you read?'), findsOneWidget);
-
-    // A relaunch with the stored session and the same preferences.
+  Future<void> relaunchWith(
+    WidgetTester tester,
+    _App first,
+    StubAdapter adapter, {
+    FakeReminderScheduler? reminders,
+  }) async {
     await tester.pumpWidget(const SizedBox());
     final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
     await tester.pumpWidget(
@@ -468,14 +500,28 @@ void main() {
           apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
           deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
           healthSourceProvider.overrideWithValue(relaunch.health),
-          reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
+          reminderSchedulerProvider.overrideWithValue(reminders ?? relaunch.reminders),
         ],
         child: const NewMeApp(),
       ),
     );
     await relaunch.settle();
+  }
 
-    expect(find.text('How long will you read?'), findsOneWidget);
+  testWidgets('leaving after the profile exists resumes at the first unanswered step', (
+    tester,
+  ) async {
+    final adapter = _server(info: {..._info, 'initialized': false});
+    final first = _App(tester, adapter);
+    await first.joinFirst();
+    await first.unitsToSchedule();
+    await first.tapButton('Use 7:00 AM and 11:00 PM');
+    await first.tapText('Read more');
+    await first.tapButton('Continue');
+    expect(find.text('Your daily goals'), findsOneWidget);
+
+    await relaunchWith(tester, first, adapter);
+    expect(find.text('Your daily goals'), findsOneWidget);
     expect(find.text('Today'), findsNothing, reason: 'the app does not open until onboarding ends');
   });
 
@@ -484,39 +530,20 @@ void main() {
   ) async {
     final adapter = _server(info: {..._info, 'initialized': false});
     final first = _App(tester, adapter);
-    await first.launch();
-    await first.tapButton('Get started');
-    await first.enter('Ana');
-    await first.tapButton('Continue');
-    await first.tapButton('Continue');
-    await first.tapButton('Use 7:00 AM and 11:00 PM');
-    await first.tapText('Read more');
-    await first.tapButton('Continue');
-    await first.tapButton('Continue');
-    await first.tapButton('Not now');
-    await first.skipAbout();
+    await first.joinFirst();
+    await first.unitsToSchedule();
+    await first.scheduleToReminders('Read more');
     expect(find.text('Want a nudge in the evening?'), findsOneWidget);
 
-    await tester.pumpWidget(const SizedBox());
-    final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
     final denying = FakeReminderScheduler(grantsOnRequest: false);
-    await tester.pumpWidget(
-      ProviderScope(
-        retry: (_, _) => null,
-        overrides: [
-          apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
-          deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
-          healthSourceProvider.overrideWithValue(relaunch.health),
-          reminderSchedulerProvider.overrideWithValue(denying),
-        ],
-        child: const NewMeApp(),
-      ),
-    );
-    await relaunch.settle();
-
+    await relaunchWith(tester, first, adapter, reminders: denying);
     expect(find.text('Want a nudge in the evening?'), findsOneWidget);
-    expect(relaunch.health.accessRequests, 0, reason: 'Health was already answered');
-    await relaunch.tapButton('Allow');
+    await first.tester.pump();
+    await tester.ensureVisible(find.text('ALLOW'));
+    await tester.tap(find.text('ALLOW'));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(denying.permissionRequests, 1);
     expect(denying.pending, isEmpty, reason: 'nothing is scheduled without permission');
     expect(
@@ -527,157 +554,142 @@ void main() {
   });
 
   group('the About you steps', () {
-    Map<String, dynamic> targets(String name) =>
-        (jsonDecode(File('test/contract_v8/$name.json').readAsStringSync()) as Map)['body']!
-            as Map<String, dynamic>;
+    StubAdapter aboutServer({String targets = 'targets_missing'}) =>
+        _server(info: {..._info, 'initialized': false})
+          ..on('GET /api/me', StubResponse(200, meJson()))
+          ..on('GET /api/targets', StubResponse(200, _targets(targets)))
+          ..on('PUT /api/health/daily', const StubResponse(200, {'days': []}));
 
-    StubAdapter aboutServer() => _server(info: {..._info, 'initialized': false})
-      ..on('GET /api/me', StubResponse(200, meJson()))
-      ..on('GET /api/targets', StubResponse(200, targets('targets_missing')));
-
-    Future<_App> toHealth(WidgetTester tester, StubAdapter adapter) async {
+    /// To the one-screen About you, choosing [units] and answering Health.
+    Future<_App> toAbout(
+      WidgetTester tester,
+      StubAdapter adapter, {
+      String units = 'Pounds and feet',
+      bool connect = false,
+    }) async {
       final app = _App(tester, adapter);
-      await app.launch();
-      await app.tapButton('Get started');
-      await app.enter('Ana');
+      await app.joinFirst();
+      await app.tapText(units);
       await app.tapButton('Continue');
-      await app.tapButton('Continue');
-      await app.tapButton('Use 7:00 AM and 11:00 PM');
-      await app.tapText('Read more');
-      await app.tapButton('Continue');
-      await app.tapButton('Continue');
-      expect(find.text('Connect Apple Health'), findsWidgets);
+      await app.tapButton(connect ? 'Connect Apple Health' : 'Not now');
+      expect(find.text('About you'), findsOneWidget);
       return app;
     }
 
-    testWidgets('follow Health and come before reminders, in the order of the formulas', (
-      tester,
-    ) async {
-      final app = await toHealth(tester, aboutServer());
-      await app.tapButton('Connect Apple Health');
-      expect(app.health.accessRequests, 1);
+    /// Fields are found by their hint, which their accessible name also carries.
+    Future<void> enterField(WidgetTester tester, String hint, String text) async {
+      await tester.enterText(find.widgetWithText(TextField, hint), text);
+      await tester.pump();
+    }
 
-      const titles = [
-        'What year were you born?',
-        'What is your sex?',
-        'How tall are you?',
-        'What do you weigh?',
-        'What is your weight goal?',
-        'Your daily targets',
-      ];
-      for (final (i, title) in titles.indexed) {
-        expect(find.text(title), findsOneWidget, reason: title);
-        expect(find.text('Want a nudge in the evening?'), findsNothing);
-        if (i < 5) {
-          expect(find.text('SKIP'), findsOneWidget, reason: '$title has Skip');
-          await app.tapButton('Skip');
-        } else {
-          expect(find.text('SKIP'), findsNothing, reason: 'the last screen has no Skip');
-          expect(find.text('USE ALL'), findsOneWidget);
-          expect(find.text('NOT NOW'), findsOneWidget);
-          await app.tapButton('Not now');
+    testWidgets(
+      'come after Health on one screen, then the weight goal, and skipping saves nothing',
+      (tester) async {
+        final adapter = aboutServer();
+        final app = await toAbout(tester, adapter, connect: true);
+        expect(app.health.accessRequests, 1);
+        for (final hint in ['For example 1990', 'ft', 'in', 'For example 160']) {
+          expect(find.widgetWithText(TextField, hint), findsOneWidget, reason: hint);
         }
-      }
-      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
-      expect(
-        app.adapter.to('PATCH /api/me').length,
-        1,
-        reason: 'skipping every question saves nothing beyond the schedule and plan',
-      );
+        await app.tapButton('Skip for now');
+        expect(find.text('What is your weight goal?'), findsOneWidget);
+        await app.tapButton('Skip');
+        expect(find.text('When do you usually wake up?'), findsOneWidget);
+        expect(adapter.to('PATCH /api/me'), hasLength(1), reason: 'only the units');
+        expect(
+          adapter.to('PUT /api/health/daily').where((r) => '${r.data}'.contains('manual')),
+          isEmpty,
+          reason: 'no weigh-in was typed; only the Health sync writes',
+        );
+      },
+    );
+
+    testWidgets('metric answers save in one PATCH and one weigh-in', (tester) async {
+      final adapter = aboutServer();
+      final app = await toAbout(tester, adapter, units: 'Kilograms and centimetres');
+      await enterField(tester, 'For example 1990', '1990');
+      await app.tapText('Female');
+      await enterField(tester, 'For example 178', '165');
+      await enterField(tester, 'For example 72.5', '60.5');
+      await app.tapButton('Continue');
+      expect(app.lastBody('PATCH /api/me'), {
+        'birthYear': 1990,
+        'heightCm': 165.0,
+        'sex': 'female',
+      });
+      final weigh = (app.lastBody('PUT /api/health/daily')['items'] as List).single as Map;
+      expect(weigh['metric'], 'weight_kg');
+      expect(weigh['value'], 60.5);
+      expect(find.text('What is your weight goal?'), findsOneWidget);
     });
 
-    testWidgets('Health is asked first so its height is prefilled and kept off the profile', (
-      tester,
-    ) async {
-      final adapter = aboutServer()..on('GET /api/targets', StubResponse(200, targets('targets')));
-      final app = await toHealth(tester, adapter);
-      await app.tapButton('Connect Apple Health');
-      await app.tapButton('Skip');
-      await app.tapButton('Skip');
+    testWidgets('feet, inches and pounds are stored as centimetres and kilograms', (tester) async {
+      final adapter = aboutServer();
+      final app = await toAbout(tester, adapter);
+      await enterField(tester, 'ft', '5');
+      await enterField(tester, 'in', '6');
+      await enterField(tester, 'For example 160', '150');
+      await app.tapButton('Continue');
+      expect(app.lastBody('PATCH /api/me'), {'heightCm': 167.6});
+      final weigh = (app.lastBody('PUT /api/health/daily')['items'] as List).single as Map;
+      expect(weigh['value'], 68.0);
+    });
 
-      expect(find.text('How tall are you?'), findsOneWidget);
-      expect(find.text('From Apple Health'), findsOneWidget);
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '180');
+    testWidgets('the weight goal offers paces in pounds', (tester) async {
+      final adapter = aboutServer();
+      final app = await toAbout(tester, adapter);
+      await app.tapButton('Skip for now');
+      await app.tapText('Lose');
+      expect(find.text('0.5 lb a week'), findsOneWidget);
+      expect(find.text('1 lb a week'), findsOneWidget);
+      await app.tapText('1 lb a week');
+      await app.tapButton('Continue');
+      expect(app.lastBody('PATCH /api/me')['goal'], {'kind': 'lose', 'paceKgPerWeek': 0.45});
+    });
+
+    testWidgets('Health is asked first so its height and weight are prefilled and kept off the '
+        'profile', (tester) async {
+      final adapter = aboutServer(targets: 'targets');
+      final app = await toAbout(tester, adapter, connect: true);
+      expect(find.text('From Apple Health'), findsNWidgets(2));
+      final weight = tester.widget<TextField>(
+        find.descendant(
+          of: find.bySemanticsLabel('Weight in pounds'),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(weight.controller!.text, '181.7');
       final patches = adapter.to('PATCH /api/me').length;
       await app.tapButton('Continue');
-      expect(adapter.to('PATCH /api/me').length, patches, reason: 'Health keeps supplying it');
-      expect(find.text('What do you weigh?'), findsOneWidget);
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '82.4');
+      expect(adapter.to('PATCH /api/me').length, patches, reason: 'Health keeps supplying them');
+      expect(
+        adapter.to('PUT /api/health/daily').where((r) => '${r.data}'.contains('manual')),
+        isEmpty,
+      );
     });
 
-    testWidgets('the back arrow returns to the previous question', (tester) async {
-      final app = await toHealth(tester, aboutServer());
-      await app.tapButton('Not now');
-      await app.tapButton('Skip');
-      expect(find.text('What is your sex?'), findsOneWidget);
+    testWidgets('the back arrow returns from the goal to About you', (tester) async {
+      final app = await toAbout(tester, aboutServer());
+      await app.tapButton('Skip for now');
+      expect(find.text('What is your weight goal?'), findsOneWidget);
       await app.tap(find.bySemanticsLabel('Back'));
-      expect(find.text('What year were you born?'), findsOneWidget);
+      expect(find.text('About you'), findsOneWidget);
     });
 
-    testWidgets('leaving midway resumes at the first question not passed', (tester) async {
+    testWidgets('leaving at the weight goal resumes there', (tester) async {
       final adapter = aboutServer();
-      final first = await toHealth(tester, adapter);
-      await first.tapButton('Not now');
-      await first.tapButton('Skip');
-      await first.tapButton('Skip');
-      expect(find.text('How tall are you?'), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox());
-      final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
-      await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, _) => null,
-          overrides: [
-            apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
-            deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
-            healthSourceProvider.overrideWithValue(relaunch.health),
-            reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
-          ],
-          child: const NewMeApp(),
-        ),
-      );
-      await relaunch.settle();
-
-      expect(find.text('How tall are you?'), findsOneWidget);
-      expect(relaunch.health.accessRequests, 0, reason: 'Health was already answered');
+      final first = await toAbout(tester, adapter);
+      await first.tapButton('Skip for now');
+      expect(find.text('What is your weight goal?'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('onboardingProgress'), contains('"aboutDone":2'));
+      expect(prefs.getString('onboardingProgress'), contains('"aboutDone":1'));
 
-      for (var i = 0; i < 3; i++) {
-        await relaunch.tapButton('Skip');
-      }
-      await relaunch.tapButton('Not now');
-      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
-      expect(prefs.getString('onboardingProgress'), contains('"aboutDone":6'));
-    });
-
-    testWidgets('a person who finished About you resumes at reminders', (tester) async {
-      final adapter = aboutServer();
-      final first = await toHealth(tester, adapter);
-      await first.tapButton('Not now');
-      await first.skipAbout();
-      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox());
-      final relaunch = _App(tester, adapter)..storage.values.addAll(first.storage.values);
-      await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, _) => null,
-          overrides: [
-            apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
-            deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
-            healthSourceProvider.overrideWithValue(relaunch.health),
-            reminderSchedulerProvider.overrideWithValue(relaunch.reminders),
-          ],
-          child: const NewMeApp(),
-        ),
-      );
-      await relaunch.settle();
-      expect(find.text('Want a nudge in the evening?'), findsOneWidget);
+      await relaunchWith(tester, first, adapter);
+      expect(find.text('What is your weight goal?'), findsOneWidget);
     });
 
     for (final scale in [1.0, 2.0]) {
-      testWidgets('every screen fits 390 wide at text scale $scale with 44pt buttons', (
+      testWidgets('every new screen fits 390 wide at text scale $scale with 44pt buttons', (
         tester,
       ) async {
         tester.view.physicalSize = const Size(390, 844);
@@ -685,15 +697,32 @@ void main() {
         tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        final app = await toHealth(tester, aboutServer());
-        await app.tapButton('Not now');
-        for (var i = 0; i < 6; i++) {
-          expect(tester.takeException(), isNull, reason: 'screen $i');
+        final app = _App(tester, aboutServer(targets: 'targets'));
+        await app.joinFirst();
+        Future<void> check(String screen) async {
+          expect(tester.takeException(), isNull, reason: screen);
           for (final b in tester.widgetList<ChunkyButton>(find.byType(ChunkyButton))) {
-            expect(tester.getSize(find.byWidget(b)).height, greaterThanOrEqualTo(44));
+            expect(
+              tester.getSize(find.byWidget(b)).height,
+              greaterThanOrEqualTo(44),
+              reason: screen,
+            );
           }
-          await app.tapButton(i < 5 ? 'Skip' : 'Not now');
         }
+
+        await check('units');
+        await app.tapButton('Continue');
+        await check('health');
+        await app.tapButton('Not now');
+        await check('about you');
+        await app.tapButton('Skip for now');
+        await check('weight goal');
+        await app.tapButton('Skip');
+        await check('schedule');
+        await app.tapButton('Use 7:00 AM and 11:00 PM');
+        await app.tapText('Eat well');
+        await app.tapButton('Continue');
+        await check('daily goals');
       });
     }
   });
@@ -701,16 +730,13 @@ void main() {
   group('the schedule step', () {
     Future<_App> toSchedule(WidgetTester tester, StubAdapter adapter) async {
       final app = _App(tester, adapter);
-      await app.launch();
-      await app.tapButton('Get started');
-      await app.enter('Ana');
-      await app.tapButton('Continue');
-      await app.tapButton('Continue');
+      await app.joinFirst();
+      await app.unitsToSchedule();
       expect(find.text('When do you usually wake up?'), findsOneWidget);
       return app;
     }
 
-    testWidgets('follows the colour step and saves one wake and bed time for every day', (
+    testWidgets('follows the weight goal and saves one wake and bed time for every day', (
       tester,
     ) async {
       final adapter = _server(info: {..._info, 'initialized': false});
@@ -736,14 +762,14 @@ void main() {
       final adapter = _server(info: {..._info, 'initialized': false});
       final app = await toSchedule(tester, adapter);
       await app.tapButton('Use 7:00 AM and 11:00 PM');
-      expect(adapter.to('PATCH /api/me'), isEmpty);
+      expect(adapter.to('PATCH /api/me'), hasLength(1), reason: 'only the units, no schedule');
       expect(find.text('What do you want to work on?'), findsOneWidget);
     });
 
     testWidgets('a failed save says why and stays', (tester) async {
-      final adapter = _server(info: {..._info, 'initialized': false})
-        ..on('PATCH /api/me', const StubResponse(422, {'error': 'wake and bed must differ'}));
+      final adapter = _server(info: {..._info, 'initialized': false});
       final app = await toSchedule(tester, adapter);
+      adapter.on('PATCH /api/me', const StubResponse(422, {'error': 'wake and bed must differ'}));
       await app.tapButton('Continue');
       expect(find.text('wake and bed must differ'), findsOneWidget);
       expect(find.text('When do you usually wake up?'), findsOneWidget);

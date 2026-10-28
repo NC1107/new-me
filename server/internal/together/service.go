@@ -448,11 +448,26 @@ func (s *Service) Bank(ctx context.Context) (int, error) {
 
 // settleReward announces, once each, the approved rewards the bank now covers.
 func (s *Service) settleReward(ctx context.Context, users []db.User) error {
-	bank, err := s.Bank(ctx)
-	if err != nil {
+	// The wishlist lock keeps a claim from spending the gems between reading the bank and marking
+	// rewards ready, which would announce a reward the bank no longer covers.
+	var bank int
+	var ready []db.Reward
+	err := s.DB.WithTx(ctx, func(tx pgx.Tx) error {
+		if err := db.LockRewards(ctx, tx); err != nil {
+			return err
+		}
+		total, err := db.TotalPoints(ctx, tx)
+		if err != nil {
+			return err
+		}
+		spent, err := db.SpentGems(ctx, tx)
+		if err != nil {
+			return err
+		}
+		bank = Bank(total, spent)
+		ready, err = db.MarkRewardsReady(ctx, tx, bank)
 		return err
-	}
-	ready, err := db.MarkRewardsReady(ctx, s.DB.Pool, bank)
+	})
 	if err != nil {
 		return err
 	}

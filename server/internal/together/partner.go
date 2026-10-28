@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	// PartnerClaimPrefix starts the notice_log kind of every partner nudge, which is how their
-	// separate daily budget is counted.
+	// PartnerClaimPrefix starts the notice_log kind of every partner nudge. The budget counts an
+	// explicit set of kinds (cover, cheer, challenge, reward progress) because partner_done shares
+	// the prefix but is the finisher's own announcement, not a nudge to them.
 	PartnerClaimPrefix = "partner_"
 	// PartnerBudget is how many partner nudges one person gets a day.
 	PartnerBudget = 1
@@ -81,7 +82,8 @@ func RewardWords(name string, threshold int) string {
 
 // PartnerRoom reports whether the person still has a partner nudge to spare on their local date.
 func (s *Service) PartnerRoom(ctx context.Context, userID int64, date score.Date) (bool, error) {
-	n, err := db.CountNoticesWithPrefix(ctx, s.DB.Pool, userID, date, PartnerClaimPrefix)
+	n, err := db.CountNoticesOfKinds(ctx, s.DB.Pool, userID, date,
+		[]string{EventPartnerCover, EventPartnerCheer, EventPartnerChallenge}, []string{rewardClaimPrefix})
 	return n < PartnerBudget, err
 }
 

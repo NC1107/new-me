@@ -95,9 +95,10 @@ func main() {
 	scheduler.Milestones = &milestone.Service{DB: database, Together: scheduler.Together, Now: time.Now}
 	go scheduler.Run(ctx)
 
+	apiServer := api.New(cfg, database).WithVersion(version).WithNotifier(notifier)
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           api.New(cfg, database).WithVersion(version).WithNotifier(notifier).Router(),
+		Handler:           apiServer.Router(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -116,6 +117,9 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(shutdownCtx)
+	if err := apiServer.WaitBackground(shutdownCtx); err != nil {
+		log.Printf("[NEWME] background work not finished: %v", err)
+	}
 	if dispatcher != nil {
 		if err := dispatcher.Shutdown(shutdownCtx); err != nil {
 			log.Printf("[NEWME] push queue not drained: %v", err)

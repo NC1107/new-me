@@ -124,6 +124,7 @@ func (p *Polisher) PolishInBackground(user db.User, date score.Date, day Day) {
 	}
 	key := fmt.Sprintf("%d|%s|%s", user.ID, date, factsKey(day))
 	p.mu.Lock()
+	p.pruneFailures()
 	if p.inflight[key] || p.now().Sub(p.failedAt[key]) < polishRetryAfter {
 		p.mu.Unlock()
 		return
@@ -155,10 +156,36 @@ func (p *Polisher) PolishInBackground(user db.User, date score.Date, day Day) {
 	}()
 }
 
+// pruneFailures drops failures older than the retry window, which no longer block anything, so
+// the map does not grow with every day and facts state that ever failed. The caller holds mu.
+func (p *Polisher) pruneFailures() {
+	now := p.now()
+	for key, at := range p.failedAt {
+		if now.Sub(at) >= polishRetryAfter {
+			delete(p.failedAt, key)
+		}
+	}
+}
+
 // Wait blocks until every background call has finished, for tests and shutdown.
 func (p *Polisher) Wait() {
 	if p != nil {
 		p.wg.Wait()
+	}
+}
+
+// WaitContext is Wait that gives up when ctx ends, and returns its error then.
+func (p *Polisher) WaitContext(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		p.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 

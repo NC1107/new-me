@@ -233,13 +233,15 @@ func ReleaseNotice(ctx context.Context, q Querier, kind string, userID int64, da
 	return err
 }
 
-// CountNoticesWithPrefix is how many notices whose kind starts with the prefix were sent to a
-// person for a local date.
-func CountNoticesWithPrefix(ctx context.Context, q Querier, userID int64, date score.Date, prefix string) (int, error) {
+// CountNoticesOfKinds is how many notices a person was sent on a local date whose kind is one
+// of the exact kinds or starts with one of the prefixes.
+func CountNoticesOfKinds(ctx context.Context, q Querier, userID int64, date score.Date, kinds, prefixes []string) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `
 		SELECT count(*)::int FROM notice_log
-		WHERE user_id = $1 AND local_date = $2::date AND starts_with(kind, $3)`, userID, date, prefix).Scan(&n)
+		WHERE user_id = $1 AND local_date = $2::date
+		  AND (kind = ANY($3::text[]) OR EXISTS (SELECT 1 FROM unnest($4::text[]) p WHERE starts_with(kind, p)))`,
+		userID, date, kinds, prefixes).Scan(&n)
 	return n, err
 }
 

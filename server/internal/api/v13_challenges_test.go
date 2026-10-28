@@ -670,6 +670,26 @@ func TestRewardProgressSharesNoBudgetWithTheAutomaticPushes(t *testing.T) {
 	}
 }
 
+func TestPartnerDoneDoesNotSpendThePartnerBudget(t *testing.T) {
+	h := newHarness(t, withPush(&capture{}))
+	nick, _ := h.pair()
+	ctx := context.Background()
+	today := score.MustDate("2026-11-02")
+	if _, err := db.ClaimNotice(ctx, h.db.Pool, together.EventPartnerDone, nick.ID, today); err != nil {
+		t.Fatal(err)
+	}
+	room, err := h.srv.together.PartnerRoom(ctx, nick.ID, today)
+	if err != nil || !room {
+		t.Fatalf("partner_done spent the finisher's partner budget: room=%v err=%v", room, err)
+	}
+	if _, err := db.ClaimNotice(ctx, h.db.Pool, together.EventPartnerCheer, nick.ID, today); err != nil {
+		t.Fatal(err)
+	}
+	if room, _ = h.srv.together.PartnerRoom(ctx, nick.ID, today); room {
+		t.Fatal("a cheer nudge should spend the budget")
+	}
+}
+
 func TestPartnerNudgeClaimsNeedThePartnerPrefix(t *testing.T) {
 	h := newHarness(t, withPush(&capture{}))
 	nick, _ := h.pair()

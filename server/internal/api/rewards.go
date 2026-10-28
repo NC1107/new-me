@@ -243,13 +243,25 @@ func (s *Server) handleCreateReward(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
+	// Builds from before shared rewards send only target and have no approval UI, so a reward
+	// they create is approved at once rather than left pending where they cannot see it.
+	legacy := req.Price == nil
 	status := db.RewardPending
-	if partner == nil {
+	if partner == nil || legacy {
 		status = db.RewardApproved
 	}
 	var reward db.Reward
+	duplicate := false
 	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := db.LockRewards(ctx, tx); err != nil {
+			return err
+		}
+		existing, err := db.PendingRewardByName(ctx, tx, c.user.ID, name)
+		if err == nil {
+			reward, duplicate = existing, true
+			return nil
+		}
+		if !errors.Is(err, db.ErrNotFound) {
 			return err
 		}
 		n, err := db.CountOpenRewards(ctx, tx)
@@ -266,7 +278,11 @@ func (s *Server) handleCreateReward(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	if partner != nil {
+	if duplicate {
+		s.writeReward(w, r, http.StatusOK, reward)
+		return
+	}
+	if partner != nil && status == db.RewardPending {
 		s.notifyRewardProposal(*partner, c.user, reward)
 	}
 	s.writeReward(w, r, http.StatusCreated, reward)
@@ -348,6 +364,7 @@ func (s *Server) handlePatchReward(w http.ResponseWriter, r *http.Request) {
 			rw.Name = name
 		}
 		priceChanged := false
+		before := rw.Price
 		if p := req.price(); p != nil {
 			if herr := checkPrice(*p); herr != nil {
 				return rw, false, herr
@@ -364,11 +381,13 @@ func (s *Server) handlePatchReward(w http.ResponseWriter, r *http.Request) {
 				rw.Status = db.RewardPending
 			} else {
 				rw.Status = db.RewardApproved
+				rw.ApprovedPrice, rw.ApprovedFocus = nil, false
 			}
 		case db.RewardApproved:
 			if priceChanged {
 				rw.ProposedBy = &c.user.ID
 				if partner != nil {
+					rw.ApprovedPrice, rw.ApprovedFocus = &before, rw.Focus
 					rw.Focus = false
 					rw.Status = db.RewardPending
 				}
@@ -380,7 +399,16 @@ func (s *Server) handlePatchReward(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleWithdrawReward deletes a reward its proposer made that was never approved.
+// revertPriceChange puts back the approved state a pending price change replaced. The focus
+// comes back only while the slot is free, which SaveReward checks.
+func revertPriceChange(rw db.Reward) db.Reward {
+	rw.Price, rw.Status, rw.Focus = *rw.ApprovedPrice, db.RewardApproved, rw.ApprovedFocus
+	rw.ApprovedPrice, rw.ApprovedFocus = nil, false
+	return rw
+}
+
+// handleWithdrawReward deletes a reward its proposer made that was never approved. Withdrawing a
+// new price on an approved reward restores the approved reward and its price instead.
 func (s *Server) handleWithdrawReward(w http.ResponseWriter, r *http.Request) {
 	id, herr := rewardID(r)
 	if herr != nil {
@@ -402,6 +430,10 @@ func (s *Server) handleWithdrawReward(w http.ResponseWriter, r *http.Request) {
 		}
 		if !proposedByMe(rw, c) {
 			return newErr(http.StatusForbidden, codeForbidden, "only the proposer can withdraw a reward")
+		}
+		if rw.ApprovedPrice != nil {
+			_, err := db.SaveReward(ctx, tx, revertPriceChange(rw), true)
+			return err
 		}
 		return db.DeleteReward(ctx, tx, id)
 	})
@@ -431,7 +463,10 @@ func (s *Server) answerReward(w http.ResponseWriter, r *http.Request, approve bo
 			return rw, false, newErr(http.StatusForbidden, codeForbidden, "the other person answers a proposal")
 		}
 		if approve {
-			rw.Status = db.RewardApproved
+			rw.Status, rw.Focus = db.RewardApproved, rw.ApprovedFocus
+			rw.ApprovedPrice, rw.ApprovedFocus = nil, false
+		} else if rw.ApprovedPrice != nil {
+			return revertPriceChange(rw), true, nil
 		} else {
 			rw.Status = db.RewardDeclined
 		}

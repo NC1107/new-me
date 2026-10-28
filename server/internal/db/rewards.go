@@ -29,23 +29,27 @@ var (
 
 // Reward is one wishlist entry, priced in gems.
 type Reward struct {
-	ID         int64
-	Name       string
-	Price      int
-	Status     string
-	Focus      bool
-	Spent      int
-	ProposedBy *int64
-	StartedAt  time.Time
-	ReachedAt  *time.Time
-	ClaimedAt  *time.Time
+	ID     int64
+	Name   string
+	Price  int
+	Status string
+	Focus  bool
+	Spent  int
+	// ApprovedPrice and ApprovedFocus are the approved state a pending price change replaced;
+	// ApprovedPrice is nil unless the reward is a pending change to an approved one.
+	ApprovedPrice *int
+	ApprovedFocus bool
+	ProposedBy    *int64
+	StartedAt     time.Time
+	ReachedAt     *time.Time
+	ClaimedAt     *time.Time
 }
 
-const rewardColumns = `id, name, target, status, is_focus, spent, proposed_by, started_at, reached_at, claimed_at`
+const rewardColumns = `id, name, target, status, is_focus, spent, approved_price, approved_focus, proposed_by, started_at, reached_at, claimed_at`
 
 func scanReward(row interface{ Scan(...any) error }) (Reward, error) {
 	var r Reward
-	err := row.Scan(&r.ID, &r.Name, &r.Price, &r.Status, &r.Focus, &r.Spent, &r.ProposedBy,
+	err := row.Scan(&r.ID, &r.Name, &r.Price, &r.Status, &r.Focus, &r.Spent, &r.ApprovedPrice, &r.ApprovedFocus, &r.ProposedBy,
 		&r.StartedAt, &r.ReachedAt, &r.ClaimedAt)
 	return r, err
 }
@@ -90,6 +94,16 @@ func InsertReward(ctx context.Context, tx pgx.Tx, name string, price int, by int
 		return Reward{}, err
 	}
 	return GetReward(ctx, tx, r.ID)
+}
+
+// PendingRewardByName finds a pending reward the person proposed under the same name, ignoring
+// case, so a repeated create can be answered with it instead of adding a duplicate.
+func PendingRewardByName(ctx context.Context, q Querier, by int64, name string) (Reward, error) {
+	r, err := scanReward(q.QueryRow(ctx, `
+		SELECT `+rewardColumns+` FROM rewards
+		WHERE status = 'pending' AND proposed_by = $1 AND lower(name) = lower($2)
+		ORDER BY id LIMIT 1`, by, name))
+	return r, notFound(err)
 }
 
 // PromoteFocus fills an empty focus slot with the oldest approved reward.
@@ -143,14 +157,17 @@ func LockReward(ctx context.Context, tx pgx.Tx, id int64) (Reward, error) {
 }
 
 // SaveReward writes the changeable fields of r. A reward that is no longer approved loses the
-// focus and the slot is refilled; a changed price clears the ready mark so it is announced
+// focus and the slot is refilled (a focus is only kept or restored while the slot is free); a changed price clears the ready mark so it is announced
 // again once the new price is covered.
 func SaveReward(ctx context.Context, tx pgx.Tx, r Reward, priceChanged bool) (Reward, error) {
 	focus := r.Focus && r.Status == RewardApproved
 	if _, err := scanReward(tx.QueryRow(ctx, `
-		UPDATE rewards SET name = $2, target = $3, status = $4, proposed_by = $5, is_focus = $6,
+		UPDATE rewards SET name = $2, target = $3, status = $4, proposed_by = $5,
+		    is_focus = $6 AND NOT EXISTS (SELECT 1 FROM rewards o WHERE o.is_focus AND o.id <> $1),
+		    approved_price = $8, approved_focus = $9,
 		    reached_at = CASE WHEN $7 THEN NULL ELSE reached_at END, updated_at = now()
-		WHERE id = $1 RETURNING `+rewardColumns, r.ID, r.Name, r.Price, r.Status, r.ProposedBy, focus, priceChanged)); err != nil {
+		WHERE id = $1 RETURNING `+rewardColumns, r.ID, r.Name, r.Price, r.Status, r.ProposedBy, focus, priceChanged,
+		r.ApprovedPrice, r.ApprovedFocus)); err != nil {
 		return Reward{}, notFound(err)
 	}
 	if err := PromoteFocus(ctx, tx); err != nil {
@@ -159,9 +176,10 @@ func SaveReward(ctx context.Context, tx pgx.Tx, r Reward, priceChanged bool) (Re
 	return GetReward(ctx, tx, r.ID)
 }
 
-// DeleteReward removes a reward that was never approved.
+// DeleteReward removes a reward that was never approved. A pending price change to an approved
+// reward is not one: it is reverted instead.
 func DeleteReward(ctx context.Context, tx pgx.Tx, id int64) error {
-	_, err := tx.Exec(ctx, `DELETE FROM rewards WHERE id = $1`, id)
+	_, err := tx.Exec(ctx, `DELETE FROM rewards WHERE id = $1 AND approved_price IS NULL`, id)
 	return err
 }
 

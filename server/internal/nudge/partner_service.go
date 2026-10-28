@@ -2,6 +2,8 @@ package nudge
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/nc1107/new-me/server/internal/db"
@@ -13,7 +15,7 @@ import (
 
 // runPartner sends the person at most one partner nudge about the partner. Everything cheap is
 // checked first (switches, quiet hours, the day's budget), so a person with nothing due costs a
-// few queries and no scoring.
+// few queries. The partner's stored day is read, never rescored, so a pass writes nothing.
 func (s *Service) runPartner(ctx context.Context, u, partner db.User, now time.Time) error {
 	prefs := PartnerPrefs{Cover: u.Notify.Cover, Nudges: u.Notify.PartnerNudges}
 	if !prefs.Cover && !prefs.Nudges {
@@ -96,22 +98,30 @@ func (s *Service) coverChance(ctx context.Context, u, partner db.User, now time.
 	return mine.Freezes.Held, mine.Freezes.Held > 0, nil
 }
 
-// partnerHardQuest finds a hard quest the partner finished on their own today, and whether this
-// person has already cheered them on their own day.
+// partnerHardQuest finds a hard quest the partner finished on their own today, read from the day
+// score stored when they last logged, and whether this person has already cheered them on their
+// own day.
 func (s *Service) partnerHardQuest(ctx context.Context, u, partner db.User, now time.Time) (*HardQuest, bool, error) {
 	ploc, err := partner.Location()
 	if err != nil {
 		return nil, false, err
 	}
 	ptoday := score.LocalToday(now, ploc)
-	day, err := s.loadDay(ctx, partner, ploc, ptoday, now)
+	row, err := db.GetDayScore(ctx, s.DB.Pool, partner.ID, ptoday)
+	if errors.Is(err, db.ErrNotFound) {
+		return nil, false, nil
+	}
 	if err != nil {
 		return nil, false, err
 	}
+	var quests []score.QuestScore
+	if err := json.Unmarshal(row.Detail, &quests); err != nil {
+		return nil, false, err
+	}
 	var hard *HardQuest
-	for _, row := range day.QuestRows {
-		if row.Quest.Done && row.Points >= HardQuestPoints {
-			hard = &HardQuest{Key: row.Quest.Key, Actual: row.Quest.Actual}
+	for _, q := range quests {
+		if q.Complete && q.Points >= HardQuestPoints {
+			hard = &HardQuest{Key: q.Key, Actual: q.Actual}
 			break
 		}
 	}

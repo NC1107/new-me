@@ -115,12 +115,13 @@ func ChallengeKindsBetween(ctx context.Context, q Querier, from, to score.Date) 
 	return out, rows.Err()
 }
 
-// CloseMissedChallenges marks every unfinished challenge of a week before the given Monday as
-// missed, once, and returns how many it closed. There is no penalty: nothing else reads it
-// except the recap and the Us screen.
+// CloseMissedChallenges marks every unfinished challenge of the two weeks before the given Monday
+// as missed, once, and returns how many it closed. Older weeks are left alone so the pass stays
+// cheap. There is no penalty: nothing else reads it except the recap and the Us screen.
 func CloseMissedChallenges(ctx context.Context, q Querier, currentWeek score.Date) (int, error) {
 	tag, err := q.Exec(ctx, `
 		UPDATE challenges SET missed_at = now()
-		WHERE completed_at IS NULL AND missed_at IS NULL AND week_start < $1::date`, currentWeek)
+		WHERE completed_at IS NULL AND missed_at IS NULL
+		  AND week_start < $1::date AND week_start >= $1::date - 14`, currentWeek)
 	return int(tag.RowsAffected()), err
 }

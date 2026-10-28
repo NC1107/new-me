@@ -301,3 +301,9 @@ func (h *healthCache) ping(r *http.Request, database *db.DB) error {
 	h.checked = time.Now()
 	return h.err
 }
+
+// WaitBackground blocks until background work started by requests (plan wording) has finished or
+// ctx ends, so shutdown does not cut a call off or close the pool under it.
+func (s *Server) WaitBackground(ctx context.Context) error {
+	return s.polisher.WaitContext(ctx)
+}

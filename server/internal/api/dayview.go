@@ -8,6 +8,7 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
+	"github.com/nc1107/new-me/server/internal/regularity"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -29,6 +30,9 @@ type questJSON struct {
 	// DoneBy says which Health workout or planned session completed the quest; null when logged
 	// entries did.
 	DoneBy *score.DoneBy `json:"doneBy"`
+	// Detail is extra, quest-specific facts: the steady bedtime sends the night against the
+	// person's usual times. Absent for every other quest.
+	Detail map[string]any `json:"detail,omitempty"`
 }
 
 // dayJSON is the score of a day. StreakLine is the percent a day needs to count.
@@ -82,6 +86,9 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		if earned.Complete {
 			item.DoneBy = engine.DoneBy(q, s.Inputs)
 		}
+		if q.Key == db.QuestSleepRegularity {
+			item.Detail = regularityDetail(engine.RegularityCheck(q, s.Inputs))
+		}
 		out = append(out, item)
 	}
 	return out
@@ -125,4 +132,17 @@ func (s *Server) backdateUntil(u db.User, loc *time.Location) *string {
 	}
 	ts := wireTime(until)
 	return &ts
+}
+
+// regularityDetail is the night against the person's usual times: the usual and the night's own
+// clock times as minutes after midnight in their zone, and how far off each was.
+func regularityDetail(c regularity.Check) map[string]any {
+	if !c.Measurable {
+		return map[string]any{"measurable": false, "baselineNights": c.BaselineNights, "minBaseline": regularity.MinBaseline}
+	}
+	return map[string]any{
+		"measurable": true, "baselineNights": c.BaselineNights, "windowMin": c.WindowMin,
+		"bedMedian": c.BedMedian, "wakeMedian": c.WakeMedian,
+		"bedOffset": c.BedOffset, "wakeOffset": c.WakeOffset, "bedOk": c.BedOK, "wakeOk": c.WakeOK,
+	}
 }

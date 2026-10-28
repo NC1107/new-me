@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/regularity"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -21,6 +22,9 @@ var healthMetric = map[string]string{
 	db.QuestExercise: db.MetricExercise,
 	db.QuestSleep:    db.MetricSleep,
 	db.QuestWater:    db.MetricWater,
+	// Breathing counts Health's mindful minutes, and the steady bedtime reads the sleep nights.
+	db.QuestBreathing:       db.MetricMindful,
+	db.QuestSleepRegularity: db.MetricSleep,
 }
 
 // QuestResults measures each snapshotted quest against the day's inputs. A Health-fed quest
@@ -43,14 +47,32 @@ func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 // has ever reported exercise minutes. Water logged by hand does the same for the water quest.
 func connected(key, metric string, in db.DayInputs) bool {
 	switch {
+	case key == db.QuestSleepRegularity:
+		// Only a night that can be compared with a routine is judged; a Health reading of
+		// sleep minutes alone says nothing about when the person slept.
+		return RegularityCheck(db.DayQuest{Key: key, Target: db.DefaultRegularityWindowMin}, in).Measurable
 	case in.Connected(metric):
 		return true
 	case key == db.QuestExercise:
 		return in.ManualExerciseMinutes() > 0
 	case key == db.QuestWater:
 		return in.WaterLoggedML > 0
+	case key == db.QuestBreathing:
+		return in.BreathingLoggedMin > 0
 	}
 	return false
+}
+
+// RegularityCheck judges the day's sleep night against the person's own routine, with the
+// quest's target as the window in minutes.
+func RegularityCheck(q db.DayQuest, in db.DayInputs) regularity.Check {
+	nights := make([]regularity.Night, 0, len(in.SleepNights))
+	for _, n := range in.SleepNights {
+		if n.AsleepMin > 0 {
+			nights = append(nights, regularity.Night{Date: n.Date, BedAt: n.BedAt, WakeAt: n.WakeAt})
+		}
+	}
+	return regularity.Evaluate(nights, in.Date, q.Target, in.Location())
 }
 
 // healthUnits is the quest's amount from Health, and for exercise the minutes logged by hand.
@@ -63,6 +85,10 @@ func healthUnits(key string, in db.DayInputs) int {
 		// Health and the log hold the same water, so the larger of the two is the day's amount;
 		// adding them would count a drink twice for someone who records it in both places.
 		units = max(units, in.WaterLoggedML)
+	case db.QuestBreathing:
+		// Same reason as water: the app never writes mindful minutes to Health, so a session
+		// logged here and one recorded in a Health app are separate, and someone may log both.
+		units = max(units, in.BreathingLoggedMin)
 	}
 	return units
 }
@@ -70,8 +96,14 @@ func healthUnits(key string, in db.DayInputs) int {
 // progress returns the quest's actual and target in one shared unit.
 func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	switch q.Key {
-	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater:
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater, db.QuestBreathing:
 		return healthUnits(q.Key, in), q.Target
+	case db.QuestSleepRegularity:
+		// Bedtime and wake time are one point each, so a night with one of them in the window
+		// earns half the quest. The target on the wire is the window, not this count.
+		return RegularityCheck(q, in).Hits, regularity.Anchors
+	case db.QuestProduce:
+		return in.ProduceServings, q.Target
 	case db.QuestPushups:
 		actual, _ = score.StrengthProgress(in.Pushups, q.Target, in.TrainingSession, in.Workouts, in.HIITMinHR)
 		return actual, q.Target
@@ -103,8 +135,12 @@ func tenthsOfGrams(g float64) int { return int(math.Round(g * 10)) }
 // pages separately. It is what the Today screen shows beside the target.
 func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	switch q.Key {
-	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater:
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater, db.QuestBreathing:
 		return healthUnits(q.Key, in), nil
+	case db.QuestSleepRegularity:
+		return RegularityCheck(q, in).Hits, nil
+	case db.QuestProduce:
+		return in.ProduceServings, nil
 	case db.QuestPushups:
 		return in.Pushups, nil
 	case db.QuestReading:

@@ -99,6 +99,11 @@ func TestLoadDayInputsAggregatesTheDay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The zone and the steady-bedtime nights have their own test; here they only need to be sane.
+	if in.Loc == nil || in.Date != day || len(in.SleepNights) != 0 {
+		t.Fatalf("zone %v, date %q and nights %v", in.Loc, in.Date, in.SleepNights)
+	}
+	in.Loc, in.Date, in.SleepNights = nil, "", nil
 	want := db.DayInputs{
 		Metrics: map[string]float64{db.MetricSteps: 4321, db.MetricActiveEnergy: 540},
 		Synced:  map[string]bool{db.MetricSteps: true, db.MetricActiveEnergy: true}, Pushups: 35, ReadingMinutes: 12,

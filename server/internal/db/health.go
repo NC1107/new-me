@@ -62,6 +62,17 @@ type DayInputs struct {
 	YogaMinutes    int
 	// WaterLoggedML is water logged by hand; the water quest takes the larger of it and Health.
 	WaterLoggedML int
+	// ProduceServings and BreathingLoggedMin are fruit and vegetable servings and breathing minutes
+	// logged by hand; the breathing quest takes the larger of the minutes and Health's mindful minutes.
+	ProduceServings    int
+	BreathingLoggedMin int
+	// SleepNights are the sleep nights ending on the 7 days before the date and on the date, which
+	// the steady-bedtime quest compares against the person's own usual times; Loc is the zone
+	// those times are read in.
+	SleepNights []SleepNight
+	Loc         *time.Location
+	// Date is the day the inputs were loaded for.
+	Date score.Date
 	// OtherFullMinutes and OtherEasyMinutes are manual activity minutes by intensity: moderate
 	// and hard count fully toward exercise, easy counts half.
 	OtherFullMinutes int
@@ -86,6 +97,14 @@ type DayInputs struct {
 	FiberG   float64
 }
 
+// Location is the zone sleep times are read in, UTC when none was loaded.
+func (in DayInputs) Location() *time.Location {
+	if in.Loc == nil {
+		return time.UTC
+	}
+	return in.Loc
+}
+
 // ManualExerciseMinutes is what manual activity adds to the day's exercise minutes.
 func (in DayInputs) ManualExerciseMinutes() int { return in.OtherFullMinutes + in.OtherEasyMinutes/2 }
 
@@ -98,9 +117,9 @@ func (in DayInputs) Connected(key string) bool { return in.Synced[key] }
 // LoadDayInputs aggregates the day's live logs and Health readings in two queries.
 // A metric is Synced once any reading of it exists on or before the date.
 func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date) (DayInputs, error) {
-	var in DayInputs
+	in := DayInputs{Date: date}
 	err := q.QueryRow(ctx, `
-		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.other_full, a.other_easy,
+		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.produce, a.breathing, a.other_full, a.other_easy,
 		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber
 		FROM (
 			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups'), 0)::int AS pushups,
@@ -108,6 +127,8 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_pages'), 0)::int AS reading_pages,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'yoga_minutes'), 0)::int AS yoga_minutes,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'water_ml'), 0)::int AS water_ml,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'produce_servings'), 0)::int AS produce,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'breathing_minutes'), 0)::int AS breathing,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity <> 'easy'), 0)::int AS other_full,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity = 'easy'), 0)::int AS other_easy
 			FROM activity_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
@@ -120,7 +141,7 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(fiber_g), 0)::float8 AS fiber
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
 		) m`, userID, date).Scan(
-		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.OtherFullMinutes, &in.OtherEasyMinutes,
+		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceServings, &in.BreathingLoggedMin, &in.OtherFullMinutes, &in.OtherEasyMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
 	if err != nil {
 		return in, err
@@ -141,6 +162,9 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 	}
 	in.Metrics, in.Synced, err = loadHealthDay(ctx, q, userID, date)
 	if err != nil {
+		return in, err
+	}
+	if in.SleepNights, in.Loc, err = loadRegularityNights(ctx, q, userID, date); err != nil {
 		return in, err
 	}
 	in.HIITMinHR, err = hiitThreshold(ctx, q, userID, date)
@@ -276,4 +300,22 @@ func hiitThreshold(ctx context.Context, q Querier, userID int64, date score.Date
 	}
 	age := year - *birthYear
 	return score.HIITMinHR(&age, &rest.Value), nil
+}
+
+// regularityLookbackDays is how many mornings before the date make up the usual bed and wake times.
+const regularityLookbackDays = 7
+
+// loadRegularityNights returns the nights the steady-bedtime quest reads and the zone to read
+// their clock times in.
+func loadRegularityNights(ctx context.Context, q Querier, userID int64, date score.Date) ([]SleepNight, *time.Location, error) {
+	var zone string
+	if err := q.QueryRow(ctx, `SELECT timezone FROM users WHERE id = $1`, userID).Scan(&zone); err != nil {
+		return nil, nil, err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return nil, nil, err
+	}
+	nights, err := ListSleepNights(ctx, q, userID, date.AddDays(-regularityLookbackDays), date)
+	return nights, loc, err
 }

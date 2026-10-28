@@ -17,6 +17,10 @@ const (
 	QuestExercise    = "exercise"
 	QuestSleep       = "sleep"
 	QuestWater       = "water"
+	// QuestSleepRegularity, QuestProduce and QuestBreathing are the v17 opt-in quests.
+	QuestSleepRegularity = "sleep_regularity"
+	QuestProduce         = "produce"
+	QuestBreathing       = "breathing"
 
 	ActivityPushups        = "pushups"
 	ActivityReadingMinutes = "reading_minutes"
@@ -24,6 +28,8 @@ const (
 	ActivityYogaMinutes    = "yoga_minutes"
 	ActivityOtherMinutes   = "other_minutes"
 	ActivityWaterML        = "water_ml"
+	ActivityProduce        = "produce_servings"
+	ActivityBreathing      = "breathing_minutes"
 
 	MetricSteps        = "steps"
 	MetricActiveEnergy = "active_energy"
@@ -31,11 +37,20 @@ const (
 	MetricSleep        = "sleep_minutes"
 	MetricWeight       = "weight_kg"
 	MetricWater        = "water_ml"
+	MetricMindful      = "mindful_minutes"
 )
 
 // DefaultWaterTarget is the water goal in ml until the person sets their sex, which moves it to
 // the figure for men (3000) or women (2200).
 const DefaultWaterTarget = 2200
+
+// Defaults of the v17 quests. The regularity target is the window in minutes around the person's
+// usual bed and wake times; the research behind each is in docs/design-v17-quests.md.
+const (
+	DefaultRegularityWindowMin = 45
+	DefaultProduceServings     = 5
+	DefaultBreathingMin        = 5
+)
 
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
 const DefaultProteinTarget = 100
@@ -68,7 +83,8 @@ func intPtr(n int) *int { return &n }
 
 func strPtr(s string) *string { return &s }
 
-// DefaultTemplates are the quests every new user starts with. Yoga ships disabled; exercise and
+// DefaultTemplates are the quests every new user starts with. Yoga and the three v17 quests
+// (steady bedtime, fruit and vegetables, breathing) ship disabled and are opt-in; exercise and
 // sleep are on because Health-fed quests stay out of the day until their data arrives.
 func DefaultTemplates() []QuestTemplate {
 	return []QuestTemplate{
@@ -82,6 +98,9 @@ func DefaultTemplates() []QuestTemplate {
 		{Key: QuestExercise, Target: 30, Unit: "min", Points: 100, Enabled: true, Position: 6},
 		{Key: QuestSleep, Target: 420, Unit: "min", Points: 50, Enabled: true, Position: 7},
 		{Key: QuestWater, Target: DefaultWaterTarget, Unit: "ml", Points: 50, Enabled: true, Position: 8},
+		{Key: QuestSleepRegularity, Target: DefaultRegularityWindowMin, Unit: "min", Points: 50, Enabled: false, Position: 9},
+		{Key: QuestProduce, Target: DefaultProduceServings, Unit: "servings", Points: 50, Enabled: false, Position: 10},
+		{Key: QuestBreathing, Target: DefaultBreathingMin, Unit: "min", Points: 50, Enabled: false, Position: 11},
 	}
 }
 

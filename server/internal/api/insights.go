@@ -7,7 +7,14 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/insights"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/targets"
 )
+
+// sleepInsightsJSON is the sleep insights with the Sleep Regularity Index beside them.
+type sleepInsightsJSON struct {
+	insights.Sleep
+	Regularity map[string]any `json:"regularity"`
+}
 
 // defaultSleepTargetMin is the sleep target shown while the sleep quest is off.
 const defaultSleepTargetMin = 420
@@ -86,6 +93,13 @@ func (s *Server) handleInsights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	reg := targets.SleepRegularity(nights, today, c.loc)
+	regularity := map[string]any{"score": reg.Score, "nights": reg.Nights, "pairs": reg.Pairs,
+		"windowDays": targets.SRIWindowDays, "minNights": targets.SRIMinNights, "missing": []string{}}
+	if reg.Missing != nil {
+		regularity["missing"] = reg.Missing
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"weight":   weight,
 		"activity": activity,
@@ -93,9 +107,12 @@ func (s *Server) handleInsights(w http.ResponseWriter, r *http.Request) {
 		"steps": insights.ComputeSteps(insights.StepInput{
 			Days: days, Today: today, Goal: stepGoal, BirthYear: c.user.BirthYear,
 		}),
-		"sleep": insights.ComputeSleep(insights.SleepInput{
-			Nights: nights, Today: today, TargetMin: sleepTarget, Loc: c.loc,
-		}),
+		"sleep": sleepInsightsJSON{
+			Sleep: insights.ComputeSleep(insights.SleepInput{
+				Nights: nights, Today: today, TargetMin: sleepTarget, Loc: c.loc,
+			}),
+			Regularity: regularity,
+		},
 		"workouts": insights.ComputeWorkouts(workouts, today),
 	})
 }

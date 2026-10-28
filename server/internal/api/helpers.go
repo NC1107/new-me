@@ -214,5 +214,9 @@ var titles = map[string]string{
 	db.QuestExercise:    "Exercise",
 	db.QuestSleep:       "Sleep",
 	db.QuestWater:       "Water",
-	proposalCalories:    "Calories",
+
+	db.QuestSleepRegularity: "Steady bedtime",
+	db.QuestProduce:         "Fruit and vegetables",
+	db.QuestBreathing:       "Breathing",
+	proposalCalories:        "Calories",
 }

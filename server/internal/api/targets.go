@@ -35,6 +35,8 @@ const (
 	tgtSteps       = "steps"
 	tgtPushups     = "pushups"
 	tgtWater       = "water"
+	tgtProduce     = "produce"
+	tgtBreathing   = "breathing"
 )
 
 // Input keys.
@@ -496,6 +498,8 @@ func computeTargets(d targetData) targetsResponse {
 	add(d.stepsTarget(tpl(db.QuestSteps)))
 	add(d.pushupsTarget(tpl(db.QuestPushups)))
 	add(d.waterTarget(tpl(db.QuestWater)))
+	add(produceTarget(tpl(db.QuestProduce)))
+	add(breathingTarget(tpl(db.QuestBreathing)))
 
 	return targetsResponse{AsOf: d.Today, Disclaimer: targetsDisclaimer, Inputs: d.inputs(), Targets: out, Sources: targets.Sources}
 }
@@ -702,6 +706,26 @@ func (d targetData) waterTarget(current *int) targetJSON {
 	return t
 }
 
+// produceTarget is five 80 g servings, the WHO 400 g a day.
+func produceTarget(current *int) targetJSON {
+	return targetJSON{Key: tgtProduce, Unit: "servings", Label: labelGuideline, Applicable: true, Current: current,
+		Value: intp(targets.ProduceServings), Missing: []string{}, Sources: []string{"who2003", "nhs5aday", "aune2017"},
+		Formula: fmt.Sprintf("WHO advises at least %d g of fruit and vegetables a day, and one serving is %d g (NHS 5 A Day), so %d servings.",
+			targets.ProduceWHOGrams, targets.ProduceServingGrams, targets.ProduceServings),
+		Details: map[string]any{"servingGrams": targets.ProduceServingGrams, "whoMinGrams": targets.ProduceWHOGrams,
+			"lowestRiskGrams": targets.ProduceLowestRiskGrams,
+			"note":            "Potatoes do not count, beans and pulses count once a day, and juice and smoothies count once however much you drink. Aune et al. 2017 found risk kept falling up to about 800 g (10 servings) a day, so five is a floor, not a ceiling."}}
+}
+
+// breathingTarget is the five minutes a day of the Balban trial.
+func breathingTarget(current *int) targetJSON {
+	return targetJSON{Key: tgtBreathing, Unit: "min", Label: labelGuideline, Applicable: true, Current: current,
+		Value: intp(targets.BreathingMinutes), Missing: []string{}, Sources: []string{"balban2023", "zaccaro2018"},
+		Formula: fmt.Sprintf("%d minutes a day of cyclic sighing, the practice that improved mood and lowered breathing rate over a month in Balban et al. 2023.", targets.BreathingMinutes),
+		Details: map[string]any{"slowPaceBreathsPerMin": targets.SlowBreathsPerMin,
+			"note": "Apple Health mindful minutes also count, and the larger of Health and the minutes you log is used, never the sum."}}
+}
+
 // find returns the target with the key.
 func (r targetsResponse) find(key string) (targetJSON, bool) {
 	for _, t := range r.Targets {
@@ -812,6 +836,10 @@ func (s *Server) handleApplyTargets(w http.ResponseWriter, r *http.Request) {
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestSleep, Target: &v})
 		case tgtWater:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestWater, Target: &v})
+		case tgtProduce:
+			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestProduce, Target: &v})
+		case tgtBreathing:
+			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestBreathing, Target: &v})
 		case tgtPushups:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestPushups, Target: &v})
 		}

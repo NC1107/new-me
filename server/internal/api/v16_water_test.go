@@ -201,12 +201,12 @@ func TestMigrationBackfillsWaterForExistingPeopleBySex(t *testing.T) {
 		target int
 	}{{nick, 3000}, {nadia, 2200}} {
 		me := h.get("/api/me", tc.p.Token).expect(http.StatusOK)
-		if me.length("questTemplates") != 9 {
+		if me.length("questTemplates") != 12 {
 			t.Fatalf("the backfill must add exactly one water template: %s", me.Body)
 		}
-		last := "questTemplates.8"
+		last := "questTemplates.11"
 		if me.str(last+".key") != "water" || !me.flag(last+".enabled") || me.num(last+".target") != tc.target ||
-			me.str(last+".unit") != "ml" || me.num(last+".points") != 50 || me.num(last+".position") != 8 {
+			me.str(last+".unit") != "ml" || me.num(last+".points") != 50 || me.num(last+".position") != 12 {
 			t.Fatalf("backfilled template = %s", me.Body)
 		}
 	}

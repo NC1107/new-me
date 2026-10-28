@@ -26,7 +26,7 @@ func TestGetMe(t *testing.T) {
 	if !got.isNull("backdateUntil") {
 		t.Fatal("at noon the backdate window is closed")
 	}
-	if got.length("questTemplates") != 9 || got.str("questTemplates.0.key") != "steps" ||
+	if got.length("questTemplates") != 12 || got.str("questTemplates.0.key") != "steps" ||
 		got.flag("questTemplates.5.enabled") || got.str("questTemplates.5.key") != "yoga" ||
 		got.str("questTemplates.6.key") != "exercise" || !got.flag("questTemplates.6.enabled") ||
 		got.num("questTemplates.6.target") != 30 || got.num("questTemplates.6.points") != 100 ||

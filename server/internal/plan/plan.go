@@ -141,6 +141,12 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 	case db.QuestWater:
 		litres := litresText(left)
 		return candidate{fmt.Sprintf("Water: %s to go.", litres), litres + " more water", frac}, true
+	case db.QuestProduce:
+		return candidate{fmt.Sprintf("Fruit and vegetables: %d more %s.", left, plural(left, "serving", "servings")),
+			fmt.Sprintf("%d more %s of fruit and vegetables", left, plural(left, "serving", "servings")), frac}, true
+	case db.QuestBreathing:
+		return candidate{fmt.Sprintf("Breathing: %d more %s.", left, plural(left, "minute", "minutes")),
+			fmt.Sprintf("%d minutes of breathing", left), frac}, true
 	case db.QuestExercise:
 		return candidate{fmt.Sprintf("Exercise: %d more %s.", left, plural(left, "minute", "minutes")),
 			fmt.Sprintf("%d more minutes of exercise", left), frac}, true
@@ -207,8 +213,10 @@ func doneText(q Quest) string {
 		return fmt.Sprintf("%s done: %s", title, Thousands(q.Actual))
 	case db.QuestWater:
 		return fmt.Sprintf("%s done: %s", title, litresText(q.Actual))
-	case db.QuestReading, db.QuestYoga, db.QuestExercise:
+	case db.QuestReading, db.QuestYoga, db.QuestExercise, db.QuestBreathing:
 		return fmt.Sprintf("%s done: %d min", title, q.Actual)
+	case db.QuestProduce:
+		return fmt.Sprintf("%s done: %d %s", title, q.Actual, plural(q.Actual, "serving", "servings"))
 	}
 	return title + " done"
 }
@@ -220,6 +228,7 @@ func litresText(ml int) string { return fmt.Sprintf("%.1f L", float64(ml)/1000) 
 var titles = map[string]string{
 	db.QuestSteps: "Steps", db.QuestPushups: "Push-ups", db.QuestReading: "Reading", db.QuestMealsLogged: "Meals",
 	db.QuestProtein: "Protein", db.QuestYoga: "Yoga", db.QuestExercise: "Exercise", db.QuestSleep: "Sleep", db.QuestWater: "Water",
+	db.QuestSleepRegularity: "Steady bedtime", db.QuestProduce: "Fruit and vegetables", db.QuestBreathing: "Breathing",
 }
 
 func workoutTitle(t string) string {

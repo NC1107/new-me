@@ -21,14 +21,16 @@ import (
 // Per-entry caps. They match the table checks, and are enforced here first so the caller gets
 // a 422 that names the field.
 const (
-	maxReps       = 500
-	maxPages      = 2000
-	maxMinutes    = 1440
-	maxWaterML    = 5000
-	maxKcal       = 10000
-	maxMacroGrams = 5000
-	maxMealName   = 80
-	maxNote       = 200
+	maxReps            = 500
+	maxPages           = 2000
+	maxMinutes         = 1440
+	maxWaterML         = 5000
+	maxProduceServings = 30
+	maxBreathMin       = 120
+	maxKcal            = 10000
+	maxMacroGrams      = 5000
+	maxMealName        = 80
+	maxNote            = 200
 )
 
 var uuidShape = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -82,6 +84,8 @@ var wireActivity = map[string][2]string{
 	db.ActivityYogaMinutes:    {"yoga", "minutes"},
 	db.ActivityOtherMinutes:   {"other", "minutes"},
 	db.ActivityWaterML:        {"water", "ml"},
+	db.ActivityProduce:        {"produce", "servings"},
+	db.ActivityBreathing:      {"breathing", "minutes"},
 }
 
 // storedActivity resolves the wire's type and unit to a stored type. The stored names are
@@ -99,6 +103,10 @@ func storedActivity(typ, unit string) (string, bool) {
 		return db.ActivityYogaMinutes, true
 	case typ == "water" && (unit == "" || unit == "ml"):
 		return db.ActivityWaterML, true
+	case typ == "produce" && (unit == "" || unit == "servings"):
+		return db.ActivityProduce, true
+	case typ == "breathing" && (unit == "" || unit == "minutes"):
+		return db.ActivityBreathing, true
 	case typ == "other" && (unit == "" || unit == "minutes"):
 		return db.ActivityOtherMinutes, true
 	}
@@ -113,6 +121,10 @@ func activityCap(stored string) int {
 		return maxPages
 	case db.ActivityWaterML:
 		return maxWaterML
+	case db.ActivityProduce:
+		return maxProduceServings
+	case db.ActivityBreathing:
+		return maxBreathMin
 	}
 	return maxMinutes
 }
@@ -147,7 +159,7 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 	case db.KindActivity:
 		stored, ok := storedActivity(req.Type, req.Unit)
 		if !ok {
-			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga, water (unit ml) or other")
+			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga, water (unit ml), produce (unit servings), breathing or other")
 		}
 		activity := db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
 		if stored == db.ActivityOtherMinutes {

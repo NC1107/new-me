@@ -23,13 +23,14 @@ func TestCreateUserSeedsTemplatesAndInitializes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(templates) != 9 {
-		t.Fatalf("templates = %d, want 9", len(templates))
+	if len(templates) != 12 {
+		t.Fatalf("templates = %d, want 12", len(templates))
 	}
 	for i, tpl := range templates {
-		off := tpl.Key == db.QuestYoga
-		if tpl.Enabled == off || tpl.Position != i {
-			t.Fatalf("%+v; only yoga ships disabled, in order", tpl)
+		optIn := tpl.Key == db.QuestYoga || tpl.Key == db.QuestSleepRegularity || tpl.Key == db.QuestProduce ||
+			tpl.Key == db.QuestBreathing
+		if tpl.Enabled == optIn || tpl.Position != i {
+			t.Fatalf("%+v; only yoga and the three v17 quests ship disabled, in order", tpl)
 		}
 	}
 	if templates[6].Key != db.QuestExercise || templates[6].Target != 30 || templates[6].Points != 100 ||

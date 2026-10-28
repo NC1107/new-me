@@ -2,8 +2,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'together_prefs.dart';
 
-const _kHistoryReached = 'health.history.reached';
-const _kHistoryDone = 'health.history.done';
+// v2: the server took only 400 days before v0.13, so an import marked done then is run again.
+const _kHistoryReached = 'health.history.v2.reached';
+const _kHistoryDone = 'health.history.v2.done';
 const _kHealthAskedVersion = 'health.askedVersion';
 const _kHealthPrompted = 'healthPrompted';
 const _kLastSyncedAt = 'lastSyncedAt';

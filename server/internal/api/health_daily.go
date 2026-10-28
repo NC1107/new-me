@@ -20,7 +20,7 @@ const (
 	maxHealthItems = 50
 	// maxHistoryItems and maxHealthHistoryDays bound a Health history import batch.
 	maxHistoryItems      = 200
-	maxHealthHistoryDays = 400
+	maxHealthHistoryDays = 3660
 	maxTrendDays         = 365
 	maxSourceLen         = 32
 	// clockSkew is how far ahead of the server a device clock may run before its reading is

@@ -38,6 +38,12 @@ func TestHealthHistoryFillsClosedDaysWithoutRescoring(t *testing.T) {
 	if mixed.num("stored") != 1 || mixed.num("skipped") != 4 {
 		t.Fatalf("mixed batch = %s", mixed.Body)
 	}
+	// Years back is still history: Apple Health keeps a decade, and the app imports all of it.
+	years := h.put("/api/health/history", nick.Token, obj{"items": []obj{item("2018-03-14", 7000)}}).
+		expect(http.StatusOK)
+	if years.num("stored") != 1 {
+		t.Fatalf("a reading eight years back should be stored: %s", years.Body)
+	}
 	if h.get("/api/today", nick.Token).expect(http.StatusOK).num("day.basePoints") != 0 {
 		t.Fatal("history must not touch today's score")
 	}

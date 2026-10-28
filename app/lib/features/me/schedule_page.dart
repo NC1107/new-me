@@ -11,7 +11,6 @@ import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
-import '../../widgets/chunky_icon_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 
@@ -26,11 +25,21 @@ const _kWeekdayNames = [
   'Sunday',
 ];
 
-const kOffsetStep = 5;
 
 /// "10 min after you wake", or "as soon as you wake" at zero.
-String offsetLabel(int minutes) =>
-    minutes == 0 ? 'As soon as you wake' : '$minutes min after you wake';
+String offsetLabel(int minutes) {
+  if (minutes == 0) return 'As soon as you wake';
+  final h = minutes ~/ 60, m = minutes % 60;
+  final gap = h == 0 ? '$m min' : (m == 0 ? '$h h' : '$h h $m min');
+  return '$gap after you wake';
+}
+
+/// The wait after waking for a chosen start time, within 0 to [kMaxFirstOffsetMin]; a start
+/// before waking means as soon as you wake.
+int dayStartOffset(int wake, int start) {
+  final gap = (start - wake) % (24 * 60);
+  return gap > kMaxFirstOffsetMin ? 0 : gap;
+}
 
 /// "07:10" or "7:10 AM": when the first notification arrives for a wake time and offset.
 String firstNotificationAt(DayTimes times, int offsetMin) =>
@@ -138,21 +147,23 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           onChanged: (t) => _edit(_draft.copyWith(dayOff: t)),
         ),
         const SizedBox(height: 24),
-        Semantics(header: true, child: const Text('First notification', style: AppText.headline)),
+        Semantics(header: true, child: const Text('Your day starts', style: AppText.headline)),
         const SizedBox(height: 4),
         Text(
-          'The first note of the day waits for you to be up.',
+          'Your first note waits until then, even if you are up earlier.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        _OffsetStepper(
-          minutes: offset,
-          onChanged: (v) => _edit(_draft.copyWith(firstNotificationOffsetMin: v)),
+        TimeField(
+          label: 'On workdays at',
+          minutes: (_draft.workday.wake + offset) % (24 * 60),
+          onChanged: (start) => _edit(
+            _draft.copyWith(firstNotificationOffsetMin: dayStartOffset(_draft.workday.wake, start)),
+          ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Workdays: ${firstNotificationAt(_draft.workday, offset)}. Days off: '
-          '${firstNotificationAt(_draft.dayOff, offset)}.',
+          '${offsetLabel(offset)}. On days off: ${firstNotificationAt(_draft.dayOff, offset)}.',
           style: AppText.caption,
         ),
         if (_error != null) ...[
@@ -325,47 +336,4 @@ class TimeField extends StatelessWidget {
       ),
     );
   }
-}
-
-class _OffsetStepper extends StatelessWidget {
-  const _OffsetStepper({required this.minutes, required this.onChanged});
-
-  final int minutes;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) => AppCard(
-    child: Row(
-      children: [
-        ChunkyIconButton(
-          icon: Icons.remove_rounded,
-          semanticLabel: 'Earlier',
-          size: 48,
-          kind: ChunkyKind.secondary,
-          onPressed: minutes > 0
-              ? () => onChanged((minutes - kOffsetStep).clamp(0, kMaxFirstOffsetMin))
-              : null,
-        ),
-        Expanded(
-          child: Semantics(
-            label: offsetLabel(minutes),
-            excludeSemantics: true,
-            child: Text(
-              offsetLabel(minutes),
-              textAlign: TextAlign.center,
-              style: AppText.body.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-        ChunkyIconButton(
-          icon: Icons.add_rounded,
-          semanticLabel: 'Later',
-          size: 48,
-          onPressed: minutes < kMaxFirstOffsetMin
-              ? () => onChanged((minutes + kOffsetStep).clamp(0, kMaxFirstOffsetMin))
-              : null,
-        ),
-      ],
-    ),
-  );
 }

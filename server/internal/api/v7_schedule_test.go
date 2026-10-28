@@ -54,7 +54,7 @@ func TestPatchScheduleIsPartialAndValidated(t *testing.T) {
 		"bad time":         {"workday": obj{"wake": "7am"}},
 		"hour 24":          {"workday": obj{"bed": "24:00"}},
 		"equal wake / bed": {"dayOff": obj{"wake": "08:00", "bed": "08:00"}},
-		"offset too big":   {"firstNotificationOffsetMin": 121},
+		"offset too big":   {"firstNotificationOffsetMin": 361},
 		"offset negative":  {"firstNotificationOffsetMin": -1},
 		"weekday 8":        {"workdays": []int{1, 8}},
 		"weekday 0":        {"workdays": []int{0}},

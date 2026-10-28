@@ -21,7 +21,6 @@ import 'package:newme/api/models.dart';
 import 'package:newme/state/right_now.dart';
 import 'package:newme/state/today.dart';
 import 'package:newme/widgets/chunky_button.dart';
-import 'package:newme/widgets/chunky_icon_button.dart';
 import 'package:newme/widgets/mascot.dart';
 
 import 'fixtures.dart';
@@ -44,10 +43,6 @@ StubAdapter _server({Map<String, dynamic>? me}) => fullServer()
 
 Finder _chunky(String label) =>
     find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
-
-ChunkyIconButton _iconButton(WidgetTester tester, String label) => tester.widget<ChunkyIconButton>(
-  find.byWidgetPredicate((w) => w is ChunkyIconButton && w.semanticLabel == label),
-);
 
 bool _enabled(WidgetTester tester, String label) =>
     tester.widget<ChunkyButton>(_chunky(label)).onPressed != null;
@@ -76,16 +71,16 @@ void main() {
       expect(find.text('Mon to Fri'), findsOneWidget);
       expect(find.text('7:00 AM'), findsNWidgets(2));
       expect(find.text('11:00 PM'), findsNWidgets(2));
-      expect(find.text('10 min after you wake'), findsOneWidget);
-      expect(find.textContaining('Workdays: 7:10 AM. Days off: 7:10 AM.'), findsOneWidget);
+      expect(find.text('7:10 AM'), findsOneWidget);
+      expect(find.text('10 min after you wake. On days off: 7:10 AM.'), findsOneWidget);
       expect(_enabled(tester, 'Save'), isFalse, reason: 'nothing changed yet');
     });
 
     testWidgets('shows what the server has', (tester) async {
       await open(tester, me: {...meJson(), 'schedule': _fixture('me')['schedule']});
       expect(find.text('6:30 AM'), findsOneWidget);
-      expect(find.text('15 min after you wake'), findsOneWidget);
-      expect(find.textContaining('Workdays: 6:45 AM. Days off: 7:15 AM.'), findsOneWidget);
+      expect(find.text('6:45 AM'), findsOneWidget);
+      expect(find.text('15 min after you wake. On days off: 7:15 AM.'), findsOneWidget);
     });
 
     testWidgets('edits workdays and the offset, then saves one schedule object', (tester) async {
@@ -95,9 +90,6 @@ void main() {
       expect(find.text('Mon to Sat'), findsNothing);
       await app.tap(find.bySemanticsLabel('Friday'));
       expect(find.text('Mon, Tue, Wed, Thu, Sat'), findsOneWidget);
-      await app.tap(find.bySemanticsLabel('Later'));
-      await app.tap(find.bySemanticsLabel('Later'));
-      expect(find.text('20 min after you wake'), findsOneWidget);
       expect(_enabled(tester, 'Save'), isTrue);
 
       await app.tap(_chunky('Save'));
@@ -106,31 +98,23 @@ void main() {
           'workdays': [1, 2, 3, 4, 6],
           'workday': {'wake': '07:00', 'bed': '23:00'},
           'dayOff': {'wake': '07:00', 'bed': '23:00'},
-          'firstNotificationOffsetMin': 20,
+          'firstNotificationOffsetMin': 10,
         },
       });
     });
 
-    testWidgets('the offset stops at 0 and at 120 minutes', (tester) async {
-      final app = await open(
-        tester,
-        me: {
-          ...meJson(),
-          'schedule': {
-            'workdays': [1],
-            'workday': {'wake': '07:00', 'bed': '23:00'},
-            'dayOff': {'wake': '07:00', 'bed': '23:00'},
-            'firstNotificationOffsetMin': 0,
-          },
-        },
+    test('a day start is the wait after waking, up to six hours', () {
+      expect(dayStartOffset(3 * 60 + 40, 5 * 60 + 30), 110);
+      expect(dayStartOffset(7 * 60, 7 * 60), 0);
+      expect(dayStartOffset(7 * 60, 13 * 60), 360);
+      expect(
+        dayStartOffset(7 * 60, 6 * 60),
+        0,
+        reason: 'a start before waking is as soon as you wake',
       );
-      expect(find.text('As soon as you wake'), findsOneWidget);
-      expect(_iconButton(tester, 'Earlier').onPressed, isNull, reason: 'nothing before 0');
-      for (var i = 0; i < 30; i++) {
-        await app.tap(find.bySemanticsLabel('Later'));
-      }
-      expect(find.text('120 min after you wake'), findsOneWidget);
-    }, skip: false);
+      expect(offsetLabel(110), '1 h 50 min after you wake');
+      expect(offsetLabel(0), 'As soon as you wake');
+    });
 
     testWidgets('a time field opens the time picker', (tester) async {
       final app = await open(tester);
@@ -148,10 +132,10 @@ void main() {
           const StubResponse(422, {'error': 'workday wake and bed must differ'}),
         );
       final app = await open(tester, server: server);
-      await app.tap(find.bySemanticsLabel('Later'));
+      await app.tap(find.bySemanticsLabel('Saturday'));
       await app.tap(_chunky('Save'));
       expect(find.text('workday wake and bed must differ'), findsOneWidget);
-      expect(find.text('15 min after you wake'), findsOneWidget);
+      expect(_enabled(tester, 'Save'), isTrue, reason: 'the edit is kept');
     });
 
     testWidgets('Me links to it with a summary', (tester) async {

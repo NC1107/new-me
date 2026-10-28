@@ -297,7 +297,7 @@ void main() {
       );
     });
 
-    testWidgets('Schedule: weekday chips, time fields and the stepper', (tester) async {
+    testWidgets('Schedule: weekday chips and time fields', (tester) async {
       await open(tester, const SchedulePage());
       for (final day in ['Monday', 'Tuesday', 'Sunday']) {
         expect(
@@ -310,7 +310,10 @@ void main() {
         tester.getSize(find.bySemanticsLabel(RegExp('^Wake up')).first).height,
         greaterThanOrEqualTo(44),
       );
-      expect(tester.getSize(find.bySemanticsLabel('Later')).height, greaterThanOrEqualTo(44));
+      expect(
+        tester.getSize(find.bySemanticsLabel(RegExp('^On workdays at'))).height,
+        greaterThanOrEqualTo(44),
+      );
     });
 
     testWidgets('Progress: the person switcher and the rows below', (tester) async {

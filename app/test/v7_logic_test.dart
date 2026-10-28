@@ -461,7 +461,7 @@ void main() {
         const DayTimes(wake: 420, bed: 23 * 60 + 30),
         reason: 'a bad time keeps the default',
       );
-      expect(s.firstNotificationOffsetMin, 120, reason: 'clamped to the server maximum');
+      expect(s.firstNotificationOffsetMin, 360, reason: 'clamped to the server maximum');
       expect(s.timesFor(DateTime.monday), s.workday);
       expect(s.timesFor(DateTime.sunday), s.dayOff);
       expect(Schedule.parse('nope'), const Schedule());

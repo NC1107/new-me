@@ -60,7 +60,7 @@ func TestScheduleValidate(t *testing.T) {
 	bad := []func(*Schedule){
 		func(s *Schedule) { s.Workdays = 128 },
 		func(s *Schedule) { s.Workdays = -1 },
-		func(s *Schedule) { s.FirstOffsetMin = 121 },
+		func(s *Schedule) { s.FirstOffsetMin = 361 },
 		func(s *Schedule) { s.FirstOffsetMin = -1 },
 		func(s *Schedule) { s.Workday.WakeMin = 1440 },
 		func(s *Schedule) { s.DayOff.BedMin = -1 },

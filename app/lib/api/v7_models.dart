@@ -246,7 +246,7 @@ class DayTimes {
 const kDefaultWake = 7 * 60;
 const kDefaultBed = 23 * 60;
 const kDefaultFirstOffsetMin = 10;
-const kMaxFirstOffsetMin = 120;
+const kMaxFirstOffsetMin = 360;
 
 /// The person's rhythm: workdays (1 Monday to 7 Sunday), wake and bed for workdays and days
 /// off, and how long after waking the first notification may come.

@@ -61,6 +61,15 @@ The new-profile path is: name, colour, units, Apple Health, about you (birth yea
 - After connecting, and from a button on the Apple Health page, the app imports every day Apple Health holds, up to ten years, in the background, paced to the server's limits.
 - `PUT /api/health/history` stores readings for days before yesterday, up to ten years back, only where no reading exists, and never rescores a day, so history fills insights and look-backs without changing any score.
 
+## When the day starts
+
+- Nick wakes at 3:40 but wants the day, and its first notification, to start at 5:30.
+- Schedule asks "Your day starts" as a clock time on workdays, stored as the wait after waking (now up to six hours instead of two), and says when that falls on days off.
+
+## Undo snack bars
+
+- Flutter keeps any snack bar with an action until it is tapped, so Undo snack bars stayed forever; they now go away after six seconds.
+
 ## Reinstalling
 
 - The session token is in the iOS Keychain, which survives deleting the app, so a reinstall signs straight back in.

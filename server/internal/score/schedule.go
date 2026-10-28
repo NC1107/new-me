@@ -9,7 +9,7 @@ import (
 // Schedule bounds.
 const (
 	// MaxFirstOffsetMin is the longest wait after waking before the first notification.
-	MaxFirstOffsetMin = 120
+	MaxFirstOffsetMin = 360
 	// DefaultFirstOffsetMin is how long after waking the first notification comes by default.
 	DefaultFirstOffsetMin = 10
 	minutesPerDay         = 1440

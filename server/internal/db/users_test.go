@@ -395,7 +395,7 @@ func TestEnsureSnapshotIgnoresTemplatesEnabledAfterwards(t *testing.T) {
 	if err := db.EnsureSnapshot(ctx, database.Pool, u.ID, day.AddDays(1)); err != nil {
 		t.Fatal(err)
 	}
-	if quests, _ := db.GetDayQuests(ctx, database.Pool, u.ID, day.AddDays(1)); len(quests) != 8 {
+	if quests, _ := db.GetDayQuests(ctx, database.Pool, u.ID, day.AddDays(1)); len(quests) != 9 {
 		t.Fatalf("the next day must include yoga, got %d quests", len(quests))
 	}
 

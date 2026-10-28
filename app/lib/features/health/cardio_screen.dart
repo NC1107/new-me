@@ -327,7 +327,7 @@ class _Placement extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Among $who aged ${cardio.ageGroup}, the middle value is '
-            '${_tenths(cardio.median ?? 0)} ml/kg/min.',
+            '${_oneDecimal(cardio.median ?? 0)} ml/kg/min.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
           const SizedBox(height: 12),
@@ -404,7 +404,7 @@ class _WhatMovesIt extends ConsumerWidget {
           if (minutes != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Apple Health counted ${_minutes(minutes)} of exercise in the last 7 days. That '
+              'Apple Health counted ${plural(minutes.round(), 'minute', 'minutes')} of exercise in the last 7 days. That '
               'includes all brisk activity, not only vigorous.',
               style: AppText.body,
             ),
@@ -462,9 +462,4 @@ String _ordinal(int n) => switch (n % 10) {
   _ => '${n}th',
 };
 
-String _tenths(num v) => v.toStringAsFixed(1);
-
-String _minutes(num m) {
-  final n = m.round();
-  return n == 1 ? '1 minute' : '$n minutes';
-}
+String _oneDecimal(num v) => v.toStringAsFixed(1);

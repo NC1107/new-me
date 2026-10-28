@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/health/cardio_screen.dart';
 import 'package:newme/features/health/health_screen.dart';
+import 'package:newme/features/health/trend_chart.dart';
 import 'package:newme/util/format.dart';
 import 'package:newme/widgets/mascot.dart';
 
@@ -45,6 +46,9 @@ StubAdapter _server({
   return adapter;
 }
 
+int _chartPoints(WidgetTester tester) =>
+    tester.widget<TrendChart>(find.byType(TrendChart)).points.length;
+
 void main() {
   setUp(() {
     FakeStorage().install();
@@ -80,7 +84,7 @@ void main() {
     ]);
     expect(find.text('41.9 ml/kg/min'), findsOneWidget);
     expect(find.text('Latest, Oct 26'), findsOneWidget);
-    expect(find.byType(CustomPaint), findsWidgets);
+    expect(_chartPoints(tester), 30);
     expect(find.text('60th to 70th percentile'), findsOneWidget);
     expect(find.textContaining('Among men aged 40-49'), findsOneWidget);
     expect(find.textContaining('35.3 ml/kg/min'), findsOneWidget);
@@ -165,7 +169,7 @@ void main() {
     expect(find.text('Add your birth year and your sex to compare'), findsOneWidget);
     expect(find.textContaining('on your profile in Me'), findsOneWidget);
     expect(find.text('How you compare'), findsNothing);
-    expect(find.byType(CustomPaint), findsWidgets);
+    expect(_chartPoints(tester), 20);
   });
 
   testWidgets('one missing field is named alone', (tester) async {

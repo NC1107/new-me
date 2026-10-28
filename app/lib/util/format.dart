@@ -11,6 +11,9 @@ extension FormattedNumber on num {
   String get formatted => (this % 1 == 0 ? _whole : _tenths).format(this);
 }
 
+/// "1 step" or "1,850 steps": the count is rounded to pick the form, and shown with its separators.
+String plural(num v, String one, String many) => '${v.formatted} ${v.round() == 1 ? one : many}';
+
 /// "Oct 28": one date format for the whole app, written US style.
 String dayShort(String date) => DateFormat('MMM d', 'en_US').format(parseLocalDate(date));
 

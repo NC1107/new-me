@@ -14,8 +14,6 @@ String formatDuration(num minutes) {
   return m == 0 ? '$h h' : '$h h $m min';
 }
 
-String _plural(num v, String one, String many) => '${v.formatted} ${v.round() == 1 ? one : many}';
-
 String _tenths(num v) => double.parse(v.toStringAsFixed(1)).formatted;
 
 /// A metric Apple Health supplies: what to call it, where it sits and how a number reads.
@@ -70,7 +68,7 @@ final kHealthGroups = <HealthGroup>[
         key: HealthMetric.steps,
         name: 'Steps',
         icon: Icons.directions_walk_rounded,
-        format: (v) => _plural(v, 'step', 'steps'),
+        format: (v) => plural(v, 'step', 'steps'),
       ),
       HealthMetricSpec(
         key: HealthMetric.distanceM,
@@ -83,7 +81,7 @@ final kHealthGroups = <HealthGroup>[
         key: HealthMetric.flights,
         name: 'Flights climbed',
         icon: Icons.stairs_rounded,
-        format: (v) => _plural(v, 'flight', 'flights'),
+        format: (v) => plural(v, 'flight', 'flights'),
       ),
       HealthMetricSpec(
         key: HealthMetric.activeEnergy,
@@ -114,7 +112,7 @@ final kHealthGroups = <HealthGroup>[
         key: HealthMetric.workouts,
         name: 'Workouts',
         icon: Icons.sports_gymnastics_rounded,
-        format: (v) => _plural(v, 'workout', 'workouts'),
+        format: (v) => plural(v, 'workout', 'workouts'),
       ),
       const HealthMetricSpec(
         key: HealthMetric.workoutMinutes,

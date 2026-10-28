@@ -54,8 +54,11 @@ func (f *fakeClaude) count() int {
 	return len(f.requests)
 }
 
+// toolName is the forced tool of a request, or "" for a plain text request.
 func toolName(req map[string]any) string {
-	return req["tool_choice"].(map[string]any)["name"].(string)
+	choice, _ := req["tool_choice"].(map[string]any)
+	name, _ := choice["name"].(string)
+	return name
 }
 
 // splitReply is what the parse step returns for a one-food sentence.
@@ -67,6 +70,10 @@ func splitReply() obj {
 // forTool answers the parse step with one item and every other call with the given estimate.
 func forTool(estimateInput any) func(map[string]any) any {
 	return func(req map[string]any) any {
+		if toolName(req) == "" {
+			return obj{"id": "msg_1", "type": "message", "role": "assistant", "stop_reason": "end_turn",
+				"content": []obj{{"type": "text", "text": "A steady day."}}}
+		}
 		if toolName(req) == "split_meal" {
 			return splitReply()
 		}

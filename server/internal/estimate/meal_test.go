@@ -337,7 +337,7 @@ func TestBrandedItemFallsBackFromOpenFoodFactsToUSDABranded(t *testing.T) {
 	}
 	it := m.Items[0]
 	// 260 kcal per 100 g and one 127 g serving.
-	if it.Source != "usda" || it.SourceID != "2000" || it.Kcal != 330 || it.Grams != 127 || !strings.Contains(it.MatchedName, "HOT POCKETS") {
+	if it.Source != "usda" || it.SourceID != "2000" || it.Kcal != 330 || it.Grams != 127 || !strings.Contains(it.MatchedName, "Hot Pockets") {
 		t.Fatalf("item = %+v", it)
 	}
 	if claude.calls("report_meal_estimate") != 0 {

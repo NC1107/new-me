@@ -1,0 +1,29 @@
+package estimate
+
+import "testing"
+
+func TestTidyNamesAndBrands(t *testing.T) {
+	names := map[string]string{
+		"TOTINO'S SAUSAGE PIZZA ROLLS":  "Totino's Sausage Pizza Rolls",
+		"Totino's Cheese Party Pizza":   "Totino's Cheese Party Pizza",
+		"CHICKEN BREAST WITH SKIN, RAW": "Chicken Breast with Skin, Raw",
+		"OK":                            "OK",
+	}
+	for in, want := range names {
+		if got := tidyName(in); got != want {
+			t.Errorf("tidyName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	brands := []struct{ name, owner, want string }{
+		{"Totino's", "GENERAL MILLS SALES INC.", "Totino's"},
+		{"", "GENERAL MILLS SALES INC.", "General Mills"},
+		{"", "Kraft Heinz Foods Company", "Kraft Heinz Foods"},
+		{"TOTINO'S", "General Mills, Inc.", "Totino's"},
+		{"", "", ""},
+	}
+	for _, b := range brands {
+		if got := tidyBrand(b.name, b.owner); got != b.want {
+			t.Errorf("tidyBrand(%q, %q) = %q, want %q", b.name, b.owner, got, b.want)
+		}
+	}
+}

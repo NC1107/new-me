@@ -166,7 +166,7 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 	}
 
 	day := score.ScoreDay(QuestResults(quests, inputs))
-	day, err = withExtraBonus(ctx, tx, userID, date, day)
+	day, err = withHabitsAndBonus(ctx, tx, userID, date, day)
 	if err != nil {
 		return Scored{}, err
 	}
@@ -196,14 +196,15 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 	return Scored{Row: row, Quests: quests, Inputs: inputs, Score: day}, nil
 }
 
-// withExtraBonus adds the bonus that does not come from quests: habit points and the weekly
-// challenge award. A finalized day keeps the bonus it was finalized with, so editing or
-// deleting a habit later can never change history.
-func withExtraBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, day score.DayScore) (score.DayScore, error) {
+// withHabitsAndBonus adds what does not come from quests: the due habits' worth (which counts
+// toward the daily goal) and the weekly challenge award. A finalized day keeps everything it was
+// finalized with, so editing or deleting a habit later can never change history.
+func withHabitsAndBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, day score.DayScore) (score.DayScore, error) {
 	stored, err := db.GetDayScore(ctx, tx, userID, date)
 	switch {
 	case err == nil && stored.FinalizedAt != nil:
-		day.BonusPoints = stored.BonusPoints
+		day.BasePoints, day.BonusPoints, day.MaxBase = stored.BasePoints, stored.BonusPoints, stored.MaxBase
+		day.Percent, day.Counted = stored.Percent, stored.Counted
 		return day, nil
 	case err != nil && !errors.Is(err, db.ErrNotFound):
 		return day, err
@@ -216,5 +217,5 @@ func withExtraBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Dat
 	if err != nil {
 		return day, err
 	}
-	return day.WithBonus(score.HabitBonus(db.HabitDays(states)) + award), nil
+	return day.WithHabits(score.HabitScore(db.HabitDays(states))).WithBonus(award), nil
 }

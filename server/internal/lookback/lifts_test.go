@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/progress"
 	"github.com/nc1107/new-me/server/internal/training"
 )
 
@@ -56,5 +57,16 @@ func TestLiftsCapAndSkipQuietExercises(t *testing.T) {
 		if l.Key == "old" {
 			t.Fatal("an exercise not logged this month is not a lift of the month")
 		}
+	}
+}
+
+func TestBodyWordsKilogramsInPoundsForImperial(t *testing.T) {
+	m := Month{Label: "October 2026", People: []PersonMonth{{UserID: 1, Improvements: []progress.Improvement{
+		{Title: "Lean mass", Unit: "kg", Value: 61, Previous: 60, Summary: "Lean mass: 61.0 kg, up from 60.0"}}}}}
+	if got := Body(m, 1, true); got != "Lean mass: 134.5 lb, up from 132.3." {
+		t.Fatalf("imperial body = %q", got)
+	}
+	if got := Body(m, 1, false); got != "Lean mass: 61.0 kg, up from 60.0." {
+		t.Fatalf("metric body = %q", got)
 	}
 }

@@ -196,7 +196,7 @@ func (s *Server) formulaProposal(ctx context.Context, c caller, key string, curr
 				perKg = k
 			}
 		}
-		if p := goals.Protein(current, *d.WeightKg, value, perKg); p != nil {
+		if p := goals.Protein(current, *d.WeightKg, value, perKg, d.User.Imperial()); p != nil {
 			return p, nil
 		}
 	}

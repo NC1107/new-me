@@ -5,40 +5,45 @@ import (
 	"testing"
 )
 
-func TestHabitBonusPaysPerCompletedSlotAndPerReachedTarget(t *testing.T) {
+func TestHabitScore(t *testing.T) {
 	tests := []struct {
-		name string
-		days []HabitDay
-		want int
+		name             string
+		days             []HabitDay
+		earned, possible int
 	}{
-		{"nothing", nil, 0},
-		{"one of two slots", []HabitDay{{Check: true, Slots: 2, SlotsDone: 1}}, 5},
-		{"both slots", []HabitDay{{Check: true, Slots: 2, SlotsDone: 2}}, 10},
-		{"done slots cannot exceed the slots", []HabitDay{{Check: true, Slots: 1, SlotsDone: 3}}, 5},
-		{"count below target", []HabitDay{{Target: 8, Count: 7}}, 0},
-		{"count at target", []HabitDay{{Target: 8, Count: 8}}, 5},
-		{"count past target still pays once", []HabitDay{{Target: 8, Count: 20}}, 5},
-		{"a zero target never pays", []HabitDay{{Target: 0, Count: 3}}, 0},
-		{"mixed", []HabitDay{
-			{Check: true, Slots: 2, SlotsDone: 2}, {Check: true, Slots: 1}, {Target: 8, Count: 8}}, 15},
+		{"nothing due", nil, 0, 0},
+		{"one of two slots earns half", []HabitDay{{Check: true, Slots: 2, SlotsDone: 1, Points: 25}}, 12, 25},
+		{"both slots", []HabitDay{{Check: true, Slots: 2, SlotsDone: 2, Points: 25}}, 25, 25},
+		{"done slots cannot exceed the slots", []HabitDay{{Check: true, Slots: 1, SlotsDone: 3, Points: 10}}, 10, 10},
+		{"count below target earns its share", []HabitDay{{Target: 8, Count: 4, Points: 50}}, 25, 50},
+		{"count past target caps at the whole", []HabitDay{{Target: 8, Count: 20, Points: 50}}, 50, 50},
+		{"just track adds nothing either way", []HabitDay{{Check: true, Slots: 1, SlotsDone: 1, Points: 0}}, 0, 0},
+		{"mixed", []HabitDay{{Check: true, Slots: 2, SlotsDone: 2, Points: 10}, {Check: true, Slots: 1, Points: 25},
+			{Target: 8, Count: 8, Points: 50}}, 60, 85},
 	}
 	for _, tc := range tests {
-		if got := HabitBonus(tc.days); got != tc.want {
-			t.Errorf("%s: HabitBonus = %d, want %d", tc.name, got, tc.want)
+		if earned, possible := HabitScore(tc.days); earned != tc.earned || possible != tc.possible {
+			t.Errorf("%s: HabitScore = %d of %d, want %d of %d", tc.name, earned, possible, tc.earned, tc.possible)
 		}
 	}
 }
 
-func TestHabitBonusNeverMovesBaseOrWhetherADayCounts(t *testing.T) {
-	quests := []QuestResult{{Key: "pushups", Points: 100, Actual: 10, Target: 100}}
+func TestHabitsCountTowardTheDay(t *testing.T) {
+	quests := []QuestResult{{Key: "pushups", Points: 100, Actual: 60, Target: 100}}
 	day := ScoreDay(quests)
-	boosted := day.WithBonus(HabitBonus([]HabitDay{{Check: true, Slots: 8, SlotsDone: 8}}))
-	if boosted.BonusPoints != day.BonusPoints+40 {
-		t.Fatalf("bonus = %d, want %d", boosted.BonusPoints, day.BonusPoints+40)
+	if day.Counted {
+		t.Fatal("60 of 100 alone does not count")
 	}
-	if boosted.BasePoints != day.BasePoints || boosted.MaxBase != day.MaxBase ||
-		boosted.Percent != day.Percent || boosted.Counted != day.Counted {
-		t.Fatalf("habit bonus changed base, max, percent or counted: %+v vs %+v", boosted, day)
+	with := day.WithHabits(HabitScore([]HabitDay{{Check: true, Slots: 1, SlotsDone: 1, Points: 50}}))
+	if with.BasePoints != 110 || with.MaxBase != 150 || with.Percent != 73 || !with.Counted {
+		t.Fatalf("with a done habit = %+v", with)
+	}
+	missed := day.WithHabits(HabitScore([]HabitDay{{Check: true, Slots: 1, Points: 50}}))
+	if missed.Percent != 40 || missed.Counted {
+		t.Fatalf("a missed habit lowers the day: %+v", missed)
+	}
+	if same := day.WithHabits(0, 0); same.Percent != day.Percent || same.MaxBase != day.MaxBase {
+		t.Fatal("no habits leaves the day alone")
 	}
 }
 

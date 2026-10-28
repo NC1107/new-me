@@ -68,16 +68,18 @@ func TestProfileBodyInputsRoundTrip(t *testing.T) {
 	}
 
 	for name, body := range map[string]obj{
-		"height too short":       {"heightCm": 99},
-		"height too tall":        {"heightCm": 251},
-		"unknown sex":            {"sex": "x"},
-		"lose pace off the menu": {"goal": obj{"kind": "lose", "paceKgPerWeek": 0.3}},
-		"lose without a pace":    {"goal": obj{"kind": "lose"}},
-		"maintain with a pace":   {"goal": obj{"kind": "maintain", "paceKgPerWeek": 0.25}},
-		"gain off the 0.05 grid": {"goal": obj{"kind": "gain", "paceKgPerWeek": 0.12}},
-		"gain without a pace":    {"goal": obj{"kind": "gain"}},
-		"unknown goal":           {"goal": obj{"kind": "bulk", "paceKgPerWeek": 0.25}},
-		"goal without a kind":    {"goal": obj{"paceKgPerWeek": 0.25}},
+		"height too short":     {"heightCm": 99},
+		"height too tall":      {"heightCm": 251},
+		"unknown sex":          {"sex": "x"},
+		"lose pace too fast":   {"goal": obj{"kind": "lose", "paceKgPerWeek": 0.6}},
+		"lose pace too slow":   {"goal": obj{"kind": "lose", "paceKgPerWeek": 0.1}},
+		"lose without a pace":  {"goal": obj{"kind": "lose"}},
+		"maintain with a pace": {"goal": obj{"kind": "maintain", "paceKgPerWeek": 0.25}},
+		"gain too slow":        {"goal": obj{"kind": "gain", "paceKgPerWeek": 0.01}},
+		"gain too fast":        {"goal": obj{"kind": "gain", "paceKgPerWeek": 1.2}},
+		"gain without a pace":  {"goal": obj{"kind": "gain"}},
+		"unknown goal":         {"goal": obj{"kind": "bulk", "paceKgPerWeek": 0.25}},
+		"goal without a kind":  {"goal": obj{"paceKgPerWeek": 0.25}},
 	} {
 		if r := h.patch("/api/me", nick.Token, body); r.Status != http.StatusUnprocessableEntity {
 			t.Errorf("%s: status %d, body %s", name, r.Status, r.Body)
@@ -593,4 +595,19 @@ func TestDismissedCalorieProposalWaitsForTheNextMove(t *testing.T) {
 	if i := proposalIndex(got, "calories"); i < 0 || got.num("proposals."+itoa(i)+".proposed") != 2900 {
 		t.Fatalf("proposals = %s", got.Body)
 	}
+}
+
+func TestUnitsAndImperialPaces(t *testing.T) {
+	h := newHarness(t)
+	nick := h.joinAdmin("Nick", "green")
+	if got := h.get("/api/me", nick.Token).expect(http.StatusOK); got.str("user.units") != "metric" {
+		t.Fatalf("default units = %s", got.Body)
+	}
+	got := h.patch("/api/me", nick.Token, obj{"units": "imperial",
+		"goal": obj{"kind": "lose", "paceKgPerWeek": 0.45}}).expect(http.StatusOK)
+	if got.str("user.units") != "imperial" || got.at("user.goal.paceKgPerWeek").(float64) != 0.45 {
+		t.Fatalf("imperial = %s", got.Body)
+	}
+	h.patch("/api/me", nick.Token, obj{"goal": obj{"kind": "gain", "paceKgPerWeek": 0.11}}).expect(http.StatusOK)
+	h.patch("/api/me", nick.Token, obj{"units": "furlongs"}).expect(http.StatusUnprocessableEntity)
 }

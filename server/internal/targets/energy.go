@@ -44,8 +44,16 @@ const (
 	DefaultSteps = 7000
 )
 
-// LosePaces are the paces offered for losing weight, in kg a week.
+// LosePaces are the paces offered for losing weight, in kg a week; imperial people are offered
+// 0.5 and 1 lb (0.23 and 0.45 kg), so any pace in MinLosePace..MaxLosePace is accepted.
 var LosePaces = []float64{0.25, 0.5}
+
+// Accepted pace bounds, kg a week.
+const (
+	MinLosePace = 0.2
+	MaxLosePace = 0.5
+	MinGainPace = 0.05
+)
 
 // RestingEnergy is the Mifflin-St Jeor equation in kcal a day.
 func RestingEnergy(kg, cm float64, age int, sex Sex) float64 {

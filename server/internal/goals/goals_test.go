@@ -110,10 +110,17 @@ func TestFormulaMovedNeedsMoreThanFivePercentOrOneHundredKcal(t *testing.T) {
 }
 
 func TestProteinProposalFollowsTheFormulaValue(t *testing.T) {
-	if p := Protein(120, 80, 160, 2.0); p == nil || p.Proposed != 160 || p.Current != 120 {
+	if p := Protein(120, 80, 160, 2.0, false); p == nil || p.Proposed != 160 || p.Current != 120 {
 		t.Errorf("a 25%% gap proposes the formula value: %+v", p)
 	}
-	if p := Protein(130, 80, 160, 2.0); p != nil {
+	if p := Protein(130, 80, 160, 2.0, false); p != nil {
 		t.Errorf("an 18.75%% gap is within the rule: %+v", p)
+	}
+}
+
+func TestProteinReasonInPounds(t *testing.T) {
+	p := Protein(120, 80, 160, 2.0, true)
+	if p == nil || p.Reason != "At 176.4 lb, 0.91 g per pound is 160 g of protein a day. Your target is 120 g." {
+		t.Fatalf("reason = %+v", p)
 	}
 }

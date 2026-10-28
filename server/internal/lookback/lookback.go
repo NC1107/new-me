@@ -394,22 +394,36 @@ func (s *Service) PushDue(ctx context.Context, now time.Time) error {
 			}
 			continue
 		}
-		s.Together.Notify(u, push.Message{Kind: together.EventLookback, Title: "Your " + month.Label, Body: Body(month, u.ID)})
+		s.Together.Notify(u, push.Message{Kind: together.EventLookback, Title: "Your " + month.Label, Body: Body(month, u.ID, u.Imperial())})
 	}
 	return errors.Join(errs...)
 }
 
 // Body is the push text of a person's look-back: their biggest improvement, or a plain invitation
 // to look when the month had nothing to compare.
-func Body(m Month, userID int64) string {
+func Body(m Month, userID int64, imperial bool) string {
 	for _, p := range m.People {
 		if p.UserID != userID {
 			continue
 		}
 		if len(p.Improvements) > 0 {
-			return p.Improvements[0].Summary + "."
+			imp := p.Improvements[0]
+			if imperial && imp.Unit == "kg" {
+				return poundsSummary(imp) + "."
+			}
+			return imp.Summary + "."
 		}
 		return fmt.Sprintf("%d counted days in %s. Open New Me to see how it went.", p.CountedDays, m.Label)
 	}
 	return "Open New Me to see how the month went."
+}
+
+// poundsSummary words a kilogram improvement in pounds, the way progress words it in kg.
+func poundsSummary(imp progress.Improvement) string {
+	word := "up"
+	if imp.Value < imp.Previous {
+		word = "down"
+	}
+	const lbPerKg = 1 / 0.45359237
+	return fmt.Sprintf("%s: %.1f lb, %s from %.1f", imp.Title, imp.Value*lbPerKg, word, imp.Previous*lbPerKg)
 }

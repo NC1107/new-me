@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -294,10 +293,11 @@ type patchMeRequest struct {
 	HeightCm       nullable[float64]   `json:"heightCm"`
 	Sex            nullable[string]    `json:"sex"`
 	Goal           *goalPatch          `json:"goal"`
+	Units          *string             `json:"units"`
 }
 
-// goalPatch sets the weight goal. The pace is kg a week: 0.25 or 0.5 to lose, a multiple of 0.05
-// to gain, and 0 (or absent) to maintain.
+// goalPatch sets the weight goal. The pace is kg a week in hundredths: 0.2 to 0.5 to lose, 0.05
+// to 1 to gain, and 0 (or absent) to maintain, so imperial choices (0.5 or 1 lb) store exactly.
 type goalPatch struct {
 	Kind          *string  `json:"kind"`
 	PaceKgPerWeek *float64 `json:"paceKgPerWeek"`
@@ -501,6 +501,12 @@ func applyBody(u *db.User, req patchMeRequest) *httpError {
 		}
 		u.Sex = req.Sex.Value
 	}
+	if req.Units != nil {
+		if *req.Units != db.UnitsMetric && *req.Units != db.UnitsImperial {
+			return invalid("units must be metric or imperial")
+		}
+		u.Units = *req.Units
+	}
 	return applyGoal(u, req.Goal)
 }
 
@@ -524,12 +530,12 @@ func applyGoal(u *db.User, g *goalPatch) *httpError {
 			return invalid("a maintain goal has no pace")
 		}
 	case targets.Lose:
-		if !slices.Contains(targets.LosePaces, pace) {
-			return invalid("lose pace must be 0.25 or 0.5 kg a week")
+		if pace < targets.MinLosePace || pace > targets.MaxLosePace {
+			return invalid("lose pace must be 0.2 to 0.5 kg a week")
 		}
 	case targets.Gain:
-		if pace <= 0 || pace > 1 || math.Abs(pace/targets.PaceStepKg-math.Round(pace/targets.PaceStepKg)) > 1e-9 {
-			return invalid("gain pace must be a multiple of 0.05 kg a week, up to 1")
+		if pace < targets.MinGainPace || pace > 1 {
+			return invalid("gain pace must be 0.05 to 1 kg a week")
 		}
 	default:
 		return invalid("goal kind must be lose, maintain or gain")

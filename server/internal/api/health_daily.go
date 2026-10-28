@@ -17,8 +17,11 @@ import (
 
 const (
 	maxHealthItems = 50
-	maxTrendDays   = 365
-	maxSourceLen   = 32
+	// maxHistoryItems and maxHealthHistoryDays bound a Health history import batch.
+	maxHistoryItems      = 200
+	maxHealthHistoryDays = 400
+	maxTrendDays         = 365
+	maxSourceLen         = 32
 	// clockSkew is how far ahead of the server a device clock may run before its reading is
 	// refused. A far-future measuredAt would win every later conflict and freeze the day.
 	clockSkew = 5 * time.Minute
@@ -60,8 +63,36 @@ type putHealthRequest struct {
 	Items []healthItem `json:"items"`
 }
 
-// checkHealthItem returns the item's date and why it is unacceptable, if it is.
+// checkHealthItem returns the item's date and why it is unacceptable, if it is. The date must
+// be an open day.
 func (s *Server) checkHealthItem(c caller, item healthItem, now time.Time) (score.Date, *itemError) {
+	date, problem := checkHealthReading(item, now)
+	if problem != nil {
+		return date, problem
+	}
+	if !s.writable(c.user, c.loc, date) {
+		return "", &itemError{Code: codeDateClosed, Error: errDateClosed.msg}
+	}
+	return date, nil
+}
+
+// checkHistoryItem is checkHealthItem for history: the date must be closed (before the open
+// days) and at most maxHealthHistoryDays back.
+func (s *Server) checkHistoryItem(c caller, item healthItem, now time.Time) (score.Date, *itemError) {
+	date, problem := checkHealthReading(item, now)
+	if problem != nil {
+		return date, problem
+	}
+	today := score.LocalToday(now, c.loc)
+	if s.writable(c.user, c.loc, date) || !date.Before(today) || date.Before(today.AddDays(-maxHealthHistoryDays)) {
+		return "", &itemError{Code: codeInvalidRequest,
+			Error: fmt.Sprintf("history is for closed days up to %d days back; open days go to /api/health/daily", maxHealthHistoryDays)}
+	}
+	return date, nil
+}
+
+// checkHealthReading checks everything about a reading except which days may take it.
+func checkHealthReading(item healthItem, now time.Time) (score.Date, *itemError) {
 	reject := func(code, msg string) (score.Date, *itemError) {
 		return "", &itemError{Code: code, Error: msg}
 	}
@@ -82,10 +113,59 @@ func (s *Server) checkHealthItem(c caller, item healthItem, now time.Time) (scor
 	if item.MeasuredAt.IsZero() || item.MeasuredAt.After(now.Add(clockSkew)) {
 		return reject(codeInvalidRequest, "measuredAt must be a past instant")
 	}
-	if !s.writable(c.user, c.loc, date) {
-		return reject(codeDateClosed, errDateClosed.msg)
-	}
 	return date, nil
+}
+
+// handlePutHealthHistory stores Health readings for closed days, only where the day has no
+// reading of that metric yet, and never rescores a day: history fills insights and look-backs
+// without moving a score that is already settled.
+func (s *Server) handlePutHealthHistory(w http.ResponseWriter, r *http.Request) {
+	var req putHealthRequest
+	if err := decodeJSON(r, &req); err != nil {
+		fail(w, r, err)
+		return
+	}
+	if len(req.Items) < 1 || len(req.Items) > maxHistoryItems {
+		fail(w, r, invalid(fmt.Sprintf("items must hold 1 to %d readings", maxHistoryItems)))
+		return
+	}
+	c := callerFrom(r)
+	now := s.now()
+	dates := make([]score.Date, len(req.Items))
+	var problems []itemError
+	for i, item := range req.Items {
+		date, problem := s.checkHistoryItem(c, item, now)
+		if problem != nil {
+			problem.Index = i
+			problems = append(problems, *problem)
+			continue
+		}
+		dates[i] = date
+	}
+	if problems != nil {
+		fail(w, r, batchError(problems))
+		return
+	}
+	stored := 0
+	ctx := r.Context()
+	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		for i, item := range req.Items {
+			added, err := db.InsertHealthHistory(ctx, tx, c.user.ID, dates[i], item.Metric, item.Value,
+				item.Source, item.MeasuredAt)
+			if err != nil {
+				return err
+			}
+			if added {
+				stored++
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"stored": stored, "received": len(req.Items)})
 }
 
 // handlePutHealthDaily stores up to 50 daily readings in one transaction and returns the

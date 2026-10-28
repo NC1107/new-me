@@ -1,6 +1,7 @@
 package training
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -124,5 +125,31 @@ func TestNextTimedHoldsStepBySeconds(t *testing.T) {
 func TestIncrement(t *testing.T) {
 	if Increment(8, Equipment{}) != 1 || Increment(10, Equipment{}) != 2 || Increment(8, Equipment{Barbell: true}) != 2.5 {
 		t.Fatal("increments do not match the convention")
+	}
+}
+
+func TestImperialLoadsStepOnAPoundGrid(t *testing.T) {
+	p := Prescription{Exercise: "db_row", Sets: 2, Min: 8, Max: 12, RIR: 2}
+	lb := func(v float64) float64 { return v * kgPerLb }
+	cases := []struct {
+		name string
+		info ExerciseInfo
+		load float64
+		eq   Equipment
+		want float64
+	}{
+		{"a 40 lb dumbbell goes to 45 lb", row, lb(40), Equipment{Imperial: true}, 45},
+		{"an 8 lb dumbbell goes to the next 2.5 lb step, 10 lb", row, lb(8), Equipment{Imperial: true}, 10},
+		{"a 135 lb barbell squat goes up 5% rounded up to 5 lb plates", gobletSquat, lb(135), Equipment{Imperial: true, Barbell: true}, 145},
+		{"never past a 50 lb heaviest dumbbell", row, lb(50), Equipment{Imperial: true, DumbbellMaxKg: lb(50)}, 50},
+	}
+	for _, c := range cases {
+		got := Next(p, c.info, []SessionResult{{Sets: loaded(c.load, 12, 12)}}, c.eq)
+		if math.Abs(got.LoadKg*lbPerKg-c.want) > 0.05 {
+			t.Errorf("%s: got %.2f lb, want %v", c.name, got.LoadKg*lbPerKg, c.want)
+		}
+		if !strings.Contains(got.Reason, " lb") || strings.Contains(got.Reason, " kg") {
+			t.Errorf("%s: reason should be in pounds: %q", c.name, got.Reason)
+		}
 	}
 }

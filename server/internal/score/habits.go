@@ -3,8 +3,6 @@ package score
 import "math/bits"
 
 const (
-	// HabitPoints is the bonus for one completed check slot, or a count habit at its target.
-	HabitPoints = 5
 	// ChallengeBonusPoints is what each person earns when the weekly couple challenge completes.
 	ChallengeBonusPoints = 50
 	// AllWeekdays is the weekdays mask of a habit that applies every day.
@@ -48,27 +46,51 @@ type HabitDay struct {
 	SlotsDone int
 	Target    int
 	Count     int
+	// Points is the habit's worth toward the day.
+	Points int
 }
 
-// HabitBonus is the bonus points the day's habits earn: HabitPoints per completed check slot
-// and per count habit at its target. It is added to a day's bonus and never to its maximum,
-// so habits can only help and never move whether a day counts.
-func HabitBonus(days []HabitDay) int {
-	total := 0
+// Habit worths a person can choose; quests are worth 50 or 100.
+var HabitWorths = []int{0, 10, 25, 50}
+
+// HabitWorthDefault is the worth of a habit created without one.
+const HabitWorthDefault = 25
+
+// HabitScore is what the day's due habits add: their worth to the possible points, and the
+// share of it completed (check slots done over slots, or count over target, capped at the whole)
+// to the earned points.
+func HabitScore(days []HabitDay) (earned, possible int) {
 	for _, h := range days {
+		if h.Points <= 0 {
+			continue
+		}
+		possible += h.Points
 		switch {
-		case h.Check:
-			total += HabitPoints * min(max(h.SlotsDone, 0), h.Slots)
-		case h.Target > 0 && h.Count >= h.Target:
-			total += HabitPoints
+		case h.Check && h.Slots > 0:
+			earned += h.Points * min(max(h.SlotsDone, 0), h.Slots) / h.Slots
+		case !h.Check && h.Target > 0:
+			earned += h.Points * min(max(h.Count, 0), h.Target) / h.Target
 		}
 	}
-	return total
+	return earned, possible
 }
 
 // WithBonus returns the day with extra bonus points added. Percent, Counted and MaxBase are
 // base-only, so they are left alone.
 func (d DayScore) WithBonus(extra int) DayScore {
 	d.BonusPoints += extra
+	return d
+}
+
+// WithHabits adds the day's habits to its base points and maximum and recomputes the percent and
+// whether the day counts, so habits count toward the daily goal like quests.
+func (d DayScore) WithHabits(earned, possible int) DayScore {
+	if possible <= 0 {
+		return d
+	}
+	d.BasePoints += earned
+	d.MaxBase += possible
+	d.Percent = min(100, d.BasePoints*100/d.MaxBase)
+	d.Counted = d.BasePoints*100 >= CountedPercent*d.MaxBase
 	return d
 }

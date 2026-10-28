@@ -34,6 +34,8 @@ type Equipment struct {
 	DumbbellMaxKg float64
 	// Barbell is true when barbell work is possible, which rounds loads to 2.5 kg plates.
 	Barbell bool
+	// Imperial steps loads on a pound grid (US dumbbells and plates) and words them in pounds.
+	Imperial bool
 }
 
 // SessionResult is one earlier session's logged sets of an exercise, newest session first in
@@ -100,7 +102,7 @@ func Next(p Prescription, info ExerciseInfo, history []SessionResult, eq Equipme
 			t.LoadKg = stepLoad(lastLoad, info.Lower, eq, +1)
 			t.Amount = p.Min
 			t.Reason = fmt.Sprintf("All %d sets reached %d %s last time, so the load goes up to %s and back to %d %s (%s).",
-				len(last.Sets), p.Max, unit, kg(t.LoadKg), p.Min, unit, acsm)
+				len(last.Sets), p.Max, unit, loadText(t.LoadKg, eq), p.Min, unit, acsm)
 			return t
 		}
 		if !info.Loaded && info.HarderKey != "" && len(history) >= sessionsToMoveUp && hitTop(history[1], p) {
@@ -124,7 +126,7 @@ func deload(t Target, p Prescription, info ExerciseInfo, lastLoad float64, eq Eq
 	switch {
 	case info.Loaded && lastLoad > 0:
 		t.LoadKg = stepLoad(lastLoad, info.Lower, eq, -1)
-		t.Reason = fmt.Sprintf("Two sessions below %d %s, so the load comes down to %s (%s).", p.Min, unit, kg(t.LoadKg), acsm)
+		t.Reason = fmt.Sprintf("Two sessions below %d %s, so the load comes down to %s (%s).", p.Min, unit, loadText(t.LoadKg, eq), acsm)
 	case !info.Loaded && info.EasierKey != "":
 		t.Exercise = info.EasierKey
 		t.Reason = fmt.Sprintf("Two sessions below %d %s, so step back to the easier variation (%s).", p.Min, unit, acsm)
@@ -178,7 +180,8 @@ func maxLoad(sets []Set) float64 {
 }
 
 // stepLoad moves a load one step up (dir 1) or down (dir -1): at least the ACSM percentage,
-// rounded to the equipment increment, and never by less than one increment.
+// rounded to the equipment increment, and never by less than one increment. Imperial loads step
+// on a pound grid and are stored back in kg.
 func stepLoad(load float64, lower bool, eq Equipment, dir int) float64 {
 	pct := upperStep
 	if lower {
@@ -187,36 +190,64 @@ func stepLoad(load float64, lower bool, eq Equipment, dir int) float64 {
 	if dir < 0 {
 		pct = deloadStep
 	}
-	inc := Increment(load, eq)
-	change := math.Max(inc, math.Ceil(load*pct/inc)*inc)
-	next := load + float64(dir)*change
-	if dir > 0 && eq.DumbbellMaxKg > 0 && !eq.Barbell && next > eq.DumbbellMaxKg {
-		next = eq.DumbbellMaxKg
+	unit, maxLoad := load, eq.DumbbellMaxKg
+	if eq.Imperial {
+		unit, maxLoad = load*lbPerKg, eq.DumbbellMaxKg*lbPerKg
+	}
+	inc := Increment(unit, eq)
+	change := math.Max(inc, math.Ceil(unit*pct/inc)*inc)
+	next := unit + float64(dir)*change
+	if eq.Imperial {
+		next = math.Round(next/inc) * inc
+	}
+	if dir > 0 && maxLoad > 0 && !eq.Barbell && next > maxLoad {
+		next = maxLoad
 	}
 	if next < inc {
 		next = inc
 	}
+	if eq.Imperial {
+		next *= kgPerLb
+	}
 	return math.Round(next*100) / 100
 }
 
-// Increment is the smallest load change available: 2.5 kg plates with a barbell, otherwise
-// dumbbells that go up 1 kg below 10 kg and 2 kg from there (a common fixed-dumbbell series,
-// labelled as our convention).
+// Increment is the smallest load change available, in the person's unit. Metric: 2.5 kg plates
+// with a barbell, otherwise dumbbells that go up 1 kg below 10 kg and 2 kg from there. Imperial:
+// 5 lb with a barbell (two 2.5 lb plates), otherwise dumbbells that go up 2.5 lb below 10 lb and
+// 5 lb from there. Both dumbbell series are labelled as our convention.
 func Increment(load float64, eq Equipment) float64 {
-	if eq.Barbell {
+	switch {
+	case eq.Imperial && eq.Barbell:
+		return 5
+	case eq.Imperial && load < 10:
 		return 2.5
-	}
-	if load < 10 {
+	case eq.Imperial:
+		return 5
+	case eq.Barbell:
+		return 2.5
+	case load < 10:
 		return 1
 	}
 	return 2
 }
 
+// Pound conversions for imperial loads.
+const (
+	kgPerLb = 0.45359237
+	lbPerKg = 1 / kgPerLb
+)
+
 func clamp(v, lo, hi int) int { return max(lo, min(hi, v)) }
 
-func kg(v float64) string {
-	if v == math.Trunc(v) {
-		return fmt.Sprintf("%.0f kg", v)
+// loadText words a load in the person's unit.
+func loadText(kg float64, eq Equipment) string {
+	v, unit := kg, "kg"
+	if eq.Imperial {
+		v, unit = math.Round(kg*lbPerKg*2)/2, "lb"
 	}
-	return fmt.Sprintf("%g kg", v)
+	if v == math.Trunc(v) {
+		return fmt.Sprintf("%.0f %s", v, unit)
+	}
+	return fmt.Sprintf("%g %s", v, unit)
 }

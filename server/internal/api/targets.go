@@ -209,6 +209,38 @@ func (s *Server) loadTargetData(ctx context.Context, q db.Querier, u db.User, lo
 }
 
 // trim formats a number with at most the given decimals, dropping trailing zeros.
+// kgPerLb converts pounds to kilograms; lbPerKg is its inverse.
+const (
+	kgPerLb = 0.45359237
+	lbPerKg = 1 / kgPerLb
+)
+
+// kg words a weight the way the person reads it. Formulas are defined in kg, so an imperial
+// person sees the kg the formula used with their pounds beside it.
+func (d targetData) kg(v float64, decimals int) string {
+	if d.User.Imperial() {
+		return fmt.Sprintf("%s kg (%s lb)", trim(v, decimals), trim(v*lbPerKg, 1))
+	}
+	return trim(v, decimals) + " kg"
+}
+
+// cm words a height the same way, with feet and inches beside it for an imperial person.
+func (d targetData) cm(v float64) string {
+	if !d.User.Imperial() {
+		return trim(v, 1) + " cm"
+	}
+	inches := int(math.Round(v / 2.54))
+	return fmt.Sprintf("%s cm (%d ft %d in)", trim(v, 1), inches/12, inches%12)
+}
+
+// perKg words a per-kilogram rate, with the per-pound rate beside it for an imperial person.
+func (d targetData) perKg(v float64, unit string) string {
+	if d.User.Imperial() {
+		return fmt.Sprintf("%s %s per kg (%s per lb)", trim(v, 1), unit, trim(v*kgPerLb, 2))
+	}
+	return fmt.Sprintf("%s %s per kg", trim(v, 1), unit)
+}
+
 func trim(v float64, decimals int) string {
 	s := strconv.FormatFloat(v, 'f', decimals, 64)
 	if strings.Contains(s, ".") {
@@ -241,7 +273,7 @@ func (d targetData) inputs() []inputJSON {
 	var weightNote, heightSrc, stepsNote = "", srcProfile, ""
 	if d.WeightKg != nil {
 		weight = *d.WeightKg
-		weightNote = fmt.Sprintf("smoothed trend of %d weigh-ins (v7); latest reading %s kg", len(d.Readings), trim(*d.LatestKg, 1))
+		weightNote = fmt.Sprintf("smoothed trend of %d weigh-ins (v7); latest reading %s", len(d.Readings), d.kg(*d.LatestKg, 1))
 	}
 	if d.HeightCm != nil {
 		height = *d.HeightCm
@@ -341,8 +373,8 @@ func computeTargets(d targetData) targetsResponse {
 			sexTerm = "- 161"
 		}
 		resting.Value = intp(int(math.Round(chain.resting)))
-		resting.Formula = fmt.Sprintf("Mifflin-St Jeor: 10 x %s kg + 6.25 x %s cm - 5 x %d %s = %s kcal.",
-			trim(*d.WeightKg, 1), trim(*d.HeightCm, 1), *d.Age, sexTerm, th(chain.resting))
+		resting.Formula = fmt.Sprintf("Mifflin-St Jeor: 10 x %s + 6.25 x %s - 5 x %d %s = %s kcal.",
+			d.kg(*d.WeightKg, 1), d.cm(*d.HeightCm), *d.Age, sexTerm, th(chain.resting))
 	} else {
 		resting.Formula = "Mifflin-St Jeor: 10 x kg + 6.25 x cm - 5 x age + 5 (male) or - 161 (female). " + needs(restingMissing)
 	}
@@ -374,8 +406,8 @@ func computeTargets(d targetData) targetsResponse {
 		"need": map[string]int{"weighIns": targets.BalanceMinWeighIns, "spanDays": targets.BalanceMinSpanDays, "loggedDays": targets.BalanceMinLogged},
 	}
 	if bal.Kcal != nil {
-		est.Formula = fmt.Sprintf("Estimated from your logs: average logged intake %s kcal minus the change in your weight trend (%s kg over %d days x 7,700 kcal per kg / %d days) = %s kcal, and logged intake is commonly under-reported.",
-			th(bal.AvgIntake), trim(bal.TrendChgKg, 2), bal.SpanDays, bal.SpanDays, th(float64(*bal.Kcal)))
+		est.Formula = fmt.Sprintf("Estimated from your logs: average logged intake %s kcal minus the change in your weight trend (%s over %d days x 7,700 kcal per kg / %d days) = %s kcal, and logged intake is commonly under-reported.",
+			th(bal.AvgIntake), d.kg(bal.TrendChgKg, 2), bal.SpanDays, bal.SpanDays, th(float64(*bal.Kcal)))
 		est.Details["avgIntakeKcal"] = int(math.Round(bal.AvgIntake))
 		est.Details["trendChangeKg"] = math.Round(bal.TrendChgKg*100) / 100
 	} else {
@@ -398,7 +430,7 @@ func computeTargets(d targetData) targetsResponse {
 		chain.hasCalories = true
 		c := chain.calories
 		cal.Value = intp(c.Target)
-		cal.Formula = calorieFormula(c, kind)
+		cal.Formula = calorieFormula(d, c, kind)
 		cal.Details = map[string]any{
 			"goal": goalJSON{Kind: kind, PaceKgPerWeek: c.PaceKg}, "floorKcal": c.Floor,
 			"paceOptions": map[string]any{"lose": targets.LosePaces, "gainMaxKgPerWeek": targets.MaxGainPace(*d.WeightKg)},
@@ -468,14 +500,14 @@ func computeTargets(d targetData) targetsResponse {
 	return targetsResponse{AsOf: d.Today, Disclaimer: targetsDisclaimer, Inputs: d.inputs(), Targets: out, Sources: targets.Sources}
 }
 
-func calorieFormula(c targets.Calories, kind string) string {
+func calorieFormula(d targetData, c targets.Calories, kind string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Maintenance %s kcal (our step-band convention)", th(c.Maintenance))
 	switch kind {
 	case targets.Lose:
-		fmt.Fprintf(&b, " - %s kg a week x 7,700 kcal per kg / 7 days (%s kcal)", trim(c.PaceKg, 2), th(-c.DeltaKcal))
+		fmt.Fprintf(&b, " - %s a week x 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(-c.DeltaKcal))
 	case targets.Gain:
-		fmt.Fprintf(&b, " + %s kg a week x 7,700 kcal per kg / 7 days (%s kcal)", trim(c.PaceKg, 2), th(c.DeltaKcal))
+		fmt.Fprintf(&b, " + %s a week x 7,700 kcal per kg / 7 days (%s kcal)", d.kg(c.PaceKg, 2), th(c.DeltaKcal))
 	}
 	if c.DeltaKcal != 0 {
 		fmt.Fprintf(&b, " = %s kcal", th(c.Maintenance+c.DeltaKcal))
@@ -489,7 +521,7 @@ func calorieFormula(c targets.Calories, kind string) string {
 		if kind == targets.Gain {
 			limit = "0.5% of body weight"
 		}
-		fmt.Fprintf(&b, ", with the pace limited to %s kg a week, %s", trim(c.PaceKg, 2), limit)
+		fmt.Fprintf(&b, ", with the pace limited to %s a week, %s", d.kg(c.PaceKg, 2), limit)
 	}
 	fmt.Fprintf(&b, " = %s kcal.", th(float64(c.Target)))
 	return b.String()
@@ -509,15 +541,15 @@ func proteinTarget(d targetData, kind string) (*targets.Protein, targetJSON) {
 	}
 	p := targets.ComputeProtein(kind, *d.WeightKg, d.HeightCm)
 	t.Value = intp(p.G)
-	t.Formula = fmt.Sprintf("%s g per kg x %s kg = %s g, rounded to 5 g.", trim(p.PerKg, 1), trim(*d.WeightKg, 1), th(p.PerKg**d.WeightKg))
+	t.Formula = fmt.Sprintf("%s x %s = %s g, rounded to 5 g.", d.perKg(p.PerKg, "g"), d.kg(*d.WeightKg, 1), th(p.PerKg**d.WeightKg))
 	t.Details = map[string]any{"perKg": p.PerKg, "perMealG": p.PerMealG,
 		"perMealTip": fmt.Sprintf("About 0.4 g/kg a meal, %d g, across 4 meals.", p.PerMealG)}
 	if p.BMI != nil {
 		t.Details["bmi"] = math.Round(*p.BMI*10) / 10
 	}
 	if p.Capped {
-		t.Formula = fmt.Sprintf("%s g per kg x %s kg = %s g, capped at 2.2 g per kg of the weight at BMI 25 for your height (expert practice) = %s g, rounded to 5 g.",
-			trim(p.PerKg, 1), trim(*d.WeightKg, 1), th(p.PerKg**d.WeightKg), th(p.CapG))
+		t.Formula = fmt.Sprintf("%s x %s = %s g, capped at 2.2 g per kg of the weight at BMI 25 for your height (expert practice) = %s g, rounded to 5 g.",
+			d.perKg(p.PerKg, "g"), d.kg(*d.WeightKg, 1), th(p.PerKg**d.WeightKg), th(p.CapG))
 		t.Details["capped"] = true
 	}
 	if d.HeightCm == nil {

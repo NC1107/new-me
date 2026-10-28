@@ -184,73 +184,79 @@ func TestDeleteHabitIsSoftAndOrderRequiresEveryHabit(t *testing.T) {
 	h.put("/api/habits/order", nick.Token, obj{"ids": []int{b, c}}).expect(http.StatusOK)
 }
 
-func TestMarkingASlotEarnsFiveBonusPointsAndNeverMaxBase(t *testing.T) {
+func TestMarkingASlotEarnsItsShareOfTheHabitsWorth(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	id := h.brushTeeth(nick)
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
+	id := h.brushTeeth(nick)
+	due := h.get("/api/today", nick.Token).expect(http.StatusOK)
+	if due.num("day.maxBase") != before.num("day.maxBase")+25 || due.num("habits.0.points") != 25 {
+		t.Fatalf("a due Medium habit adds 25 possible points: %s", due.Body)
+	}
 
 	got := h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 0, "done": true}).expect(http.StatusOK)
 	if got.str("date") != "2026-11-02" || !got.flag("habits.0.slots.0.done") || got.flag("habits.0.slots.1.done") ||
-		got.num("day.bonusPoints") != before.num("day.bonusPoints")+5 ||
-		got.num("day.points") != before.num("day.points")+5 || got.num("day.maxBase") != before.num("day.maxBase") ||
-		got.num("day.basePoints") != before.num("day.basePoints") {
+		got.num("day.basePoints") != due.num("day.basePoints")+12 || got.num("day.bonusPoints") != due.num("day.bonusPoints") {
 		t.Fatalf("after first slot = %s", got.Body)
 	}
 	got = h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 1, "done": true}).expect(http.StatusOK)
-	if got.num("day.bonusPoints") != before.num("day.bonusPoints")+10 {
+	if got.num("day.basePoints") != due.num("day.basePoints")+25 {
 		t.Fatalf("after second slot = %s", got.Body)
 	}
 
 	// Idempotent: the same call again changes nothing.
 	again := h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 1, "done": true}).expect(http.StatusOK)
-	if again.num("day.bonusPoints") != before.num("day.bonusPoints")+10 {
+	if again.num("day.basePoints") != due.num("day.basePoints")+25 {
 		t.Fatalf("repeat changed the score: %s", again.Body)
 	}
 
 	undone := h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 0, "done": false}).expect(http.StatusOK)
-	if undone.flag("habits.0.slots.0.done") || undone.num("day.bonusPoints") != before.num("day.bonusPoints")+5 {
+	if undone.flag("habits.0.slots.0.done") || undone.num("day.basePoints") != due.num("day.basePoints")+12 {
 		t.Fatalf("after undo = %s", undone.Body)
 	}
-	h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 0, "done": false}).expect(http.StatusOK)
-
-	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if today.length("habits") != 1 || today.num("habits.0.id") != id || !today.flag("habits.0.slots.1.done") ||
-		today.num("day.bonusPoints") != before.num("day.bonusPoints")+5 {
-		t.Fatalf("today = %s", today.Body)
-	}
 }
 
-func TestHabitBonusNeverMakesADayCountOrLosesAStreak(t *testing.T) {
+func TestHabitWorthIsChosenAndChangedAndCanJustTrack(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	id := h.brushTeeth(nick)
-	h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 0, "done": true}).expect(http.StatusOK)
-	h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 1, "done": true}).expect(http.StatusOK)
-	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("day.percent") != 0 || got.flag("day.counted") || got.num("day.points") != 10 {
-		t.Fatalf("habits alone must not count a day: %s", got.Body)
+	base := h.get("/api/today", nick.Token).expect(http.StatusOK).num("day.maxBase")
+	big := h.post("/api/habits", nick.Token, obj{"name": "Creatine", "icon": "medication", "kind": "check",
+		"slots": []obj{{"label": "Morning", "time": nil}}, "points": 50}).expect(http.StatusCreated)
+	if big.num("habit.points") != 50 {
+		t.Fatalf("created = %s", big.Body)
 	}
+	if got := h.get("/api/today", nick.Token).num("day.maxBase"); got != base+50 {
+		t.Fatalf("maxBase = %d, want %d", got, base+50)
+	}
+	id := big.num("habit.id")
+	h.patch(fmt.Sprintf("/api/habits/%d", id), nick.Token, obj{"points": 0}).expect(http.StatusOK)
+	if got := h.get("/api/today", nick.Token).num("day.maxBase"); got != base {
+		t.Fatalf("a just-track habit adds nothing: maxBase = %d", got)
+	}
+	h.patch(fmt.Sprintf("/api/habits/%d", id), nick.Token, obj{"points": 30}).expect(http.StatusUnprocessableEntity)
+	h.post("/api/habits", nick.Token, obj{"name": "Bad", "icon": "medication", "kind": "check",
+		"slots": []obj{{"label": "Morning", "time": nil}}, "points": 7}).expect(http.StatusUnprocessableEntity)
 }
 
-func TestCountHabitEarnsFiveAtTargetAndClearsAtZero(t *testing.T) {
+func TestCountHabitEarnsItsShareAndClearsAtZero(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	id := h.water(nick, 8)
 	path := markPath(id, "2026-11-02")
+	zero := h.get("/api/today", nick.Token).num("day.basePoints")
 
-	got := h.put(path, nick.Token, obj{"count": 7}).expect(http.StatusOK)
-	if got.num("habits.0.count") != 7 || got.num("habits.0.target") != 8 || got.num("day.bonusPoints") != 0 {
-		t.Fatalf("7 of 8 = %s", got.Body)
+	got := h.put(path, nick.Token, obj{"count": 4}).expect(http.StatusOK)
+	if got.num("habits.0.count") != 4 || got.num("habits.0.target") != 8 || got.num("day.basePoints") != zero+12 {
+		t.Fatalf("4 of 8 = %s", got.Body)
 	}
-	if got = h.put(path, nick.Token, obj{"count": 8}).expect(http.StatusOK); got.num("day.bonusPoints") != 5 {
+	if got = h.put(path, nick.Token, obj{"count": 8}).expect(http.StatusOK); got.num("day.basePoints") != zero+25 {
 		t.Fatalf("8 of 8 = %s", got.Body)
 	}
-	if got = h.put(path, nick.Token, obj{"count": 12}).expect(http.StatusOK); got.num("day.bonusPoints") != 5 ||
+	if got = h.put(path, nick.Token, obj{"count": 12}).expect(http.StatusOK); got.num("day.basePoints") != zero+25 ||
 		got.num("habits.0.count") != 12 {
 		t.Fatalf("12 of 8 = %s", got.Body)
 	}
-	if got = h.put(path, nick.Token, obj{"count": 0}).expect(http.StatusOK); got.num("day.bonusPoints") != 0 ||
+	if got = h.put(path, nick.Token, obj{"count": 0}).expect(http.StatusOK); got.num("day.basePoints") != zero ||
 		got.num("habits.0.count") != 0 {
 		t.Fatalf("cleared = %s", got.Body)
 	}
@@ -293,7 +299,7 @@ func TestMarkFollowsTheLogDayWindow(t *testing.T) {
 
 	h.clock.Set(ny(2026, time.November, 3, 9, 59))
 	got := h.put(markPath(id, "2026-11-02"), nick.Token, obj{"slot": 0, "done": true}).expect(http.StatusOK)
-	if got.num("day.bonusPoints") != 5 {
+	if got.num("day.basePoints") != 12 {
 		t.Fatalf("yesterday inside the grace = %s", got.Body)
 	}
 	h.put(markPath(id, "2026-11-03"), nick.Token, obj{"slot": 0, "done": true}).expect(http.StatusOK)
@@ -358,18 +364,18 @@ func TestEditingOrDeletingAHabitRescoresTodayButNeverAFinalizedDay(t *testing.T)
 
 	// Pausing drops the open day's habit points straight away.
 	h.patch(fmt.Sprintf("/api/habits/%d", id), nick.Token, obj{"paused": true}).expect(http.StatusOK)
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.num("day.bonusPoints") != 0 {
+	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.num("day.basePoints") != 0 {
 		t.Fatalf("paused habit still pays: %s", got.Body)
 	}
 	h.patch(fmt.Sprintf("/api/habits/%d", id), nick.Token, obj{"paused": false}).expect(http.StatusOK)
 
-	// Once the day is finalized the stored bonus is history.
+	// Once the day is finalized its points are history.
 	h.clock.Set(ny(2026, time.November, 3, 10, 30))
-	if got := h.get("/api/today?date=2026-11-02", nick.Token).expect(http.StatusOK); got.num("day.bonusPoints") != 10 {
+	if got := h.get("/api/today?date=2026-11-02", nick.Token).expect(http.StatusOK); got.num("day.basePoints") != 25 {
 		t.Fatalf("finalizing read = %s", got.Body)
 	}
 	h.delete(fmt.Sprintf("/api/habits/%d", id), nick.Token).expect(http.StatusNoContent)
-	if got := h.get("/api/today?date=2026-11-02", nick.Token).expect(http.StatusOK); got.num("day.bonusPoints") != 10 {
+	if got := h.get("/api/today?date=2026-11-02", nick.Token).expect(http.StatusOK); got.num("day.basePoints") != 25 {
 		t.Fatalf("a finalized day changed after the habit was deleted: %s", got.Body)
 	}
 	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("habits") != 0 {

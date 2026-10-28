@@ -200,6 +200,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/api/health/trends", s.handleHealthTrends)
 		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/workouts", s.handlePutWorkouts)
 		r.With(limit(s.limits.healthPut, byDevice), s.settleAfter).Put("/api/health/sleep", s.handlePutSleep)
+		r.With(limit(s.limits.healthPut, byDevice)).Put("/api/health/history", s.handlePutHealthHistory)
 		r.Get("/api/workouts", s.handleListWorkouts)
 		r.Get("/api/insights", s.handleInsights)
 		r.Get("/api/targets", s.handleGetTargets)

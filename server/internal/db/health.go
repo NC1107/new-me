@@ -31,6 +31,16 @@ func UpsertHealthDaily(ctx context.Context, q Querier, userID int64, date score.
 	return true, nil
 }
 
+// InsertHealthHistory stores a reading only when the day has none of that metric yet.
+func InsertHealthHistory(ctx context.Context, q Querier, userID int64, date score.Date, metric string,
+	value float64, source string, measuredAt time.Time) (added bool, err error) {
+	tag, err := q.Exec(ctx, `
+		INSERT INTO health_daily (user_id, local_date, metric, value, source, measured_at)
+		VALUES ($1, $2::date, $3, $4, $5, $6)
+		ON CONFLICT (user_id, local_date, metric) DO NOTHING`, userID, date, metric, value, source, measuredAt)
+	return tag.RowsAffected() == 1, err
+}
+
 // LastHealthSync is when the user's Health data last changed, or nil if it never arrived.
 func LastHealthSync(ctx context.Context, q Querier, userID int64) (*time.Time, error) {
 	var t *time.Time

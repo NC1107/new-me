@@ -436,7 +436,8 @@ func (s *Server) sessionDetail(r *http.Request, plan db.StoredPlan, session db.T
 	if err != nil && !errors.Is(err, db.ErrNotFound) {
 		return out, err
 	}
-	eq := training.Equipment{Barbell: slices.Contains(profile.Equipment, "barbell") || slices.Contains(profile.Equipment, "gym")}
+	eq := training.Equipment{Barbell: slices.Contains(profile.Equipment, "barbell") || slices.Contains(profile.Equipment, "gym"),
+		Imperial: c.user.Imperial()}
 	if profile.DumbbellMaxKg != nil {
 		eq.DumbbellMaxKg = *profile.DumbbellMaxKg
 	}

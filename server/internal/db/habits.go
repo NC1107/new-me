@@ -27,26 +27,28 @@ type HabitSlot struct {
 
 // Habit is a person's habit with its schedule. Weekdays is the mask from score.WeekdayBit.
 type Habit struct {
-	ID        int64
-	UserID    int64
-	Name      string
-	Icon      string
-	Kind      string
-	Weekdays  int
-	Slots     []HabitSlot
-	Target    *int
-	Position  int
-	Paused    bool
+	ID       int64
+	UserID   int64
+	Name     string
+	Icon     string
+	Kind     string
+	Weekdays int
+	Slots    []HabitSlot
+	Target   *int
+	Position int
+	Paused   bool
+	// Points is the habit's worth toward the daily goal.
+	Points    int
 	CreatedAt time.Time
 }
 
-const habitColumns = `id, user_id, name, icon, kind, weekdays, slots, target, position, paused, created_at`
+const habitColumns = `id, user_id, name, icon, kind, weekdays, slots, target, position, paused, points, created_at`
 
 func scanHabit(row pgx.Row) (Habit, error) {
 	var h Habit
 	var slots []byte
 	err := row.Scan(&h.ID, &h.UserID, &h.Name, &h.Icon, &h.Kind, &h.Weekdays, &slots, &h.Target,
-		&h.Position, &h.Paused, &h.CreatedAt)
+		&h.Position, &h.Paused, &h.Points, &h.CreatedAt)
 	if err != nil {
 		return h, err
 	}
@@ -81,10 +83,10 @@ func CreateHabit(ctx context.Context, q Querier, h Habit) (Habit, error) {
 		return Habit{}, err
 	}
 	return scanHabit(q.QueryRow(ctx, `
-		INSERT INTO habits (user_id, name, icon, kind, weekdays, slots, target, position)
-		VALUES ($1, $2, $3, $4, $5, $6, $7,
+		INSERT INTO habits (user_id, name, icon, kind, weekdays, slots, target, points, position)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
 		        COALESCE((SELECT max(position) + 1 FROM habits WHERE user_id = $1 AND deleted_at IS NULL), 0))
-		RETURNING `+habitColumns, h.UserID, h.Name, h.Icon, h.Kind, h.Weekdays, slots, h.Target))
+		RETURNING `+habitColumns, h.UserID, h.Name, h.Icon, h.Kind, h.Weekdays, slots, h.Target, h.Points))
 }
 
 // GetHabit reads one live habit of the person.
@@ -121,9 +123,9 @@ func UpdateHabit(ctx context.Context, q Querier, h Habit) (Habit, error) {
 		return Habit{}, err
 	}
 	updated, err := scanHabit(q.QueryRow(ctx, `
-		UPDATE habits SET name = $3, icon = $4, weekdays = $5, slots = $6, target = $7, paused = $8
+		UPDATE habits SET name = $3, icon = $4, weekdays = $5, slots = $6, target = $7, paused = $8, points = $9
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-		RETURNING `+habitColumns, h.ID, h.UserID, h.Name, h.Icon, h.Weekdays, slots, h.Target, h.Paused))
+		RETURNING `+habitColumns, h.ID, h.UserID, h.Name, h.Icon, h.Weekdays, slots, h.Target, h.Paused, h.Points))
 	return updated, notFound(err)
 }
 
@@ -251,7 +253,8 @@ func DueHabits(ctx context.Context, q Querier, userID int64, date score.Date) ([
 func HabitDays(states []HabitState) []score.HabitDay {
 	out := make([]score.HabitDay, 0, len(states))
 	for _, st := range states {
-		day := score.HabitDay{Check: st.Habit.Kind == HabitCheck, Slots: len(st.Habit.Slots), Count: st.Count}
+		day := score.HabitDay{Check: st.Habit.Kind == HabitCheck, Slots: len(st.Habit.Slots), Count: st.Count,
+			Points: st.Habit.Points}
 		if st.Habit.Target != nil {
 			day.Target = *st.Habit.Target
 		}

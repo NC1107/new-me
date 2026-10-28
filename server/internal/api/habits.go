@@ -52,6 +52,8 @@ type habitJSON struct {
 	Target   *int       `json:"target"`
 	Position int        `json:"position"`
 	Paused   bool       `json:"paused"`
+	// Points is the habit's worth toward the daily goal: 0, 10, 25 or 50.
+	Points int `json:"points"`
 }
 
 func toHabitJSON(h db.Habit) habitJSON {
@@ -60,7 +62,7 @@ func toHabitJSON(h db.Habit) habitJSON {
 		slots[i] = slotJSON{Label: s.Label, Time: s.Time}
 	}
 	return habitJSON{ID: h.ID, Name: h.Name, Icon: h.Icon, Kind: h.Kind, Weekdays: score.ISOWeekdays(h.Weekdays),
-		Slots: slots, Target: h.Target, Position: h.Position, Paused: h.Paused}
+		Slots: slots, Target: h.Target, Position: h.Position, Paused: h.Paused, Points: h.Points}
 }
 
 type stateSlotJSON struct {
@@ -80,6 +82,7 @@ type habitStateJSON struct {
 	Slots  []stateSlotJSON `json:"slots"`
 	Target *int            `json:"target"`
 	Count  int             `json:"count"`
+	Points int             `json:"points"`
 }
 
 func toHabitStatesJSON(states []db.HabitState) []habitStateJSON {
@@ -91,7 +94,7 @@ func toHabitStatesJSON(states []db.HabitState) []habitStateJSON {
 			slots[i] = stateSlotJSON{Index: i, Label: s.Label, Time: s.Time, Done: st.Done[i]}
 		}
 		out = append(out, habitStateJSON{ID: h.ID, Name: h.Name, Icon: h.Icon, Kind: h.Kind, Slots: slots,
-			Target: h.Target, Count: st.Count})
+			Target: h.Target, Count: st.Count, Points: h.Points})
 	}
 	return out
 }
@@ -104,6 +107,7 @@ type habitRequest struct {
 	Slots    *[]slotJSON `json:"slots"`
 	Target   *int        `json:"target"`
 	Paused   *bool       `json:"paused"`
+	Points   *int        `json:"points"`
 }
 
 // apply writes the fields present in the request onto h and then checks the result as a whole,
@@ -143,6 +147,12 @@ func (req habitRequest) apply(h *db.Habit, creating bool) *httpError {
 	}
 	if req.Paused != nil {
 		h.Paused = *req.Paused
+	}
+	if req.Points != nil {
+		if !slices.Contains(score.HabitWorths, *req.Points) {
+			return invalid("points must be 0, 10, 25 or 50")
+		}
+		h.Points = *req.Points
 	}
 	return validateHabit(*h)
 }
@@ -210,7 +220,7 @@ func (s *Server) handleCreateHabit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := callerFrom(r)
-	h := db.Habit{UserID: c.user.ID, Weekdays: score.AllWeekdays, Slots: []db.HabitSlot{}}
+	h := db.Habit{UserID: c.user.ID, Weekdays: score.AllWeekdays, Slots: []db.HabitSlot{}, Points: score.HabitWorthDefault}
 	if herr := req.apply(&h, true); herr != nil {
 		fail(w, r, herr)
 		return

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -225,12 +226,10 @@ func (f usdaFood) toFood() (Food, bool) {
 		return Food{}, false
 	}
 	food := Food{
-		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID), Name: strings.TrimSpace(parenthetical.ReplaceAllString(f.Description, "")),
-		Brand: strings.TrimSpace(firstNonEmpty(f.BrandName, f.BrandOwner)), DataType: f.DataType,
+		Source: SourceUSDA, ID: strconv.Itoa(f.FdcID),
+		Name:  tidyName(strings.TrimSpace(parenthetical.ReplaceAllString(f.Description, ""))),
+		Brand: tidyBrand(f.BrandName, f.BrandOwner), DataType: f.DataType,
 		Per100g: &per100, Portions: f.portions(),
-	}
-	if f.BrandOwner != "" && f.BrandName != "" && !strings.EqualFold(f.BrandOwner, f.BrandName) {
-		food.Brand = f.BrandName + " " + f.BrandOwner
 	}
 	switch strings.ToLower(f.ServingUnit) {
 	case "g", "grm":
@@ -260,3 +259,59 @@ func firstNonEmpty(ss ...string) string {
 	}
 	return ""
 }
+
+// corporateSuffix matches the company words a USDA brand owner carries ("General Mills Sales
+// Inc."), which are not what anyone calls the food.
+var corporateSuffix = regexp.MustCompile(`(?i)[,.]?\s+(sales\s+)?(inc|incorporated|llc|l\.l\.c|co|corp|corporation|company|ltd|limited|usa|us)\.?$`)
+
+// tidyBrand is the brand people know: the brand name when USDA has one, else the owner without
+// its company suffixes, in normal capitals.
+func tidyBrand(name, owner string) string {
+	brand := strings.TrimSpace(name)
+	if brand == "" {
+		brand = strings.TrimSpace(owner)
+		for {
+			trimmed := strings.TrimSpace(corporateSuffix.ReplaceAllString(brand, ""))
+			if trimmed == brand || trimmed == "" {
+				break
+			}
+			brand = trimmed
+		}
+	}
+	return tidyName(brand)
+}
+
+// tidyName turns an all-capitals label ("TOTINO'S SAUSAGE PIZZA ROLLS") into normal capitals
+// ("Totino's Sausage Pizza Rolls") and leaves mixed-case names alone.
+func tidyName(s string) string {
+	letters, upper := 0, 0
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			letters++
+			if unicode.IsUpper(r) {
+				upper++
+			}
+		}
+	}
+	if letters < 4 || upper*10 < letters*8 {
+		return s
+	}
+	words := strings.Fields(strings.ToLower(s))
+	for i, w := range words {
+		if i > 0 && smallWords[w] {
+			continue
+		}
+		r := []rune(w)
+		for j, c := range r {
+			if unicode.IsLetter(c) {
+				r[j] = unicode.ToUpper(c)
+				break
+			}
+		}
+		words[i] = string(r)
+	}
+	return strings.Join(words, " ")
+}
+
+var smallWords = map[string]bool{"a": true, "an": true, "and": true, "of": true, "with": true, "in": true,
+	"or": true, "the": true, "to": true, "for": true, "on": true}

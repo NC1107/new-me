@@ -120,13 +120,18 @@ func Enable(key string, target int) *Proposal {
 }
 
 // Protein proposes the formula's protein target when the current one is 20% or more away from it.
-func Protein(current int, weightKg float64, suggested int, perKg float64) *Proposal {
+// An imperial person reads the weight in pounds and the rate per pound.
+func Protein(current int, weightKg float64, suggested int, perKg float64, imperial bool) *Proposal {
 	if current <= 0 || suggested <= 0 || !score.ProteinOff(current, suggested) {
 		return nil
 	}
-	return &Proposal{Key: "protein", Kind: KindTarget, Current: current, Proposed: suggested, Reason: fmt.Sprintf(
-		"At %.1f kg, %.1f g per kilogram is %d g of protein a day. Your target is %d g.",
-		weightKg, perKg, suggested, current)}
+	reason := fmt.Sprintf("At %.1f kg, %.1f g per kilogram is %d g of protein a day. Your target is %d g.",
+		weightKg, perKg, suggested, current)
+	if imperial {
+		reason = fmt.Sprintf("At %.1f lb, %.2f g per pound is %d g of protein a day. Your target is %d g.",
+			weightKg/0.45359237, perKg*0.45359237, suggested, current)
+	}
+	return &Proposal{Key: "protein", Kind: KindTarget, Current: current, Proposed: suggested, Reason: reason}
 }
 
 // Formula-change thresholds: a target is proposed when its formula value moved by more than 5%

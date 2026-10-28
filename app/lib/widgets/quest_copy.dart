@@ -1,8 +1,12 @@
 import '../api/models.dart';
 import '../util/format.dart';
+import '../util/time_format.dart';
 
 /// Quests Apple Health fills in; everything else is logged by hand.
-const kAutomaticQuests = {'steps', 'exercise', 'sleep'};
+const kAutomaticQuests = {'steps', 'exercise', 'sleep', 'sleep_regularity'};
+
+/// The earlier nights the steady bedtime needs before it can judge one, matching the server.
+const kRegularityBaselineNights = 3;
 
 bool isAutomaticQuest(String key) => kAutomaticQuests.contains(key);
 
@@ -41,6 +45,9 @@ String questTitle(Quest q, {Units units = Units.metric}) {
     'protein' => 'Eat ${t.formatted} g protein',
     'yoga' => 'Yoga or stretching for ${t.formatted} ${shortUnit(q.unit)}',
     'water' => 'Drink ${units.volume(t)}',
+    'sleep_regularity' => 'Keep a steady bedtime',
+    'produce' => 'Eat ${t.formatted} a day',
+    'breathing' => 'Breathe ${t.formatted} min',
     _ => q.title,
   };
 }
@@ -49,6 +56,7 @@ String questTitle(Quest q, {Units units = Units.metric}) {
 bool titleStatesTarget(Quest q) => switch (q.key) {
   'pushups' => false,
   'reading' => q.unitAlt == null,
+  'sleep_regularity' || 'produce' => false,
   _ => true,
 };
 
@@ -68,6 +76,11 @@ String questProgress(Quest q, {Units units = Units.metric}) {
   if (q.key == 'water') {
     return '${units.volumeNumber(q.actual)} of ${units.volume(q.target)}';
   }
+  if (q.key == 'produce') {
+    return '${q.actual.formatted} of ${q.target.formatted} '
+        '${q.target == 1 ? 'serving' : 'servings'} of fruit and veg';
+  }
+  if (q.key == 'sleep_regularity') return steadyBedtimeProgress(q);
   if (q.key == 'sleep') {
     return q.actual == 0
         ? 'No sleep recorded'
@@ -105,6 +118,55 @@ String doneByLabel(DoneBy by) => by.kind == 'session'
 /// "Listening synced 3 min ago".
 String listeningSyncedLabel(DateTime syncedAt, DateTime now) =>
     'Listening synced ${agoLabel(syncedAt, now)}';
+
+/// One of the two times the steady bedtime checks, for the card: the night's time against the
+/// person's usual one, and whether it fell inside the window.
+class SteadyLine {
+  const SteadyLine({required this.text, required this.ok});
+
+  final String text;
+  final bool ok;
+}
+
+String _steadyTime(int median, int offset) => formatMinutesOfDay((median + offset) % 1440);
+
+SteadyLine _steadyLine(String label, int median, int offset, bool ok) {
+  final gap = offset == 0
+      ? 'right on your usual'
+      : '${offset.abs()} min ${offset > 0 ? 'later' : 'earlier'} than usual';
+  return SteadyLine(
+    text: '$label ${_steadyTime(median, offset)}, $gap (${formatMinutesOfDay(median)})',
+    ok: ok,
+  );
+}
+
+/// The night's bed and wake time against the usual ones; empty until the night can be judged.
+List<SteadyLine> steadyBedtimeLines(Quest q) {
+  final d = q.detail;
+  if (d == null || d['measurable'] != true) return const [];
+  int n(String key) => (d[key] as num? ?? 0).round();
+  return [
+    _steadyLine('Bed', n('bedMedian'), n('bedOffset'), d['bedOk'] == true),
+    _steadyLine('Up', n('wakeMedian'), n('wakeOffset'), d['wakeOk'] == true),
+  ];
+}
+
+/// "Both inside 45 min", or what the quest is waiting for.
+String steadyBedtimeProgress(Quest q) {
+  final d = q.detail;
+  final window = (d?['windowMin'] as num? ?? q.target).round();
+  if (d == null || d['measurable'] != true) {
+    final learned = (d?['baselineNights'] as num? ?? 0).round();
+    return learned < kRegularityBaselineNights
+        ? 'Learning your usual times: $learned of $kRegularityBaselineNights nights'
+        : 'No sleep recorded';
+  }
+  return switch (q.actual.round()) {
+    2 => 'Bed and wake time both within $window min of usual',
+    1 => 'One of bed and wake time within $window min of usual',
+    _ => 'Neither within $window min of usual',
+  };
+}
 
 /// How much of the quest's bar is filled.
 double questFraction(Quest q) {

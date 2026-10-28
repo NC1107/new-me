@@ -120,6 +120,36 @@ final Map<String, GoalSpec> kGoalSpecs = {
       labelIn: (v, units) => units.volume(v),
     ),
     GoalSpec(
+      questKey: 'sleep_regularity',
+      question: 'How close to your usual times?',
+      // Research shows regular timing matters (Windred et al. 2024) but gives no window to aim
+      // for, so these are starting points you can change.
+      note:
+          'Your usual bed and wake times are the median of your last 7 nights. '
+          'The research does not name a window, so this one is yours to set.',
+      options: _named([30, 45, 60, 90]),
+      defaultValue: 45,
+      label: (v) => 'within $v min',
+    ),
+    GoalSpec(
+      questKey: 'produce',
+      question: 'How many servings of fruit and vegetables?',
+      note:
+          'WHO advises at least 400 g a day, and one serving is 80 g, so five. '
+          'Risk kept falling up to about 10 servings (Aune et al. 2017).',
+      options: _named([3, 5, 7, 10]),
+      defaultValue: 5,
+      label: (v) => '$v ${v == 1 ? 'serving' : 'servings'}',
+    ),
+    GoalSpec(
+      questKey: 'breathing',
+      question: 'How many minutes will you breathe?',
+      note: 'Five minutes a day of cyclic sighing lifted mood in a month-long trial (Balban et al. 2023).',
+      options: _named([3, 5, 10, 15]),
+      defaultValue: 5,
+      label: _minutes,
+    ),
+    GoalSpec(
       questKey: 'yoga',
       question: 'How long will you do yoga or stretch?',
       options: _named([10, 15, 20, 30]),
@@ -199,6 +229,27 @@ const List<Focus> kFocuses = [
     subtitle: 'Logged here or read from Apple Health',
     icon: Icons.water_drop_rounded,
     questKeys: ['water'],
+  ),
+  Focus(
+    id: 'steady',
+    title: 'Keep a steady bedtime',
+    subtitle: 'Go to bed and get up at about the same time',
+    icon: Icons.alarm_on_rounded,
+    questKeys: ['sleep_regularity'],
+  ),
+  Focus(
+    id: 'produce',
+    title: 'Eat your five a day',
+    subtitle: 'Count servings of fruit and vegetables',
+    icon: Icons.eco_rounded,
+    questKeys: ['produce'],
+  ),
+  Focus(
+    id: 'breathe',
+    title: 'Breathe for 5 minutes',
+    subtitle: 'A guided session, daily',
+    icon: Icons.air_rounded,
+    questKeys: ['breathing'],
   ),
   Focus(
     id: 'stretch',

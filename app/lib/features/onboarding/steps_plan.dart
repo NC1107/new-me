@@ -103,12 +103,14 @@ List<PlanGoal> planGoals(
     int? formula,
     int fallback,
     int step,
-    String fromFormula,
-  ) => PlanGoal(
+    String fromFormula, {
+    int min = 1,
+  }) => PlanGoal(
     key: key,
     name: name,
     value: formula ?? fallback,
     step: step,
+    min: min,
     why: formula != null ? fromFormula : 'A starting point. Change it any time in Me.',
     label: (v) => label(key, v),
   );
@@ -165,6 +167,31 @@ List<PlanGoal> planGoals(
           2200,
           250,
           'National Academies: 3.0 L of drinks a day for men and 2.2 L for women.',
+        ),
+        'sleep_regularity' => goal(
+          k,
+          'Steady bedtime',
+          null,
+          45,
+          15,
+          'Research favours regular timing but names no window, so 45 minutes is a starting point.',
+          min: 15,
+        ),
+        'produce' => goal(
+          k,
+          'Fruit and vegetables',
+          _value(report, 'produce'),
+          5,
+          1,
+          'WHO: at least 400 g a day, and a serving is 80 g (NHS 5 A Day).',
+        ),
+        'breathing' => goal(
+          k,
+          'Breathing',
+          _value(report, 'breathing'),
+          5,
+          1,
+          'Five minutes a day of cyclic sighing for a month (Balban et al. 2023).',
         ),
         'yoga' => goal(k, 'Stretching', null, 15, 5, ''),
         _ => goal(k, k, null, kGoalSpecs[k]?.defaultValue ?? 1, 1, ''),

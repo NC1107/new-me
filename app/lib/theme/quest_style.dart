@@ -14,6 +14,9 @@ AccentPalette questPalette(String key) => accentById(switch (key) {
   'sleep' => 'violet',
   'yoga' => 'teal',
   'water' => 'sky',
+  'sleep_regularity' => 'violet',
+  'produce' => 'green',
+  'breathing' => 'teal',
   _ => 'sky',
 });
 
@@ -27,5 +30,8 @@ IconData questIcon(String key) => switch (key) {
   'sleep' => Icons.bedtime_rounded,
   'yoga' => Icons.self_improvement_rounded,
   'water' => Icons.water_drop_rounded,
+  'sleep_regularity' => Icons.alarm_on_rounded,
+  'produce' => Icons.eco_rounded,
+  'breathing' => Icons.air_rounded,
   _ => Icons.star_rounded,
 };

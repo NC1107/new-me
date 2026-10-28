@@ -182,6 +182,12 @@ class _QuestCardState extends State<QuestCard> {
                     questProgress(q, units: widget.units),
                     style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
                   ),
+                for (final line in steadyBedtimeLines(q))
+                  _NoteLine(
+                    icon: line.ok ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                    color: line.ok ? kSuccess : category.lip,
+                    text: line.text,
+                  ),
                 if (q.doneBy case final by?)
                   _NoteLine(
                     icon: Icons.fitness_center_rounded,

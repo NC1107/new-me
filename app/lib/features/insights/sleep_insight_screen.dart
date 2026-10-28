@@ -73,6 +73,8 @@ class SleepInsightScreen extends ConsumerWidget {
             const SizedBox(height: kCardGap),
             _Consistency(spread: spread),
           ],
+          const SizedBox(height: kCardGap),
+          RegularityCard(regularity: sleep.regularity),
           if (tips.isNotEmpty) ...[const SizedBox(height: kCardGap), _Tips(tips: tips)],
         ];
       },
@@ -261,6 +263,44 @@ class _Consistency extends StatelessWidget {
             child: Text(
               consistencyLine(spread),
               style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The Sleep Regularity Index over the last 14 days (Phillips et al., Sci Rep 2017): 100 means
+/// the same minutes asleep and awake as 24 hours before, every day.
+class RegularityCard extends StatelessWidget {
+  const RegularityCard({super.key, required this.regularity});
+
+  final SleepRegularity regularity;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = questPalette('sleep_regularity');
+    final score = regularity.score;
+    final title = score == null ? 'Sleep regularity' : 'Sleep regularity ${score.round()} of 100';
+    final detail = score == null
+        ? 'Needs ${regularity.minNights} nights with sleep in the last ${regularity.windowDays} days, two of them back to back.'
+        : 'How alike your sleep and wake times are from one day to the next, over the last '
+              '${regularity.windowDays} days. 100 is the same every day.';
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconDisc(icon: Icons.alarm_on_rounded, palette: palette, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(detail, style: AppText.caption.copyWith(color: kInkSecondary)),
+              ],
             ),
           ),
         ],

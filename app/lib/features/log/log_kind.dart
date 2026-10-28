@@ -4,6 +4,8 @@ enum LogKind {
   meal,
   yoga,
   water,
+  produce,
+  breathing,
   activity;
 
   String get label => switch (this) {
@@ -12,6 +14,8 @@ enum LogKind {
     LogKind.meal => 'Meal',
     LogKind.yoga => 'Yoga',
     LogKind.water => 'Water',
+    LogKind.produce => 'Fruit and vegetables',
+    LogKind.breathing => 'Breathing',
     LogKind.activity => 'Activity',
   };
 
@@ -21,6 +25,8 @@ enum LogKind {
     LogKind.meal => 'Log a meal',
     LogKind.yoga => 'Log yoga',
     LogKind.water => 'Log water',
+    LogKind.produce => 'Log fruit and vegetables',
+    LogKind.breathing => 'Breathe',
     LogKind.activity => 'Log activity',
   };
 
@@ -31,6 +37,8 @@ enum LogKind {
     LogKind.meal => 'meals_logged',
     LogKind.yoga => 'yoga',
     LogKind.water => 'water',
+    LogKind.produce => 'produce',
+    LogKind.breathing => 'breathing',
     LogKind.activity => 'exercise',
   };
 
@@ -41,6 +49,8 @@ enum LogKind {
     'meals_logged' || 'protein' => LogKind.meal,
     'yoga' => LogKind.yoga,
     'water' => LogKind.water,
+    'produce' => LogKind.produce,
+    'breathing' => LogKind.breathing,
     'exercise' => LogKind.activity,
     _ => null,
   };

@@ -5,22 +5,36 @@ import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../widgets/accent_text.dart';
 import '../../widgets/dialogs.dart';
+import '../log/log_kind.dart';
+import '../log/log_sheet.dart';
 import 'readiness_card.dart';
 
 Future<void> showPlanSheet(BuildContext context, {required Plan plan, Readiness? readiness}) =>
     showAppSheet<void>(
       context,
-      builder: (_) => PlanSheet(plan: plan, readiness: readiness),
+      builder: (sheet) => PlanSheet(
+        plan: plan,
+        readiness: readiness,
+        // The breathing step opens the breathing form, whose first button starts the session.
+        onStartBreathing: () {
+          Navigator.of(sheet).pop();
+          showLogSheet(context, kind: LogKind.breathing);
+        },
+      ),
     );
 
 /// The day laid out: what the data already did, what is left and the easiest way to finish it,
 /// and the habits by time.
 class PlanSheet extends StatelessWidget {
-  const PlanSheet({super.key, required this.plan, this.readiness});
+  const PlanSheet({super.key, required this.plan, this.readiness, this.onStartBreathing});
 
   final Plan plan;
   final Readiness? readiness;
+
+  /// Null leaves the breathing step as plain text.
+  final VoidCallback? onStartBreathing;
 
   List<PlanItem> _of(PlanItemKind kind) => [
     for (final i in plan.items)
@@ -74,7 +88,13 @@ class PlanSheet extends StatelessWidget {
                 const SizedBox(height: 18),
                 Semantics(header: true, child: Text(title, style: AppText.headline)),
                 const SizedBox(height: 4),
-                for (final item in items) _PlanRow(item: item),
+                for (final item in items)
+                  _PlanRow(
+                    item: item,
+                    onStart: item.kind == PlanItemKind.todo && item.key == 'breathing'
+                        ? onStartBreathing
+                        : null,
+                  ),
               ],
           ],
         ),
@@ -84,9 +104,10 @@ class PlanSheet extends StatelessWidget {
 }
 
 class _PlanRow extends StatelessWidget {
-  const _PlanRow({required this.item});
+  const _PlanRow({required this.item, this.onStart});
 
   final PlanItem item;
+  final VoidCallback? onStart;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +131,12 @@ class _PlanRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(child: Text(item.text, style: AppText.body)),
+            if (onStart != null)
+              TextButton(
+                onPressed: onStart,
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: Text('Start', style: AppText.label.copyWith(color: context.accentText)),
+              ),
           ],
         ),
       ),

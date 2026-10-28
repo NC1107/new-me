@@ -533,6 +533,7 @@ class Quest {
     this.targetAlt,
     this.actualAlt,
     this.doneBy,
+    this.detail,
   });
 
   factory Quest.fromJson(Json j) => Quest(
@@ -549,6 +550,7 @@ class Quest {
     targetAlt: j['targetAlt'] as num?,
     actualAlt: j['actualAlt'] as num?,
     doneBy: DoneBy.tryParse(j['doneBy']),
+    detail: j['detail'] is Map ? (j['detail'] as Map).cast<String, dynamic>() : null,
   );
 
   final String key;
@@ -573,6 +575,10 @@ class Quest {
   /// The Health workout that completed the quest, when logged entries alone did not.
   final DoneBy? doneBy;
 
+  /// Quest-specific facts from the server. The steady bedtime sends the night against the
+  /// person's usual bed and wake times here.
+  final Json? detail;
+
   Json toJson() => {
     'key': key,
     'title': title,
@@ -587,6 +593,7 @@ class Quest {
     'targetAlt': targetAlt,
     'actualAlt': actualAlt,
     if (doneBy != null) 'doneBy': doneBy!.toJson(),
+    if (detail != null) 'detail': detail,
   };
 }
 
@@ -2022,6 +2029,7 @@ class SleepInsights {
     this.stages7,
     this.lastNight,
     this.nights = const [],
+    this.regularity = const SleepRegularity(),
   });
 
   factory SleepInsights.fromJson(Object? raw) {
@@ -2041,6 +2049,7 @@ class SleepInsights {
           ? SleepNight.fromJson((j['lastNight'] as Map).cast<String, dynamic>())
           : null,
       nights: _list(j['nights'], SleepNightPoint.fromJson),
+      regularity: SleepRegularity.fromJson(j['regularity']),
     );
   }
 
@@ -2058,6 +2067,9 @@ class SleepInsights {
   /// The last 14 nights with data, oldest first.
   final List<SleepNightPoint> nights;
 
+  /// The Sleep Regularity Index over the last 14 days.
+  final SleepRegularity regularity;
+
   Json toJson() => {
     'avg7Min': avg7Min,
     'avg30Min': avg30Min,
@@ -2068,6 +2080,45 @@ class SleepInsights {
     'stages7': stages7?.toJson(),
     'lastNight': lastNight?.toJson(),
     'nights': [for (final n in nights) n.toJson()],
+    if (regularity.nights > 0 || regularity.score != null) 'regularity': regularity.toJson(),
+  };
+}
+
+/// The Sleep Regularity Index (Phillips et al., Sci Rep 2017): 100 is a perfectly regular
+/// schedule. [score] is null until there are enough nights.
+class SleepRegularity {
+  const SleepRegularity({
+    this.score,
+    this.nights = 0,
+    this.pairs = 0,
+    this.windowDays = 14,
+    this.minNights = 5,
+  });
+
+  factory SleepRegularity.fromJson(Object? raw) {
+    if (raw is! Map) return const SleepRegularity();
+    final j = raw.cast<String, dynamic>();
+    return SleepRegularity(
+      score: j['score'] as num?,
+      nights: _int(j['nights']),
+      pairs: _int(j['pairs']),
+      windowDays: _int(j['windowDays'], 14),
+      minNights: _int(j['minNights'], 5),
+    );
+  }
+
+  final num? score;
+  final int nights;
+  final int pairs;
+  final int windowDays;
+  final int minNights;
+
+  Json toJson() => {
+    'score': score,
+    'nights': nights,
+    'pairs': pairs,
+    'windowDays': windowDays,
+    'minNights': minNights,
   };
 }
 

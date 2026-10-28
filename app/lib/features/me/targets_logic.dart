@@ -19,6 +19,8 @@ const kTargetGroups = [
   TargetGroup('Steps', ['steps']),
   TargetGroup('Push-ups', ['pushups']),
   TargetGroup('Water', ['water']),
+  TargetGroup('Fruit and vegetables', ['produce']),
+  TargetGroup('Breathing', ['breathing']),
 ];
 
 /// The estimate from logs is a secondary line under maintenance, not a row of its own.
@@ -39,6 +41,8 @@ const _names = {
   'steps': 'Steps',
   'pushups': 'Push-ups',
   'water': 'Water',
+  'produce': 'Fruit and vegetables',
+  'breathing': 'Breathing',
 };
 
 String targetName(String key) => _names[key] ?? key;
@@ -189,7 +193,7 @@ List<String> detailLines(Target t) {
         }
         add(str(reg['note']));
       }
-    case 'water':
+    case 'water' || 'produce' || 'breathing':
       add(str(d['note']));
     case 'pushups':
       final range = d['rangePerSet'];

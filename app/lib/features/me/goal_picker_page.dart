@@ -17,6 +17,15 @@ class GoalChoice {
   final int? targetAlt;
 }
 
+/// The goals the server accepts for quests with a narrower range than "above zero", in the
+/// quest's own unit (millilitres for water).
+const kGoalRanges = {
+  'water': (min: 250, max: 6000),
+  'sleep_regularity': (min: 15, max: 120),
+  'produce': (min: 1, max: 30),
+  'breathing': (min: 1, max: 60),
+};
+
 /// One quest's goal: the same named presets onboarding offers, plus a number of your own.
 class GoalPickerPage extends StatefulWidget {
   const GoalPickerPage({
@@ -76,8 +85,13 @@ class _GoalPickerPageState extends State<GoalPickerPage> {
 
   bool get _valid =>
       (_value ?? 0) > 0 &&
-      (!_isWater || (_value! >= 250 && _value! <= 6000)) &&
+      _inRange(_value!) &&
       (widget.quest.targetAlt == null || (_altValue ?? 0) > 0);
+
+  bool _inRange(int value) {
+    final range = kGoalRanges[widget.quest.key];
+    return range == null || (value >= range.min && value <= range.max);
+  }
 
   void _done() => Navigator.of(context).pop(GoalChoice(_value!, _altValue));
 

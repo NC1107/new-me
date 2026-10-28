@@ -23,8 +23,10 @@ import '../../util/format.dart';
 import '../../util/time_format.dart';
 import '../../widgets/dialogs.dart';
 import 'activity_pane.dart';
+import 'breathing_pane.dart';
 import 'log_kind.dart';
 import 'log_panes.dart';
+import 'produce_pane.dart';
 import 'water_pane.dart';
 
 /// Opens the log sheet for [kind], from a quest card's + or the food card.
@@ -338,6 +340,18 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.water => WaterPane(
                   key: const ValueKey(LogKind.water),
                   units: ref.watch(unitsProvider),
+                  busy: _busy,
+                  failed: _error != null,
+                  onLog: _submit,
+                ),
+                LogKind.produce => ProducePane(
+                  key: const ValueKey(LogKind.produce),
+                  busy: _busy,
+                  failed: _error != null,
+                  onLog: _submit,
+                ),
+                LogKind.breathing => BreathingPane(
+                  key: const ValueKey(LogKind.breathing),
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,

@@ -308,6 +308,8 @@ class _EntryRow extends StatelessWidget {
         'reading' => 'reading',
         'other' => 'exercise',
         'water' => 'water',
+        'produce' => 'produce',
+        'breathing' => 'breathing',
         _ => 'yoga',
       },
       switch (a.type) {
@@ -315,6 +317,8 @@ class _EntryRow extends StatelessWidget {
         'reading' => 'Reading',
         'other' => a.name.isEmpty ? 'Activity' : a.name,
         'water' => 'Water',
+        'produce' => 'Fruit and vegetables',
+        'breathing' => 'Breathing',
         _ => 'Yoga',
       },
       a.type == 'water' ? units.volume(a.quantity) : '${a.quantity.formatted} ${shortUnit(a.unit)}',

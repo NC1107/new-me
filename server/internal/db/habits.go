@@ -38,17 +38,24 @@ type Habit struct {
 	Position int
 	Paused   bool
 	// Points is the habit's worth toward the daily goal.
-	Points    int
-	CreatedAt time.Time
+	Points int
+	// Minutes is how long the habit takes; nil when it is only tracked or predates v11.
+	Minutes *int
+	// ProposedPoints is non-nil while the partner has a change to approve. ProposedMinutes is
+	// the minutes it came from, nil when it proposes only tracking.
+	ProposedPoints  *int
+	ProposedMinutes *int
+	ProposedAt      *time.Time
+	CreatedAt       time.Time
 }
 
-const habitColumns = `id, user_id, name, icon, kind, weekdays, slots, target, position, paused, points, created_at`
+const habitColumns = `id, user_id, name, icon, kind, weekdays, slots, target, position, paused, points, minutes, proposed_points, proposed_minutes, proposed_at, created_at`
 
 func scanHabit(row pgx.Row) (Habit, error) {
 	var h Habit
 	var slots []byte
 	err := row.Scan(&h.ID, &h.UserID, &h.Name, &h.Icon, &h.Kind, &h.Weekdays, &slots, &h.Target,
-		&h.Position, &h.Paused, &h.Points, &h.CreatedAt)
+		&h.Position, &h.Paused, &h.Points, &h.Minutes, &h.ProposedPoints, &h.ProposedMinutes, &h.ProposedAt, &h.CreatedAt)
 	if err != nil {
 		return h, err
 	}
@@ -83,10 +90,12 @@ func CreateHabit(ctx context.Context, q Querier, h Habit) (Habit, error) {
 		return Habit{}, err
 	}
 	return scanHabit(q.QueryRow(ctx, `
-		INSERT INTO habits (user_id, name, icon, kind, weekdays, slots, target, points, position)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+		INSERT INTO habits (user_id, name, icon, kind, weekdays, slots, target, points, minutes,
+		                    proposed_points, proposed_minutes, proposed_at, position)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
 		        COALESCE((SELECT max(position) + 1 FROM habits WHERE user_id = $1 AND deleted_at IS NULL), 0))
-		RETURNING `+habitColumns, h.UserID, h.Name, h.Icon, h.Kind, h.Weekdays, slots, h.Target, h.Points))
+		RETURNING `+habitColumns, h.UserID, h.Name, h.Icon, h.Kind, h.Weekdays, slots, h.Target, h.Points,
+		h.Minutes, h.ProposedPoints, h.ProposedMinutes, h.ProposedAt))
 }
 
 // GetHabit reads one live habit of the person.
@@ -123,9 +132,11 @@ func UpdateHabit(ctx context.Context, q Querier, h Habit) (Habit, error) {
 		return Habit{}, err
 	}
 	updated, err := scanHabit(q.QueryRow(ctx, `
-		UPDATE habits SET name = $3, icon = $4, weekdays = $5, slots = $6, target = $7, paused = $8, points = $9
+		UPDATE habits SET name = $3, icon = $4, weekdays = $5, slots = $6, target = $7, paused = $8, points = $9, minutes = $10,
+		                  proposed_points = $11, proposed_minutes = $12, proposed_at = $13
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-		RETURNING `+habitColumns, h.ID, h.UserID, h.Name, h.Icon, h.Weekdays, slots, h.Target, h.Paused, h.Points))
+		RETURNING `+habitColumns, h.ID, h.UserID, h.Name, h.Icon, h.Weekdays, slots, h.Target, h.Paused, h.Points,
+		h.Minutes, h.ProposedPoints, h.ProposedMinutes, h.ProposedAt))
 	return updated, notFound(err)
 }
 
@@ -266,4 +277,19 @@ func HabitDays(states []HabitState) []score.HabitDay {
 		out = append(out, day)
 	}
 	return out
+}
+
+// PendingProposals lists the person's live habits that wait for their partner's answer.
+func PendingProposals(ctx context.Context, q Querier, userID int64) ([]Habit, error) {
+	habits, err := ListHabits(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := []Habit{}
+	for _, h := range habits {
+		if h.ProposedAt != nil {
+			out = append(out, h)
+		}
+	}
+	return out, nil
 }

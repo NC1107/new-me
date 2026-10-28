@@ -50,22 +50,17 @@ class HabitSlot {
   Json toJson() => {'label': label, 'time': time};
 }
 
+/// Habits are paid 3 gems a minute, capped at 100 (v11); a habit with no minutes only tracks.
+const kGemsPerMinute = 3;
+const kMaxHabitGems = 100;
+
+/// The choices for how long a habit takes; null is "only track".
+const kHabitMinuteChoices = <int?>[null, 1, 2, 5, 10, 15, 20, 30];
+
+int habitGems(int? minutes) =>
+    minutes == null ? 0 : (minutes * kGemsPerMinute).clamp(0, kMaxHabitGems);
+
 /// A habit as the management screens see it, paused ones included.
-/// The gems a habit adds toward the day (v10); quests are worth 50 or 100. Zero only tracks it.
-enum HabitWorth {
-  track(0),
-  small(10),
-  medium(25),
-  big(50);
-
-  const HabitWorth(this.points);
-
-  final int points;
-
-  static HabitWorth of(int points) =>
-      HabitWorth.values.where((w) => w.points == points).firstOrNull ?? HabitWorth.medium;
-}
-
 const kDefaultHabitPoints = 25;
 
 class Habit {
@@ -80,6 +75,9 @@ class Habit {
     required this.position,
     required this.paused,
     this.points = kDefaultHabitPoints,
+    this.minutes,
+    this.proposedPoints,
+    this.proposedMinutes,
   });
 
   factory Habit.fromJson(Json j) => Habit(
@@ -96,6 +94,9 @@ class Habit {
     position: _int(j['position']),
     paused: j['paused'] as bool? ?? false,
     points: _int(j['points'], kDefaultHabitPoints),
+    minutes: (j['minutes'] as num?)?.toInt(),
+    proposedPoints: (j['proposedPoints'] as num?)?.toInt(),
+    proposedMinutes: (j['proposedMinutes'] as num?)?.toInt(),
   );
 
   final int id;
@@ -110,8 +111,17 @@ class Habit {
   final int position;
   final bool paused;
 
-  /// The habit's worth toward the daily goal (v10): 0, 10, 25 or 50.
+  /// The habit's worth in gems toward the daily goal, 0 to 100.
   final int points;
+
+  /// How long the habit takes, or null when it is only tracked or was made before v11.
+  final int? minutes;
+
+  /// A change the partner has not answered yet; [proposedMinutes] is null for "only track".
+  final int? proposedPoints;
+  final int? proposedMinutes;
+
+  bool get pending => proposedPoints != null;
 
   bool get isCount => kind == HabitKind.count;
 
@@ -130,6 +140,9 @@ class Habit {
     position: position ?? this.position,
     paused: paused ?? this.paused,
     points: points,
+    minutes: minutes,
+    proposedPoints: proposedPoints,
+    proposedMinutes: proposedMinutes,
   );
 
   Json toJson() => {
@@ -143,6 +156,9 @@ class Habit {
     'position': position,
     'paused': paused,
     'points': points,
+    'minutes': minutes,
+    'proposedPoints': proposedPoints,
+    'proposedMinutes': proposedMinutes,
   };
 }
 
@@ -155,7 +171,7 @@ class HabitDraft {
     required this.weekdays,
     this.slots = const [],
     this.target,
-    this.points = kDefaultHabitPoints,
+    this.minutes,
   });
 
   final String name;
@@ -164,7 +180,9 @@ class HabitDraft {
   final List<int> weekdays;
   final List<HabitSlot> slots;
   final int? target;
-  final int points;
+
+  /// Minutes the habit takes; null sends "only track".
+  final int? minutes;
 
   Json toJson() => {
     'name': name,
@@ -173,7 +191,7 @@ class HabitDraft {
     'weekdays': weekdays,
     if (kind == HabitKind.check) 'slots': [for (final s in slots) s.toJson()],
     if (kind == HabitKind.count) 'target': target,
-    'points': points,
+    'minutes': minutes,
   };
 
   /// A PATCH cannot change the kind, so it leaves it out.
@@ -296,4 +314,53 @@ class HabitList {
   Json toJson() => {
     'habits': [for (final h in habits) h.toJson()],
   };
+}
+
+/// A change to a habit's gems that the partner has asked me to approve.
+class HabitProposal {
+  const HabitProposal({
+    required this.habitId,
+    required this.name,
+    required this.points,
+    required this.minutes,
+    required this.currentPoints,
+  });
+
+  factory HabitProposal.fromJson(Json j) => HabitProposal(
+    habitId: _int(j['habitId']),
+    name: _str(j['name']),
+    points: _int(j['points']),
+    minutes: (j['minutes'] as num?)?.toInt(),
+    currentPoints: _int(j['currentPoints']),
+  );
+
+  final int habitId;
+  final String name;
+  final int points;
+
+  /// Null when the partner proposes only tracking the habit.
+  final int? minutes;
+  final int currentPoints;
+
+  /// "Brush teeth worth 6 gems (2 min)".
+  String get worth => '$name worth $points gems${minutes == null ? '' : ' ($minutes min)'}';
+}
+
+/// The partner's pending proposals, with their name.
+class HabitProposals {
+  const HabitProposals({required this.from, required this.items});
+
+  factory HabitProposals.fromJson(Json j) =>
+      HabitProposals(from: _str(j['from']), items: _items(j['proposals'], HabitProposal.fromJson));
+
+  final String from;
+  final List<HabitProposal> items;
+
+  HabitProposals without(int habitId) => HabitProposals(
+    from: from,
+    items: [
+      for (final p in items)
+        if (p.habitId != habitId) p,
+    ],
+  );
 }

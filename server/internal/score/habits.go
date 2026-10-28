@@ -53,6 +53,23 @@ type HabitDay struct {
 // Habit worths a person can choose; quests are worth 50 or 100.
 var HabitWorths = []int{0, 10, 25, 50}
 
+// HabitGemsPerMinute and HabitGemsCap are the v11 rate: the timed quests' own, rounded down so
+// habits never outpay them.
+const (
+	HabitGemsPerMinute = 3
+	HabitGemsCap       = 100
+	HabitMaxMinutes    = 30
+)
+
+// HabitGems is what a habit that takes the given minutes is worth; a habit that is only
+// tracked (zero minutes) is worth nothing.
+func HabitGems(minutes int) int {
+	if minutes <= 0 {
+		return 0
+	}
+	return min(HabitGemsCap, HabitGemsPerMinute*minutes)
+}
+
 // HabitWorthDefault is the worth of a habit created without one.
 const HabitWorthDefault = 25
 

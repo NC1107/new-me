@@ -9,6 +9,7 @@ import '../../api/habit_models.dart';
 import '../../reminders/habit_reminder_plan.dart';
 import '../../reminders/reminder_plan.dart';
 import '../../state/habit_reminders.dart';
+import '../../state/habit_proposals.dart';
 import '../../state/habits.dart';
 import '../../state/local_prefs.dart';
 import '../../theme/accent.dart';
@@ -57,7 +58,9 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
   String _kind = HabitKind.check;
   final List<_SlotForm> _slots = [_SlotForm(label: 'Daily')];
   int _target = 8;
-  HabitWorth _worth = HabitWorth.medium;
+  int? _minutes;
+  // A habit made before minutes keeps its gems until its minutes are chosen.
+  bool _minutesChosen = true;
   HabitTemplate? _template;
   String? _error;
   bool _busy = false;
@@ -80,7 +83,8 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
       _days = {...habit.weekdays};
       _kind = habit.kind;
       _target = habit.target ?? 8;
-      _worth = HabitWorth.of(habit.points);
+      _minutes = habit.pending ? habit.proposedMinutes : habit.minutes;
+      _minutesChosen = habit.pending || habit.minutes != null || habit.points == 0;
       _slots
         ..clear()
         ..addAll([
@@ -154,7 +158,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ]
         : const [],
     target: _kind == HabitKind.count ? _target : null,
-    points: _worth.points,
+    minutes: _minutes,
   );
 
   Future<void> _save() async {
@@ -340,14 +344,31 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ],
         ),
         const SizedBox(height: 20),
-        const FieldLabel('Gems'),
-        Segmented<HabitWorth>(
-          options: [for (final w in HabitWorth.values) (w, '${w.points}')],
-          selected: _worth,
-          onChanged: (w) {
-            HapticFeedback.selectionClick();
-            setState(() => _worth = w);
-          },
+        const FieldLabel('How long it takes'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final m in kHabitMinuteChoices)
+              _Pill(
+                label: m == null ? 'Only track' : '$m min',
+                selected: _minutesChosen && m == _minutes,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _minutes = m;
+                    _minutesChosen = true;
+                  });
+                },
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _GemsNote(
+          habit: widget.habit,
+          minutes: _minutes,
+          chosen: _minutesChosen,
+          partner: ref.watch(partnerNameProvider),
         ),
         if (!_editing) ...[
           const SizedBox(height: 20),
@@ -394,6 +415,40 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ],
         ],
       ],
+    );
+  }
+}
+
+/// The gems the chosen minutes are worth, and where the partner's approval stands.
+class _GemsNote extends StatelessWidget {
+  const _GemsNote({
+    required this.habit,
+    required this.minutes,
+    required this.chosen,
+    required this.partner,
+  });
+
+  final Habit? habit;
+  final int? minutes;
+  final bool chosen;
+  final String? partner;
+
+  @override
+  Widget build(BuildContext context) {
+    final habit = this.habit;
+    final gems = chosen ? habitGems(minutes) : habit?.points ?? 0;
+    final changed = chosen && (habit == null ? minutes != null : minutes != habit.minutes);
+    final String text;
+    if (habit != null && habit.pending && minutes == habit.proposedMinutes) {
+      text = 'Waiting for ${partner ?? 'your partner'} to approve ${habit.proposedPoints} gems';
+    } else if (changed && partner != null) {
+      text = '$gems gems, once $partner approves';
+    } else {
+      text = '$gems gems';
+    }
+    return Semantics(
+      liveRegion: true,
+      child: Text(text, style: AppText.label.copyWith(color: kInkSecondary)),
     );
   }
 }

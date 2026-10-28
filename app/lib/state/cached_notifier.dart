@@ -10,6 +10,10 @@ import 'session.dart';
 abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
   ResponseCache<T> get cache;
 
+  /// Bumped by every refresh and replace, so a response that left earlier never lands on top of
+  /// a newer one.
+  int _generation = 0;
+
   Future<T> fetch(ApiClient client);
 
   @override
@@ -24,12 +28,14 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
     if (session == null || client == null) throw StateError('Not signed in');
     try {
       final value = await fetch(client);
-      await cache.write(
-        value,
-        userId: session.userId,
-        baseUrl: session.baseUrl,
-        at: ref.read(clockProvider)(),
-      );
+      if (ref.mounted && ref.read(sessionProvider).session?.userId == session.userId) {
+        await cache.write(
+          value,
+          userId: session.userId,
+          baseUrl: session.baseUrl,
+          at: ref.read(clockProvider)(),
+        );
+      }
       return Cached(value, userId: session.userId);
     } on ApiException catch (e) {
       if (e.kind != ApiErrorKind.offline) rethrow;
@@ -41,16 +47,20 @@ abstract class CachedNotifier<T> extends AsyncNotifier<Cached<T>> {
 
   /// Reloads without dropping the value on screen; a failure keeps it beneath the error.
   Future<void> refresh() async {
+    final generation = ++_generation;
     try {
-      state = AsyncData(await _load());
+      final loaded = await _load();
+      if (ref.mounted && generation == _generation) state = AsyncData(loaded);
     } on Object catch (e, st) {
-      state = AsyncError<Cached<T>>(e, st);
+      if (ref.mounted && generation == _generation) state = AsyncError<Cached<T>>(e, st);
     }
   }
 
   /// The screen changes at once and the cache catches up, so a tap never waits on storage.
   Future<void> replace(T value) async {
+    if (!ref.mounted) return;
     final session = ref.read(sessionProvider).session;
+    _generation++;
     state = AsyncData(Cached(value, userId: session?.userId));
     if (session != null) {
       await cache.write(

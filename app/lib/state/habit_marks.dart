@@ -18,6 +18,9 @@ class HabitMarks {
   /// Requests in flight per habit. While one is pending a failure must not undo the newer tap.
   final _pending = <int, int>{};
 
+  /// Numbers each request; only the newest answer may set the day and quests.
+  int _requests = 0;
+
   ApiClient get _client {
     final client = _ref.read(apiClientProvider);
     if (client == null) throw StateError('Not signed in');
@@ -66,16 +69,26 @@ class HabitMarks {
 
     unawaited(notifier.replace(today.copyWith(habits: _swap(today.habits, change(before)))));
     _pending[habitId] = (_pending[habitId] ?? 0) + 1;
+    final request = ++_requests;
+    var settled = false;
+    void settleOnce() {
+      if (settled) return;
+      settled = true;
+      _settle(habitId);
+    }
+
     try {
       final result = await send(_client, date);
-      _settle(habitId);
-      await _apply(notifier, date, result, habitId);
+      settleOnce();
+      await _apply(notifier, date, result, habitId, newest: request == _requests);
       _refreshBoard();
       return true;
     } on ApiException {
-      _settle(habitId);
+      settleOnce();
       if (!_stillPending(habitId)) await _revert(notifier, date, before);
       return false;
+    } finally {
+      settleOnce();
     }
   }
 
@@ -87,8 +100,9 @@ class HabitMarks {
     TodayNotifier notifier,
     String date,
     HabitMarkResult result,
-    int habitId,
-  ) async {
+    int habitId, {
+    required bool newest,
+  }) async {
     final current = _ref.read(todayProvider).value?.data;
     if (current == null) return;
     if (current.localToday != date) return notifier.refresh();
@@ -96,8 +110,8 @@ class HabitMarks {
     final replaceHabit = answered != null && !_stillPending(habitId);
     await notifier.replace(
       current.copyWith(
-        day: result.day.score,
-        quests: result.day.quests,
+        day: newest ? result.day.score : null,
+        quests: newest ? result.day.quests : null,
         habits: replaceHabit ? _swap(current.habits, answered) : null,
       ),
     );

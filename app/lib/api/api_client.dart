@@ -40,6 +40,7 @@ class ApiException implements Exception {
     this.code,
     this.minClientVersion,
     this.body = const {},
+    this.retryAfter,
   });
 
   const ApiException.badAppKey({int? statusCode})
@@ -108,7 +109,13 @@ class ApiException implements Exception {
       statusCode: status,
       code: code,
       body: body,
+      retryAfter: _retryAfter(response.headers.value('retry-after')),
     );
+  }
+
+  static Duration? _retryAfter(String? header) {
+    final seconds = int.tryParse(header?.trim() ?? '');
+    return seconds == null || seconds < 0 ? null : Duration(seconds: seconds);
   }
 
   final String message;
@@ -123,6 +130,15 @@ class ApiException implements Exception {
 
   /// The whole error body, for errors that carry details such as a rejected plan's violations.
   final Map<String, dynamic> body;
+
+  /// On a 429, how long the server asked the client to wait.
+  final Duration? retryAfter;
+
+  /// The server's rate limiter said slow down.
+  bool get isRateLimited =>
+      statusCode == 429 ||
+      code == 'rate_limited' ||
+      message.toLowerCase().contains('too many requests');
 
   @override
   String toString() => 'ApiException($kind, $statusCode): $message';

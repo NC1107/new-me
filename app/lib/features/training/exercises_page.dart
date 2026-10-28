@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -373,20 +374,25 @@ class _SetHistory extends StatelessWidget {
                 Text(_day(date), style: AppText.caption.copyWith(color: kInkMuted)),
                 const SizedBox(height: 4),
                 for (final s in daySets)
-                  InkWell(
-                    onLongPress: () => onDelete(s),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              setLabel(s, context.units),
-                              style: AppText.tabular(AppText.label.copyWith(color: kInk)),
+                  Semantics(
+                    customSemanticsActions: {
+                      const CustomSemanticsAction(label: 'Delete set'): () => onDelete(s),
+                    },
+                    child: InkWell(
+                      onLongPress: () => onDelete(s),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                setLabel(s, context.units),
+                                style: AppText.tabular(AppText.label.copyWith(color: kInk)),
+                              ),
                             ),
-                          ),
-                          Text(rirLabel(s.rir), style: AppText.caption),
-                        ],
+                            Text(rirLabel(s.rir), style: AppText.caption),
+                          ],
+                        ),
                       ),
                     ),
                   ),

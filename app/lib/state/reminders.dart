@@ -136,6 +136,13 @@ class ReminderController extends Notifier<ReminderSettings> {
     _reschedule();
   }
 
+  /// The phone moved to another zone: planned times are wall-clock, so they are re-anchored and
+  /// replanned in the new one.
+  Future<void> deviceTimezoneChanged() => _enqueue(() async {
+    await _scheduler.useDeviceTimezone();
+    await _apply();
+  });
+
   void _reschedule() => unawaited(_enqueue(_apply));
 
   Future<void> _enqueue(Future<void> Function() job) => _queue = _queue.then((_) async {

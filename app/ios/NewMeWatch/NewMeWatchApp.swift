@@ -111,6 +111,7 @@ struct HabitsPage: View {
               .lineLimit(2)
           }
         }
+        .accessibilityLabel(item.accessibilityText)
       }
       if let status = model.status {
         Text(status).font(.footnote).foregroundStyle(.secondary)

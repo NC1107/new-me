@@ -24,7 +24,7 @@ struct RingProvider: TimelineProvider {
     let snapshot = CompanionStore.load()
     var entries = [RingEntry(date: now, snapshot: snapshot, stale: snapshot.map { !$0.isCurrent(at: now) } ?? false)]
     if let snapshot = snapshot, snapshot.isCurrent(at: now),
-      let midnight = Calendar.current.nextDate(
+      let midnight = snapshot.calendar.nextDate(
         after: now, matching: DateComponents(hour: 0, minute: 0), matchingPolicy: .nextTime)
     {
       entries.append(RingEntry(date: midnight, snapshot: snapshot, stale: true))
@@ -53,8 +53,10 @@ struct RingComplicationView: View {
     Gauge(value: Double(min(percent, 100)), in: 0...100) {
       Image(systemName: "flame.fill")
     } currentValueLabel: {
-      Text(entry.snapshot == nil ? "-" : "\(percent)")
+      Text(entry.snapshot == nil ? "-" : "\(min(percent, 999))")
         .font(CompanionStyle.rounded(.body, weight: .bold))
+        .minimumScaleFactor(0.5)
+        .lineLimit(1)
     }
     .gaugeStyle(.accessoryCircularCapacity)
     .tint(entry.snapshot?.fill ?? CompanionStyle.fallbackAccent)

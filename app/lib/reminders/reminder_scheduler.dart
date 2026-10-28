@@ -24,6 +24,10 @@ abstract class ReminderScheduler {
 
   Future<void> cancel(int id);
 
+  /// Re-reads the phone's time zone, so reminders planned in wall-clock time land in the zone
+  /// the person is in now.
+  Future<void> useDeviceTimezone();
+
   /// The ids of what is pending now, so stale habit reminders can be found and cancelled.
   Future<List<int>> pendingIds();
 }
@@ -47,6 +51,9 @@ class NoopReminderScheduler implements ReminderScheduler {
 
   @override
   Future<void> cancel(int id) async {}
+
+  @override
+  Future<void> useDeviceTimezone() async {}
 
   @override
   Future<List<int>> pendingIds() async => const [];
@@ -82,17 +89,22 @@ class LocalNotificationsScheduler implements ReminderScheduler {
     DidReceiveBackgroundNotificationResponseCallback? onBackgroundResponse,
   }) async {
     tzdata.initializeTimeZones();
+    await useDeviceTimezone();
+    await _plugin.initialize(
+      settings: _settings,
+      onDidReceiveNotificationResponse: onResponse,
+      onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
+    );
+  }
+
+  @override
+  Future<void> useDeviceTimezone() async {
     try {
       final zone = (await FlutterTimezone.getLocalTimezone()).identifier;
       tz.setLocalLocation(tz.getLocation(zone));
     } on Object catch (e) {
       debugPrint('[NEWME] reminder time zone unavailable, using UTC: $e');
     }
-    await _plugin.initialize(
-      settings: _settings,
-      onDidReceiveNotificationResponse: onResponse,
-      onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
-    );
   }
 
   @override

@@ -36,7 +36,7 @@ struct TodayProvider: TimelineProvider {
       return
     }
     var entries = [TodayEntry(date: now, snapshot: snapshot, stale: false)]
-    if let midnight = Calendar.current.nextDate(
+    if let midnight = snapshot.calendar.nextDate(
       after: now, matching: DateComponents(hour: 0, minute: 0), matchingPolicy: .nextTime)
     {
       entries.append(TodayEntry(date: midnight, snapshot: snapshot, stale: true))
@@ -182,6 +182,7 @@ private struct HabitButtons: View {
             HabitRow(item: item, fill: snapshot.fill, tint: snapshot.tint)
           }
           .buttonStyle(.plain)
+          .accessibilityLabel(item.accessibilityText)
         }
         Spacer(minLength: 0)
       }
@@ -222,8 +223,10 @@ private struct CircularView: View {
     Gauge(value: Double(min(percent, 100)), in: 0...100) {
       Image(systemName: "flame.fill")
     } currentValueLabel: {
-      Text(entry.snapshot == nil ? "-" : "\(percent)")
+      Text(entry.snapshot == nil ? "-" : "\(min(percent, 999))")
         .font(CompanionStyle.rounded(.body, weight: .bold))
+        .minimumScaleFactor(0.5)
+        .lineLimit(1)
     }
     .gaugeStyle(.accessoryCircularCapacity)
     .widgetAccentable()

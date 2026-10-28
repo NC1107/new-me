@@ -105,7 +105,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     final LogResult result;
     try {
       result = await actions.create(build(_clientOpId, date));
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
@@ -130,7 +130,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(logActionsProvider).recordPushupMax(reps, date: _entryDate());
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
@@ -212,7 +212,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
       try {
         _manyResults.add(await actions.create(builds[i](_manyIds[i], date)));
         _manyDone.add(i);
-      } on ApiException catch (e) {
+      } on Object catch (e) {
         if (mounted) {
           setState(() {
             _busy = false;

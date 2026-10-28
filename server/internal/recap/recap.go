@@ -168,3 +168,25 @@ func SummaryLine(cur, prev, pair Stats) string {
 	}
 	return line + fmt.Sprintf(" Together: %s points.", plan.Thousands(pair.Points))
 }
+
+// ScoredRange is the part of the week from monday that the board counts for a person whose local
+// day is today: it stops at today, and stays inside the season the week's last counted day
+// belongs to. The recap adds points over the same days, so the two always agree.
+func ScoredRange(monday, today score.Date, seasons []score.Season) (from, to score.Date) {
+	from, to = monday, monday.AddDays(6)
+	if today.Before(monday) {
+		return from, monday.AddDays(-1)
+	}
+	if today.Before(to) {
+		to = today
+	}
+	if season, ok := score.SeasonFor(to, seasons); ok {
+		if from.Before(season.StartsOn) {
+			from = season.StartsOn
+		}
+		if season.EndsOn != nil && to.After(*season.EndsOn) {
+			to = *season.EndsOn
+		}
+	}
+	return from, to
+}

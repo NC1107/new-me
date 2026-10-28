@@ -26,12 +26,16 @@ class HowToButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void open() => showHowTo(context, exerciseKey: exerciseKey, name: name);
+    // Its own node, so VoiceOver reaches it apart from the row it sits in.
     return Semantics(
+      container: true,
       button: true,
       label: 'How to do $name',
       excludeSemantics: true,
+      onTap: open,
       child: InkResponse(
-        onTap: () => showHowTo(context, exerciseKey: exerciseKey, name: name),
+        onTap: open,
         radius: 24,
         child: const SizedBox(
           width: 44,

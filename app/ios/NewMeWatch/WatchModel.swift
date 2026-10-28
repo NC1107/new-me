@@ -10,6 +10,9 @@ final class WatchModel: NSObject, ObservableObject {
   /// A short line under an action: what was saved, or why it was not.
   @Published var status: String?
   @Published private(set) var busy = false
+  /// The key of a save that has not been answered yet, so a retry of the same entry reaches the
+  /// server as the same operation and cannot log twice.
+  private var pendingLog: (signature: String, clientOpId: String)?
 
   override init() {
     snapshot = CompanionStore.load()
@@ -43,14 +46,24 @@ final class WatchModel: NSObject, ObservableObject {
     guard let snapshot = snapshot, quantity > 0 else { return false }
     busy = true
     defer { busy = false }
+    let signature = "\(type)|\(quantity)|\(unit)|\(snapshot.date)"
+    let clientOpId: String
+    if let pending = pendingLog, pending.signature == signature {
+      clientOpId = pending.clientOpId
+    } else {
+      clientOpId = UUID().uuidString.lowercased()
+      pendingLog = (signature, clientOpId)
+    }
     let action = CompanionAction.logActivity(
-      type: type, quantity: quantity, unit: unit, clientOpId: UUID().uuidString.lowercased())
+      type: type, quantity: quantity, unit: unit, clientOpId: clientOpId)
     do {
       let body = try await perform(action, date: snapshot.date)
+      pendingLog = nil
       if let latest = self.snapshot { store(latest.applying(response: body)) }
       status = "Saved \(quantity) \(noun)"
       return true
     } catch {
+      if Self.isDefinitiveRefusal(error) { pendingLog = nil }
       status = message(for: error)
       return false
     }
@@ -87,8 +100,16 @@ final class WatchModel: NSObject, ObservableObject {
     }
   }
 
+  /// A refusal the server will repeat, as opposed to a dropped connection or a server hiccup,
+  /// after which the same entry may still be retried.
+  private static func isDefinitiveRefusal(_ error: Error) -> Bool {
+    guard case .status(let code) = error as? CompanionAPIError else { return false }
+    return (400..<500).contains(code) && code != 408 && code != 429
+  }
+
   private func message(for error: Error) -> String {
     switch error as? CompanionAPIError {
+    case .status(426): return "Update New Me on your iPhone"
     case .status(401): return "Open New Me on your iPhone to sign in again."
     case .status(422): return "That day is closed."
     case .status: return "The server said no. Try from your iPhone."

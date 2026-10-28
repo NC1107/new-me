@@ -44,5 +44,10 @@ class FakeReminderScheduler implements ReminderScheduler {
   }
 
   @override
+  Future<void> useDeviceTimezone() async {
+    calls.add('timezone');
+  }
+
+  @override
   Future<List<int>> pendingIds() async => pending.keys.toList();
 }

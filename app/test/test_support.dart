@@ -13,27 +13,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 class StubResponse {
   const StubResponse(this.status, [this.body = const <String, dynamic>{}])
     : unreachable = false,
+      contentType = 'application/json',
+      headers = const {};
+
+  /// A JSON answer with extra headers, such as `Retry-After` on a 429.
+  const StubResponse.withHeaders(this.status, this.body, this.headers)
+    : unreachable = false,
       contentType = 'application/json';
 
   /// A plain-text answer, the way a proxy in front of the server replies during a restart.
   const StubResponse.text(this.status, String this.body)
     : unreachable = false,
-      contentType = 'text/plain';
+      contentType = 'text/plain',
+      headers = const {};
 
   /// A binary answer, such as an exercise photo.
   const StubResponse.bytes(this.status, List<int> this.body, {this.contentType = 'image/png'})
-    : unreachable = false;
+    : unreachable = false,
+      headers = const {};
 
   const StubResponse.unreachable()
     : status = 0,
       body = const <String, dynamic>{},
       unreachable = true,
-      contentType = 'application/json';
+      contentType = 'application/json',
+      headers = const {};
 
   final int status;
   final Object body;
   final bool unreachable;
   final String contentType;
+  final Map<String, String> headers;
 }
 
 typedef StubHandler = FutureOr<StubResponse> Function(RequestOptions request);
@@ -72,6 +82,7 @@ class StubAdapter implements HttpClientAdapter {
         response.status,
         headers: {
           Headers.contentTypeHeader: [response.contentType],
+          for (final MapEntry(:key, :value) in response.headers.entries) key: [value],
         },
       );
     }
@@ -80,6 +91,7 @@ class StubAdapter implements HttpClientAdapter {
       response.status,
       headers: {
         Headers.contentTypeHeader: [response.contentType],
+        for (final MapEntry(:key, :value) in response.headers.entries) key: [value],
       },
     );
   }

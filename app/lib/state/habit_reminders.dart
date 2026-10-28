@@ -38,6 +38,12 @@ class HabitReminderController extends Notifier<void> {
     });
   }
 
+  /// After the scheduler moved to a new zone every pending time is stale, so all are replanned.
+  Future<void> deviceTimezoneChanged() => _enqueue(() async {
+    _scheduled.clear();
+    await _apply();
+  });
+
   void reschedule() => unawaited(_enqueue(_apply));
 
   /// Asks the system for permission the first time a reminder is wanted, then plans. Returns

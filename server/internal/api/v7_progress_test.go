@@ -292,7 +292,7 @@ func TestMilestonesAreRecordedOnceShownAndPushed(t *testing.T) {
 		h.storeScore(nick, d, 300, 0, 400)
 	}
 	h.clock.Set(ny(2026, time.November, 9, 12, 0))
-	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
+	today := h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK)
 	// Monday to Sunday all counted, so the first fully counted week is celebrated with it.
 	if today.num("streak.current") != 7 || today.length("newMilestones") != 2 || today.str("newMilestones.0.kind") != "streak" ||
 		today.str("newMilestones.1.kind") != "first_full_week" ||
@@ -304,12 +304,12 @@ func TestMilestonesAreRecordedOnceShownAndPushed(t *testing.T) {
 	if len(got) != 1 || got[0].Title != "7-day streak" {
 		t.Fatalf("only the streak is announced: %+v", n.msgs)
 	}
-	h.get("/api/today", nick.Token).expect(http.StatusOK)
+	h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK)
 	h.get("/api/board", nick.Token).expect(http.StatusOK)
 	if len(n.of("milestone", nick.ID)) != 1 {
 		t.Fatalf("pushed again: %+v", n.msgs)
 	}
-	if other := h.get("/api/today", nadia.Token).expect(http.StatusOK); other.length("newMilestones") != 0 {
+	if other := h.todayAfterPass("/api/today", nadia.Token).expect(http.StatusOK); other.length("newMilestones") != 0 {
 		t.Fatalf("nadia = %s", other.Body)
 	}
 
@@ -323,14 +323,14 @@ func TestMilestonesAreRecordedOnceShownAndPushed(t *testing.T) {
 
 	// The day after, the celebration is no longer new but stays in the list. The next one is 14.
 	h.clock.Set(ny(2026, time.November, 11, 12, 0))
-	if later := h.get("/api/today", nick.Token).expect(http.StatusOK); later.length("newMilestones") != 0 {
+	if later := h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK); later.length("newMilestones") != 0 {
 		t.Fatalf("two days later = %s", later.Body)
 	}
 	for i := 7; i < 14; i++ {
 		h.storeScore(nick, ny(2026, time.November, 2+i, 12, 0).Format(time.DateOnly), 300, 0, 400)
 	}
 	h.clock.Set(ny(2026, time.November, 16, 12, 0))
-	h.get("/api/today", nick.Token).expect(http.StatusOK)
+	h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK)
 	if got := n.of("milestone", nick.ID); len(got) != 2 || got[1].Title != "14-day streak" {
 		t.Fatalf("pushes = %+v", n.msgs)
 	}
@@ -349,7 +349,7 @@ func TestMilestoneBatchAnnouncesOnlyTheHighestAndRespectsQuietHoursAndPreference
 	}
 	// The first look finds 7 and 14 at once, late in the evening.
 	h.clock.Set(ny(2026, time.November, 17, 23, 30))
-	h.get("/api/today", nick.Token).expect(http.StatusOK)
+	h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK)
 	if n.count() != 0 {
 		t.Fatalf("after bedtime nothing is sent: %+v", n.msgs)
 	}
@@ -357,7 +357,7 @@ func TestMilestoneBatchAnnouncesOnlyTheHighestAndRespectsQuietHoursAndPreference
 		t.Fatalf("7, 14 and the first full week are recorded: %s", list.Body)
 	}
 	h.clock.Set(ny(2026, time.November, 18, 8, 0))
-	h.get("/api/today", nick.Token).expect(http.StatusOK)
+	h.todayAfterPass("/api/today", nick.Token).expect(http.StatusOK)
 	if got := n.of("milestone", nick.ID); len(got) != 1 || got[0].Title != "14-day streak" {
 		t.Fatalf("only the highest of the batch: %+v", n.msgs)
 	}
@@ -370,7 +370,7 @@ func TestMilestoneBatchAnnouncesOnlyTheHighestAndRespectsQuietHoursAndPreference
 		h2.storeScore(other, ny(2026, time.November, 2+i, 12, 0).Format(time.DateOnly), 300, 0, 400)
 	}
 	h2.clock.Set(ny(2026, time.November, 10, 12, 0))
-	if got := h2.get("/api/today", other.Token).expect(http.StatusOK); got.length("newMilestones") != 1 {
+	if got := h2.todayAfterPass("/api/today", other.Token).expect(http.StatusOK); got.length("newMilestones") != 1 {
 		t.Fatalf("recorded anyway: %s", got.Body)
 	}
 	if len(n2.of("milestone", other.ID)) != 0 {

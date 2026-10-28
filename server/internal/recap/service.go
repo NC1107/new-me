@@ -74,14 +74,27 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 	out := Recap{Week: score.ISOWeekLabel(monday), From: monday, To: sunday, Complete: sunday.Before(viewerToday),
 		People: make([]PersonRecap, 0, len(users))}
 
+	seasons, err := db.ListSeasons(ctx, s.DB.Pool)
+	if err != nil {
+		return out, err
+	}
+	now := s.Now()
+
 	var thisAll, prevAll []Stats
 	var dayLists [][]DayPoints
 	for _, u := range users {
-		cur, err := s.week(ctx, u.ID, monday)
+		loc, err := u.Location()
 		if err != nil {
 			return out, err
 		}
-		prev, err := s.week(ctx, u.ID, prevMonday)
+		today := score.LocalToday(now, loc)
+		curFrom, curTo := ScoredRange(monday, today, seasons)
+		cur, err := s.week(ctx, u.ID, monday, curFrom, curTo)
+		if err != nil {
+			return out, err
+		}
+		prevFrom, prevTo := ScoredRange(prevMonday, today, seasons)
+		prev, err := s.week(ctx, u.ID, prevMonday, prevFrom, prevTo)
 		if err != nil {
 			return out, err
 		}
@@ -109,11 +122,13 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 	return out, nil
 }
 
-func (s *Service) week(ctx context.Context, userID int64, monday score.Date) (Week, error) {
+// week reads one person's numbers for the ISO week from monday. Points and counted days come
+// from the scored range only; the other readings cover the whole week.
+func (s *Service) week(ctx context.Context, userID int64, monday score.Date, scoredFrom, scoredTo score.Date) (Week, error) {
 	sunday := monday.AddDays(6)
 	q := s.DB.Pool
 	var w Week
-	scores, err := db.ListDayScores(ctx, q, userID, monday, sunday)
+	scores, err := db.ListDayScores(ctx, q, userID, scoredFrom, scoredTo)
 	if err != nil {
 		return w, err
 	}

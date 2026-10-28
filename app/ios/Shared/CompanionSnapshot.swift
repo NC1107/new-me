@@ -33,6 +33,14 @@ struct CompanionSnapshot: Codable, Equatable {
       if isCount, let target = target { return "\(name) \(count)/\(target)" }
       return label.isEmpty || label == "Daily" ? name : "\(name) · \(label)"
     }
+
+    /// What VoiceOver reads for the row, which the strike-through and the tick alone do not say.
+    var accessibilityText: String {
+      if isCount, let target = target {
+        return "\(name), \(count) of \(target)\(done ? ", done" : "")"
+      }
+      return "\(title), \(done ? "done" : "not done")"
+    }
   }
 
   struct Session: Codable, Equatable {
@@ -57,20 +65,29 @@ struct CompanionSnapshot: Codable, Equatable {
   var quests: [Quest]
   var habits: [HabitItem]
   let session: Session?
+  /// The profile's IANA zone, which `date` was cut in; nil in snapshots from older builds.
+  var timezone: String? = nil
 
   var questsLeft: Int { quests.filter { !$0.done }.count }
   var habitsDue: Int { habits.filter { !$0.done }.count }
 
-  /// False once the local day has moved on, when every number here belongs to yesterday.
-  func isCurrent(at now: Date = Date()) -> Bool {
-    date == Self.dayString(now)
+  /// The calendar of the person's day, so midnight is theirs and not the phone's.
+  var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timezone.flatMap { TimeZone(identifier: $0) } ?? TimeZone.current
+    return calendar
   }
 
-  static func dayString(_ date: Date) -> String {
+  /// False once the local day has moved on, when every number here belongs to yesterday.
+  func isCurrent(at now: Date = Date()) -> Bool {
+    date == Self.dayString(now, in: timezone.flatMap { TimeZone(identifier: $0) })
+  }
+
+  static func dayString(_ date: Date, in zone: TimeZone? = nil) -> String {
     let format = DateFormatter()
     format.calendar = Calendar(identifier: .gregorian)
     format.locale = Locale(identifier: "en_US_POSIX")
-    format.timeZone = TimeZone.current
+    format.timeZone = zone ?? TimeZone.current
     format.dateFormat = "yyyy-MM-dd"
     return format.string(from: date)
   }
@@ -109,7 +126,9 @@ struct CompanionSnapshot: Codable, Equatable {
     var copy = self
     if let day = response.day {
       copy.points = day.points ?? points
-      copy.percent = day.percent ?? percent
+      // The ring and the gauges show the goal percent; a server that does not send it is
+      // asked for the raw percent, which the 70 percent streak line scales to the same number.
+      copy.percent = day.goalPercent ?? day.percent.map { $0 * 100 / 70 } ?? percent
       copy.counted = day.counted ?? counted
       if let quests = day.quests {
         let doneByKey = Dictionary(quests.map { ($0.key, $0.done) }, uniquingKeysWith: { a, _ in a })
@@ -146,6 +165,7 @@ private struct ActionResponse: Decodable {
     }
     let points: Int?
     let percent: Int?
+    let goalPercent: Int?
     let counted: Bool?
     let quests: [Quest]?
   }

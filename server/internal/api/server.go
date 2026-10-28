@@ -116,7 +116,7 @@ func New(cfg config.Config, database *db.DB) *Server {
 		srv.estimator = &estimate.Estimator{Client: claude, Foods: srv.foods, Library: libraryStore{database}}
 		srv.planner = &planner.Planner{Client: claude}
 	}
-	srv.polisher = &coach.Polisher{DB: database, Client: claude}
+	srv.polisher = &coach.Polisher{DB: database, Client: claude, Now: func() time.Time { return srv.now() }}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.plans = ratelimit.NewWindow(plansPerDay, 24*time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}

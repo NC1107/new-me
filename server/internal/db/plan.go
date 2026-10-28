@@ -29,6 +29,15 @@ func SavePlanPolish(ctx context.Context, q Querier, userID int64, date score.Dat
 	return err
 }
 
+// ReleasePlanPolish gives the day's claim back when the call produced nothing, so a later pass
+// may try again. A row that already holds wording is left alone.
+func ReleasePlanPolish(ctx context.Context, q Querier, userID int64, date score.Date, factsKey string) error {
+	_, err := q.Exec(ctx, `DELETE FROM plan_polish
+		WHERE user_id = $1 AND local_date = $2::date AND facts_key = $3 AND text IS NULL`,
+		userID, date, factsKey)
+	return err
+}
+
 // GetPlanPolish reads the day's row, or ErrNotFound when no call was ever claimed.
 func GetPlanPolish(ctx context.Context, q Querier, userID int64, date score.Date) (PlanPolish, error) {
 	var p PlanPolish

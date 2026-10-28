@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -29,6 +30,7 @@ const (
 	maxRemote       = 10
 )
 
+var errNoBarcode = newErr(http.StatusNotFound, codeNotFound, "no food found for that barcode")
 var errNoFood = newErr(http.StatusNotFound, codeNotFound, "no such food")
 
 type servingJSON struct {
@@ -178,6 +180,55 @@ func (s *Server) handleListFoods(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// handleFoodByBarcode answers one scanned barcode: the saved copy when the household already
+// saved that Open Food Facts product, otherwise the product as an unsaved candidate.
+func (s *Server) handleFoodByBarcode(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	if !estimate.ValidBarcode(code) {
+		fail(w, r, invalid("code must be an 8 to 14 digit barcode with a valid check digit"))
+		return
+	}
+	ids := []string{code}
+	// iOS reports a UPC-A as an EAN-13 with a leading zero, and Open Food Facts stores either form.
+	switch {
+	case len(code) == 12:
+		ids = append(ids, "0"+code)
+	case len(code) == 13 && code[0] == '0':
+		ids = append(ids, code[1:])
+	}
+	for _, id := range ids {
+		saved, err := db.FoodBySource(r.Context(), s.db.Pool, estimate.SourceOpenFoodFacts, id)
+		if err == nil {
+			writeJSON(w, http.StatusOK, toLibFoodJSON(saved))
+			return
+		}
+		if !errors.Is(err, db.ErrNotFound) {
+			fail(w, r, err)
+			return
+		}
+	}
+	if s.foods == nil || s.foods.OFF == nil {
+		fail(w, r, errNoBarcode)
+		return
+	}
+	food, err := s.foods.OFF.Product(r.Context(), code)
+	switch {
+	case errors.Is(err, estimate.ErrNoProduct):
+		fail(w, r, errNoBarcode)
+		return
+	case err != nil:
+		log.Printf("[NEWME] barcode lookup: %v", err)
+		fail(w, r, newErr(http.StatusBadGateway, codeUnavailable, "could not reach Open Food Facts, try again later"))
+		return
+	}
+	c, ok := candidateJSON(food)
+	if !ok {
+		fail(w, r, errNoBarcode)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
 }
 
 type foodRequest struct {

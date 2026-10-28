@@ -283,6 +283,8 @@ class _ChallengeResult extends StatelessWidget {
                 Text(
                   c.completed
                       ? 'Challenge done'
+                      : c.missed
+                      ? 'Challenge: missed, nothing lost'
                       : complete
                       ? 'Challenge: next time'
                       : 'Challenge so far',

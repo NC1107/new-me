@@ -70,15 +70,17 @@ class MeNotifier extends CachedNotifier<Me> {
   }
 
   /// Follows the phone to a new time zone, but leaves a zone the user picked by hand alone:
-  /// only a change of the device zone since the last run is pushed.
-  Future<void> syncDeviceTimezone() async {
+  /// only a change of the device zone since the last run is pushed. Returns whether the device
+  /// zone changed since the last run, which also means local reminders need replanning.
+  Future<bool> syncDeviceTimezone() async {
     final me = (await future).data;
     final device = await ref.read(deviceTimezoneProvider)();
-    if (device == null) return;
+    if (device == null) return false;
     final known = await LocalPrefs.deviceTimezone();
     await LocalPrefs.setDeviceTimezone(device);
-    if (known == null || known == device || me.user.timezone == device) return;
-    await save(MePatch(timezone: device));
+    if (known == null || known == device) return false;
+    if (me.user.timezone != device) await save(MePatch(timezone: device));
+    return true;
   }
 }
 

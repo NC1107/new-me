@@ -149,3 +149,28 @@ func TestChangePromptCarriesTheCurrentPlanAndRequest(t *testing.T) {
 		t.Fatalf("prompt = %s", f.prompts[0])
 	}
 }
+
+func TestPromptOmitsStretchesAndValidationRejectsThem(t *testing.T) {
+	in := input
+	in.Catalog = append(append([]Exercise(nil), catalog...),
+		Exercise{Key: "cat_stretch", Name: "Cat stretch", PrimaryMuscles: []string{"back"}, Timed: true, Stretch: true})
+	if strings.Contains(Prompt(in), "cat_stretch") {
+		t.Fatal("stretches must not be offered to the plan designer")
+	}
+	bad := planJSON(2)
+	bad["days"].([]obj)[0]["exercises"] = append(bad["days"].([]obj)[0]["exercises"].([]obj),
+		obj{"exercise": "cat_stretch", "sets": 2, "min": 30, "max": 60, "rir": 0, "restSec": 30})
+	f, p := newFake(t, bad, planJSON(2))
+	plan, err := p.Generate(context.Background(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.prompts) != 2 || !strings.Contains(f.prompts[1], "is a stretch") {
+		t.Fatalf("the stretch should have gone back as a violation: %v", f.prompts)
+	}
+	for _, e := range plan.Days[0].Exercises {
+		if e.Exercise == "cat_stretch" {
+			t.Fatalf("stretch in plan: %+v", plan)
+		}
+	}
+}

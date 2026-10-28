@@ -387,14 +387,11 @@ func (s *Service) PushDue(ctx context.Context, now time.Time) error {
 			}
 			cache[monthKey] = month
 		}
-		first, err := db.ClaimNotice(ctx, s.DB.Pool, together.EventLookback, u.ID, today)
-		if err != nil || !first {
-			if err != nil {
-				errs = append(errs, err)
-			}
-			continue
+		_, err = s.Together.SendClaimed(ctx, together.Claim{Kind: together.EventLookback, UserID: u.ID, Date: today}, u,
+			push.Message{Kind: together.EventLookback, Title: "Your " + month.Label, Body: Body(month, u.ID, u.Imperial())})
+		if err != nil {
+			errs = append(errs, err)
 		}
-		s.Together.Notify(u, push.Message{Kind: together.EventLookback, Title: "Your " + month.Label, Body: Body(month, u.ID, u.Imperial())})
 	}
 	return errors.Join(errs...)
 }

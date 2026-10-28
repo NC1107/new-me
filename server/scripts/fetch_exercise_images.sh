@@ -17,4 +17,6 @@ grep -v '^#' SOURCES.tsv | awk -F'\t' '$2 != "" {print $1 "\t" $2}' | while IFS=
     done
     rm -f "$tmp"
   done
+  # Some source entries repeat one photo; keep a single file so the app shows one image.
+  if cmp -s "$key-0.jpg" "$key-1.jpg"; then rm -f "$key-1.jpg"; fi
 done

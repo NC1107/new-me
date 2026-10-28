@@ -116,7 +116,7 @@ func New(cfg config.Config, database *db.DB) *Server {
 		srv.estimator = &estimate.Estimator{Client: claude, Foods: srv.foods, Library: libraryStore{database}}
 		srv.planner = &planner.Planner{Client: claude}
 	}
-	srv.polisher = &coach.Polisher{DB: database, Client: claude}
+	srv.polisher = &coach.Polisher{DB: database, Client: claude, Now: func() time.Time { return srv.now() }}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.plans = ratelimit.NewWindow(plansPerDay, 24*time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
@@ -225,11 +225,14 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/training/today/full", s.handleTakeFullSession)
 		r.With(s.settleAfter).Post("/api/training/sessions/{id}/complete", s.handleCompleteSession)
 		r.Get("/api/training/progress", s.handleTrainingProgress)
+		r.Get("/api/training/history", s.handleTrainingHistory)
+		r.Get("/api/exercises/{key}/history", s.handleExerciseHistory)
 		r.With(limit(s.limits.absLink, byDevice)).Put("/api/me/audiobookshelf", s.handleLinkAudiobookshelf)
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
 		r.Get("/api/foods", s.handleListFoods)
+		r.Get("/api/foods/barcode/{code}", s.handleFoodByBarcode)
 		r.Post("/api/foods", s.handleCreateFood)
 		r.Patch("/api/foods/{id}", s.handlePatchFood)
 		r.Delete("/api/foods/{id}", s.handleDeleteFood)
@@ -257,8 +260,14 @@ func (s *Server) Router() http.Handler {
 
 		r.Post("/api/cheers", s.handleCreateCheer)
 		r.Get("/api/rewards", s.handleListRewards)
-		r.Post("/api/rewards", s.handleCreateReward)
-		r.Post("/api/rewards/{id}/claim", s.handleClaimReward)
+		r.With(s.settleAfter).Post("/api/rewards", s.handleCreateReward)
+		r.Patch("/api/rewards/{id}", s.handlePatchReward)
+		r.Delete("/api/rewards/{id}", s.handleWithdrawReward)
+		r.Post("/api/rewards/{id}/approve", s.handleApproveReward)
+		r.Post("/api/rewards/{id}/decline", s.handleDeclineReward)
+		r.Post("/api/rewards/{id}/cancel", s.handleCancelReward)
+		r.Post("/api/rewards/{id}/focus", s.handleFocusReward)
+		r.With(s.settleAfter).Post("/api/rewards/{id}/claim", s.handleClaimReward)
 		r.Put("/api/devices/me/push", s.handlePutPushToken)
 		r.Delete("/api/devices/me/push", s.handleDeletePushToken)
 

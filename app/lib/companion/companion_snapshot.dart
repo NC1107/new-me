@@ -14,6 +14,9 @@ const kCompanionSnapshotVersion = 1;
 Json companionSnapshot({
   required Session session,
   required Today today,
+
+  /// The profile's IANA zone, which the Swift side reads dates in; null before Me has loaded.
+  String? timezone,
   String appKey = kAppKey,
   String clientVersion = kClientVersion,
 }) {
@@ -21,6 +24,7 @@ Json companionSnapshot({
   return {
     'version': kCompanionSnapshotVersion,
     'date': today.localToday,
+    if (timezone != null && timezone.isNotEmpty) 'timezone': timezone,
     'name': session.userName,
     'accent': {'fill': _hex(accent.fill), 'tint': _hex(accent.tint)},
     'points': today.day.points,

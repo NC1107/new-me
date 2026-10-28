@@ -261,7 +261,7 @@ func (s *Server) planAndSave(w http.ResponseWriter, r *http.Request, weeks int, 
 		Current: current, Change: change,
 	}
 	for _, e := range exercises {
-		if !equipped(profile.Equipment, e.Equipment) {
+		if e.Stretch() || !equipped(profile.Equipment, e.Equipment) {
 			continue
 		}
 		in.Catalog = append(in.Catalog, planner.Exercise{Key: e.Key, Name: e.Name, PrimaryMuscles: e.PrimaryMuscles,
@@ -690,7 +690,9 @@ func (s *Server) handleTrainingProgress(w http.ResponseWriter, r *http.Request) 
 	}
 	muscles := map[int64][]string{}
 	for _, e := range exercises {
-		muscles[e.ID] = e.PrimaryMuscles
+		if !e.Stretch() {
+			muscles[e.ID] = e.PrimaryMuscles
+		}
 	}
 	weekly := map[string][]int{}
 	for _, m := range db.Muscles {

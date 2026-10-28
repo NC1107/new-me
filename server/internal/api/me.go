@@ -170,6 +170,10 @@ type notificationsJSON struct {
 	WeeklyRecap bool `json:"weeklyRecap"`
 	Milestones  bool `json:"milestones"`
 	Lookback    bool `json:"lookback"`
+	// The v13 switches. Partner counted is partnerDone.
+	PartnerNudges bool `json:"partnerNudges"`
+	Cover         bool `json:"cover"`
+	Approvals     bool `json:"approvals"`
 }
 
 type notificationsPatch struct {
@@ -184,6 +188,10 @@ type notificationsPatch struct {
 	WeeklyRecap *bool `json:"weeklyRecap"`
 	Milestones  *bool `json:"milestones"`
 	Lookback    *bool `json:"lookback"`
+
+	PartnerNudges *bool `json:"partnerNudges"`
+	Cover         *bool `json:"cover"`
+	Approvals     *bool `json:"approvals"`
 }
 
 // proteinFor describes the protein target in force for the person.
@@ -251,7 +259,8 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 		Notifications: notificationsJSON{PartnerDone: u.Notify.PartnerDone, Cheers: u.Notify.Cheers,
 			Challenge: u.Notify.Challenge, Reward: u.Notify.Reward, BehindPace: u.Notify.BehindPace,
 			CloseToDone: u.Notify.CloseToDone, WindDown: u.Notify.WindDown, MorningPlan: u.Notify.MorningPlan,
-			WeeklyRecap: u.Notify.WeeklyRecap, Milestones: u.Notify.Milestones, Lookback: u.Notify.Lookback},
+			WeeklyRecap: u.Notify.WeeklyRecap, Milestones: u.Notify.Milestones, Lookback: u.Notify.Lookback,
+			PartnerNudges: u.Notify.PartnerNudges, Cover: u.Notify.Cover, Approvals: u.Notify.Approvals},
 		Features: featuresJSON{MealEstimate: s.estimator != nil, PlanPolish: s.cfg.Anthropic.Enabled()},
 		Schedule: toScheduleJSON(u.Schedule),
 		Protein:  protein,
@@ -449,7 +458,8 @@ func (s *Server) applyProfilePatch(u *db.User, req patchMeRequest) *httpError {
 			{&u.Notify.BehindPace, n.BehindPace}, {&u.Notify.CloseToDone, n.CloseToDone},
 			{&u.Notify.WindDown, n.WindDown}, {&u.Notify.MorningPlan, n.MorningPlan},
 			{&u.Notify.WeeklyRecap, n.WeeklyRecap}, {&u.Notify.Milestones, n.Milestones},
-			{&u.Notify.Lookback, n.Lookback}} {
+			{&u.Notify.Lookback, n.Lookback}, {&u.Notify.PartnerNudges, n.PartnerNudges},
+			{&u.Notify.Cover, n.Cover}, {&u.Notify.Approvals, n.Approvals}} {
 			if sw.patch != nil {
 				*sw.field = *sw.patch
 			}

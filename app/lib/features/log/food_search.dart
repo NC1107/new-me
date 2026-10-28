@@ -11,6 +11,8 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/pressable.dart';
+import '../scan/barcode_scan_page.dart';
+import '../scan/barcode_scanner.dart';
 
 /// Saved foods are searched on every keystroke; the databases wait for a pause in typing.
 const _remoteDelay = Duration(milliseconds: 500);
@@ -26,9 +28,14 @@ class FoodSearchBox extends ConsumerStatefulWidget {
     this.autofocus = false,
     this.browseOnFocus = true,
     this.remoteDelay = _remoteDelay,
+    this.onEnterByHand,
   });
 
   final ValueChanged<SavedFood> onPick;
+
+  /// Where "Enter by hand" goes when a scan finds nothing; without it the scanner only offers
+  /// "Search instead".
+  final VoidCallback? onEnterByHand;
   final bool enabled;
 
   /// Puts the cursor in the field as soon as it appears.
@@ -154,6 +161,21 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
     });
   }
 
+  Future<void> _scan() async {
+    final outcome = await scanBarcode(context);
+    if (!mounted) return;
+    switch (outcome) {
+      case ScanFound(:final food):
+        _pick(food);
+      case ScanSearchInstead():
+        _focus.requestFocus();
+      case ScanEnterByHand():
+        widget.onEnterByHand?.call();
+      case null:
+        break;
+    }
+  }
+
   Widget _note(String text, {bool danger = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: Text(
@@ -165,6 +187,14 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
     ),
   );
 
+  Widget _field() => AppTextField(
+    controller: _text,
+    hint: 'Search foods',
+    semanticLabel: 'Search foods',
+    onChanged: _typed,
+    focusNode: _focus,
+  );
+
   @override
   Widget build(BuildContext context) {
     final open = _focus.hasFocus || _query.isNotEmpty;
@@ -172,13 +202,19 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppTextField(
-          controller: _text,
-          hint: 'Search foods',
-          semanticLabel: 'Search foods',
-          onChanged: _typed,
-          focusNode: _focus,
-        ),
+        if (ref.watch(barcodeScannerProvider).available)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _field()),
+                const SizedBox(width: 8),
+                _ScanButton(onTap: widget.enabled ? _scan : null),
+              ],
+            ),
+          )
+        else
+          _field(),
         if (open) ...[
           const SizedBox(height: 8),
           for (final food in _saved.take(6))
@@ -219,6 +255,35 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
             _note('Nothing found in the databases.'),
         ],
       ],
+    );
+  }
+}
+
+class _ScanButton extends StatelessWidget {
+  const _ScanButton({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: 'Scan a barcode',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Pressable(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 54),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(kRadiusField),
+            border: Border.all(color: kBorder, width: kBorderWidth),
+          ),
+          child: const Icon(Icons.qr_code_scanner_rounded, color: kInkSecondary),
+        ),
+      ),
     );
   }
 }

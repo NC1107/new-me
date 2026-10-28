@@ -33,6 +33,7 @@ type Exercise struct {
 	Timed          bool
 	Loaded         bool
 	Equipment      []string
+	Stretch        bool
 }
 
 // Input is everything a plan is built from.
@@ -148,7 +149,7 @@ const RepairRounds = 2
 func (p *Planner) Generate(ctx context.Context, in Input) (training.Plan, error) {
 	catalog := map[string]training.CatalogEntry{}
 	for _, e := range in.Catalog {
-		catalog[e.Key] = training.CatalogEntry{Key: e.Key, PrimaryMuscles: e.PrimaryMuscles, Timed: e.Timed, Equipment: e.Equipment}
+		catalog[e.Key] = training.CatalogEntry{Key: e.Key, PrimaryMuscles: e.PrimaryMuscles, Timed: e.Timed, Equipment: e.Equipment, Stretch: e.Stretch}
 	}
 	prompt := Prompt(in)
 	plan, err := p.ask(ctx, prompt)
@@ -236,6 +237,9 @@ func Prompt(in Input) string {
 	fmt.Fprintf(&b, "\nCatalog (key: name; primary muscles; measure; equipment):\n")
 	exercises := slicesSorted(in.Catalog)
 	for _, e := range exercises {
+		if e.Stretch {
+			continue
+		}
 		measure := "reps"
 		if e.Timed {
 			measure = "seconds"

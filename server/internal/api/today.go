@@ -97,9 +97,6 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	// Milestones are recorded where they are shown, so a streak that just reached 7 days is
-	// celebrated on the Today that follows.
-	s.milestones.RunQuietly(ctx)
 	var (
 		scored engine.Scored
 		streak score.StreakResult
@@ -180,7 +177,13 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ready = day.Readiness
-		planOut = &planJSON{Items: day.Plan.Items, Summary: s.polisher.Summary(ctx, c.user, date, day)}
+		// Claude is never awaited here: the stored wording is shown, and a missing one is made
+		// in the background for the next read.
+		summary, settled := s.polisher.Cached(ctx, c.user, date, day)
+		if !settled {
+			s.polisher.PolishInBackground(c.user, date, day)
+		}
+		planOut = &planJSON{Items: day.Plan.Items, Summary: summary}
 	}
 
 	in := scored.Inputs

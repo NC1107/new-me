@@ -78,10 +78,12 @@ struct ScoreRing: View {
         .trim(from: 0, to: sweep)
         .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
         .rotationEffect(.degrees(-90))
-      Circle()
-        .trim(from: line - 0.004, to: line + 0.004)
-        .stroke(tick, style: StrokeStyle(lineWidth: lineWidth + 3, lineCap: .butt))
-        .rotationEffect(.degrees(-90))
+      if streakLine < 100 {
+        Circle()
+          .trim(from: line - 0.004, to: line + 0.004)
+          .stroke(tick, style: StrokeStyle(lineWidth: lineWidth + 3, lineCap: .butt))
+          .rotationEffect(.degrees(-90))
+      }
     }
     .padding(lineWidth / 2)
   }

@@ -78,8 +78,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// A phone left locked overnight would otherwise open on yesterday's score.
   void _onResume() {
     unawaited(ref.read(remindersProvider.notifier).refreshPermission());
-    unawaited(ref.read(listeningSyncProvider).syncThenRefreshToday());
+    unawaited(_refreshTodayThenSync());
     unawaited(ref.read(boardProvider.notifier).refresh());
+    unawaited(_followDeviceTimezone());
     // A phone left open over midnight may now be on a Monday, or past Sunday 19:00.
     ref.invalidate(goalProposalsProvider);
     ref.invalidate(recapProvider);
@@ -88,9 +89,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
+  /// Today comes first so a slow Audiobookshelf sync never holds the screen on yesterday.
+  Future<void> _refreshTodayThenSync() async {
+    await ref.read(todayProvider.notifier).refresh();
+    await ref.read(listeningSyncProvider).syncThenRefreshToday(onlyIfSynced: true);
+  }
+
   Future<void> _followDeviceTimezone() async {
     try {
-      await ref.read(meProvider.notifier).syncDeviceTimezone();
+      final changed = await ref.read(meProvider.notifier).syncDeviceTimezone();
+      if (changed && mounted) {
+        await ref.read(remindersProvider.notifier).deviceTimezoneChanged();
+        await ref.read(habitRemindersProvider.notifier).deviceTimezoneChanged();
+      }
     } on Object catch (e) {
       debugPrint('[NEWME] timezone sync skipped: $e');
     }

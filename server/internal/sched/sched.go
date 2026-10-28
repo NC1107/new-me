@@ -90,12 +90,13 @@ func (s *Scheduler) runListening(ctx context.Context) {
 	}
 }
 
-// pass finalizes due days, settles what the pair shares, then sends the look-back, nudges and
-// weekly recap that have come due and records the milestones reached.
+// pass finalizes due days, settles what the pair shares, delivers held pushes that came due, then
+// sends the look-back, nudges and weekly recap that have come due and records the milestones
+// reached.
 func (s *Scheduler) pass(ctx context.Context) error {
 	err := s.FinalizeDue(ctx)
 	if s.Together != nil {
-		err = errors.Join(err, s.Together.Settle(ctx))
+		err = errors.Join(err, s.Together.Settle(ctx), s.Together.DeliverHeld(ctx))
 	}
 	// The look-back goes before the nudges: it is the first push of the 1st, so the morning plan
 	// finds the first slot taken and steps aside.

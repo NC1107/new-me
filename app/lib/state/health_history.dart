@@ -1,5 +1,3 @@
-import '../util/errors.dart';
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -27,12 +25,18 @@ const kHistoryBatch = 200;
 /// Pause between uploads, so the import stays far inside the server's rate limit.
 const kHistoryPause = Duration(milliseconds: 400);
 
-/// How long to wait after the server says "slow down", doubled for each further refusal. A
-/// variable so tests do not have to sit through it.
-Duration kHistoryBackoff = const Duration(seconds: 15);
+/// How many times one upload is retried after a 429 before the import pauses until next launch.
+const kHistoryRateLimitRetries = 6;
 
-/// How many times a batch is retried after "slow down" before the import stops for now.
-const kHistoryRetries = 4;
+/// The first wait after a 429 that names no Retry-After; it doubles up to [kHistoryBackoffMax].
+const kHistoryBackoffStart = Duration(seconds: 2);
+const kHistoryBackoffMax = Duration(minutes: 2);
+
+/// The wait between rate-limited retries, replaceable so tests need not sit through it.
+final historyBackoffWaitProvider = Provider<Future<void> Function(Duration)>(
+  (ref) =>
+      (d) => Future<void>.delayed(d),
+);
 
 class HealthHistoryState {
   const HealthHistoryState({this.running = false, this.reached, this.done = false, this.error});
@@ -75,22 +79,33 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
       await _import(client, restart ? null : saved.reached);
     } on ApiException catch (e) {
       debugPrint('[NEWME] health history stopped: $e');
-      state = HealthHistoryState(reached: state.reached, error: errorCopy(e));
+      state = HealthHistoryState(
+        reached: state.reached,
+        error: e.isRateLimited
+            ? 'The server is busy. History will carry on the next time you open New Me.'
+            : e.message,
+      );
     } finally {
       if (state.running) state = HealthHistoryState(reached: state.reached, done: state.done);
     }
   }
 
-  Future<void> _putWithBackoff(ApiClient client, List<HealthItem> items) async {
-    var wait = kHistoryBackoff;
+  /// A 429 is the server pacing the import, not a failure: wait as long as it asks (or back off
+  /// exponentially) and send the same batch again.
+  Future<void> _upload(ApiClient client, List<HealthItem> items) async {
+    var wait = kHistoryBackoffStart;
     for (var attempt = 0; ; attempt++) {
       try {
         await client.putHealthHistory(items);
         return;
       } on ApiException catch (e) {
-        if (e.statusCode != 429 || attempt >= kHistoryRetries || _stop) rethrow;
-        await Future<void>.delayed(wait);
-        wait *= 2;
+        if (!e.isRateLimited || attempt >= kHistoryRateLimitRetries || _stop) rethrow;
+        final asked = e.retryAfter;
+        final pause = asked == null
+            ? wait
+            : (asked > kHistoryBackoffMax ? kHistoryBackoffMax : asked);
+        wait = wait * 2 > kHistoryBackoffMax ? kHistoryBackoffMax : wait * 2;
+        await ref.read(historyBackoffWaitProvider)(pause);
       }
     }
   }
@@ -110,7 +125,7 @@ class HealthHistoryImporter extends Notifier<HealthHistoryState> {
 
     Future<void> flush({required bool done}) async {
       if (batch.isNotEmpty) {
-        await _putWithBackoff(client, List.of(batch));
+        await _upload(client, List.of(batch));
         batch.clear();
         await Future<void>.delayed(kHistoryPause);
       }

@@ -25,14 +25,19 @@ func TestEveryCatalogExerciseHasAHowTo(t *testing.T) {
 		}
 		switch photos := got.length(p + "imageUrls"); photos {
 		case 0:
+		case 1:
+			if key != "seated_hamstring_stretch" {
+				t.Errorf("%s has 1 photo, want 0 or 2", key)
+			}
+			withPhotos++
 		case 2:
 			withPhotos++
 		default:
 			t.Errorf("%s has %d photos, want 0 or 2", key, photos)
 		}
 	}
-	if withPhotos != 28 {
-		t.Fatalf("%d exercises have photos, want 28", withPhotos)
+	if withPhotos != 40 {
+		t.Fatalf("%d exercises have photos, want 40", withPhotos)
 	}
 	i := exerciseIndex(t, got, "push_up")
 	if got.str(fmt.Sprintf("exercises.%d.imageUrls.1", i)) != "/api/exercises/push_up/images/1" {

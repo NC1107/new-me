@@ -40,6 +40,7 @@ class ApiException implements Exception {
     this.code,
     this.minClientVersion,
     this.body = const {},
+    this.retryAfter,
   });
 
   const ApiException.badAppKey({int? statusCode})
@@ -108,7 +109,13 @@ class ApiException implements Exception {
       statusCode: status,
       code: code,
       body: body,
+      retryAfter: _retryAfter(response.headers.value('retry-after')),
     );
+  }
+
+  static Duration? _retryAfter(String? header) {
+    final seconds = int.tryParse(header?.trim() ?? '');
+    return seconds == null || seconds < 0 ? null : Duration(seconds: seconds);
   }
 
   final String message;
@@ -123,6 +130,15 @@ class ApiException implements Exception {
 
   /// The whole error body, for errors that carry details such as a rejected plan's violations.
   final Map<String, dynamic> body;
+
+  /// On a 429, how long the server asked the client to wait.
+  final Duration? retryAfter;
+
+  /// The server's rate limiter said slow down.
+  bool get isRateLimited =>
+      statusCode == 429 ||
+      code == 'rate_limited' ||
+      message.toLowerCase().contains('too many requests');
 
   @override
   String toString() => 'ApiException($kind, $statusCode): $message';
@@ -493,6 +509,18 @@ class ApiClient {
   Future<TrainingProgress> trainingProgress() =>
       _send(() => _dio.get<dynamic>('/api/training/progress'), TrainingProgress.parse);
 
+  /// The days of a month ("2026-10") with sets, completed sessions, yoga or workouts.
+  Future<TrainingHistoryMonth> trainingHistory(String month) => _send(
+    () => _dio.get<dynamic>('/api/training/history', queryParameters: {'month': month}),
+    TrainingHistoryMonth.parse,
+  );
+
+  /// One exercise's per-day bests in its chart metric, and its max tests.
+  Future<ExerciseHistory> exerciseHistory(String key, {int days = 180}) => _send(
+    () => _dio.get<dynamic>('/api/exercises/$key/history', queryParameters: {'days': days}),
+    ExerciseHistory.parse,
+  );
+
   Future<List<Milestone>> milestones() => _send(
     () => _dio.get<dynamic>('/api/milestones'),
     (data) => parseMilestones((data as Json)['milestones']),
@@ -544,6 +572,22 @@ class ApiClient {
     ),
     (data) => FoodSearch.fromJson(data as Json),
   );
+
+  /// Looks a scanned barcode up through the server; null when no food has that barcode.
+  Future<SavedFood?> foodByBarcode(String code) async {
+    try {
+      return await _send(
+        () => _dio.get<dynamic>(
+          '/api/foods/barcode/${Uri.encodeComponent(code)}',
+          options: Options(receiveTimeout: const Duration(seconds: 20)),
+        ),
+        (data) => SavedFood.fromJson(data as Json),
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 404 && e.code == 'not_found') return null;
+      rethrow;
+    }
+  }
 
   /// Saves a food. A database food that is already saved comes back as the saved copy.
   Future<SavedFood> createFood(SavedFood food) => _send(
@@ -651,17 +695,40 @@ class ApiClient {
   Future<RewardList> rewards() =>
       _send(() => _dio.get<dynamic>('/api/rewards'), (data) => RewardList.fromJson(data as Json));
 
-  /// Throws code `reward_active` (409) while another reward is still being earned.
-  Future<Reward> createReward({required String name, required int target}) => _send(
-    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'target': target}),
-    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  Reward _reward(Object? data) =>
+      Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward'));
+
+  /// Proposes a reward priced in gems. The partner approves it; alone it is approved at once.
+  Future<Reward> createReward({required String name, required int price}) => _send(
+    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'price': price}),
+    _reward,
   );
 
-  /// Throws code `reward_not_reached` (409) before the target is met.
-  Future<Reward> claimReward(int id) => _send(
-    () => _dio.post<dynamic>('/api/rewards/$id/claim'),
-    (data) => Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward')),
+  /// Edits a reward. A new price on an approved reward is proposed again.
+  Future<Reward> patchReward(int id, {String? name, int? price}) => _send(
+    () => _dio.patch<dynamic>('/api/rewards/$id', data: {'name': ?name, 'price': ?price}),
+    _reward,
   );
+
+  /// Withdraws my pending or declined proposal.
+  Future<void> withdrawReward(int id) =>
+      _send(() => _dio.delete<dynamic>('/api/rewards/$id'), (_) {});
+
+  Future<Reward> answerReward(int id, {required bool approve}) => _send(
+    () => _dio.post<dynamic>('/api/rewards/$id/${approve ? 'approve' : 'decline'}'),
+    _reward,
+  );
+
+  Future<Reward> cancelReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/cancel'), _reward);
+
+  Future<Reward> focusReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/focus'), _reward);
+
+  /// Spends the price from the bank. Throws code `reward_not_reached` (409) while the bank
+  /// does not cover it; a repeat answers the claimed reward without spending again.
+  Future<Reward> claimReward(int id) =>
+      _send(() => _dio.post<dynamic>('/api/rewards/$id/claim'), _reward);
 
   Future<void> putPushToken(String token) =>
       _send(() => _dio.put<dynamic>('/api/devices/me/push', data: {'token': token}), (_) {});

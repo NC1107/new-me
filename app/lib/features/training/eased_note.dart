@@ -59,8 +59,8 @@ class _EasedNoteState extends ConsumerState<EasedNote> {
               style: TextButton.styleFrom(
                 foregroundColor: accent.lip,
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                minimumSize: const Size(0, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: const Size(0, 44),
+                tapTargetSize: MaterialTapTargetSize.padded,
               ),
               child: const Text(
                 'Do the full session',

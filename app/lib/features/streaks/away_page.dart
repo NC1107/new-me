@@ -97,13 +97,13 @@ class _AwayPageState extends ConsumerState<AwayPage> {
       firstDate: parseLocalDate(first),
       lastDate: parseLocalDate(last),
     );
-    return picked == null ? null : formatDateKey(picked);
+    return picked == null || !mounted ? null : formatDateKey(picked);
   }
 
   Future<void> _pickFrom() async {
     final today = _today();
     final picked = await _pick(_start, today, _plus(today, kMaxAwayDays));
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() {
       _from = picked;
       if (_end.compareTo(picked) < 0 || _end.compareTo(_plus(picked, kMaxAwayDays - 1)) > 0) {
@@ -115,7 +115,7 @@ class _AwayPageState extends ConsumerState<AwayPage> {
 
   Future<void> _pickTo() async {
     final picked = await _pick(_end, _start, _plus(_start, kMaxAwayDays - 1));
-    if (picked != null) setState(() => _to = picked);
+    if (picked != null && mounted) setState(() => _to = picked);
   }
 
   Future<void> _save() async {

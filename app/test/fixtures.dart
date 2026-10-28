@@ -261,6 +261,9 @@ StubAdapter fullServer() => StubAdapter()
   ..on('GET /api/meals/recent', const StubResponse(200, recentMealsJson))
   ..on('GET /api/logs', StubResponse(200, logsJson([logJson(), mealLogJson()])));
 
+/// The zone the test phone reports; a test may change it between launch and a resume.
+String testDeviceTimezone = 'America/New_York';
+
 class TestApp {
   TestApp(
     this.tester,
@@ -303,7 +306,7 @@ class TestApp {
           apiClientFactoryProvider.overrideWithValue(stubFactory(adapter)),
           clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
           healthSourceProvider.overrideWithValue(health),
-          deviceTimezoneProvider.overrideWithValue(() async => 'America/New_York'),
+          deviceTimezoneProvider.overrideWithValue(() async => testDeviceTimezone),
           ...overrides,
         ],
         child: MaterialApp(

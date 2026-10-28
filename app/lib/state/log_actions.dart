@@ -52,6 +52,8 @@ class LogActions {
   Future<FoodSearch> searchFoods(String q, {bool remote = false}) =>
       _client.foods(q: q, remote: remote);
 
+  Future<SavedFood?> foodByBarcode(String code) => _client.foodByBarcode(code);
+
   Future<SavedFood> saveFood(SavedFood food) => _client.createFood(food);
 
   Future<SavedFood> updateFood(int id, SavedFood food) => _client.updateFood(id, food);

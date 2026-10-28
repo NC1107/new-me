@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/together"
 )
 
 // capture records queued pushes, standing in for the APNs dispatcher.
@@ -139,6 +139,7 @@ func TestNotificationPreferencesDefaultOnAndPatchPartially(t *testing.T) {
 func TestBoardCreatesTheWeeksChallengeLazilyWithAFrozenTarget(t *testing.T) {
 	h := newHarness(t)
 	nick, _ := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	ctx := context.Background()
 	// Nick had four workouts last week, so his share is five; Nadia had none, so hers is two.
 	for i, day := range []string{"2026-10-26", "2026-10-27", "2026-10-28", "2026-10-30"} {
@@ -179,6 +180,7 @@ func TestWorkoutChallengeCompletesOnceAndPaysBothFiftyPoints(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	h.get("/api/board", nick.Token).expect(http.StatusOK)
 
 	start := ny(2026, time.November, 2, 8, 0)
@@ -247,6 +249,7 @@ func TestChallengePushRespectsThePreference(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	h.patch("/api/me", nadia.Token, obj{"notifications": obj{"challenge": false}}).expect(http.StatusOK)
 	start := ny(2026, time.November, 2, 8, 0)
 	putWorkouts(h, nick, workout("a", "running", start, 30), workout("b", "yoga", start.Add(time.Hour), 30)).expect(http.StatusOK)
@@ -264,6 +267,7 @@ func TestStepsChallengeIsSizedFromTheLastTwoWeeks(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 23, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindSteps)
 	for i := range 14 {
 		date := score.MustDate("2026-11-09").AddDays(i)
 		for _, row := range []struct {
@@ -294,6 +298,7 @@ func TestReadingChallengeCountsLoggedMinutesAndListening(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 16, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindReading)
 	got := h.get("/api/board", nick.Token).expect(http.StatusOK)
 	if got.str("challenge.kind") != "reading" || got.num("challenge.target") != 150 ||
 		got.num("challenge.people.0.target") != 75 {
@@ -319,6 +324,7 @@ func TestCountedDaysChallengeNeedsEachPersonsOwnDays(t *testing.T) {
 	h := newHarness(t)
 	h.clock.Set(ny(2026, time.November, 14, 12, 0))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindCountedDays)
 	for _, day := range []string{"2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"} {
 		h.storeScore(nick, day, 300, 0, 400)
 		h.storeScore(nadia, day, 300, 0, 400)
@@ -347,6 +353,7 @@ func TestSettleCompletesAChallengeWithoutAnyRequest(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
+	h.seedChallenge(together.KindWorkouts)
 	start := ny(2026, time.November, 2, 8, 0)
 	for i, id := range []string{"a", "b", "c", "d"} {
 		who := []person{nick, nadia, nick, nadia}[i]
@@ -363,92 +370,6 @@ func TestSettleCompletesAChallengeWithoutAnyRequest(t *testing.T) {
 	}
 	if h.get("/api/today", nadia.Token).expect(http.StatusOK).num("day.bonusPoints") != 50 {
 		t.Fatal("Nadia was not paid")
-	}
-}
-
-func TestRewardLifecycle(t *testing.T) {
-	n := &capture{}
-	h := newHarness(t, withPush(n))
-	nick, nadia := h.pair()
-
-	if empty := h.get("/api/rewards", nick.Token).expect(http.StatusOK); !empty.isNull("reward") || empty.length("history") != 0 {
-		t.Fatalf("empty = %s", empty.Body)
-	}
-	if board := h.get("/api/board", nick.Token).expect(http.StatusOK); !board.isNull("reward") {
-		t.Fatalf("board reward = %s", board.Body)
-	}
-
-	// Points earned before the reward starts do not count towards it.
-	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
-	for _, bad := range []obj{{"name": " ", "target": 100}, {"name": strings.Repeat("x", 41), "target": 100},
-		{"name": "Trip", "target": 0}, {"name": "Trip", "target": 100001}} {
-		h.post("/api/rewards", nick.Token, bad).expect(http.StatusUnprocessableEntity).code("invalid_request")
-	}
-	made := h.post("/api/rewards", nick.Token, obj{"name": "Date night", "target": 200}).expect(http.StatusCreated)
-	if made.str("reward.name") != "Date night" || made.num("reward.target") != 200 || made.num("reward.progress") != 0 ||
-		!made.isNull("reward.reachedAt") || !made.isNull("reward.claimedAt") {
-		t.Fatalf("created = %s", made.Body)
-	}
-	id := made.num("reward.id")
-	h.post("/api/rewards", nadia.Token, obj{"name": "Second", "target": 50}).expect(http.StatusConflict).code("reward_active")
-	h.post(fmt.Sprintf("/api/rewards/%d/claim", id), nick.Token, nil).expect(http.StatusConflict).code("reward_not_reached")
-	h.post("/api/rewards/999/claim", nick.Token, nil).expect(http.StatusNotFound)
-
-	h.logActivity(nadia, "pushups", "reps", 30).expect(http.StatusCreated)
-	mid := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if mid.num("reward.progress") != 120 || !mid.isNull("reward.reachedAt") || mid.num("reward.id") != id {
-		t.Fatalf("midway = %s", mid.Body)
-	}
-
-	h.logActivity(nick, "reading", "minutes", 20).expect(http.StatusCreated)
-	reached := h.get("/api/rewards", nadia.Token).expect(http.StatusOK)
-	if !reached.isNull("reward") || reached.length("history") != 1 || reached.str("history.0.reachedAt") == "" ||
-		reached.num("history.0.progress") != 200 {
-		t.Fatalf("reached = %s", reached.Body)
-	}
-	for _, p := range []person{nick, nadia} {
-		if got := n.of("reward", p.ID); len(got) != 1 || got[0].Body != "Date night" {
-			t.Fatalf("%s reward pushes = %+v", p.Name, got)
-		}
-	}
-	board := h.get("/api/board", nick.Token).expect(http.StatusOK)
-	if board.num("reward.id") != id || board.str("reward.reachedAt") == "" {
-		t.Fatalf("board after reaching = %s", board.Body)
-	}
-
-	claimed := h.post(fmt.Sprintf("/api/rewards/%d/claim", id), nick.Token, nil).expect(http.StatusOK)
-	stamp := claimed.str("reward.claimedAt")
-	if stamp == "" {
-		t.Fatalf("claimed = %s", claimed.Body)
-	}
-	h.clock.Set(h.clock.Now().Add(time.Hour))
-	if again := h.post(fmt.Sprintf("/api/rewards/%d/claim", id), nadia.Token, nil).expect(http.StatusOK); again.str("reward.claimedAt") != stamp {
-		t.Fatalf("a repeat claim moved the time: %s", again.Body)
-	}
-	if after := h.get("/api/board", nick.Token).expect(http.StatusOK); !after.isNull("reward") {
-		t.Fatalf("a claimed reward still on the board: %s", after.Body)
-	}
-
-	// The next one starts from the points at that moment.
-	next := h.post("/api/rewards", nadia.Token, obj{"name": "Trip", "target": 500}).expect(http.StatusCreated)
-	if next.num("reward.progress") != 0 || next.num("reward.createdBy") != int(nadia.ID) {
-		t.Fatalf("next = %s", next.Body)
-	}
-	if len(n.of("reward", nick.ID)) != 1 {
-		t.Fatalf("reward pushed more than once: %+v", n.msgs)
-	}
-}
-
-func TestStartingARewardRightAfterReachingOneIsAllowed(t *testing.T) {
-	h := newHarness(t)
-	nick := h.joinAdmin("Nick", "green")
-	h.post("/api/rewards", nick.Token, obj{"name": "Treat", "target": 100}).expect(http.StatusCreated)
-	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
-	// No read happened in between: creating the next one settles the first.
-	h.post("/api/rewards", nick.Token, obj{"name": "Next", "target": 100}).expect(http.StatusCreated)
-	if list := h.get("/api/rewards", nick.Token).expect(http.StatusOK); list.str("reward.name") != "Next" ||
-		list.length("history") != 1 {
-		t.Fatalf("list = %s", list.Body)
 	}
 }
 

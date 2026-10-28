@@ -42,6 +42,8 @@ type ChallengeResult struct {
 	Target    int    `json:"target"`
 	Progress  int    `json:"progress"`
 	Completed bool   `json:"completed"`
+	// Missed is true when the week ended with the challenge unfinished. It costs nothing.
+	Missed bool `json:"missed"`
 }
 
 // Recap is the answer of GET /api/recap.
@@ -74,14 +76,27 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 	out := Recap{Week: score.ISOWeekLabel(monday), From: monday, To: sunday, Complete: sunday.Before(viewerToday),
 		People: make([]PersonRecap, 0, len(users))}
 
+	seasons, err := db.ListSeasons(ctx, s.DB.Pool)
+	if err != nil {
+		return out, err
+	}
+	now := s.Now()
+
 	var thisAll, prevAll []Stats
 	var dayLists [][]DayPoints
 	for _, u := range users {
-		cur, err := s.week(ctx, u.ID, monday)
+		loc, err := u.Location()
 		if err != nil {
 			return out, err
 		}
-		prev, err := s.week(ctx, u.ID, prevMonday)
+		today := score.LocalToday(now, loc)
+		curFrom, curTo := ScoredRange(monday, today, seasons)
+		cur, err := s.week(ctx, u.ID, monday, curFrom, curTo)
+		if err != nil {
+			return out, err
+		}
+		prevFrom, prevTo := ScoredRange(prevMonday, today, seasons)
+		prev, err := s.week(ctx, u.ID, prevMonday, prevFrom, prevTo)
 		if err != nil {
 			return out, err
 		}
@@ -102,18 +117,20 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 		if err != nil {
 			return out, err
 		}
-		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress, Completed: ch.CompletedAt != nil}
+		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress, Completed: ch.CompletedAt != nil, Missed: ch.MissedAt != nil}
 	case !errors.Is(err, db.ErrNotFound):
 		return out, err
 	}
 	return out, nil
 }
 
-func (s *Service) week(ctx context.Context, userID int64, monday score.Date) (Week, error) {
+// week reads one person's numbers for the ISO week from monday. Points and counted days come
+// from the scored range only; the other readings cover the whole week.
+func (s *Service) week(ctx context.Context, userID int64, monday score.Date, scoredFrom, scoredTo score.Date) (Week, error) {
 	sunday := monday.AddDays(6)
 	q := s.DB.Pool
 	var w Week
-	scores, err := db.ListDayScores(ctx, q, userID, monday, sunday)
+	scores, err := db.ListDayScores(ctx, q, userID, scoredFrom, scoredTo)
 	if err != nil {
 		return w, err
 	}
@@ -184,17 +201,15 @@ func (s *Service) PushDue(ctx context.Context, now time.Time) error {
 		if sent >= nudge.DailyBudget {
 			continue
 		}
-		first, err := db.ClaimNotice(ctx, s.DB.Pool, together.EventWeeklyRecap, u.ID, today)
-		if err != nil || !first {
+		for _, p := range rc.People {
+			if p.UserID != u.ID {
+				continue
+			}
+			_, err := s.Together.SendClaimed(ctx, together.Claim{Kind: together.EventWeeklyRecap, UserID: u.ID, Date: today}, u,
+				push.Message{Kind: together.EventWeeklyRecap, Title: "Your week",
+					Body: SummaryLine(p.This, p.Previous, rc.Pair.This)})
 			if err != nil {
 				errs = append(errs, err)
-			}
-			continue
-		}
-		for _, p := range rc.People {
-			if p.UserID == u.ID {
-				s.Together.Notify(u, push.Message{Kind: together.EventWeeklyRecap, Title: "Your week",
-					Body: SummaryLine(p.This, p.Previous, rc.Pair.This)})
 			}
 		}
 	}

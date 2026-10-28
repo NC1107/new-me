@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,18 +26,19 @@ import '../../widgets/skeletons.dart';
 import '../log/log_chip.dart';
 import 'how_to_sheet.dart';
 import 'set_form.dart';
+import 'strength_chart.dart';
 import 'training_copy.dart';
 import '../../widgets/units_scope.dart';
 
 /// The muscle an exercise is listed under: its first primary muscle.
 String groupOf(Exercise e) => e.primaryMuscles.firstOrNull ?? 'other';
 
-/// Exercises whose name matches [query], grouped by muscle in the server's muscle order.
+/// Strength exercises whose name matches [query] (stretches live in Mobility), grouped by muscle in the server's muscle order.
 List<(String, List<Exercise>)> groupExercises(ExerciseCatalog catalog, String query) {
   final q = query.trim().toLowerCase();
   final matching = [
     for (final e in catalog.exercises)
-      if (q.isEmpty || e.name.toLowerCase().contains(q)) e,
+      if (!e.stretch && (q.isEmpty || e.name.toLowerCase().contains(q))) e,
   ];
   final order = [...catalog.muscles, 'other'];
   return [
@@ -318,6 +320,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        switch (ref.watch(exerciseHistoryProvider(e.key))) {
+          AsyncValue(:final value?) => StrengthChart(history: value, units: context.units),
+          AsyncValue(:final error?) => ErrorBlock(
+            title: 'Could not load the strength chart',
+            error: error,
+            onRetry: () async => ref.invalidate(exerciseHistoryProvider(e.key)),
+          ),
+          _ => const SkeletonBlock(height: 180, radius: kRadiusCard),
+        },
         if (_error case final error?) ...[
           const SizedBox(height: 12),
           Text(error, style: AppText.label.copyWith(color: kDangerText)),
@@ -373,20 +385,25 @@ class _SetHistory extends StatelessWidget {
                 Text(_day(date), style: AppText.caption.copyWith(color: kInkMuted)),
                 const SizedBox(height: 4),
                 for (final s in daySets)
-                  InkWell(
-                    onLongPress: () => onDelete(s),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              setLabel(s, context.units),
-                              style: AppText.tabular(AppText.label.copyWith(color: kInk)),
+                  Semantics(
+                    customSemanticsActions: {
+                      const CustomSemanticsAction(label: 'Delete set'): () => onDelete(s),
+                    },
+                    child: InkWell(
+                      onLongPress: () => onDelete(s),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                setLabel(s, context.units),
+                                style: AppText.tabular(AppText.label.copyWith(color: kInk)),
+                              ),
                             ),
-                          ),
-                          Text(rirLabel(s.rir), style: AppText.caption),
-                        ],
+                            Text(rirLabel(s.rir), style: AppText.caption),
+                          ],
+                        ),
                       ),
                     ),
                   ),

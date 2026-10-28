@@ -10,14 +10,14 @@ import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import 'together_bar.dart';
 
-/// The shared reward on Us: an invitation to start one, the bar while it is being earned, or
-/// the "We did it" button once it is reached.
+/// The focus reward on Us: an invitation to add one, the bar against the gem bank while it is
+/// being earned, or the "We did it" button once the bank covers its price.
 class RewardCard extends StatelessWidget {
   const RewardCard({
     super.key,
     required this.reward,
     required this.people,
-    required this.onStart,
+    required this.onAdd,
     required this.onClaim,
     this.claiming = false,
     this.error,
@@ -25,7 +25,7 @@ class RewardCard extends StatelessWidget {
 
   final Reward? reward;
   final List<AccentPalette> people;
-  final VoidCallback onStart;
+  final VoidCallback onAdd;
   final VoidCallback onClaim;
   final bool claiming;
   final String? error;
@@ -59,17 +59,13 @@ class RewardCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Pick a treat and a points goal. Everything either of you earns fills the bar.',
+              'Pick a treat and a price in gems. Every gem either of you earns goes into the shared bank.',
               style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),
             Semantics(
               container: true,
-              child: ChunkyButton(
-                label: 'Start a reward',
-                icon: Icons.add_rounded,
-                onPressed: onStart,
-              ),
+              child: ChunkyButton(label: 'Add a reward', icon: Icons.add_rounded, onPressed: onAdd),
             ),
           ],
         ),
@@ -77,9 +73,9 @@ class RewardCard extends StatelessWidget {
     }
     final from = people.isNotEmpty ? people.first.fill : gift.fill;
     final to = people.length > 1 ? people[1].fill : from;
-    final left = (r.target - r.progress).clamp(0, r.target);
+    final left = (r.price - r.progress).clamp(0, r.price);
     return AppCard(
-      borderColor: r.reached ? Color.lerp(kBorder, kFlame, 0.7)! : kBorder,
+      borderColor: r.ready ? Color.lerp(kBorder, kFlame, 0.7)! : kBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -87,15 +83,15 @@ class RewardCard extends StatelessWidget {
             child: Row(
               children: [
                 _Bubble(
-                  icon: r.reached ? Icons.emoji_events_rounded : Icons.card_giftcard_rounded,
-                  palette: r.reached ? accentById('amber') : gift,
+                  icon: r.ready ? Icons.emoji_events_rounded : Icons.card_giftcard_rounded,
+                  palette: r.ready ? accentById('amber') : gift,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(r.reached ? 'Reward reached' : 'Shared reward', style: AppText.caption),
+                      Text(r.ready ? 'Reward ready' : 'Shared reward', style: AppText.caption),
                       Text(r.name, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
                     ],
                   ),
@@ -106,9 +102,9 @@ class RewardCard extends StatelessWidget {
           const SizedBox(height: 14),
           TogetherBar(value: r.fraction, from: from, to: to),
           const SizedBox(height: 10),
-          if (r.reached) ...[
+          if (r.ready) ...[
             Text(
-              'You earned ${r.target.formatted} points together. Go enjoy it.',
+              'Your bank covers ${r.price.formatted} gems. Go enjoy it.',
               style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),
@@ -136,7 +132,7 @@ class RewardCard extends StatelessWidget {
                 runSpacing: 2,
                 children: [
                   Text(
-                    '${r.progress.formatted} of ${r.target.formatted} points',
+                    '${r.progress.formatted} of ${r.price.formatted} gems',
                     style: AppText.tabular(AppText.label.copyWith(fontWeight: FontWeight.w800)),
                   ),
                   Text('${left.formatted} to go', style: AppText.caption),
@@ -196,7 +192,7 @@ class _HistoryRow extends StatelessWidget {
     final at = reward.claimedAt ?? reward.reachedAt;
     final when = at == null ? null : DateFormat.MMMd().format(at.toLocal());
     final detail =
-        '${reward.target.formatted} points${when == null ? '' : ', ${reward.claimed ? 'enjoyed' : 'reached'} $when'}';
+        '${reward.price.formatted} gems${when == null ? '' : ', ${reward.claimed ? 'enjoyed' : 'reached'} $when'}';
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 56),
       child: Semantics(

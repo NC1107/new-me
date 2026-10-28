@@ -22,7 +22,7 @@ import '../../widgets/pressable.dart';
 import '../../widgets/time_presets.dart';
 
 /// How many push switches the page has.
-const kNotificationSwitches = 11;
+const kNotificationSwitches = 14;
 
 /// How many of the push switches are on, for the Me row's subtitle.
 int notificationsOn(NotificationPrefs p) => [
@@ -37,7 +37,24 @@ int notificationsOn(NotificationPrefs p) => [
   p.weeklyRecap,
   p.milestones,
   p.lookback,
+  p.partnerNudges,
+  p.cover,
+  p.approvals,
 ].where((on) => on).length;
+
+String _quietSpan(DayTimes d, int offsetMin) {
+  final until = formatClockWire((d.wake + offsetMin).clamp(0, 1439));
+  // A bedtime after midnight leaves only the hours before the first notification.
+  return d.bed > d.wake ? '${formatClockWire(d.bed)} to $until' : '00:00 to $until';
+}
+
+/// "Quiet from 23:00 to 07:10, and on away days." - the hours no push arrives, from the schedule.
+String quietHoursText(Schedule s) {
+  final work = _quietSpan(s.workday, s.firstNotificationOffsetMin);
+  final off = _quietSpan(s.dayOff, s.firstNotificationOffsetMin);
+  if (work == off) return 'Quiet from $work, and on away days.';
+  return 'Quiet from $work on workdays and $off on days off, and on away days.';
+}
 
 /// Which events may notify this phone, and the evening reminder with its time.
 class NotificationsPage extends ConsumerWidget {
@@ -71,6 +88,9 @@ class NotificationsPage extends ConsumerWidget {
       meProvider.select((m) => m.value?.data.notifications ?? const NotificationPrefs()),
     );
     final reminders = ref.watch(remindersProvider);
+    final schedule = ref.watch(
+      meProvider.select((m) => m.value?.data.schedule ?? const Schedule()),
+    );
     final nudges = [
       (
         icon: Icons.directions_walk_rounded,
@@ -153,6 +173,30 @@ class NotificationsPage extends ConsumerWidget {
         subtitle: 'When you earn it',
         on: prefs.reward,
         patch: (bool v) => NotificationPatch(reward: v),
+      ),
+      (
+        icon: Icons.volunteer_activism_rounded,
+        palette: accentById('green'),
+        title: 'Nudges about your partner',
+        subtitle: 'A cheer prompt, reward progress and a Thursday challenge check-in, one a day',
+        on: prefs.partnerNudges,
+        patch: (bool v) => NotificationPatch(partnerNudges: v),
+      ),
+      (
+        icon: Icons.shield_rounded,
+        palette: accentById('sky'),
+        title: 'Cover',
+        subtitle: 'When a freeze of yours could help them, and when they cover you',
+        on: prefs.cover,
+        patch: (bool v) => NotificationPatch(cover: v),
+      ),
+      (
+        icon: Icons.how_to_reg_rounded,
+        palette: accentById('violet'),
+        title: 'Approvals',
+        subtitle: 'When they ask you to approve a habit',
+        on: prefs.approvals,
+        patch: (bool v) => NotificationPatch(approvals: v),
       ),
       (
         icon: Icons.emoji_events_rounded,
@@ -242,7 +286,7 @@ class NotificationsPage extends ConsumerWidget {
         Semantics(header: true, child: const Text('Nudges and plan', style: AppText.headline)),
         const SizedBox(height: 4),
         Text(
-          'At most two of these a day, and none late at night.',
+          'At most two of these a day. ${quietHoursText(schedule)}',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),

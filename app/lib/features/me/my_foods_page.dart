@@ -34,7 +34,11 @@ class MyFoodsPage extends ConsumerWidget {
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
-        FoodSearchBox(browseOnFocus: false, onPick: (food) => _open(context, ref, food)),
+        FoodSearchBox(
+          browseOnFocus: false,
+          onPick: (food) => _open(context, ref, food),
+          onEnterByHand: () => _open(context, ref),
+        ),
         const SizedBox(height: 16),
         ChunkyButton.secondary(
           label: 'New food',

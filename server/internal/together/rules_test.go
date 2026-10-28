@@ -1,34 +1,11 @@
 package together
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/nc1107/new-me/server/internal/score"
 )
-
-func TestKindRotatesByISOWeekNumber(t *testing.T) {
-	// 2026-11-02 is Monday of ISO week 45, and 2026-12-28 starts week 53.
-	cases := []struct {
-		monday string
-		kind   string
-	}{
-		{"2026-11-02", KindWorkouts},    // 45 % 4 = 1
-		{"2026-11-09", KindCountedDays}, // 46 % 4 = 2
-		{"2026-11-16", KindReading},     // 47 % 4 = 3
-		{"2026-11-23", KindSteps},       // 48 % 4 = 0
-		{"2026-12-28", KindWorkouts},    // 53 % 4 = 1
-		{"2027-01-04", KindWorkouts},    // ISO week 1 of 2027: 1 % 4 = 1
-	}
-	for _, tc := range cases {
-		if got := KindFor(score.MustDate(tc.monday)); got != tc.kind {
-			t.Errorf("%s: kind = %s, want %s", tc.monday, got, tc.kind)
-		}
-	}
-	seen := map[string]bool{}
-	for d := score.MustDate("2026-11-02"); len(seen) < 4; d = d.AddDays(7) {
-		seen[KindFor(d)] = true
-	}
-}
 
 func TestStepsShareIsTenPercentAboveTheWeeklyAverageRoundedToAThousand(t *testing.T) {
 	cases := []struct {
@@ -90,18 +67,25 @@ func TestSharesAreSizedFromEachPersonsOwnHistory(t *testing.T) {
 
 func TestGenerateTitlesAndTargetsPerKind(t *testing.T) {
 	cases := []struct {
-		monday string
+		kind   string
 		shares []int
 		want   Spec
 	}{
-		{"2026-11-23", []int{92000, 39000}, Spec{KindSteps, "Walk 131,000 steps together", 131000}},
-		{"2026-11-02", []int{5, 2}, Spec{KindWorkouts, "Do 7 workouts together", 7}},
-		{"2026-11-09", []int{5, 5}, Spec{KindCountedDays, "Both count on 5 of 7 days", 10}},
-		{"2026-11-16", []int{220, 30}, Spec{KindReading, "Read 250 minutes together", 250}},
+		{KindSteps, []int{92000, 39000}, Spec{KindSteps, "Walk 131,000 steps together", 131000}},
+		{KindWorkouts, []int{5, 2}, Spec{KindWorkouts, "Do 7 workouts together", 7}},
+		{KindCountedDays, []int{5, 5}, Spec{KindCountedDays, "Both count on 5 of 7 days", 10}},
+		{KindReading, []int{220, 30}, Spec{KindReading, "Read 250 minutes together", 250}},
+		{KindSleepNights, []int{5, 6}, Spec{KindSleepNights, "Sleep your target on 11 nights together", 11}},
+		{KindMealDays, []int{5, 6}, Spec{KindMealDays, "Log your meals on 11 days together", 11}},
+		{KindProteinDays, []int{4, 4}, Spec{KindProteinDays, "Hit your protein on 8 days together", 8}},
+		{KindPushupReps, []int{150, 100}, Spec{KindPushupReps, "Do 250 push-ups together", 250}},
+		{KindYogaMinutes, []int{60, 40}, Spec{KindYogaMinutes, "Do 100 minutes of yoga together", 100}},
+		{KindHabitMarks, []int{20, 30}, Spec{KindHabitMarks, "Mark 50 habits together", 50}},
+		{KindActiveDays, []int{4, 5}, Spec{KindActiveDays, "Be active on 9 days together", 9}},
 	}
 	for _, tc := range cases {
-		if got := Generate(score.MustDate(tc.monday), tc.shares); got != tc.want {
-			t.Errorf("%s: %+v, want %+v", tc.monday, got, tc.want)
+		if got := Generate(tc.kind, tc.shares); got != tc.want {
+			t.Errorf("%s: %+v, want %+v", tc.kind, got, tc.want)
 		}
 	}
 }
@@ -159,17 +143,71 @@ func TestBothCountedDaysNeedsEveryMemberOnTheSameDay(t *testing.T) {
 	}
 }
 
-func TestRewardProgressIsClampedAndReachedAtTheTarget(t *testing.T) {
-	if got := RewardProgress(900, 1000, 500); got != 0 {
-		t.Errorf("below baseline = %d, want 0", got)
+func TestBankNeverGoesNegative(t *testing.T) {
+	for _, c := range []struct{ total, spent, want int }{
+		{1240, 0, 1240}, {1240, 1000, 240}, {1000, 1000, 0}, {900, 1000, 0},
+	} {
+		if got := Bank(c.total, c.spent); got != c.want {
+			t.Errorf("Bank(%d, %d) = %d, want %d", c.total, c.spent, got, c.want)
+		}
 	}
-	if got := RewardProgress(1300, 1000, 500); got != 300 {
-		t.Errorf("progress = %d, want 300", got)
+}
+
+func TestRewardProgressIsClampedAndReadyAtThePrice(t *testing.T) {
+	for _, c := range []struct {
+		bank, price, progress int
+		ready                 bool
+	}{
+		{0, 2000, 0, false}, {1240, 2000, 1240, false}, {1999, 2000, 1999, false},
+		{2000, 2000, 2000, true}, {3500, 2000, 2000, true}, {-5, 100, 0, false},
+	} {
+		if got := RewardProgress(c.bank, c.price); got != c.progress {
+			t.Errorf("RewardProgress(%d, %d) = %d, want %d", c.bank, c.price, got, c.progress)
+		}
+		if got := RewardReady(c.bank, c.price); got != c.ready {
+			t.Errorf("RewardReady(%d, %d) = %v, want %v", c.bank, c.price, got, c.ready)
+		}
 	}
-	if got := RewardProgress(2000, 1000, 500); got != 500 {
-		t.Errorf("past target = %d, want 500", got)
+}
+
+func TestMedianInt(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		values []int
+		want   int
+	}{
+		{"none", nil, 0},
+		{"one", []int{7}, 7},
+		{"odd", []int{9, 1, 5}, 5},
+		{"even rounds half up", []int{1, 2}, 2},
+		{"even exact", []int{10, 30, 20, 40}, 25},
+		{"outlier does not pull it", []int{100, 100, 100, 100, 5000}, 100},
+	} {
+		in := append([]int(nil), c.values...)
+		if got := MedianInt(c.values); got != c.want {
+			t.Errorf("%s: median = %d, want %d", c.name, got, c.want)
+		}
+		if !slices.Equal(in, c.values) {
+			t.Errorf("%s: the input was reordered", c.name)
+		}
 	}
-	if RewardReached(1499, 1000, 500) || !RewardReached(1500, 1000, 500) {
-		t.Error("reached should flip exactly at baseline + target")
+}
+
+func TestSuggestPrices(t *testing.T) {
+	if SuggestPrices(nil) != nil || SuggestPrices([]int{0, 0, 0}) != nil {
+		t.Error("no history or no gems must give no suggestion")
+	}
+	got := SuggestPrices([]int{100, 80, 120, 0, 90, 110, 100, 95, 105, 100, 100, 60, 140, 100})
+	want := []PriceOption{{7, 700}, {14, 1400}, {30, 3000}}
+	if got == nil || got.MedianDaily != 100 || got.SampleDays != 14 || !slices.Equal(got.Options, want) {
+		t.Errorf("suggestions = %+v, want median 100 over 14 days with %v", got, want)
+	}
+	short := SuggestPrices([]int{50, 70, 60})
+	if short == nil || short.MedianDaily != 60 || short.SampleDays != 3 {
+		t.Errorf("a newer pair = %+v", short)
+	}
+	huge := SuggestPrices([]int{5000})
+	if huge == nil || len(huge.Options) != 2 || huge.Options[1].Days != 14 {
+		t.Errorf("options above the cap must drop: %+v", huge)
 	}
 }

@@ -77,16 +77,20 @@ type Challenge struct {
 	Title       string
 	Target      int
 	CompletedAt *time.Time
+	// PickReason is why the kind was chosen; empty for challenges from before v13.
+	PickReason string
+	// MissedAt is set at week end on a challenge that was not finished.
+	MissedAt *time.Time
 }
 
 // EndsOn is the Sunday of the challenge's week.
 func (c Challenge) EndsOn() score.Date { return c.WeekStart.AddDays(6) }
 
-const challengeColumns = `id, week_start::text, kind, title, target, completed_at`
+const challengeColumns = `id, week_start::text, kind, title, target, completed_at, COALESCE(pick_reason, ''), missed_at`
 
 func scanChallenge(row interface{ Scan(...any) error }) (Challenge, error) {
 	var c Challenge
-	err := row.Scan(&c.ID, &c.WeekStart, &c.Kind, &c.Title, &c.Target, &c.CompletedAt)
+	err := row.Scan(&c.ID, &c.WeekStart, &c.Kind, &c.Title, &c.Target, &c.CompletedAt, &c.PickReason, &c.MissedAt)
 	return c, err
 }
 
@@ -101,8 +105,8 @@ func GetChallenge(ctx context.Context, q Querier, weekStart score.Date) (Challen
 // one either way, so two racing creators agree on the target.
 func InsertChallenge(ctx context.Context, q Querier, c Challenge) (Challenge, error) {
 	if _, err := q.Exec(ctx, `
-		INSERT INTO challenges (week_start, kind, title, target) VALUES ($1::date, $2, $3, $4)
-		ON CONFLICT (week_start) DO NOTHING`, c.WeekStart, c.Kind, c.Title, c.Target); err != nil {
+		INSERT INTO challenges (week_start, kind, title, target, pick_reason) VALUES ($1::date, $2, $3, $4, NULLIF($5, ''))
+		ON CONFLICT (week_start) DO NOTHING`, c.WeekStart, c.Kind, c.Title, c.Target, c.PickReason); err != nil {
 		return Challenge{}, err
 	}
 	return GetChallenge(ctx, q, c.WeekStart)
@@ -161,100 +165,13 @@ func CountedDays(ctx context.Context, q Querier, from, to score.Date) ([]Counted
 	return out, rows.Err()
 }
 
-// Reward is a shared goal measured in combined points since it started.
-type Reward struct {
-	ID        int64
-	Name      string
-	Target    int
-	Baseline  int
-	CreatedBy *int64
-	StartedAt time.Time
-	ReachedAt *time.Time
-	ClaimedAt *time.Time
-}
-
-const rewardColumns = `id, name, target, baseline, created_by, started_at, reached_at, claimed_at`
-
-func scanReward(row interface{ Scan(...any) error }) (Reward, error) {
-	var r Reward
-	err := row.Scan(&r.ID, &r.Name, &r.Target, &r.Baseline, &r.CreatedBy, &r.StartedAt, &r.ReachedAt, &r.ClaimedAt)
-	return r, err
-}
-
-// TotalPoints is the combined all-time points of every live user.
+// TotalPoints is the combined all-time points (gems) of every live user.
 func TotalPoints(ctx context.Context, q Querier) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE(sum(s.base_points + s.bonus_points), 0)::int FROM day_scores s
 		JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL`).Scan(&n)
 	return n, err
-}
-
-// CreateReward starts a reward from the given baseline. A second unreached reward violates
-// rewards_one_active, which ErrRewardActive reports.
-func CreateReward(ctx context.Context, q Querier, name string, target, baseline int, by int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		INSERT INTO rewards (name, target, baseline, created_by) VALUES ($1, $2, $3, $4)
-		RETURNING `+rewardColumns, name, target, baseline, by))
-	if violatedConstraint(err) == "rewards_one_active" {
-		return Reward{}, ErrRewardActive
-	}
-	return r, err
-}
-
-// ActiveReward is the reward still being earned.
-func ActiveReward(ctx context.Context, q Querier) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx,
-		`SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NULL`))
-	return r, notFound(err)
-}
-
-// LatestUnclaimedReward is the newest reached reward nobody has marked as enjoyed yet.
-func LatestUnclaimedReward(ctx context.Context, q Querier) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NOT NULL AND claimed_at IS NULL
-		ORDER BY reached_at DESC, id DESC LIMIT 1`))
-	return r, notFound(err)
-}
-
-// GetReward reads one reward.
-func GetReward(ctx context.Context, q Querier, id int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `SELECT `+rewardColumns+` FROM rewards WHERE id = $1`, id))
-	return r, notFound(err)
-}
-
-// ListReachedRewards is the history, newest first.
-func ListReachedRewards(ctx context.Context, q Querier) ([]Reward, error) {
-	rows, err := q.Query(ctx, `
-		SELECT `+rewardColumns+` FROM rewards WHERE reached_at IS NOT NULL
-		ORDER BY reached_at DESC, id DESC LIMIT 100`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Reward{}
-	for rows.Next() {
-		r, err := scanReward(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
-}
-
-// MarkRewardReached stamps the moment once and reports whether this call did it.
-func MarkRewardReached(ctx context.Context, q Querier, id int64) (bool, error) {
-	tag, err := q.Exec(ctx, `UPDATE rewards SET reached_at = now() WHERE id = $1 AND reached_at IS NULL`, id)
-	return tag.RowsAffected() == 1, err
-}
-
-// ClaimReward marks a reached reward as enjoyed. A repeat keeps the first time.
-func ClaimReward(ctx context.Context, q Querier, id int64) (Reward, error) {
-	r, err := scanReward(q.QueryRow(ctx, `
-		UPDATE rewards SET claimed_at = COALESCE(claimed_at, now())
-		WHERE id = $1 AND reached_at IS NOT NULL RETURNING `+rewardColumns, id))
-	return r, notFound(err)
 }
 
 // UpsertPushToken registers the APNs token of an install. The token is unique, so one that
@@ -307,6 +224,40 @@ func ClaimNotice(ctx context.Context, q Querier, kind string, userID int64, date
 		INSERT INTO notice_log (kind, user_id, local_date) VALUES ($1, $2, $3::date)
 		ON CONFLICT DO NOTHING`, kind, userID, date)
 	return tag.RowsAffected() == 1, err
+}
+
+// ReleaseNotice withdraws a claim whose push could not be queued, so the next pass sends it.
+func ReleaseNotice(ctx context.Context, q Querier, kind string, userID int64, date score.Date) error {
+	_, err := q.Exec(ctx, `DELETE FROM notice_log WHERE kind = $1 AND user_id = $2 AND local_date = $3::date`,
+		kind, userID, date)
+	return err
+}
+
+// CountNoticesWithPrefix is how many notices whose kind starts with the prefix were sent to a
+// person for a local date.
+func CountNoticesWithPrefix(ctx context.Context, q Querier, userID int64, date score.Date, prefix string) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, `
+		SELECT count(*)::int FROM notice_log
+		WHERE user_id = $1 AND local_date = $2::date AND starts_with(kind, $3)`, userID, date, prefix).Scan(&n)
+	return n, err
+}
+
+// NoticeEverSent reports whether a person has a notice of the kind on any date.
+func NoticeEverSent(ctx context.Context, q Querier, userID int64, kind string) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM notice_log WHERE user_id = $1 AND kind = $2)`,
+		userID, kind).Scan(&ok)
+	return ok, err
+}
+
+// CheeredToday reports whether the sender has cheered the recipient on their local date.
+func CheeredToday(ctx context.Context, q Querier, from, to int64, date score.Date) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM cheers WHERE from_user = $1 AND to_user = $2 AND local_date = $3::date)`,
+		from, to, date).Scan(&ok)
+	return ok, err
 }
 
 // ReadingMinutesUser is one person's logged reading minutes plus Audiobookshelf listening on

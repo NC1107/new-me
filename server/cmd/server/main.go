@@ -75,7 +75,7 @@ func main() {
 		log.Printf("seed server name: %v", err)
 	}
 
-	notifier := startPush(ctx, cfg, database)
+	notifier, dispatcher := startPush(ctx, cfg, database)
 
 	scheduler := sched.New(database)
 	if cfg.ABSURL != "" {
@@ -116,28 +116,35 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(shutdownCtx)
+	if dispatcher != nil {
+		if err := dispatcher.Shutdown(shutdownCtx); err != nil {
+			log.Printf("[NEWME] push queue not drained: %v", err)
+		}
+	}
 }
 
 // startPush builds the APNs dispatcher, or returns nil when push is not configured. A bad key
-// is logged and leaves push off, since the rest of the app does not depend on it.
-func startPush(ctx context.Context, cfg config.Config, database *db.DB) together.Notifier {
+// is logged and leaves push off, since the rest of the app does not depend on it. The workers
+// outlive the signal context so that shutdown can drain what is queued.
+func startPush(ctx context.Context, cfg config.Config, database *db.DB) (together.Notifier, *push.Dispatcher) {
 	if !cfg.APNS.Enabled() {
 		log.Println("[NEWME] push is off: NEWME_APNS_* is not set")
-		return nil
+		return nil, nil
 	}
 	key, err := push.ParseKey(cfg.APNS.Key)
 	if err != nil {
 		log.Printf("[NEWME] push is off: %v", err)
-		return nil
+		return nil, nil
 	}
 	client, err := push.NewClient(push.Config{Key: key, KeyID: cfg.APNS.KeyID, TeamID: cfg.APNS.TeamID,
 		Topic: cfg.APNS.Topic, Sandbox: !cfg.APNS.Production})
 	if err != nil {
 		log.Printf("[NEWME] push is off: %v", err)
-		return nil
+		return nil, nil
 	}
 	log.Printf("[NEWME] push is on (production=%v)", cfg.APNS.Production)
-	return push.NewDispatcher(ctx, client, push.DBStore{DB: database})
+	dispatcher := push.NewDispatcher(context.WithoutCancel(ctx), client, push.DBStore{DB: database})
+	return dispatcher, dispatcher
 }
 
 // healthcheck does one GET against the local health endpoint and returns the exit code.

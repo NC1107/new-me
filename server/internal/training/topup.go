@@ -32,6 +32,9 @@ func addOneSet(p *Plan, group []string, r SetRange, limit int, catalog map[strin
 	for di, d := range p.Days {
 		spare := limit - daySeconds(d)
 		for ei, e := range d.Exercises {
+			if catalog[e.Exercise].Stretch {
+				continue
+			}
 			muscles := catalog[e.Exercise].PrimaryMuscles
 			if !slices.ContainsFunc(muscles, func(m string) bool { return slices.Contains(group, m) }) {
 				continue

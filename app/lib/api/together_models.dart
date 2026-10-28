@@ -76,6 +76,8 @@ class Challenge {
     required this.done,
     required this.endsOn,
     this.people = const [],
+    this.missed = false,
+    this.reason = '',
   });
 
   static Challenge? tryParse(Object? v) {
@@ -92,10 +94,14 @@ class Challenge {
         if (j['people'] is List)
           for (final p in j['people'] as List) ?ChallengeShare.tryParse(p),
       ],
+      missed: j['missed'] as bool? ?? false,
+      reason: _str(j['reason']),
     );
   }
 
-  /// steps, workouts, counted_days or reading; unknown kinds still render with generic copy.
+  /// steps, workouts, counted_days, reading or one of the v13 kinds (sleep_nights, meal_days,
+  /// protein_days, pushup_reps, yoga_minutes, habit_marks, active_days); unknown kinds still
+  /// render with generic copy.
   final String kind;
   final String title;
   final int target;
@@ -109,6 +115,12 @@ class Challenge {
   /// from before them, which are measured on the pair's total.
   final List<ChallengeShare> people;
 
+  /// True once the week ended with the challenge unfinished. It costs nothing.
+  final bool missed;
+
+  /// Why the server picked this kind, empty on servers older than v13.
+  final String reason;
+
   double get fraction => (progress / target).clamp(0.0, 1.0);
 
   Map<String, dynamic> toJson() => {
@@ -119,75 +131,187 @@ class Challenge {
     'done': done,
     'endsOn': endsOn,
     if (people.isNotEmpty) 'people': [for (final p in people) p.toJson()],
+    if (missed) 'missed': true,
+    if (reason.isNotEmpty) 'reason': reason,
   };
 }
 
+/// One wishlist entry, priced in gems. [status] is `pending`, `declined`, `approved` or
+/// `claimed`; builds before shared rewards sent only a target and no status, which reads as an
+/// approved reward.
 class Reward {
   const Reward({
     required this.id,
     required this.name,
-    required this.target,
+    required this.price,
     required this.progress,
+    this.status = 'approved',
+    this.focus = false,
+    this.ready = false,
     this.startedAt,
     this.reachedAt,
     this.claimedAt,
-    this.createdBy,
+    this.proposedBy,
+    this.proposedByName = '',
   });
 
   static Reward? tryParse(Object? v) {
     final j = _map(v);
-    if (j == null || _int(j['id']) < 1 || _int(j['target']) < 1) return null;
+    final price = j == null ? 0 : _int(j['price'], _int(j['target']));
+    if (j == null || _int(j['id']) < 1 || price < 1) return null;
+    final status = _str(j['status'], 'approved');
+    final claimedAt = _time(j['claimedAt']);
+    final reachedAt = _time(j['reachedAt']);
     return Reward(
       id: _int(j['id']),
       name: _str(j['name']),
-      target: _int(j['target']),
+      price: price,
       progress: _int(j['progress']),
+      status: status,
+      focus: j['focus'] as bool? ?? false,
+      ready:
+          status == 'approved' && claimedAt == null && (j['ready'] as bool? ?? reachedAt != null),
       startedAt: _time(j['startedAt']),
-      reachedAt: _time(j['reachedAt']),
-      claimedAt: _time(j['claimedAt']),
-      createdBy: (j['createdBy'] as num?)?.toInt(),
+      reachedAt: reachedAt,
+      claimedAt: claimedAt,
+      proposedBy: (j['proposedBy'] as num?)?.toInt() ?? (j['createdBy'] as num?)?.toInt(),
+      proposedByName: _str(j['proposedByName']),
     );
   }
 
   final int id;
   final String name;
-  final int target;
+  final int price;
   final int progress;
+  final String status;
+  final bool focus;
+
+  /// The bank covers the price and nobody has claimed it yet.
+  final bool ready;
   final DateTime? startedAt;
   final DateTime? reachedAt;
   final DateTime? claimedAt;
-  final int? createdBy;
+  final int? proposedBy;
+  final String proposedByName;
 
+  bool get pending => status == 'pending';
+  bool get declined => status == 'declined';
+  bool get approved => status == 'approved';
+  bool get claimed => status == 'claimed' || claimedAt != null;
   bool get reached => reachedAt != null;
-  bool get claimed => claimedAt != null;
-  double get fraction => (progress / target).clamp(0.0, 1.0);
+
+  double get fraction => (progress / price).clamp(0.0, 1.0);
+
+  bool proposedByUser(int? userId) => userId != null && proposedBy == userId;
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
-    'target': target,
+    'price': price,
+    'target': price,
     'progress': progress,
+    'status': status,
+    'focus': focus,
+    'ready': ready,
     'startedAt': _timeJson(startedAt),
     'reachedAt': _timeJson(reachedAt),
     'claimedAt': _timeJson(claimedAt),
-    'createdBy': createdBy,
+    'proposedBy': proposedBy,
+    'proposedByName': proposedByName,
+    'createdBy': proposedBy,
   };
 }
 
-/// GET /api/rewards: the reward being earned and the ones already reached, newest first.
+/// A suggested price: what the pair earns at its own pace over [days] days.
+class PriceOption {
+  const PriceOption({required this.days, required this.price});
+
+  final int days;
+  final int price;
+
+  /// "1 week", "2 weeks", "about a month".
+  String get span => switch (days) {
+    7 => '1 week',
+    14 => '2 weeks',
+    30 => 'about a month',
+    _ => '$days days',
+  };
+}
+
+/// The pair's median combined gems per day over its last full days, and the prices that follow.
+class PriceHelp {
+  const PriceHelp({required this.medianDaily, required this.sampleDays, required this.options});
+
+  static PriceHelp? tryParse(Object? v) {
+    final j = _map(v);
+    if (j == null || _int(j['medianDaily']) < 1) return null;
+    final options = [
+      if (j['options'] is List)
+        for (final o in j['options'] as List)
+          if (_map(o) case final m? when _int(m['price']) >= 1)
+            PriceOption(days: _int(m['days']), price: _int(m['price'])),
+    ];
+    if (options.isEmpty) return null;
+    return PriceHelp(
+      medianDaily: _int(j['medianDaily']),
+      sampleDays: _int(j['sampleDays']),
+      options: options,
+    );
+  }
+
+  final int medianDaily;
+  final int sampleDays;
+  final List<PriceOption> options;
+}
+
+/// GET /api/rewards: the focus reward, the whole wishlist (focus first, with the proposals that
+/// wait on someone), the claimed history newest first, the gem bank and the price helper.
 class RewardList {
-  const RewardList({this.active, this.history = const []});
+  const RewardList({
+    this.active,
+    this.items = const [],
+    this.history = const [],
+    this.bank = 0,
+    this.priceHelp,
+  });
 
   factory RewardList.fromJson(Map<String, dynamic> j) => RewardList(
     active: Reward.tryParse(j['reward']),
+    items: [
+      if (j['rewards'] is List)
+        for (final item in j['rewards'] as List) ?Reward.tryParse(item),
+    ],
     history: [
       if (j['history'] is List)
         for (final item in j['history'] as List) ?Reward.tryParse(item),
     ],
+    bank: _int(j['bank']),
+    priceHelp: PriceHelp.tryParse(j['priceHelp']),
   );
 
   final Reward? active;
+  final List<Reward> items;
   final List<Reward> history;
+  final int bank;
+  final PriceHelp? priceHelp;
+
+  /// Approved rewards waiting behind the focus.
+  List<Reward> get queued => [
+    for (final r in items)
+      if (r.approved && !r.focus) r,
+  ];
+
+  /// Proposals from my partner that wait for my answer.
+  List<Reward> proposalsFor(int? userId) => [
+    for (final r in items)
+      if (r.pending && !r.proposedByUser(userId)) r,
+  ];
+
+  /// What I proposed and is still pending or was declined.
+  List<Reward> mineOpen(int? userId) => [
+    for (final r in items)
+      if ((r.pending || r.declined) && r.proposedByUser(userId)) r,
+  ];
 }
 
 /// Which events may send this person a push notification.
@@ -204,6 +328,9 @@ class NotificationPrefs {
     this.weeklyRecap = true,
     this.milestones = true,
     this.lookback = true,
+    this.partnerNudges = true,
+    this.cover = true,
+    this.approvals = true,
   });
 
   /// Servers older than v5 send nothing, which reads as everything on.
@@ -222,6 +349,9 @@ class NotificationPrefs {
       weeklyRecap: j['weeklyRecap'] as bool? ?? true,
       milestones: j['milestones'] as bool? ?? true,
       lookback: j['lookback'] as bool? ?? true,
+      partnerNudges: j['partnerNudges'] as bool? ?? true,
+      cover: j['cover'] as bool? ?? true,
+      approvals: j['approvals'] as bool? ?? true,
     );
   }
 
@@ -241,6 +371,12 @@ class NotificationPrefs {
   final bool milestones;
   final bool lookback;
 
+  /// The v13 switches: gentle prompts about the partner (cheer prompt, reward progress, Thursday
+  /// check-in), cover chances and covers, and habit approvals.
+  final bool partnerNudges;
+  final bool cover;
+  final bool approvals;
+
   Map<String, dynamic> toJson() => {
     'partnerDone': partnerDone,
     'cheers': cheers,
@@ -254,6 +390,9 @@ class NotificationPrefs {
     // Left out while on (the default), so an older server's answer re-encodes to what it sent.
     if (!milestones) 'milestones': false,
     if (!lookback) 'lookback': false,
+    if (!partnerNudges) 'partnerNudges': false,
+    if (!cover) 'cover': false,
+    if (!approvals) 'approvals': false,
   };
 }
 
@@ -271,6 +410,9 @@ class NotificationPatch {
     this.weeklyRecap,
     this.milestones,
     this.lookback,
+    this.partnerNudges,
+    this.cover,
+    this.approvals,
   });
 
   final bool? partnerDone;
@@ -284,6 +426,9 @@ class NotificationPatch {
   final bool? weeklyRecap;
   final bool? milestones;
   final bool? lookback;
+  final bool? partnerNudges;
+  final bool? cover;
+  final bool? approvals;
 
   Map<String, dynamic> toJson() => {
     'partnerDone': ?partnerDone,
@@ -297,5 +442,8 @@ class NotificationPatch {
     'weeklyRecap': ?weeklyRecap,
     'milestones': ?milestones,
     'lookback': ?lookback,
+    'partnerNudges': ?partnerNudges,
+    'cover': ?cover,
+    'approvals': ?approvals,
   };
 }

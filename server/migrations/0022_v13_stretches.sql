@@ -1,0 +1,62 @@
+-- v13 mobility sessions: catalog exercises gain a kind, so stretches live in the same catalog as
+-- strength exercises but never enter strength plans or weekly set counts, and a per_side flag for
+-- stretches done once on each side.
+-- Stretches are chosen by hand from free-exercise-db (Unlicense, github.com/yuhonas/free-exercise-db),
+-- beginner and no equipment, with steps rewritten short; the mapping per key is in
+-- server/static/exercises/SOURCES.tsv. Muscles use the existing vocabulary.
+
+ALTER TABLE exercises
+    ADD COLUMN kind     TEXT    NOT NULL DEFAULT 'strength' CHECK (kind IN ('strength', 'stretch')),
+    ADD COLUMN per_side BOOLEAN NOT NULL DEFAULT false,
+    ADD CONSTRAINT exercises_stretch_shape CHECK (kind = 'strength' OR (measure = 'seconds' AND load = 'bodyweight' AND user_id IS NULL)),
+    ADD CONSTRAINT exercises_per_side_stretch CHECK (NOT per_side OR kind = 'stretch');
+
+INSERT INTO exercises (key, name, primary_muscles, secondary_muscles, measure, load, equipment, position, kind, per_side, steps, cues, images) VALUES
+    ('cat_stretch', 'Cat stretch', '{back,core}', '{}', 'seconds', 'bodyweight', '{}', 100, 'stretch', false,
+     ARRAY['Get on your hands and knees, hands under your shoulders and knees under your hips.', 'Tuck your chin and let your head drop.', 'Pull your belly in and round your whole back toward the ceiling.', 'Hold, breathing slowly, then relax.']::text[],
+     ARRAY['Push the floor away so your shoulder blades spread.', 'Keep the stretch gentle, never sharp.']::text[],
+     ARRAY['cat_stretch-0.jpg', 'cat_stretch-1.jpg']::text[]),
+    ('childs_pose', 'Child''s pose', '{back}', '{glutes}', 'seconds', 'bodyweight', '{}', 101, 'stretch', false,
+     ARRAY['Start on your hands and knees and walk your hands forward.', 'Sit your hips back toward your heels.', 'Rest your forehead on the floor and let your arms lie relaxed.', 'Breathe into your back and hold.']::text[],
+     ARRAY['If your knees complain, skip this one or put a folded towel behind them.', 'Let your shoulders sink away from your ears.']::text[],
+     ARRAY['childs_pose-0.jpg', 'childs_pose-1.jpg']::text[]),
+    ('kneeling_hip_flexor_stretch', 'Kneeling hip flexor stretch', '{quads}', '{glutes}', 'seconds', 'bodyweight', '{}', 102, 'stretch', true,
+     ARRAY['Kneel on a mat, then step one foot forward so that knee is bent at about 90 degrees.', 'Keep your back knee on the floor and your torso upright.', 'Tuck your tailbone under and shift your weight forward until you feel the front of your back hip stretch.', 'Hold, then switch sides.']::text[],
+     ARRAY['Squeeze the glute of the back leg.', 'Do not arch your lower back.']::text[],
+     ARRAY['kneeling_hip_flexor_stretch-0.jpg', 'kneeling_hip_flexor_stretch-1.jpg']::text[]),
+    ('seated_hamstring_stretch', 'Seated hamstring stretch', '{hamstrings}', '{calves}', 'seconds', 'bodyweight', '{}', 103, 'stretch', true,
+     ARRAY['Sit on the floor with one leg straight in front of you.', 'Bend the other knee and rest that foot against your inner thigh.', 'Lean forward from your hips and reach toward your ankle.', 'Stop when you feel a stretch behind the straight knee, then hold and switch sides.']::text[],
+     ARRAY['Hinge at the hips and keep your back long, not rounded.', 'Reach only as far as is comfortable.']::text[],
+     ARRAY['seated_hamstring_stretch-0.jpg']::text[]),
+    ('figure_four_stretch', 'Figure-four stretch', '{glutes}', '{}', 'seconds', 'bodyweight', '{}', 104, 'stretch', true,
+     ARRAY['Lie on your back with your knees bent and your feet on the floor.', 'Rest one ankle on the opposite knee.', 'Reach through and hold the bottom thigh, then pull both legs gently toward your chest.', 'Keep your head and shoulders relaxed, hold, then switch sides.']::text[],
+     ARRAY['Keep the top foot flexed to protect the knee.', 'Pull only until you feel the stretch in the outer hip.']::text[],
+     ARRAY['figure_four_stretch-0.jpg', 'figure_four_stretch-1.jpg']::text[]),
+    ('knee_across_body_stretch', 'Knee across the body', '{glutes,back}', '{core}', 'seconds', 'bodyweight', '{}', 105, 'stretch', true,
+     ARRAY['Lie on your back with one leg straight and the other knee bent.', 'Guide the bent knee across your body with the opposite hand.', 'Open your other arm out to the side and turn your head the other way.', 'Hold, breathing slowly, then switch sides.']::text[],
+     ARRAY['The knee does not need to reach the floor.', 'Keep both shoulders on the floor.']::text[],
+     ARRAY['knee_across_body_stretch-0.jpg', 'knee_across_body_stretch-1.jpg']::text[]),
+    ('one_knee_to_chest_stretch', 'One knee to chest', '{glutes,back}', '{hamstrings}', 'seconds', 'bodyweight', '{}', 106, 'stretch', true,
+     ARRAY['Lie on your back with your legs straight.', 'Bring one knee up and hold it just below the kneecap.', 'Gently pull the knee toward your chest and your nose.', 'Keep the other leg relaxed on the floor, hold, then switch sides.']::text[],
+     ARRAY['Hold under the knee, not on the kneecap.', 'Keep your lower back resting on the floor.']::text[],
+     ARRAY['one_knee_to_chest_stretch-0.jpg', 'one_knee_to_chest_stretch-1.jpg']::text[]),
+    ('side_lying_quad_stretch', 'Side-lying quad stretch', '{quads}', '{}', 'seconds', 'bodyweight', '{}', 107, 'stretch', true,
+     ARRAY['Lie on your side with your bottom knee bent for balance and your head on your arm.', 'Bend your top knee and hold that foot with your top hand.', 'Press your hip forward as you gently pull your heel toward your glute.', 'Hold, then roll over and switch sides.']::text[],
+     ARRAY['Keep your knees close together.', 'Do not twist your lower back.']::text[],
+     ARRAY['side_lying_quad_stretch-0.jpg', 'side_lying_quad_stretch-1.jpg']::text[]),
+    ('standing_calf_stretch', 'Wall calf stretch', '{calves}', '{}', 'seconds', 'bodyweight', '{}', 108, 'stretch', true,
+     ARRAY['Stand facing a wall and place your hands on it at chest height.', 'Step one foot back, with your front knee bent.', 'Press the back heel into the floor and lean toward the wall.', 'Keep your back leg straight, hold, then switch sides.']::text[],
+     ARRAY['Keep your heel down and toes pointing forward.', 'Keep your head, hips and back heel in one line.']::text[],
+     ARRAY['standing_calf_stretch-0.jpg', 'standing_calf_stretch-1.jpg']::text[]),
+    ('standing_trunk_twist', 'Standing trunk twist', '{back,core}', '{}', 'seconds', 'bodyweight', '{}', 109, 'stretch', true,
+     ARRAY['Stand with your feet shoulder width apart and your hands on your hips.', 'Keep your hips facing forward.', 'Slowly turn your upper body to one side until you feel a stretch.', 'Hold, return to the middle, then turn to the other side.']::text[],
+     ARRAY['Turn from your ribs, not by swinging your arms.', 'Keep your knees soft.']::text[],
+     ARRAY['standing_trunk_twist-0.jpg', 'standing_trunk_twist-1.jpg']::text[]),
+    ('cross_body_shoulder_stretch', 'Cross-body shoulder stretch', '{shoulders}', '{back}', 'seconds', 'bodyweight', '{}', 110, 'stretch', true,
+     ARRAY['Stand tall and bring one arm straight across your chest.', 'Hold that arm just above the elbow with your other hand.', 'Gently pull it toward your chest until you feel the back of your shoulder stretch.', 'Hold, then switch arms.']::text[],
+     ARRAY['Keep your shoulder down, not shrugged.', 'Pull on the arm, not the elbow joint.']::text[],
+     ARRAY['cross_body_shoulder_stretch-0.jpg', 'cross_body_shoulder_stretch-1.jpg']::text[]),
+    ('triceps_stretch', 'Triceps stretch', '{triceps}', '{back}', 'seconds', 'bodyweight', '{}', 111, 'stretch', true,
+     ARRAY['Stand tall and raise one arm, then bend the elbow so your hand reaches down your back.', 'Hold that elbow with your other hand.', 'Gently pull the elbow back and toward the other side.', 'Hold, then switch arms.']::text[],
+     ARRAY['Keep your ribs down and do not arch your back.', 'Stop at a comfortable stretch.']::text[],
+     ARRAY['triceps_stretch-0.jpg', 'triceps_stretch-1.jpg']::text[]);

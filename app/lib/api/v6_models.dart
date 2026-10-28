@@ -408,6 +408,7 @@ class RecapChallenge {
     required this.target,
     required this.progress,
     required this.completed,
+    this.missed = false,
   });
 
   static RecapChallenge? tryParse(Object? v) {
@@ -419,6 +420,7 @@ class RecapChallenge {
       target: _int(j['target']),
       progress: _int(j['progress']),
       completed: j['completed'] as bool? ?? false,
+      missed: j['missed'] as bool? ?? false,
     );
   }
 
@@ -428,12 +430,16 @@ class RecapChallenge {
   final int progress;
   final bool completed;
 
+  /// True once the week ended with the challenge unfinished. It costs nothing.
+  final bool missed;
+
   Map<String, dynamic> toJson() => {
     'kind': kind,
     'title': title,
     'target': target,
     'progress': progress,
     'completed': completed,
+    if (missed) 'missed': true,
   };
 }
 

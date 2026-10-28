@@ -139,7 +139,12 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	reward, err := s.boardReward(ctx)
+	lastChallenge, err := s.lastMissedChallenge(ctx, c)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	reward, err := s.focusRewardJSON(ctx)
 	if err != nil {
 		fail(w, r, err)
 		return
@@ -149,7 +154,9 @@ func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
 		"serverNow": wireTime(s.now()),
 		"users":     entries,
 		"challenge": challenge,
-		"reward":    reward,
+		// LastChallenge is last week's challenge when it ended unfinished, otherwise null.
+		"lastChallenge": lastChallenge,
+		"reward":        reward,
 
 		"sharedStreak": sharedStreakJSON{Current: shared.Current, Best: shared.Best},
 	})

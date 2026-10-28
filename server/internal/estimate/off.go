@@ -3,6 +3,7 @@ package estimate
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -83,6 +84,74 @@ func (o *OpenFoodFacts) Search(ctx context.Context, query string) ([]Food, error
 		}
 	}
 	return out, nil
+}
+
+// ValidBarcode reports whether code is 8 to 14 digits with a correct GS1 check digit, which covers
+// EAN-8, UPC-A, EAN-13 and GTIN-14.
+func ValidBarcode(code string) bool {
+	if len(code) < 8 || len(code) > 14 {
+		return false
+	}
+	sum := 0
+	for i := len(code) - 2; i >= 0; i-- {
+		c := code[i]
+		if c < '0' || c > '9' {
+			return false
+		}
+		d := int(c - '0')
+		if (len(code)-2-i)%2 == 0 {
+			d *= 3
+		}
+		sum += d
+	}
+	last := code[len(code)-1]
+	return last >= '0' && last <= '9' && (10-sum%10)%10 == int(last-'0')
+}
+
+// ErrNoProduct means Open Food Facts has no usable product for the barcode.
+var ErrNoProduct = errors.New("estimate: no product for barcode")
+
+// Product looks one barcode up. A product that is missing, unnamed or without calories is
+// ErrNoProduct; a failed call is ErrLookup.
+func (o *OpenFoodFacts) Product(ctx context.Context, code string) (Food, error) {
+	q := url.Values{}
+	q.Set("fields", "code,product_name,brands,serving_size,serving_quantity,nutriments,image_front_small_url,image_front_url")
+	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/v2/product/"+url.PathEscape(code)+"?"+q.Encode(), nil)
+	if err != nil {
+		return Food{}, err
+	}
+	req.Header.Set("User-Agent", o.UserAgent)
+	resp, err := o.HTTP.Do(req)
+	if err != nil {
+		return Food{}, fmt.Errorf("%w: openfoodfacts: %v", ErrLookup, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return Food{}, ErrNoProduct
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Food{}, fmt.Errorf("%w: openfoodfacts status %d", ErrLookup, resp.StatusCode)
+	}
+	var body struct {
+		Status  int         `json:"status"`
+		Product *offProduct `json:"product"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBodyBytes)).Decode(&body); err != nil {
+		return Food{}, fmt.Errorf("%w: openfoodfacts: unreadable answer", ErrLookup)
+	}
+	if body.Status != 1 || body.Product == nil {
+		return Food{}, ErrNoProduct
+	}
+	if body.Product.Code == "" {
+		body.Product.Code = code
+	}
+	f, ok := body.Product.toFood()
+	if !ok {
+		return Food{}, ErrNoProduct
+	}
+	return f, nil
 }
 
 func number(m map[string]any, key string) (float64, bool) {

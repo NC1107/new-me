@@ -48,7 +48,8 @@ class StubResponse {
 
 typedef StubHandler = FutureOr<StubResponse> Function(RequestOptions request);
 
-/// Answers requests by "METHOD /path"; anything unrouted is a 404.
+/// Answers requests by "METHOD /path"; anything unrouted is a 404. A route may name a path
+/// parameter in braces ("GET /api/exercises/{key}/history"); an exact route wins over one.
 class StubAdapter implements HttpClientAdapter {
   StubAdapter([Map<String, StubHandler>? routes]) : routes = routes ?? {};
 
@@ -56,6 +57,19 @@ class StubAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
   void on(String route, StubResponse response) => routes[route] = (_) => response;
+
+  StubHandler? _patternHandler(RequestOptions options) {
+    final request = '${options.method} ${options.path}';
+    for (final MapEntry(:key, :value) in routes.entries) {
+      if (!key.contains('{')) continue;
+      final segments = key
+          .split('/')
+          .map((s) => s.startsWith('{') && s.endsWith('}') ? '[^/]+' : RegExp.escape(s));
+      final pattern = RegExp('^${segments.join('/')}\$');
+      if (pattern.hasMatch(request)) return value;
+    }
+    return null;
+  }
 
   RequestOptions? get last => requests.isEmpty ? null : requests.last;
 
@@ -69,7 +83,7 @@ class StubAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
-    final handler = routes['${options.method} ${options.path}'];
+    final handler = routes['${options.method} ${options.path}'] ?? _patternHandler(options);
     final response = handler == null
         ? const StubResponse(404, {'error': 'no route'})
         : await handler(options);

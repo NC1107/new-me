@@ -473,6 +473,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('Epley'), findsOneWidget);
+      expect(find.text('Could not load the strength chart'), findsNothing);
     });
 
     testWidgets('weekly sets show the evidence range and the source', (tester) async {
@@ -482,6 +483,9 @@ void main() {
       expect(find.textContaining('Aim for 4 to 12 hard sets'), findsOneWidget);
       expect(find.textContaining('Schoenfeld, Ogborn and Krieger'), findsOneWidget);
       expect(find.text('Back'), findsWidgets);
+      expect(find.text('3 wk'), findsOneWidget);
+      expect(find.text('1 wk'), findsOneWidget);
+      expect(find.text('This week'), findsOneWidget);
     });
   });
 }

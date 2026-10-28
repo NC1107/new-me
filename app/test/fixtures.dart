@@ -259,7 +259,25 @@ StubAdapter fullServer() => StubAdapter()
   ..on('GET /api/me', StubResponse(200, meJson()))
   ..on('GET /api/board', StubResponse(200, board([boardUser(2, 'Sam', 'violet')])))
   ..on('GET /api/meals/recent', const StubResponse(200, recentMealsJson))
-  ..on('GET /api/logs', StubResponse(200, logsJson([logJson(), mealLogJson()])));
+  ..on('GET /api/logs', StubResponse(200, logsJson([logJson(), mealLogJson()])))
+  ..routes['GET /api/exercises/{key}/history'] = (request) =>
+      StubResponse(200, exerciseHistoryJson(request.path.split('/')[3]));
+
+/// What GET /api/exercises/{key}/history answers for an exercise with two days of sets and one
+/// max test, so the strength chart has something to draw.
+Map<String, dynamic> exerciseHistoryJson(String key) => {
+  'exercise': key,
+  'metric': 'reps',
+  'estimated': false,
+  'days': 180,
+  'points': [
+    {'date': '2026-10-01', 'value': 4},
+    {'date': '2026-10-17', 'value': 6},
+  ],
+  'maxTests': [
+    {'date': '2026-10-17', 'reps': 7, 'seconds': null},
+  ],
+};
 
 /// The zone the test phone reports; a test may change it between launch and a resume.
 String testDeviceTimezone = 'America/New_York';

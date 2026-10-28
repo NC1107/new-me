@@ -1,8 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/util/client_op_id.dart';
 import 'package:newme/util/format.dart';
+import 'package:newme/util/people.dart';
 
 void main() {
+  test('one date format: Oct 28, Wed, Oct 28 and Wednesday, Oct 28', () {
+    expect(dayShort('2026-10-28'), 'Oct 28');
+    expect(dayWithWeekday('2026-10-28'), 'Wed, Oct 28');
+    expect(dayLong('2026-10-28'), 'Wednesday, Oct 28');
+  });
+
+  test('meFirst moves the signed-in person to the front and keeps the rest in order', () {
+    expect(meFirst([1, 2, 3], 2, (i) => i), [2, 1, 3]);
+    expect(meFirst([1, 2], null, (i) => i), [1, 2]);
+    expect(meFirst([1, 2], 9, (i) => i), [1, 2]);
+  });
+
   test('a typed pairing code is upper-cased and grouped in fours, capped at 16 symbols', () {
     const formatter = InviteCodeFormatter();
     String typed(String raw) =>

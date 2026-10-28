@@ -98,6 +98,20 @@ void main() {
       expect(find.textContaining('New Me 0.'), findsOneWidget);
     });
 
+    testWidgets('has a Me title and rows grouped under short labels', (tester) async {
+      final app = _app(tester, _server(admin: true));
+      await app.pump(const MeScreen());
+      expect(find.text('Me'), findsOneWidget);
+      var last = -1.0;
+      for (final label in ['PLAN', 'YOU', 'CONNECTIONS', 'APP']) {
+        final y = tester.getTopLeft(find.text(label)).dy;
+        expect(y, greaterThan(last), reason: label);
+        last = y;
+      }
+      expect(find.text('Reminders'), findsNothing, reason: 'Reminders lives in Notifications');
+      expect(find.text('Notifications'), findsOneWidget);
+    });
+
     testWidgets('an admin also sees the pairing code row', (tester) async {
       final app = _app(tester, _server(admin: true));
       await app.pump(const MeScreen());

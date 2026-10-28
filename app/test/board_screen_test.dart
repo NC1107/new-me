@@ -92,6 +92,44 @@ void main() {
     expect(accentById('violet').fill, isNot(accentById('amber').fill));
   });
 
+  testWidgets('the signed-in person is always listed first, whatever order the server sends', (
+    tester,
+  ) async {
+    final app = TestApp(
+      tester,
+      _server([boardUser(1, 'Ana', 'amber'), boardUser(2, 'Sam', 'violet')]),
+    );
+    await app.pump(const BoardScreen());
+
+    final cards = tester.widgetList<PersonCard>(find.byType(PersonCard)).toList();
+    expect(cards.first.user.name, 'Sam');
+    final sam = tester.getTopLeft(find.widgetWithText(PersonCard, 'Sam')).dx;
+    final ana = tester.getTopLeft(find.widgetWithText(PersonCard, 'Ana')).dx;
+    expect(sam, lessThan(ana));
+  });
+
+  testWidgets("today's highlights name each person next to their number", (tester) async {
+    final app = TestApp(
+      tester,
+      _server([
+        _withHighlights(boardUser(2, 'Sam', 'violet'), steps: 4321),
+        _withHighlights(boardUser(1, 'Ana', 'amber'), steps: 9000),
+      ]),
+      surfaceHeight: 2400,
+    );
+    await app.pump(const BoardScreen());
+
+    final value = find.text('4,321 steps');
+    expect(value, findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.ancestor(of: value, matching: find.byType(Row)).first,
+        matching: find.text('Sam'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('this week groups one bar per person per day under a summary label', (tester) async {
     final handle = tester.ensureSemantics();
     final app = TestApp(

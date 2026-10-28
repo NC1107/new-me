@@ -58,6 +58,9 @@ type exerciseJSON struct {
 	EasierKey        *string      `json:"easierKey"`
 	HarderKey        *string      `json:"harderKey"`
 	Custom           bool         `json:"custom"`
+	Steps            []string     `json:"steps"`
+	Cues             []string     `json:"cues"`
+	ImageURLs        []string     `json:"imageUrls"`
 	Best             *bestJSON    `json:"best"`
 	MaxTest          *maxTestJSON `json:"maxTest"`
 }
@@ -66,7 +69,7 @@ func toExerciseJSON(e db.Exercise) exerciseJSON {
 	return exerciseJSON{Key: e.Key, Name: e.Name, PrimaryMuscles: nonNil(e.PrimaryMuscles),
 		SecondaryMuscles: nonNil(e.SecondaryMuscles), Measure: e.Measure, Load: e.Load,
 		Equipment: nonNil(e.Equipment), EasierKey: optString(e.EasierKey), HarderKey: optString(e.HarderKey),
-		Custom: e.Custom()}
+		Custom: e.Custom(), Steps: nonNil(e.Steps), Cues: nonNil(e.Cues), ImageURLs: exerciseImageURLs(e)}
 }
 
 func nonNil(s []string) []string {

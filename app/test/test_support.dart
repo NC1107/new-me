@@ -20,6 +20,10 @@ class StubResponse {
     : unreachable = false,
       contentType = 'text/plain';
 
+  /// A binary answer, such as an exercise photo.
+  const StubResponse.bytes(this.status, List<int> this.body, {this.contentType = 'image/png'})
+    : unreachable = false;
+
   const StubResponse.unreachable()
     : status = 0,
       body = const <String, dynamic>{},
@@ -61,6 +65,15 @@ class StubAdapter implements HttpClientAdapter {
         : await handler(options);
     if (response.unreachable) {
       throw DioException.connectionError(requestOptions: options, reason: 'unreachable');
+    }
+    if (response.body case final List<int> bytes) {
+      return ResponseBody.fromBytes(
+        bytes,
+        response.status,
+        headers: {
+          Headers.contentTypeHeader: [response.contentType],
+        },
+      );
     }
     return ResponseBody.fromString(
       response.body is String ? response.body as String : jsonEncode(response.body),

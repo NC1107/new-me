@@ -1,0 +1,38 @@
+# key	free-exercise-db id (blank = no photo)	note
+incline_push_up	Incline_Push-Up
+push_up	Pushups
+decline_push_up	Decline_Push-Up
+band_pull_up	Band_Assisted_Pull-Up
+negative_pull_up		no entry; steps written from the Pullups family
+pull_up	Pullups
+chin_up	Chin-Up
+inverted_row	Inverted_Row	bar in a rack; table variants are not in the source
+dead_hang		no entry; steps written from the Pullups family
+bench_dip	Bench_Dips
+dip	Parallel_Bar_Dip
+air_squat	Bodyweight_Squat
+split_squat		only entry is a jumping split squat, so not used; steps written from Bodyweight_Squat and the lunge family
+bulgarian_split_squat		no entry; steps written from the lunge family
+lunge	Bodyweight_Walking_Lunge	photos show a walking lunge; steps describe a stationary lunge
+step_up	Dumbbell_Step_Ups	photos hold dumbbells, which are optional
+glute_bridge	Butt_Lift_Bridge
+single_leg_glute_bridge	Single_Leg_Glute_Bridge
+good_morning		only entry uses a barbell on a rack, not the bodyweight exercise; steps written from it
+calf_raise		only entries use machines; steps written from Standing_Calf_Raises
+plank	Plank
+side_plank	Side_Bridge	source has no instructions; steps written
+hollow_hold		no entry; steps written from the core family
+burpee		no entry; steps written
+goblet_squat	Goblet_Squat	photos use a kettlebell, a dumbbell is held the same way
+db_romanian_deadlift	Stiff-Legged_Dumbbell_Deadlift
+db_bench_press	Dumbbell_Bench_Press
+db_row	One-Arm_Dumbbell_Row
+db_overhead_press	Standing_Dumbbell_Press
+lateral_raise	Side_Lateral_Raise
+biceps_curl	Dumbbell_Bicep_Curl
+triceps_extension	Standing_Dumbbell_Triceps_Extension
+back_squat	Barbell_Squat
+deadlift	Barbell_Deadlift
+bench_press	Barbell_Bench_Press_-_Medium_Grip
+overhead_press	Standing_Military_Press
+hangboard_hang		no entry; steps written from the Pullups family

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import 'habit_models.dart';
@@ -367,6 +369,20 @@ class ApiClient {
   /// The exercise catalog with the caller's custom exercises, best sets and max tests.
   Future<ExerciseCatalog> exercises() =>
       _send(() => _dio.get<dynamic>('/api/exercises'), ExerciseCatalog.parse);
+
+  /// One how-to photo, fetched with the app key and token the server requires. [path] is an
+  /// exercise's imageUrls entry.
+  Future<Uint8List> exerciseImage(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data ?? const []);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 
   /// Adds a custom exercise for the caller only.
   Future<Exercise> createExercise({

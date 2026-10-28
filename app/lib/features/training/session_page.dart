@@ -19,6 +19,7 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import 'eased_note.dart';
+import 'how_to_sheet.dart';
 import 'set_form.dart';
 import 'training_copy.dart';
 import '../../widgets/units_scope.dart';
@@ -174,6 +175,7 @@ class _ExerciseCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(e.name, style: AppText.headline)),
+              HowToButton(exerciseKey: e.exercise, name: e.name),
               if (e.complete)
                 Icon(
                   Icons.check_circle_rounded,

@@ -24,6 +24,7 @@ import '../../widgets/offline_banner.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../log/log_chip.dart';
+import 'how_to_sheet.dart';
 import 'set_form.dart';
 import 'training_copy.dart';
 import '../../widgets/units_scope.dart';
@@ -191,6 +192,7 @@ class _ExerciseRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (!e.custom) HowToButton(exerciseKey: e.key, name: e.name),
             const Icon(Icons.chevron_right_rounded, color: kInkMuted),
           ],
         ),
@@ -301,6 +303,12 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                     ? 'No max test yet'
                     : '${maxTestLabel(e.maxTest!)} on ${_day(e.maxTest!.date)}',
                 style: AppText.caption.copyWith(color: kInkSecondary),
+              ),
+              const SizedBox(height: 12),
+              ChunkyButton.secondary(
+                label: 'How to do it',
+                icon: Icons.info_outline_rounded,
+                onPressed: () => showHowTo(context, exerciseKey: e.key, name: e.name),
               ),
               if (!e.loaded) ...[
                 const SizedBox(height: 12),

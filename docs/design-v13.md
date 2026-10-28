@@ -53,3 +53,12 @@ Nick's brief for the night of 2026-10-28: focus on Training, Together, and polis
 - Me gets its title and grouped rows; Reminders joins Notifications.
 - The signed-in person is listed first everywhere, partners are told apart by name not only colour, and the cheer sheet shows what was sent.
 - Progress shows one note while data is sparse instead of the same empty lines on every card.
+
+## Decisions made while building
+
+- Pushes that fall in quiet hours or an away day wait in `held_pushes` and go out at the next allowed minute, collapsed if repeated and dropped after a day or if their switch is turned off meanwhile; claim-based pushes are simply retried later.
+- The partner-nudge budget counts only partner nudges (cover, cheer, challenge, reward progress), never the partner-counted push.
+- An approved reward whose price is changed keeps its approved price; withdrawing or declining the change restores it.
+- Last night's sleep is the night record wherever it exists (Today, Us, quests, readiness and Insights read the same number).
+- Stretches never enter strength plans or weekly sets; the exercise library lists strength exercises and Mobility holds the stretches.
+- The HRV evidence behind easier sessions comes from endurance training, and a strength trial found no gain (Bittencourt et al., Front Physiol 2024;15:1472702), so the eased session is framed as a cautious default.

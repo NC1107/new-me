@@ -728,6 +728,19 @@ All additive; the formulas, labels and citations are in `docs/design-v8.md`.
 - `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
 - `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
 
+### Endpoints, v11 to v13 additions
+
+All additive; the reasons are in `docs/design-v11.md` to `docs/design-v13.md`.
+
+- Days carry `goalPercent` (base points against 70% of the possible points, so 100 is a counted day) beside `percent`.
+- Habits carry `minutes`, `proposedPoints` and `proposedMinutes`; `GET /habits/proposals`, `POST /habits/{id}/approve` and `/decline` answer a partner's proposal.
+- `POST /training/today/full` takes the full session on an eased day; sessions carry `eased` and `easedReason`.
+- `GET /exercises/{key}/images/{n}` serves how-to photos; exercises carry `steps`, `cues`, `imageUrls`, `kind` and `perSide`.
+- `GET /training/history?month=YYYY-MM` and `GET /exercises/{key}/history?days=N` back the calendar and the strength chart.
+- `GET /foods/barcode/{code}` looks a product up; food candidates carry `imageUrl` and `sourceUrl`.
+- `GET /rewards` returns `reward` (the focus), `rewards`, `history`, `bank` and `priceHelp`; `PATCH` and `DELETE /rewards/{id}` and `/approve`, `/decline`, `/cancel`, `/focus` and `/claim` manage the wishlist. A create with the old `target` field and no `price` is approved at once for builds without approvals.
+- `GET /me` and `PATCH /me` carry the partner-nudge, cover and approvals switches; challenges carry `reason` and `missed`, and `/board` a nullable `lastChallenge`.
+
 ### Endpoints, v10 additions
 
 All additive; the reasons are in `docs/design-v10.md`.
@@ -994,6 +1007,10 @@ Migration 0008 `v6_autopilot.sql` adds (see `docs/design-v6.md`):
 - `plan_polish` (primary key user + `local_date`, `facts_key`, `text` nullable, `attempted_at`): the row is the claim on the day's single Claude call and `text` the cached wording.
 - `goal_proposals` (primary key user + `week_start` + `key` steps|sleep, `current`, `proposed`, `reason`, `state` pending|accepted|dismissed, `decided_at`).
 - The nudge and recap pushes reuse `notice_log` with the new kinds; no other table changed.
+
+#### Migrations 0017 to 0024 (v11 to v13)
+
+- 0017 habit minutes and proposals; 0018 eased sessions; 0019 exercise how-to; 0020 shared rewards; 0021 challenge kinds, missed state and notification switches; 0022 stretches (`exercises.kind`, `per_side`); 0023 held pushes; 0024 the approved price kept during a price change.
 
 #### Migrations 0015 and 0016 (v10)
 

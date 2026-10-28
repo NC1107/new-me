@@ -253,7 +253,11 @@ class _HoldTimerState extends State<HoldTimer> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  leadIn ? 'Get ready' : 'seconds left',
+                  leadIn
+                      ? 'Get ready'
+                      : _held > 0
+                      ? 'seconds left · $_held held'
+                      : 'seconds left',
                   style: AppText.label.copyWith(color: kInkSecondary),
                 ),
               ],
@@ -262,9 +266,7 @@ class _HoldTimerState extends State<HoldTimer> {
         ),
         const SizedBox(height: 12),
         ChunkyButton.secondary(
-          label: !leadIn && _held > 0
-              ? 'Stop at $_held ${_held == 1 ? 'second' : 'seconds'}'
-              : 'Cancel',
+          label: !leadIn && _held > 0 ? 'Stop now' : 'Cancel',
           onPressed: _stop,
         ),
       ],

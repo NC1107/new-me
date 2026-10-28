@@ -338,7 +338,8 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       expect(find.text('3'), findsWidgets);
       expect(find.byType(BigNumberStepper), findsNothing, reason: 'one big number while timing');
-      await tester.tap(_button('Stop at 2 seconds'));
+      expect(find.text('seconds left · 2 held'), findsOneWidget);
+      await tester.tap(_button('Stop now'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, '2'), findsOneWidget);
       await tester.tap(_button('Log set'));

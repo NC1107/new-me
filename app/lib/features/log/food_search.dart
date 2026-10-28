@@ -162,7 +162,7 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
   }
 
   Future<void> _scan() async {
-    final outcome = await scanBarcode(context);
+    final outcome = await scanBarcode(context, canEnterByHand: widget.onEnterByHand != null);
     if (!mounted) return;
     switch (outcome) {
       case ScanFound(:final food):

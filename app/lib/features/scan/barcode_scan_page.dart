@@ -34,8 +34,8 @@ class ScanEnterByHand extends ScanOutcome {
 }
 
 /// Opens the scanner and resolves with what the person chose, or null when they closed it.
-Future<ScanOutcome?> scanBarcode(BuildContext context) =>
-    pushPage<ScanOutcome>(context, const BarcodeScanPage());
+Future<ScanOutcome?> scanBarcode(BuildContext context, {bool canEnterByHand = true}) =>
+    pushPage<ScanOutcome>(context, BarcodeScanPage(canEnterByHand: canEnterByHand));
 
 /// GS1 check: 8 to 14 digits whose last digit balances the weighted sum of the others. Misreads
 /// fail it, so they are ignored instead of costing a lookup.
@@ -55,9 +55,16 @@ Future<void> openAppSettings() async {
 enum _Phase { scanning, looking, notFound, failed }
 
 class BarcodeScanPage extends ConsumerStatefulWidget {
-  const BarcodeScanPage({super.key, this.onOpenSettings = openAppSettings});
+  const BarcodeScanPage({
+    super.key,
+    this.onOpenSettings = openAppSettings,
+    this.canEnterByHand = true,
+  });
 
   final Future<void> Function() onOpenSettings;
+
+  /// False where the caller has no form to type into, so the choice is not offered.
+  final bool canEnterByHand;
 
   @override
   ConsumerState<BarcodeScanPage> createState() => _BarcodeScanPageState();
@@ -213,13 +220,26 @@ class _BarcodeScanPageState extends ConsumerState<BarcodeScanPage> with WidgetsB
   }
 
   List<Widget> _choices() => [
-    ChunkyButton(label: 'Search instead', onPressed: () => _finish(const ScanSearchInstead())),
+    ChunkyButton(label: 'Scan another', onPressed: _scanAnother),
     const SizedBox(height: 8),
     ChunkyButton.secondary(
-      label: 'Enter by hand',
-      onPressed: () => _finish(const ScanEnterByHand()),
+      label: 'Search instead',
+      onPressed: () => _finish(const ScanSearchInstead()),
     ),
+    if (widget.canEnterByHand) ...[
+      const SizedBox(height: 8),
+      ChunkyButton.secondary(
+        label: 'Enter by hand',
+        onPressed: () => _finish(const ScanEnterByHand()),
+      ),
+    ],
   ];
+
+  void _scanAnother() => setState(() {
+    _phase = _Phase.scanning;
+    _code = null;
+    _error = null;
+  });
 
   Widget _blockedBody(ScannerStatus status) {
     final denied = status == ScannerStatus.denied;

@@ -208,6 +208,34 @@ void main() {
     expect(tester.widget<TextField>(name).focusNode?.hasFocus, isTrue);
   });
 
+  testWidgets('not found: Scan another goes back to the camera for a new code', (tester) async {
+    final scanner = FakeScanner();
+    final app = TestApp(tester, _server(), surfaceHeight: 2400);
+    await app.pump(
+      const Scaffold(body: LogSheet(kind: LogKind.meal)),
+      overrides: [barcodeScannerProvider.overrideWithValue(scanner)],
+    );
+    await _openScanner(app);
+    await _emit(app, scanner, _unknown);
+    await app.tap(find.text('SCAN ANOTHER'));
+    expect(find.text('No match for that barcode'), findsNothing);
+
+    await _emit(app, scanner, _nutella);
+    expect(fieldWith('Hazelnut spread'), findsOneWidget);
+  });
+
+  testWidgets('Enter by hand is not offered where there is no form to type into', (tester) async {
+    final scanner = FakeScanner();
+    final app = TestApp(tester, _server(), surfaceHeight: 2400);
+    await app.pump(
+      const BarcodeScanPage(canEnterByHand: false),
+      overrides: [barcodeScannerProvider.overrideWithValue(scanner)],
+    );
+    await _emit(app, scanner, _unknown);
+    expect(find.text('SEARCH INSTEAD'), findsOneWidget);
+    expect(find.text('ENTER BY HAND'), findsNothing);
+  });
+
   testWidgets('a failed lookup can be retried', (tester) async {
     final scanner = FakeScanner();
     final server = _server()

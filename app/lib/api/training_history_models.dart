@@ -86,6 +86,9 @@ class HistoryDay {
 
   bool get hasSets => sets > 0;
   bool get hasYoga => yogaMinutes > 0;
+
+  /// Apple Health workouts other than yoga, which already counts in [yogaMinutes].
+  bool get otherWorkouts => workoutTypes.any((t) => t != 'yoga');
 }
 
 /// GET /training/history: the days of one month with something on them.

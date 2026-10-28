@@ -123,6 +123,12 @@ void main() {
     FakeStorage().install();
   });
 
+  test('Apple Health workouts other than yoga get their own mark', () {
+    expect(const HistoryDay(date: '2026-10-22', workoutTypes: ['running']).otherWorkouts, isTrue);
+    expect(const HistoryDay(date: '2026-10-22', workoutTypes: ['yoga']).otherWorkouts, isFalse);
+    expect(const HistoryDay(date: '2026-10-22').otherWorkouts, isFalse);
+  });
+
   group('monthWeeks', () {
     test('lays a month out in Monday-first weeks padded with nulls', () {
       final weeks = monthWeeks(2026, 10);

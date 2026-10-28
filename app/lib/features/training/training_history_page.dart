@@ -326,6 +326,11 @@ class _DayCell extends StatelessWidget {
                           if (d.sessionCompleted || d.hasSets) const SizedBox(width: 3),
                           _Dot(color: yogaDotColor(context), filled: true),
                         ],
+                        if (d != null && d.otherWorkouts) ...[
+                          if (d.sessionCompleted || d.hasSets || d.hasYoga)
+                            const SizedBox(width: 3),
+                          const _Dot(color: kInkMuted, filled: true),
+                        ],
                       ],
                     ),
                   ),
@@ -378,6 +383,7 @@ class _Legend extends StatelessWidget {
         entry(_Dot(color: context.accent, filled: true), 'Session completed'),
         entry(_Dot(color: context.accent, filled: false), 'Sets only'),
         entry(_Dot(color: yogaDotColor(context), filled: true), 'Yoga or mobility'),
+        entry(const _Dot(color: kInkMuted, filled: true), 'Other workout'),
       ],
     );
   }

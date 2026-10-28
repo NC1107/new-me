@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/habit_models.dart';
 import '../../api/models.dart';
 import '../../state/partner_today.dart';
+import '../../state/units.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
@@ -147,6 +148,7 @@ class PartnerDay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(partnerTodayProvider);
+    final units = ref.watch(unitsProvider);
     final day = value.value;
     if (day == null) {
       if (value.hasError) {
@@ -174,8 +176,8 @@ class PartnerDay extends ConsumerWidget {
           _DayRow(
             icon: questIcon(q.key),
             palette: questPalette(q.key),
-            title: questTitle(q),
-            detail: q.done ? 'Done' : questProgress(q),
+            title: questTitle(q, units: units),
+            detail: q.done ? 'Done' : questProgress(q, units: units),
             done: q.done,
           ),
         if (day.habits.isNotEmpty) ...[

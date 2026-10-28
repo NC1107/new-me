@@ -25,6 +25,11 @@ func TestPartnerTodayShowsTheirQuestsAndHabits(t *testing.T) {
 	if pushups < 0 || got.num("quests."+itoa(pushups)+".actual") != 15 {
 		t.Fatalf("quests = %s", got.Body)
 	}
+	for i := range got.length("quests") {
+		if got.str("quests."+itoa(i)+".key") == "steps" {
+			t.Fatalf("steps are not part of a day without Health: %s", got.Body)
+		}
+	}
 	if got.length("habits") != 1 || got.str("habits.0.name") != "Brush teeth" || !got.flag("habits.0.slots.0.done") {
 		t.Fatalf("habits = %s", got.Body)
 	}

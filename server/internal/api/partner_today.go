@@ -68,7 +68,23 @@ func (s *Server) handlePartnerToday(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, partnerTodayJSON{
 		ID: partner.ID, Name: partner.Name, Date: today,
-		Quests: toQuestsJSON(scored), Day: toDayJSON(scored), Streak: toStreakJSON(streak, today),
+		Quests: countingQuests(scored), Day: toDayJSON(scored), Streak: toStreakJSON(streak, today),
 		Habits: toHabitStatesJSON(habits),
 	})
+}
+
+// countingQuests leaves out Health-fed quests that are not part of the day yet. The partner
+// cannot connect Health for them, so "0 of 8,000 steps" would only read as a missed quest.
+func countingQuests(s engine.Scored) []questJSON {
+	part := make(map[string]bool, len(s.Score.Quests))
+	for _, q := range s.Score.Quests {
+		part[q.Key] = true
+	}
+	out := make([]questJSON, 0, len(s.Score.Quests))
+	for _, q := range toQuestsJSON(s) {
+		if part[q.Key] {
+			out = append(out, q)
+		}
+	}
+	return out
 }

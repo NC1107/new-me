@@ -46,3 +46,20 @@ Checking 30 common foods against live USDA found the same kinds of faults: 8 fl 
 - The saved foods "Whole Milk", "Sour Cream", "Colby Jack Cheese", "Mayonnaise" and "Mustard" were corrected to the rows and amounts the new lookup chooses.
 - "Egg Bites" (a McDonald's biscuit) and "Egg Sandwich" (a meatball sub) had no correct match and were removed from My foods.
 - Nick's Huel meal and Nadia's sandwich of 2026-10-28 were recomputed from the corrected items.
+
+## Habit approvals say what the habit is
+
+- A proposal now carries the whole habit, and the card on Us shows its icon, the gems and minutes asked for, what it is worth now when it already counts, and its days and reminder times.
+- The push names the days too, such as "Nadia wants Check litter worth 30 gems (10 min), every day".
+
+## The partner's day
+
+- GET /api/partner/today scores the partner's own local today and returns their quests, day, streak and habits, without their food, health or plan.
+- Only quests that are part of their day are listed, so a Health-fed quest they have not connected never reads as missed.
+- The sheet behind the partner's card on Us lists each quest and habit with how far along it is, in the viewer's units.
+- This shows what each person has done, which both people asked to see; it still never shows the other person's targets page or lets one person change the other's data.
+
+## Water in onboarding
+
+- "Drink enough water" is a focus of its own, and its daily goal starts from the person's National Academies figure, in their units.
+- The About you review applies the water target with the others.

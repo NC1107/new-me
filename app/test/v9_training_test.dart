@@ -148,9 +148,16 @@ void main() {
     );
 
     test('targets and sets', () {
-      expect(targetLabel(ex(), Units.metric), '3 × 8 reps');
-      expect(targetLabel(ex(load: 22.5), Units.metric), '3 × 8 reps at 22.5\u00a0kg');
+      expect(targetLabel(ex(), Units.metric), '3 × 8');
+      expect(targetLabel(ex(load: 22.5), Units.metric), '3 × 8 @ 22.5\u00a0kg');
       expect(targetLabel(ex(timed: true, amount: 45), Units.metric), '3 × 45 s');
+      expect(
+        prescriptionLabel(
+          const Prescription(exercise: 'decline_push_up', sets: 3, min: 5, max: 10),
+          timed: false,
+        ),
+        '3 × 5–10',
+      );
       expect(
         setLabel(const ExerciseSet(id: 1, exercise: 'x', localDate: '', reps: 1), Units.metric),
         '1 rep',
@@ -345,7 +352,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Push-up'), findsOneWidget);
-      expect(find.text('2 × 6 reps'), findsNWidgets(3));
+      expect(find.text('2 × 6'), findsNWidgets(3));
       expect(find.textContaining('First time in this plan'), findsWidgets);
       expect(find.text('10 reps at 20\u00a0kg · 2 RIR'), findsOneWidget);
 
@@ -420,7 +427,7 @@ void main() {
       expect(find.text('Dumbbell row'), findsNWidgets(2));
       expect(find.text('Exercises'), findsOneWidget);
       expect(find.text('Weekly sets'), findsOneWidget);
-      expect(find.text('2 × 6 to 10 reps'), findsWidgets);
+      expect(find.text('2 × 6–10'), findsWidgets);
       expect(_button('Change plan'), findsOneWidget);
     });
 

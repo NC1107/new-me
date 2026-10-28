@@ -473,7 +473,7 @@ class _PrescriptionRow extends StatelessWidget {
         const SizedBox(width: 12),
         Flexible(
           child: Text(
-            '${p.sets} × ${rangeLabel(p, timed: timed)}',
+            prescriptionLabel(p, timed: timed),
             textAlign: TextAlign.end,
             style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
           ),

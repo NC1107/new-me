@@ -7,16 +7,19 @@ String kgLabel(double kg, Units units) => units.load(kg);
 String amountLabel(int amount, {required bool timed}) =>
     timed ? '$amount s' : (amount == 1 ? '1 rep' : '$amount reps');
 
-/// "6 to 12 reps", "30 to 60 s": a prescription's range.
-String rangeLabel(Prescription p, {required bool timed}) =>
-    timed ? '${p.min} to ${p.max} s' : '${p.min} to ${p.max} reps';
+/// "3 × 5–10", "3 × 8", "2 × 30–60 s": sets × reps the way lifters write a plan, so the
+/// count is never read as a product ("3 × 5 to 10 reps" read as 150 push-ups).
+String prescriptionLabel(Prescription p, {required bool timed}) {
+  final range = p.min == p.max ? '${p.min}' : '${p.min}–${p.max}';
+  return '${p.sets} × $range${timed ? ' s' : ''}';
+}
 
-/// "2 × 8 reps at 22 kg": what today asks for on one exercise.
+/// "3 × 8 @ 22.5 kg", "3 × 45 s": what today asks for on one exercise.
 String targetLabel(SessionExercise e, Units units) {
   final t = e.target;
-  final base = '${t.sets} × ${amountLabel(t.amount, timed: e.timed)}';
+  final base = '${t.sets} × ${t.amount}${e.timed ? ' s' : ''}';
   final load = t.loadKg;
-  return load == null ? base : '$base at ${kgLabel(load, units)}';
+  return load == null ? base : '$base @ ${kgLabel(load, units)}';
 }
 
 /// "8 reps at 22 kg": what one set of today's target asks for.

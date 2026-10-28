@@ -144,6 +144,12 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
   Widget _body(TrainingSetup setup, ExerciseCatalog? catalog) {
     final profile = setup.profile;
     final plan = setup.plan;
+    final training = ref.watch(trainingTodayProvider).value?.data;
+    final pending = training?.session;
+    // Today's own card shows a session still to do, so only a rest day points at the next one.
+    final upNext = training == null || plan == null || (pending != null && !pending.completed)
+        ? null
+        : nextPlanDay(plan, training.date)?.weekday;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -175,7 +181,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
               ),
             ),
           ] else
-            _PlanView(plan: plan, catalog: catalog),
+            _PlanView(plan: plan, catalog: catalog, upNext: upNext),
         ],
         if (_error case final error?) ...[
           const SizedBox(height: 12),
@@ -195,7 +201,15 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             onPressed: _change,
           ),
           const SizedBox(height: 10),
-          ChunkyButton.secondary(label: 'End plan', onPressed: _designing ? null : _end),
+          TextButton(
+            onPressed: _designing ? null : _end,
+            style: TextButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              foregroundColor: kDangerText,
+              disabledForegroundColor: kInkMuted,
+            ),
+            child: const Text('End plan', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
         ],
         const SizedBox(height: 20),
         SettingsGroup(
@@ -204,7 +218,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
               icon: Icons.list_alt_rounded,
               palette: accentById('rose'),
               title: 'Exercises',
-              subtitle: 'Everything you have logged',
+              subtitle: 'Library and your sets',
               onTap: () => pushPage(context, const ExercisesPage()),
             ),
             SettingsRow(
@@ -224,8 +238,53 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        Text(kTrainingSources, style: AppText.caption.copyWith(color: kInkMuted)),
+        const _SourcesNote(),
       ],
+    );
+  }
+}
+
+/// One line that the plans follow published limits, with the sources behind an info button.
+class _SourcesNote extends StatelessWidget {
+  const _SourcesNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Plans follow published training guidelines.',
+            style: AppText.caption.copyWith(color: kInkMuted),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.info_outline_rounded, size: 20),
+          color: kInkMuted,
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          tooltip: 'Sources for plans and progression',
+          onPressed: () => showAppSheet<void>(context, builder: (_) => const _SourcesSheet()),
+        ),
+      ],
+    );
+  }
+}
+
+class _SourcesSheet extends StatelessWidget {
+  const _SourcesSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(header: true, child: const Text('Sources', style: AppText.title)),
+          const SizedBox(height: 12),
+          const Text(kTrainingSources, style: AppText.body),
+        ],
+      ),
     );
   }
 }
@@ -311,10 +370,13 @@ class _ProfileSummary extends StatelessWidget {
 }
 
 class _PlanView extends StatelessWidget {
-  const _PlanView({required this.plan, required this.catalog});
+  const _PlanView({required this.plan, required this.catalog, this.upNext});
 
   final TrainingPlan plan;
   final ExerciseCatalog? catalog;
+
+  /// The weekday of the next planned session, marked on its card.
+  final int? upNext;
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +414,21 @@ class _PlanView extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(child: Text(day.label, style: AppText.headline)),
+                    if (day.weekday == upNext)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: kSunken,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Next',
+                          style: AppText.caption.copyWith(
+                            color: kInkSecondary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -389,7 +466,7 @@ class _PrescriptionRow extends StatelessWidget {
         const SizedBox(width: 12),
         Flexible(
           child: Text(
-            '${p.sets} x ${rangeLabel(p, timed: timed)}',
+            '${p.sets} × ${rangeLabel(p, timed: timed)}',
             textAlign: TextAlign.end,
             style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
           ),

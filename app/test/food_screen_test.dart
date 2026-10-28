@@ -57,7 +57,8 @@ void main() {
       json['food'] = {...restingFoodJson(), 'targets': targets};
       json['quests'] = [
         ...(json['quests'] as List).where((q) => (q as Map)['key'] != 'protein'),
-        if (proteinQuest != null) quest('protein', 'Protein', {'unit': 'g', 'target': proteinQuest}),
+        if (proteinQuest != null)
+          quest('protein', 'Protein', {'unit': 'g', 'target': proteinQuest}),
       ];
       return Today.fromJson(json);
     }

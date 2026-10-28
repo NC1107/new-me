@@ -13,9 +13,7 @@ void main() {
       ProviderScope(
         overrides: [clockProvider.overrideWithValue(() => now)],
         child: MaterialApp(
-          home: Consumer(
-            builder: (context, ref, _) => Text(lastSyncLabel(ref, synced)),
-          ),
+          home: Consumer(builder: (context, ref, _) => Text(lastSyncLabel(ref, synced))),
         ),
       ),
     );

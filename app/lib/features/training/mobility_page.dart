@@ -5,7 +5,6 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
 import '../../state/training.dart';
@@ -25,7 +24,7 @@ import 'set_assist.dart' show kCounterHeight, kHoldLeadInSeconds;
 
 enum _Stage { intro, running, finished }
 
-enum _Logging { idle, busy, done, failed }
+enum _Logging { idle, busy, done, failed, nothing }
 
 enum _EndChoice { keepGoing, discard, log }
 
@@ -77,7 +76,7 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
   void _start(List<MobilityHold> holds) {
     final session = MobilityController(holds)..addListener(_changed);
     _session = session;
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _step(1));
+    _startTicker();
     setState(() => _stage = _Stage.running);
     HapticFeedback.selectionClick();
     _announce(
@@ -90,14 +89,31 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
     if (mounted) setState(() {});
   }
 
-  void _hide() => _hiddenAt = widget.now();
+  void _startTicker({Duration firstTick = const Duration(seconds: 1)}) {
+    _ticker?.cancel();
+    _ticker = Timer(firstTick, () {
+      _step(1);
+      if (mounted && _stage == _Stage.running) _startTicker();
+    });
+  }
+
+  // The ticker stops while hidden so that the wall clock replayed on return is the only count.
+  void _hide() {
+    if (_stage != _Stage.running) return;
+    _hiddenAt = widget.now();
+    _ticker?.cancel();
+  }
 
   void _show() {
     final hiddenAt = _hiddenAt;
     _hiddenAt = null;
     final session = _session;
-    if (hiddenAt == null || session == null || session.paused || _stage != _Stage.running) return;
-    _step(widget.now().difference(hiddenAt).inSeconds, quiet: true);
+    if (hiddenAt == null || session == null || _stage != _Stage.running) return;
+    final away = widget.now().difference(hiddenAt);
+    if (!session.paused) _step(away.inSeconds, quiet: true);
+    if (_stage != _Stage.running) return;
+    final remainder = Duration(milliseconds: away.inMilliseconds % 1000);
+    _startTicker(firstTick: const Duration(seconds: 1) - remainder);
   }
 
   /// Replays [seconds] of active time. After a stay in the background only the final state is
@@ -166,6 +182,14 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
     final session = _session!;
     _ticker?.cancel();
     HapticFeedback.heavyImpact();
+    if (!session.worthLogging) {
+      setState(() {
+        _stage = _Stage.finished;
+        _logging = _Logging.nothing;
+      });
+      _announce('Mobility done. Nothing logged');
+      return;
+    }
     _loggedMinutes = session.minutes;
     setState(() => _stage = _Stage.finished);
     _announce('Mobility done. ${session.minutes} ${session.minutes == 1 ? 'minute' : 'minutes'}');
@@ -189,7 +213,7 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
               unit: 'minutes',
             ),
           );
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         setState(() {
           _logging = _Logging.failed;
@@ -211,10 +235,7 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
     }
     final wasPaused = session.paused;
     session.pause();
-    if (!session.worthLogging) {
-      Navigator.of(context).pop();
-      return;
-    }
+    final worthLogging = session.worthLogging;
     final minutes = session.minutes;
     final choice = await showDialog<_EndChoice>(
       context: context,
@@ -224,10 +245,12 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
           borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: kBorder),
         ),
-        title: const Text('End Mobility early?'),
+        title: Text(worthLogging ? 'End Mobility early?' : 'End Mobility?'),
         content: Text(
-          'You have done $minutes ${minutes == 1 ? 'minute' : 'minutes'}. '
-          'Log them to your yoga quest?',
+          worthLogging
+              ? 'You have done $minutes ${minutes == 1 ? 'minute' : 'minutes'}. '
+                    'Log them to your yoga quest?'
+              : 'You are under $kMobilityMinLogSeconds seconds in, so nothing will be logged.',
           style: const TextStyle(color: kFgSecondary, fontSize: 14, height: 1.5),
         ),
         actions: [
@@ -238,15 +261,16 @@ class _MobilityPageState extends ConsumerState<MobilityPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, _EndChoice.discard),
             style: TextButton.styleFrom(foregroundColor: kFgSecondary),
-            child: const Text('End without logging'),
+            child: Text(worthLogging ? 'End without logging' : 'End'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, _EndChoice.log),
-            child: Text(
-              'Log $minutes min and end',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+          if (worthLogging)
+            TextButton(
+              onPressed: () => Navigator.pop(context, _EndChoice.log),
+              child: Text(
+                'Log $minutes min and end',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -414,7 +438,7 @@ class _Running extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              _TextAction(label: 'Back', onTap: session.canGoBack ? onBack : null),
+              _TextAction(label: 'Previous', onTap: session.canGoBack ? onBack : null),
               const Spacer(),
               _TextAction(label: 'End', onTap: onClose),
               const Spacer(),
@@ -516,6 +540,7 @@ class _Finished extends StatelessWidget {
   Widget build(BuildContext context) {
     final unit = minutes == 1 ? 'minute' : 'minutes';
     final failed = logging == _Logging.failed;
+    final nothing = logging == _Logging.nothing;
     return PageScaffold(
       title: 'Mobility 10',
       footer: failed
@@ -530,22 +555,32 @@ class _Finished extends StatelessWidget {
             )
           : ChunkyButton(label: 'Done', busy: logging == _Logging.busy, onPressed: onDone),
       children: [
-        Semantics(header: true, child: const Text('Nice work', style: AppText.display)),
-        const SizedBox(height: 8),
-        Text('$minutes $unit of mobility.', style: AppText.headline),
-        const SizedBox(height: 8),
-        if (failed)
+        if (nothing) ...[
+          Semantics(header: true, child: const Text('Nothing logged', style: AppText.display)),
+          const SizedBox(height: 8),
           Text(
-            error ?? 'Could not log your session.',
-            style: AppText.body.copyWith(color: kDangerText),
-          )
-        else
-          Text(
-            logging == _Logging.done
-                ? 'Logged $minutes $unit to your yoga quest.'
-                : 'Logging $minutes $unit to your yoga quest.',
+            'Under $kMobilityMinLogSeconds seconds of stretching, so nothing was added to your '
+            'yoga quest.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
+        ] else ...[
+          Semantics(header: true, child: const Text('Nice work', style: AppText.display)),
+          const SizedBox(height: 8),
+          Text('$minutes $unit of mobility.', style: AppText.headline),
+          const SizedBox(height: 8),
+          if (failed)
+            Text(
+              error ?? 'Could not log your session.',
+              style: AppText.body.copyWith(color: kDangerText),
+            )
+          else
+            Text(
+              logging == _Logging.done
+                  ? 'Logged $minutes $unit to your yoga quest.'
+                  : 'Logging $minutes $unit to your yoga quest.',
+              style: AppText.body.copyWith(color: kInkSecondary),
+            ),
+        ],
       ],
     );
   }
@@ -563,8 +598,9 @@ class _TextAction extends StatelessWidget {
     return TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        minimumSize: const Size(44, 44),
+        minimumSize: const Size(64, 48),
         tapTargetSize: MaterialTapTargetSize.padded,
+        overlayColor: Colors.transparent,
         foregroundColor: context.accentPalette.lip,
         disabledForegroundColor: kInkMuted,
         padding: const EdgeInsets.symmetric(horizontal: 12),

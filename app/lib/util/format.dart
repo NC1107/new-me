@@ -24,6 +24,10 @@ String dayLong(String date) => DateFormat('EEEE, MMM d', 'en_US').format(parseLo
 /// "11:00 PM": a time of day, given as minutes after midnight, the way the rest of the app writes it.
 String timeOfDayLabel(int minutes) => formatMinutesOfDay(minutes);
 
+/// "October 2026".
+String monthYear(int year, int month) =>
+    DateFormat('MMMM y', 'en_US').format(DateTime.utc(year, month));
+
 /// "just now", "5m ago", "3h ago" or "2d ago"; a time in the future reads as "just now".
 String relativeTime(DateTime then, DateTime now) {
   final elapsed = now.difference(then);

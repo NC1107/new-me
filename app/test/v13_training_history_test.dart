@@ -46,6 +46,16 @@ const _october = {
       ],
     },
     {
+      'date': '2026-10-14',
+      'sets': 1,
+      'sessionCompleted': false,
+      'yogaMinutes': 0,
+      'workoutTypes': <String>[],
+      'logged': [
+        {'exercise': 'plank', 'name': 'Plank', 'reps': null, 'seconds': 30, 'loadKg': null},
+      ],
+    },
+    {
       'date': '2026-10-20',
       'sets': 0,
       'sessionCompleted': false,
@@ -62,7 +72,17 @@ StubAdapter _server() => fullServer()
   ..on('GET /api/training/history', const StubResponse(200, _october))
   ..on('GET /api/exercises', StubResponse(200, _contract('exercises')))
   ..on('GET /api/sets', StubResponse(200, _contract('sets')))
-  ..on('GET /api/training/today', StubResponse(200, _contract('training_today')));
+  ..on('GET /api/training/today', StubResponse(200, _todayWithPlan()));
+
+Map<String, dynamic> _todayWithPlan() {
+  final today = _contract('training_today');
+  today['plan'] = {
+    ...(today['plan'] as Map<String, dynamic>),
+    'startsOn': '2026-10-05',
+    'endsOn': '2026-11-29',
+  };
+  return today;
+}
 
 Finder _day(String label) => find.bySemanticsLabel(RegExp('^$label'));
 
@@ -125,16 +145,17 @@ void main() {
       await app.pump(const TrainingHistoryPage());
 
       expect(find.text('October 2026'), findsOneWidget);
-      expect(_day('Monday 5 October, 2 sets, session completed'), findsOneWidget);
-      expect(_day('Monday 12 October, 1 set, session not completed'), findsOneWidget);
+      expect(_day('Monday, Oct 5, 2 sets, session completed'), findsOneWidget);
+      expect(_day('Monday, Oct 12, 1 set, session not completed'), findsOneWidget);
+      expect(_day('Wednesday, Oct 14, 1 set logged'), findsOneWidget, reason: 'no session planned');
       expect(
-        _day('Tuesday 20 October, 25 minutes of yoga or mobility, workouts: Running, Yoga'),
+        _day('Tuesday, Oct 20, 25 minutes of yoga or mobility, workouts: Running, Yoga'),
         findsOneWidget,
       );
-      expect(_day('Monday 26 October, today'), findsOneWidget);
-      expect(_day('Tuesday 6 October, nothing logged'), findsOneWidget);
+      expect(_day('Monday, Oct 26, today'), findsOneWidget);
+      expect(_day('Tuesday, Oct 6, nothing logged'), findsOneWidget);
       expect(find.text('Session completed'), findsOneWidget);
-      expect(find.text('Sets, session not completed'), findsOneWidget);
+      expect(find.text('Sets only'), findsOneWidget);
       expect(find.text('Yoga or mobility'), findsOneWidget);
       expect(
         app.adapter.to('GET /api/training/history').single.queryParameters['month'],
@@ -146,8 +167,8 @@ void main() {
       final app = TestApp(tester, _server());
       await app.pump(const TrainingHistoryPage());
 
-      await app.tap(_day('Monday 5 October'));
-      expect(find.text('Monday 5 October'), findsWidgets);
+      await app.tap(_day('Monday, Oct 5'));
+      expect(find.text('Monday, Oct 5'), findsWidgets);
       expect(find.text('Session completed'), findsNWidgets(2));
       expect(find.text('Push-up'), findsOneWidget);
       expect(find.text('12 reps'), findsOneWidget);
@@ -155,13 +176,22 @@ void main() {
       expect(find.text('8 reps at 20\u00a0kg'), findsOneWidget);
       await app.closeSheet();
 
-      await app.tap(_day('Tuesday 20 October'));
+      await app.tap(_day('Monday, Oct 12'));
+      expect(find.text('Session not completed'), findsOneWidget);
+      await app.closeSheet();
+
+      await app.tap(_day('Wednesday, Oct 14'));
+      expect(find.text('Sets logged'), findsOneWidget);
+      expect(find.text('Session not completed'), findsNothing);
+      await app.closeSheet();
+
+      await app.tap(_day('Tuesday, Oct 20'));
       expect(find.text('Yoga and mobility'), findsOneWidget);
       expect(find.text('25 minutes'), findsOneWidget);
       expect(find.text('Running, Yoga'), findsOneWidget);
       await app.closeSheet();
 
-      await app.tap(_day('Tuesday 6 October'));
+      await app.tap(_day('Tuesday, Oct 6'));
       expect(find.text('Nothing was logged this day.'), findsOneWidget);
     });
 
@@ -178,7 +208,7 @@ void main() {
         app.adapter.to('GET /api/training/history').map((r) => r.queryParameters['month']),
         contains('2026-09'),
       );
-      expect(_day('Tuesday 1 September, nothing logged'), findsOneWidget);
+      expect(_day('Tuesday, Sep 1, nothing logged'), findsOneWidget);
 
       await app.tap(find.bySemanticsLabel('Next month'));
       expect(find.text('October 2026'), findsOneWidget);
@@ -190,7 +220,7 @@ void main() {
       final app = TestApp(tester, _server());
       await app.pump(const TrainingHistoryPage());
 
-      final cell = tester.getSize(_day('Monday 5 October'));
+      final cell = tester.getSize(_day('Monday, Oct 5'));
       expect(cell.width, greaterThanOrEqualTo(44));
       expect(cell.height, greaterThanOrEqualTo(44));
       final previous = tester.getSize(find.bySemanticsLabel('Previous month'));
@@ -236,12 +266,12 @@ void main() {
       expect(find.textContaining('Nuzzo et al., Sports Med 2024'), findsOneWidget);
       expect(find.text('72'), findsOneWidget);
       expect(find.text('60'), findsOneWidget);
-      expect(find.text('1 Oct'), findsOneWidget);
-      expect(find.text('20 Oct'), findsOneWidget);
+      expect(find.text('Oct 1'), findsOneWidget);
+      expect(find.text('Oct 20'), findsOneWidget);
       expect(find.text('Axis in kg.'), findsOneWidget);
       expect(
         find.bySemanticsLabel(
-          'Estimated one-rep max (estimated), 3 days from 1 Oct to 20 Oct. '
+          'Estimated one-rep max (estimated), 3 days from Oct 1 to Oct 20. '
           'First ${Units.metric.load(60)}, latest ${Units.metric.load(72)}, best ${Units.metric.load(72)}.',
         ),
         findsOneWidget,
@@ -281,7 +311,40 @@ void main() {
       expect(find.text('Best reps in a set'), findsOneWidget);
       expect(find.textContaining('Rings mark max tests.'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('Max tests: 7 reps on 12 Oct')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Max tests: 7 reps on Oct 12')), findsOneWidget);
+    });
+
+    _semanticsTest('marks max tests on a load chart along the bottom line', (tester) async {
+      await _pumpChart(
+        tester,
+        _history(
+          ChartMetric.e1rm,
+          [('2026-10-01', 60), ('2026-10-20', 72)],
+          estimated: true,
+          maxTests: const [ChartMaxTest(date: '2026-10-12', reps: 7)],
+        ),
+      );
+      expect(find.textContaining('Rings on the bottom line mark max tests.'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Max tests: 7 reps on Oct 12')), findsOneWidget);
+    });
+
+    _semanticsTest('the exercise page has a visible delete button on each set', (tester) async {
+      final app = TestApp(tester, _server(), surfaceHeight: 3000);
+      await app.pump(const ExercisePage(exerciseKey: 'plank'));
+      await tester.pumpAndSettle();
+      expect(find.text('Long press a set to delete it.'), findsNothing);
+      await tester.tap(find.byTooltip('Delete set').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Delete this set?'), findsOneWidget);
+    });
+
+    _semanticsTest('an exercise with nothing logged says so once', (tester) async {
+      final app = TestApp(tester, _server(), surfaceHeight: 3000);
+      await app.pump(const ExercisePage(exerciseKey: 'push_up'));
+      await tester.pumpAndSettle();
+      expect(find.text('No sets or max test yet'), findsOneWidget);
+      expect(find.text('No sets yet'), findsNothing);
+      expect(find.text('No max test yet'), findsNothing);
     });
 
     _semanticsTest('holds chart seconds', (tester) async {
@@ -328,7 +391,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Best reps in a set'), findsOneWidget);
       expect(
-        find.bySemanticsLabel(RegExp('Best reps in a set, 2 days from 1 Oct to 17 Oct')),
+        find.bySemanticsLabel(RegExp('Best reps in a set, 2 days from Oct 1 to Oct 17')),
         findsOneWidget,
       );
     });

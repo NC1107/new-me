@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../theme/accent.dart';
@@ -48,8 +47,6 @@ String _axisUnit(ChartMetric m, Units units) => switch (m) {
   ChartMetric.seconds => 's',
 };
 
-String _shortDay(String date) => DateFormat('d MMM').format(parseLocalDate(date));
-
 /// The text a screen reader gets in place of the picture.
 String chartSummary(ExerciseHistory h, Units units) {
   final points = h.points;
@@ -63,7 +60,7 @@ String chartSummary(ExerciseHistory h, Units units) {
   final values = points.map((p) => p.value);
   final best = values.reduce(math.max);
   b.write(
-    ', ${points.length} days from ${_shortDay(points.first.date)} to ${_shortDay(points.last.date)}. '
+    ', ${points.length} days from ${dayShort(points.first.date)} to ${dayShort(points.last.date)}. '
     'First ${chartValueLabel(metric, points.first.value, units)}, '
     'latest ${chartValueLabel(metric, points.last.value, units)}, '
     'best ${chartValueLabel(metric, best, units)}.',
@@ -72,7 +69,7 @@ String chartSummary(ExerciseHistory h, Units units) {
     final tests = h.maxTests
         .map(
           (t) =>
-              '${t.seconds != null ? '${t.seconds} s' : '${t.reps} reps'} on ${_shortDay(t.date)}',
+              '${t.seconds != null ? '${t.seconds} s' : '${t.reps} reps'} on ${dayShort(t.date)}',
         )
         .join(', ');
     b.write(' Max tests: $tests.');
@@ -96,6 +93,15 @@ class StrengthChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final h = history;
     final metric = h.metric;
+    if (h.points.length < 2) {
+      return AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          'Your chart shows after sets on two different days.',
+          style: AppText.caption.copyWith(color: kInkSecondary),
+        ),
+      );
+    }
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,18 +114,12 @@ class StrengthChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          if (h.points.length < 2)
-            Text(
-              'Your chart shows after sets on two different days.',
-              style: AppText.body.copyWith(color: kInkSecondary),
-            )
-          else
-            Semantics(
-              label: chartSummary(h, units),
-              image: true,
-              excludeSemantics: true,
-              child: _Plot(history: h, units: units),
-            ),
+          Semantics(
+            label: chartSummary(h, units),
+            image: true,
+            excludeSemantics: true,
+            child: _Plot(history: h, units: units),
+          ),
           const SizedBox(height: 10),
           Text(metricNote(metric), style: AppText.caption.copyWith(color: kInkMuted)),
         ],
@@ -137,11 +137,11 @@ class _Plot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final h = history;
-    final marksTests = h.metric == ChartMetric.reps || h.metric == ChartMetric.seconds;
-    final tests = marksTests
-        ? h.maxTests.where((t) => t.value != null).toList()
-        : const <ChartMaxTest>[];
-    final scale = _Scale.of(h.points, tests);
+    // A max test is reps or seconds, so it shares the axis only with a reps or seconds chart; on a
+    // load chart it sits on the baseline at its day.
+    final onAxis = h.metric == ChartMetric.reps || h.metric == ChartMetric.seconds;
+    final tests = h.maxTests.where((t) => !onAxis || t.value != null).toList();
+    final scale = _Scale.of(h.points, tests, valued: onAxis);
     final caption = AppText.caption.copyWith(color: kInkMuted);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -167,6 +167,7 @@ class _Plot extends StatelessWidget {
                   painter: _StrengthChartPainter(
                     points: h.points,
                     maxTests: tests,
+                    testsOnAxis: onAxis,
                     scale: scale,
                     color: context.accent,
                     surface: kSurface,
@@ -182,14 +183,18 @@ class _Plot extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(_shortDay(h.points.first.date), style: caption),
-              Text(_shortDay(h.points.last.date), style: caption),
+              Text(dayShort(h.points.first.date), style: caption),
+              Text(dayShort(h.points.last.date), style: caption),
             ],
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Axis in ${_axisUnit(h.metric, units)}.${tests.isEmpty ? '' : ' Rings mark max tests.'}',
+          'Axis in ${_axisUnit(h.metric, units)}.${tests.isEmpty
+              ? ''
+              : onAxis
+              ? ' Rings mark max tests.'
+              : ' Rings on the bottom line mark max tests.'}',
           style: caption,
         ),
       ],
@@ -201,8 +206,8 @@ class _Plot extends StatelessWidget {
 class _Scale {
   const _Scale(this.lo, this.hi, this.start, this.end);
 
-  factory _Scale.of(List<ChartPoint> points, List<ChartMaxTest> tests) {
-    final values = [...points.map((p) => p.value), ...tests.map((t) => t.value!)];
+  factory _Scale.of(List<ChartPoint> points, List<ChartMaxTest> tests, {required bool valued}) {
+    final values = [...points.map((p) => p.value), if (valued) ...tests.map((t) => t.value!)];
     final days = [
       ...points.map((p) => p.date),
       ...tests.map((t) => t.date),
@@ -220,6 +225,7 @@ class _StrengthChartPainter extends CustomPainter {
   const _StrengthChartPainter({
     required this.points,
     required this.maxTests,
+    required this.testsOnAxis,
     required this.scale,
     required this.color,
     required this.surface,
@@ -227,6 +233,7 @@ class _StrengthChartPainter extends CustomPainter {
 
   final List<ChartPoint> points;
   final List<ChartMaxTest> maxTests;
+  final bool testsOnAxis;
   final _Scale scale;
   final Color color;
   final Color surface;
@@ -274,7 +281,9 @@ class _StrengthChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     for (final t in maxTests) {
-      final o = _at(t.date, t.value!, size);
+      final o = testsOnAxis
+          ? _at(t.date, t.value!, size)
+          : Offset(_at(t.date, scale.lo, size).dx, size.height - _pad);
       canvas.drawCircle(o, 8, Paint()..color = surface);
       canvas.drawCircle(o, 8, ring);
     }
@@ -282,5 +291,8 @@ class _StrengthChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StrengthChartPainter old) =>
-      old.points != points || old.maxTests != maxTests || old.color != color;
+      old.points != points ||
+      old.maxTests != maxTests ||
+      old.testsOnAxis != testsOnAxis ||
+      old.color != color;
 }

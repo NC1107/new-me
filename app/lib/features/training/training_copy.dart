@@ -11,10 +11,10 @@ String amountLabel(int amount, {required bool timed}) =>
 String rangeLabel(Prescription p, {required bool timed}) =>
     timed ? '${p.min} to ${p.max} s' : '${p.min} to ${p.max} reps';
 
-/// "2 x 8 reps at 22 kg": what today asks for on one exercise.
+/// "2 × 8 reps at 22 kg": what today asks for on one exercise.
 String targetLabel(SessionExercise e, Units units) {
   final t = e.target;
-  final base = '${t.sets} x ${amountLabel(t.amount, timed: e.timed)}';
+  final base = '${t.sets} × ${amountLabel(t.amount, timed: e.timed)}';
   final load = t.loadKg;
   return load == null ? base : '$base at ${kgLabel(load, units)}';
 }

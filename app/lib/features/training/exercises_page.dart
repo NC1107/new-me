@@ -290,7 +290,11 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                e.best == null ? 'No sets yet' : bestLabel(e.best!, context.units),
+                e.best != null
+                    ? bestLabel(e.best!, context.units)
+                    : e.maxTest == null
+                    ? 'No sets or max test yet'
+                    : 'No sets yet',
                 style: AppText.headline,
               ),
               if (e.best?.e1rmKg != null) ...[
@@ -300,13 +304,15 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                   style: AppText.caption.copyWith(color: kInkMuted),
                 ),
               ],
-              const SizedBox(height: 8),
-              Text(
-                e.maxTest == null
-                    ? 'No max test yet'
-                    : '${maxTestLabel(e.maxTest!)} on ${_day(e.maxTest!.date)}',
-                style: AppText.caption.copyWith(color: kInkSecondary),
-              ),
+              if (e.maxTest != null || e.best != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  e.maxTest == null
+                      ? 'No max test yet'
+                      : '${maxTestLabel(e.maxTest!)} on ${_day(e.maxTest!.date)}',
+                  style: AppText.caption.copyWith(color: kInkSecondary),
+                ),
+              ],
               const SizedBox(height: 12),
               ChunkyButton.secondary(
                 label: 'How to do it',
@@ -391,19 +397,23 @@ class _SetHistory extends StatelessWidget {
                     },
                     child: InkWell(
                       onLongPress: () => onDelete(s),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                setLabel(s, context.units),
-                                style: AppText.tabular(AppText.label.copyWith(color: kInk)),
-                              ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              setLabel(s, context.units),
+                              style: AppText.tabular(AppText.label.copyWith(color: kInk)),
                             ),
-                            Text(rirLabel(s.rir), style: AppText.caption),
-                          ],
-                        ),
+                          ),
+                          Text(rirLabel(s.rir), style: AppText.caption),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                            color: kInkMuted,
+                            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                            tooltip: 'Delete set',
+                            onPressed: () => onDelete(s),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -412,7 +422,6 @@ class _SetHistory extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        Text('Long press a set to delete it.', style: AppText.caption.copyWith(color: kInkMuted)),
       ],
     );
   }

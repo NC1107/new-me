@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../state/today.dart';
@@ -44,12 +43,25 @@ Color yogaDotColor(BuildContext context) {
   return kFlame;
 }
 
+/// Whether the plan had a session on [date]. The server only says whether one was completed, so
+/// a day outside the plan's dates or weekdays counts as having none planned.
+bool sessionPlanned(TrainingPlan? plan, DateTime date) {
+  if (plan == null) return false;
+  final key = formatDateKey(date);
+  if (key.compareTo(plan.startsOn) < 0 || key.compareTo(plan.endsOn) > 0) return false;
+  return plan.days.any((d) => d.weekday == date.weekday);
+}
+
 /// The words for one calendar day, read by VoiceOver and shown in the day sheet's summary.
-String dayLabel(DateTime date, HistoryDay? day, {required bool isToday}) {
+String dayLabel(DateTime date, HistoryDay? day, {required bool isToday, bool planned = true}) {
+  final count = day == null || !day.hasSets ? '' : (day.sets == 1 ? '1 set' : '${day.sets} sets');
   final sets = day == null || !day.hasSets
       ? null
-      : '${day.sets == 1 ? '1 set' : '${day.sets} sets'}, '
-            '${day.sessionCompleted ? 'session completed' : 'session not completed'}';
+      : day.sessionCompleted
+      ? '$count, session completed'
+      : planned
+      ? '$count, session not completed'
+      : '$count logged';
   final parts = <String>[
     if (isToday) 'today',
     ?sets,
@@ -58,7 +70,7 @@ String dayLabel(DateTime date, HistoryDay? day, {required bool isToday}) {
     if (day != null && day.workoutTypes.isNotEmpty)
       'workouts: ${day.workoutTypes.map(workoutTypeLabel).join(', ')}',
   ];
-  final head = DateFormat('EEEE d MMMM').format(date);
+  final head = dayLong(formatDateKey(date));
   return parts.isEmpty ? '$head, nothing logged' : '$head, ${parts.join(', ')}';
 }
 
@@ -100,13 +112,14 @@ class _TrainingHistoryPageState extends ConsumerState<TrainingHistoryPage> {
     final shown = _shown ?? now;
     final key = monthKey(shown.year, shown.month);
     final history = ref.watch(trainingHistoryProvider(key));
+    final plan = ref.watch(trainingTodayProvider.select((v) => v.value?.data.plan));
     final atNow = shown == now;
     return PageScaffold(
       title: 'History',
       subtitle: 'Sessions, sets and yoga by day',
       children: [
         _MonthHeader(
-          title: DateFormat('MMMM y').format(DateTime.utc(shown.year, shown.month)),
+          title: monthYear(shown.year, shown.month),
           onPrevious: () => _step(-1, now),
           onNext: atNow ? null : () => _step(1, now),
         ),
@@ -116,8 +129,9 @@ class _TrainingHistoryPageState extends ConsumerState<TrainingHistoryPage> {
             year: shown.year,
             month: shown.month,
             today: today,
+            plan: plan,
             history: history.value,
-            onDay: (date, day) => _openDay(context, date, day),
+            onDay: (date, day) => _openDay(context, date, day, plan),
           ),
         ),
         const SizedBox(height: 12),
@@ -134,11 +148,11 @@ class _TrainingHistoryPageState extends ConsumerState<TrainingHistoryPage> {
     );
   }
 
-  Future<void> _openDay(BuildContext context, DateTime date, HistoryDay? day) {
+  Future<void> _openDay(BuildContext context, DateTime date, HistoryDay? day, TrainingPlan? plan) {
     HapticFeedback.selectionClick();
     return showAppSheet<void>(
       context,
-      builder: (_) => _DaySheet(date: date, day: day),
+      builder: (_) => _DaySheet(date: date, day: day, planned: sessionPlanned(plan, date)),
     );
   }
 }
@@ -197,6 +211,7 @@ class _MonthGrid extends StatelessWidget {
     required this.year,
     required this.month,
     required this.today,
+    required this.plan,
     required this.history,
     required this.onDay,
   });
@@ -204,6 +219,7 @@ class _MonthGrid extends StatelessWidget {
   final int year;
   final int month;
   final String today;
+  final TrainingPlan? plan;
   final TrainingHistoryMonth? history;
   final void Function(DateTime date, HistoryDay? day) onDay;
 
@@ -231,9 +247,10 @@ class _MonthGrid extends StatelessWidget {
               for (final date in week)
                 Expanded(
                   child: date == null
-                      ? const SizedBox(height: 52)
+                      ? const SizedBox(height: _kCellHeight)
                       : _DayCell(
                           date: date,
+                          planned: sessionPlanned(plan, date),
                           day: history?.day(formatDateKey(date)),
                           isToday: formatDateKey(date) == today,
                           onTap: (day) => onDay(date, day),
@@ -246,15 +263,19 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
+const _kCellHeight = 56.0;
+
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.date,
+    required this.planned,
     required this.day,
     required this.isToday,
     required this.onTap,
   });
 
   final DateTime date;
+  final bool planned;
   final HistoryDay? day;
   final bool isToday;
   final void Function(HistoryDay? day) onTap;
@@ -266,17 +287,18 @@ class _DayCell extends StatelessWidget {
     return Semantics(
       button: true,
       excludeSemantics: true,
-      label: dayLabel(date, d, isToday: isToday),
+      label: dayLabel(date, d, isToday: isToday, planned: planned),
       onTap: () => onTap(d),
       child: Pressable(
         scale: 0.94,
         onTap: () => onTap(d),
         child: SizedBox(
-          height: 52,
+          height: _kCellHeight,
           child: Center(
             child: Container(
               width: 44,
-              height: 48,
+              height: 52,
+              padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
                 color: isToday ? context.accentTint : null,
                 border: isToday ? Border.all(color: accent, width: kBorderWidth) : null,
@@ -350,11 +372,11 @@ class _Legend extends StatelessWidget {
       ],
     );
     return Wrap(
-      spacing: 16,
+      alignment: WrapAlignment.spaceBetween,
       runSpacing: 6,
       children: [
         entry(_Dot(color: context.accent, filled: true), 'Session completed'),
-        entry(_Dot(color: context.accent, filled: false), 'Sets, session not completed'),
+        entry(_Dot(color: context.accent, filled: false), 'Sets only'),
         entry(_Dot(color: yogaDotColor(context), filled: true), 'Yoga or mobility'),
       ],
     );
@@ -362,10 +384,11 @@ class _Legend extends StatelessWidget {
 }
 
 class _DaySheet extends StatelessWidget {
-  const _DaySheet({required this.date, required this.day});
+  const _DaySheet({required this.date, required this.day, required this.planned});
 
   final DateTime date;
   final HistoryDay? day;
+  final bool planned;
 
   @override
   Widget build(BuildContext context) {
@@ -384,12 +407,16 @@ class _DaySheet extends StatelessWidget {
           children: [
             Semantics(
               header: true,
-              child: Text(DateFormat('EEEE d MMMM').format(date), style: AppText.title),
+              child: Text(dayLong(formatDateKey(date)), style: AppText.title),
             ),
             const SizedBox(height: 4),
             if (d != null && (d.hasSets || d.sessionCompleted))
               Text(
-                d.sessionCompleted ? 'Session completed' : 'Session not completed',
+                d.sessionCompleted
+                    ? 'Session completed'
+                    : planned
+                    ? 'Session not completed'
+                    : 'Sets logged',
                 style: AppText.label.copyWith(color: kInkSecondary),
               ),
             const SizedBox(height: 12),

@@ -54,10 +54,7 @@ String foodTargetsSummary(Today today) {
   final kcal = t.kcal;
   if (kcal == null && protein == null) return 'Not set';
   if (protein == null) return '${kcal!.formatted} kcal a day';
-  return [
-    if (kcal != null) '${kcal.formatted} kcal',
-    '${protein.formatted} g protein',
-  ].join(', ');
+  return [if (kcal != null) '${kcal.formatted} kcal', '${protein.formatted} g protein'].join(', ');
 }
 
 class _FoodBody extends ConsumerWidget {

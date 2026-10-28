@@ -17,6 +17,7 @@
       "points": 200,
       "maxBase": 350,
       "percent": 51,
+      "goalPercent": 73,
       "counted": false,
       "streakLine": 70,
       "quests": [

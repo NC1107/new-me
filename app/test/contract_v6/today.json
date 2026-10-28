@@ -91,6 +91,7 @@
       "points": 170,
       "maxBase": 400,
       "percent": 36,
+      "goalPercent": 51,
       "counted": false,
       "streakLine": 70
     },

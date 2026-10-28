@@ -41,6 +41,7 @@ Map<String, dynamic> dayJson({int points = 150, int percent = 62, bool counted =
   'points': points,
   'maxBase': 400,
   'percent': percent,
+  'goalPercent': percent * 100 ~/ 70,
   'counted': counted,
   'streakLine': 70,
 };
@@ -176,7 +177,12 @@ Map<String, dynamic> boardUser(
   'id': id,
   'name': name,
   'color': color,
-  'today': {'points': points, 'percent': percent, 'counted': false},
+  'today': {
+    'points': points,
+    'percent': percent,
+    'goalPercent': percent * 100 ~/ 70,
+    'counted': false,
+  },
   'week': {'points': week},
   'season': {'points': season},
   'streak': {'current': streak},

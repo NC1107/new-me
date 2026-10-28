@@ -44,7 +44,7 @@ void main() {
 
     test('is deterministic and clamps nonsense percents', () {
       expect(reminderCopy(questsLeft: 3, percent: 54), reminderCopy(questsLeft: 3, percent: 54));
-      expect(reminderCopy(questsLeft: 3, percent: 140), contains('100%'));
+      expect(reminderCopy(questsLeft: 3, percent: 140), contains('99%'));
       expect(reminderCopy(questsLeft: 3, percent: -5), contains('has not started'));
     });
   });
@@ -56,7 +56,7 @@ void main() {
       final plan = planReminders(now: evening, minutes: 20 * 60, today: _today());
       final left = _today().quests.where((q) => !q.done).length;
       expect(plan[kTonightReminderId]?.at, DateTime(2026, 10, 26, 20));
-      expect(plan[kTonightReminderId]?.body, reminderCopy(questsLeft: left, percent: 62));
+      expect(plan[kTonightReminderId]?.body, reminderCopy(questsLeft: left, percent: 88));
       expect(plan[kTomorrowReminderId]?.at, DateTime(2026, 10, 27, 20));
       expect(plan[kTomorrowReminderId]?.body, 'Your day is waiting');
     });

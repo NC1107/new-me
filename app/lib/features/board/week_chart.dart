@@ -232,7 +232,7 @@ class _BarsPainter extends CustomPainter {
   final List<String> dates;
   final double grow;
 
-  static const _threshold = 70.0;
+  static const _threshold = 100.0;
   static const _minBar = 6.0;
 
   @override
@@ -247,7 +247,7 @@ class _BarsPainter extends CustomPainter {
 
     final ceiling = math.max(
       100.0,
-      users.expand((u) => u.last7).fold<double>(0, (m, d) => math.max(m, d.percent.toDouble())),
+      users.expand((u) => u.last7).fold<double>(0, (m, d) => math.max(m, d.goalPercent.toDouble())),
     );
     double heightOf(int percent) =>
         math.max(_minBar, percent / ceiling * usable) * grow.clamp(0.0, 1.0);
@@ -273,7 +273,7 @@ class _BarsPainter extends CustomPainter {
         final mark = users[j].last7.where((d) => d.date == dates[i]).firstOrNull;
         if (mark == null) continue;
         final palette = accentById(users[j].color);
-        final h = heightOf(mark.percent);
+        final h = heightOf(mark.goalPercent);
         final x = left + j * (barW + gap);
         final color = mark.counted
             ? palette.fill

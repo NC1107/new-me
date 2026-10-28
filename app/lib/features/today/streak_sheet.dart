@@ -69,7 +69,7 @@ class StreakSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'A day counts toward your streak when you reach the streak line, $line% of the day. '
+              'A day counts toward your streak when you reach 100% of the day\'s goal. '
               'The streak is how many counted days you have in a row.',
               style: body,
             ),

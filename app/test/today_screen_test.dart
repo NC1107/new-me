@@ -61,9 +61,9 @@ void main() {
     expect(find.textContaining('Sam'), findsWidgets);
     expect(find.text('150'), findsOneWidget, reason: "today's points beside the gem");
     expect(find.text('3'), findsOneWidget, reason: 'the streak beside the flame');
-    expect(find.text('62%'), findsOneWidget);
+    expect(find.text('88%'), findsOneWidget);
     expect(find.text('130 of 400 points'), findsOneWidget);
-    expect(find.textContaining('Reach 70% to keep your streak going'), findsOneWidget);
+    expect(find.textContaining('Reach 100% to keep your streak going'), findsOneWidget);
     expect(find.text('3 quests to go'), findsOneWidget);
 
     expect(find.text('Get stronger'), findsOneWidget);
@@ -127,8 +127,8 @@ void main() {
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
     expect(find.text('Streak saved for today!'), findsOneWidget);
-    expect(find.textContaining('past the 70% line'), findsOneWidget);
-    expect(find.textContaining('Reach 70%'), findsNothing);
+    expect(find.textContaining('Goal reached'), findsOneWidget);
+    expect(find.textContaining('Reach 100%'), findsNothing);
     await app.closeSheet();
   });
 
@@ -139,7 +139,7 @@ void main() {
 
     await app.tap(find.bySemanticsLabel(RegExp(r'day streak')));
     expect(find.text('Day 1'), findsOneWidget);
-    expect(find.textContaining('reach the streak line, 70% of the day'), findsOneWidget);
+    expect(find.textContaining('reach 100% of the day'), findsOneWidget);
     expect(find.text('Earning and using freezes'), findsOneWidget);
     expect(find.text('0 of 2 freezes'), findsOneWidget);
   });
@@ -175,7 +175,7 @@ void main() {
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
 
-    await app.tap(find.bySemanticsLabel('Nick, 41 percent today, open Us'));
+    await app.tap(find.bySemanticsLabel('Nick, 58 percent of the goal today, open Us'));
     expect(app.container.read(homeTabProvider), HomeTab.board);
     await app.tap(find.bySemanticsLabel('Sam, open Me'));
     expect(app.container.read(homeTabProvider), HomeTab.me);
@@ -307,7 +307,7 @@ void main() {
 
     adapter.on('GET /api/today', StubResponse(200, richTodayJson()));
     await app.tap(find.text('Try again'));
-    expect(find.text('62%'), findsOneWidget);
+    expect(find.text('88%'), findsOneWidget);
   });
 
   testWidgets('with a cache the screen stays up under the offline banner', (tester) async {
@@ -319,7 +319,7 @@ void main() {
     adapter.on('GET /api/today', const StubResponse.unreachable());
     await app.pump(const TodayScreen(), key: UniqueKey());
     expect(find.textContaining('Offline - updated'), findsOneWidget);
-    expect(find.text('62%'), findsOneWidget);
+    expect(find.text('88%'), findsOneWidget);
   });
 
   testWidgets('a failed refresh keeps the day beneath the error', (tester) async {
@@ -331,7 +331,7 @@ void main() {
     unawaited(app.container.read(todayProvider.notifier).refresh());
     await app.settle();
     expect(find.text('Could not load today'), findsOneWidget);
-    expect(find.text('62%'), findsOneWidget);
+    expect(find.text('88%'), findsOneWidget);
   });
 
   testWidgets('pull to refresh syncs Health and reloads the day', (tester) async {

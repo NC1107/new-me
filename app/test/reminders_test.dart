@@ -112,7 +112,7 @@ void main() {
     final tonight = t.scheduler.pending[kTonightReminderId]!;
     expect(tonight.at, DateTime(2026, 10, 26, 20));
     final left = t.container.read(todayProvider).value!.data.quests.where((q) => !q.done).length;
-    expect(tonight.body, reminderCopy(questsLeft: left, percent: 62));
+    expect(tonight.body, reminderCopy(questsLeft: left, percent: 88));
     expect(t.scheduler.pending[kTomorrowReminderId]!.at, DateTime(2026, 10, 27, 20));
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('remindersEnabled'), isTrue);

@@ -32,8 +32,8 @@ void main() {
       expect(snapshot['version'], kCompanionSnapshotVersion);
       expect(snapshot['date'], '2026-10-26');
       expect(snapshot['points'], 120);
-      expect(snapshot['percent'], 25);
-      expect(snapshot['streakLine'], 70);
+      expect(snapshot['percent'], 35);
+      expect(snapshot['streakLine'], 100);
       expect(snapshot['streak'], 3);
       expect(snapshot['accent'], {'fill': '#7B6CD9', 'tint': '#EEEBFA'});
       expect(snapshot['quests'], [

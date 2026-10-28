@@ -22,12 +22,12 @@ String weekdayLong(String date) => DateFormat.EEEE().format(parseLocalDate(date)
   final until = repair.until == null ? '22:00' : formatClock(repair.until!.toLocal());
   return (
     title: 'Repair yesterday',
-    body: 'You missed $day. Reach 100% today before $until and it counts as a frozen day.',
+    body: 'You missed $day. Earn every point today before $until and it counts as a frozen day.',
   );
 }
 
 /// Shown in the right-now slot while yesterday is a missed, unfrozen day and the window to
-/// repair it is open, with today's progress toward the 100% it needs.
+/// repair it is open, with today's progress toward earning every point.
 class RepairCard extends StatelessWidget {
   const RepairCard({super.key, required this.repair, required this.percent});
 
@@ -74,7 +74,7 @@ class RepairCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '$shown% of 100%',
+              '$shown% of today\'s points',
               style: AppText.tabular(
                 AppText.label.copyWith(color: kFreezeText, fontWeight: FontWeight.w800),
               ),

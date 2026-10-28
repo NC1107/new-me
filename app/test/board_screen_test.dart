@@ -75,8 +75,8 @@ void main() {
     expect(find.byType(PersonCard), findsNWidgets(2));
     expect(find.text('120'), findsOneWidget);
     expect(find.text('2,400'), findsOneWidget);
-    expect(find.text('30%'), findsOneWidget);
-    expect(find.text('88%'), findsOneWidget);
+    expect(find.text('42%'), findsOneWidget);
+    expect(find.text('125%'), findsOneWidget);
     expect(find.text('1,200'), findsOneWidget);
     expect(find.text('8,000'), findsOneWidget);
     expect(find.text('4-day streak'), findsNWidgets(2));
@@ -180,7 +180,7 @@ void main() {
     final app = TestApp(tester, _server([boardUser(2, 'Sam', 'violet', percent: 64)]));
     await app.pump(const BoardScreen());
     await tester.pump();
-    expect(find.text('64%'), findsOneWidget);
+    expect(find.text('91%'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

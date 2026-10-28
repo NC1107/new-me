@@ -325,10 +325,17 @@ func tidyServing(text string) string {
 	if m := servingEcho.FindStringSubmatch(text); m != nil && strings.EqualFold(m[1], m[2]) {
 		text = strings.TrimSuffix(text, text[strings.LastIndex(text, " ("):])
 	}
-	if strings.ToUpper(text) == text && strings.ToLower(text) != text {
-		text = strings.ToLower(text)
+	words := strings.Fields(text)
+	for i, w := range words {
+		if len(w) > 1 && strings.ToUpper(w) == w && strings.ToLower(w) != w {
+			words[i] = strings.ToLower(w)
+		}
+		// USDA writes ounces as "ONZ".
+		if words[i] == "onz" {
+			words[i] = "oz"
+		}
 	}
-	return text
+	return strings.Join(words, " ")
 }
 
 // substitutes are words that mark a stand-in for a food, which someone searching for the food

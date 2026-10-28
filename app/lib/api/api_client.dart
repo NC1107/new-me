@@ -305,6 +305,11 @@ class ApiClient {
     (data) => Today.fromJson(data as Json),
   );
 
+  Future<PartnerToday> partnerToday() => _send(
+    () => _dio.get<dynamic>('/api/partner/today'),
+    (data) => PartnerToday.fromJson(data as Json),
+  );
+
   Future<List<Habit>> habits() => _send(
     () => _dio.get<dynamic>('/api/habits'),
     (data) => HabitList.fromJson(data as Json).habits,

@@ -192,6 +192,7 @@ func (s *Server) Router() http.Handler {
 		r.Patch("/api/me", s.handlePatchMe)
 		r.Get("/api/today", s.handleToday)
 		r.Get("/api/board", s.handleBoard)
+		r.Get("/api/partner/today", s.handlePartnerToday)
 		r.With(s.settleAfter).Post("/api/logs", s.handleCreateLog)
 		r.Get("/api/logs", s.handleListLogs)
 		r.With(s.settleAfter).Delete("/api/logs/{id}", s.handleDeleteLog)

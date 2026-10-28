@@ -597,6 +597,38 @@ int _goalPercentOf(int base, int maxBase, int line) {
   return goal <= 0 || base <= 0 ? 0 : base * 100 ~/ goal;
 }
 
+/// What the partner has done on their own local today, from GET /api/partner/today: their
+/// quests, day and habits, without their food, health or plan.
+class PartnerToday {
+  const PartnerToday({
+    required this.id,
+    required this.name,
+    required this.date,
+    required this.day,
+    required this.quests,
+    required this.streak,
+    required this.habits,
+  });
+
+  factory PartnerToday.fromJson(Json j) => PartnerToday(
+    id: _int(j['id']),
+    name: _str(j['name']),
+    date: _str(j['date']),
+    day: DayScore.fromJson(j['day'] as Json),
+    quests: _list(j['quests'], Quest.fromJson),
+    streak: Streak.fromJson(j['streak'] as Json),
+    habits: parseHabitStates(j['habits']),
+  );
+
+  final int id;
+  final String name;
+  final String date;
+  final DayScore day;
+  final List<Quest> quests;
+  final Streak streak;
+  final List<HabitState> habits;
+}
+
 class DayScore {
   DayScore({
     required this.basePoints,

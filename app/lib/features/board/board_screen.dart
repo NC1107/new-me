@@ -127,6 +127,7 @@ class _UsBody extends ConsumerWidget {
                     ? PersonCard(
                         user: users[1],
                         now: now,
+                        isPartner: true,
                         onCheer: () => showCheerSheet(context, partner: users[1]),
                       )
                     : const _WaitingCard(),

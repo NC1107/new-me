@@ -25,6 +25,7 @@ class PersonCard extends StatelessWidget {
     required this.user,
     required this.now,
     this.onCheer,
+    this.isPartner = false,
     this.inviteStreak = false,
     this.isMe = false,
   });
@@ -34,6 +35,9 @@ class PersonCard extends StatelessWidget {
 
   /// Set on the partner's card: the Cheer button opens the cheer sheet.
   final VoidCallback? onCheer;
+
+  /// The partner's card, whose sheet also shows what they have done today.
+  final bool isPartner;
 
   /// Whether a zero streak says "Start a streak today". Paired, the Us header says it once.
   final bool inviteStreak;
@@ -60,7 +64,7 @@ class PersonCard extends StatelessWidget {
         builder: (context) => Semantics(
           container: true,
           child: AppCard(
-            onTap: () => showPersonSheet(context, user: user, now: now),
+            onTap: () => showPersonSheet(context, user: user, now: now, isPartner: isPartner),
             semanticLabel: semanticLabel,
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
             child: Column(

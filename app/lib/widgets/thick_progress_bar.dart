@@ -5,13 +5,15 @@ import '../theme/tokens.dart';
 
 /// A 16 tall rounded bar with a lighter highlight stripe along the top third.
 /// The fill eases to a new value; the first build shows its value without animating unless
-/// [animateFromZero] is set. [markerAt] draws a flag on the track, like the 70% streak line.
+/// [animateFromZero] is set. [markerAt] draws a flag on the track, like a target.
+/// [bonusValue] adds a lighter segment after the fill for what goes beyond the goal.
 class ThickProgressBar extends StatelessWidget {
   const ThickProgressBar({
     super.key,
     required this.value,
     this.color,
     this.markerAt,
+    this.bonusValue = 0,
     this.animateFromZero = false,
     this.semanticLabel,
   });
@@ -27,6 +29,9 @@ class ThickProgressBar extends StatelessWidget {
 
   /// A fraction of the track in 0..1 where a flag is planted.
   final double? markerAt;
+
+  /// A fraction of the track in 0..1 that follows the fill as a lighter segment.
+  final double bonusValue;
   final bool animateFromZero;
   final String? semanticLabel;
 
@@ -61,7 +66,8 @@ class ThickProgressBar extends StatelessWidget {
                     tween: Tween<double>(begin: animateFromZero ? 0 : null, end: target),
                     duration: duration,
                     curve: Curves.easeOutCubic,
-                    builder: (context, v, _) => CustomPaint(painter: _BarPainter(v, fill)),
+                    builder: (context, v, _) =>
+                        CustomPaint(painter: _BarPainter(v, fill, bonusValue.clamp(0.0, 1.0))),
                   ),
                 ),
                 if (marker != null)
@@ -105,16 +111,28 @@ class _Flag extends StatelessWidget {
 }
 
 class _BarPainter extends CustomPainter {
-  const _BarPainter(this.value, this.fill);
+  const _BarPainter(this.value, this.fill, this.bonus);
 
   final double value;
   final Color fill;
+  final double bonus;
 
   @override
   void paint(Canvas canvas, Size size) {
     final r = size.height / 2;
     final track = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(r));
     canvas.drawRRect(track, Paint()..color = kSunken);
+    if (bonus > 0 && value > 0) {
+      canvas.save();
+      canvas.clipRRect(track);
+      final start = size.width * value;
+      final end = (start + size.width * bonus).clamp(start, size.width);
+      canvas.drawRect(
+        Rect.fromLTRB(start, 0, end, size.height),
+        Paint()..color = Color.alphaBlend(fill.withValues(alpha: 0.45), kSurface),
+      );
+      canvas.restore();
+    }
     if (value <= 0) return;
     // Never narrower than the bar is tall, so a sliver still reads as a rounded pill.
     final w = (size.width * value).clamp(size.height, size.width);
@@ -130,5 +148,6 @@ class _BarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BarPainter old) => old.value != value || old.fill != fill;
+  bool shouldRepaint(_BarPainter old) =>
+      old.value != value || old.fill != fill || old.bonus != bonus;
 }

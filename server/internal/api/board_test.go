@@ -31,11 +31,11 @@ func TestBoardShowsTodayStreakAndSyncForEachPerson(t *testing.T) {
 	h.logActivity(nadia, "pushups", "reps", 15).expect(http.StatusCreated)
 
 	got := h.get("/api/board", nadia.Token).expect(http.StatusOK)
-	if got.num("users.0.today.points") != 50 || got.num("users.0.today.percent") != 16 || got.flag("users.0.today.counted") ||
+	if got.num("users.0.today.points") != 50 || got.num("users.0.today.percent") != 16 || got.num("users.0.today.goalPercent") != 23 || got.flag("users.0.today.counted") ||
 		!got.isNull("users.0.syncedAt") || got.num("users.0.streak.current") != 0 {
 		t.Fatalf("Nadia = %s", got.Body)
 	}
-	if got.num("users.1.today.points") != 336 || got.num("users.1.today.percent") != 76 || !got.flag("users.1.today.counted") ||
+	if got.num("users.1.today.points") != 336 || got.num("users.1.today.percent") != 76 || got.num("users.1.today.goalPercent") != 109 || !got.flag("users.1.today.counted") ||
 		got.isNull("users.1.syncedAt") || got.num("users.1.streak.current") != 1 {
 		t.Fatalf("Nick = %s", got.Body)
 	}
@@ -44,7 +44,7 @@ func TestBoardShowsTodayStreakAndSyncForEachPerson(t *testing.T) {
 	}
 
 	if got.length("users.1.last7") != 7 || got.str("users.1.last7.0.date") != "2026-10-27" ||
-		got.str("users.1.last7.6.date") != "2026-11-02" || got.num("users.1.last7.6.percent") != 76 ||
+		got.str("users.1.last7.6.date") != "2026-11-02" || got.num("users.1.last7.6.percent") != 76 || got.num("users.1.last7.6.goalPercent") != 109 ||
 		!got.flag("users.1.last7.6.counted") || got.flag("users.1.last7.6.rest") || got.num("users.1.last7.0.percent") != 0 {
 		t.Fatalf("Nick last7 = %s", got.Body)
 	}

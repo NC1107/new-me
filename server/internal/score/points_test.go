@@ -153,3 +153,29 @@ func TestListeningFillsTheReadingQuestWithoutTouchingPages(t *testing.T) {
 		t.Fatalf("20 listened minutes = %d/%d, want complete", actual, target)
 	}
 }
+
+func TestGoalPercentIsFullExactlyWhenTheDayCounts(t *testing.T) {
+	for maxBase := 1; maxBase <= 400; maxBase++ {
+		for base := 0; base <= maxBase; base++ {
+			counted := base*100 >= CountedPercent*maxBase
+			if got := GoalPercent(base, maxBase) >= 100; got != counted {
+				t.Fatalf("base %d of %d: goalPercent>=100 is %v, counted is %v", base, maxBase, got, counted)
+			}
+		}
+	}
+}
+
+func TestGoalPoints(t *testing.T) {
+	cases := map[int]int{0: 0, 1: 1, 10: 7, 11: 8, 100: 70, 143: 101}
+	for maxBase, want := range cases {
+		if got := GoalPoints(maxBase); got != want {
+			t.Errorf("GoalPoints(%d) = %d, want %d", maxBase, got, want)
+		}
+	}
+	if got := GoalPercent(100, 100); got != 142 {
+		t.Errorf("full day goalPercent = %d, want 142", got)
+	}
+	if got := GoalPercent(5, 0); got != 0 {
+		t.Errorf("empty day goalPercent = %d, want 0", got)
+	}
+}

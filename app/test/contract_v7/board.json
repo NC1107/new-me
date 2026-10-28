@@ -49,6 +49,7 @@
         "today": {
           "points": 170,
           "percent": 36,
+          "goalPercent": 51,
           "counted": false
         },
         "week": {
@@ -65,6 +66,7 @@
           {
             "date": "2026-10-21",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -74,6 +76,7 @@
           {
             "date": "2026-10-22",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -83,6 +86,7 @@
           {
             "date": "2026-10-23",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -92,6 +96,7 @@
           {
             "date": "2026-10-24",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -101,6 +106,7 @@
           {
             "date": "2026-10-25",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -110,6 +116,7 @@
           {
             "date": "2026-10-26",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -119,6 +126,7 @@
           {
             "date": "2026-10-27",
             "percent": 36,
+            "goalPercent": 51,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -149,6 +157,7 @@
         "today": {
           "points": 30,
           "percent": 7,
+          "goalPercent": 10,
           "counted": false
         },
         "week": {
@@ -165,6 +174,7 @@
           {
             "date": "2026-10-21",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -174,6 +184,7 @@
           {
             "date": "2026-10-22",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -183,6 +194,7 @@
           {
             "date": "2026-10-23",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -192,6 +204,7 @@
           {
             "date": "2026-10-24",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -201,6 +214,7 @@
           {
             "date": "2026-10-25",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -210,6 +224,7 @@
           {
             "date": "2026-10-26",
             "percent": 0,
+            "goalPercent": 0,
             "counted": false,
             "rest": false,
             "frozen": false,
@@ -219,6 +234,7 @@
           {
             "date": "2026-10-27",
             "percent": 7,
+            "goalPercent": 10,
             "counted": false,
             "rest": false,
             "frozen": false,

@@ -61,7 +61,7 @@ class PersonCard extends StatelessWidget {
                 Text(
                   user.away.today
                       ? 'Away today'
-                      : '${user.today.percent}%${user.today.counted ? ' - counted' : ''}',
+                      : '${user.today.goalPercent}%${user.today.counted ? ' - counted' : ''}',
                   textAlign: TextAlign.center,
                   style: AppText.label.copyWith(
                     color: user.away.today
@@ -189,11 +189,12 @@ class _Ring extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduce = MediaQuery.disableAnimationsOf(context);
-    final fraction = (user.today.percent / 100).clamp(0.0, 1.0);
+    final fraction = (user.today.goalPercent / 100).clamp(0.0, 1.0);
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.2,
       child: Semantics(
-        label: '${user.name}: ${user.today.points} points today, ${user.today.percent} percent',
+        label:
+            '${user.name}: ${user.today.points} points today, ${user.today.goalPercent} percent of the goal',
         excludeSemantics: true,
         child: SizedBox.square(
           dimension: _kRingSize,

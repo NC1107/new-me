@@ -56,7 +56,7 @@ void main() {
     await app.settle(30);
 
     expect(find.text('170'), findsOneWidget);
-    expect(find.text('70%'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
     expect(find.text('Streak saved for today!'), findsOneWidget);
     expect(find.text('4'), findsWidgets, reason: 'the flame follows the counted day');
     expect(
@@ -96,7 +96,7 @@ void main() {
     await app.tap(_save());
 
     expect(find.text('160'), findsOneWidget);
-    expect(find.text('66%'), findsOneWidget);
+    expect(find.text('94%'), findsOneWidget);
     expect(adapter.to('GET /api/today'), hasLength(loads));
   });
 

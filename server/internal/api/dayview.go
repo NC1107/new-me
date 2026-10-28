@@ -38,6 +38,7 @@ type dayJSON struct {
 	Points      int  `json:"points"`
 	MaxBase     int  `json:"maxBase"`
 	Percent     int  `json:"percent"`
+	GoalPercent int  `json:"goalPercent"`
 	Counted     bool `json:"counted"`
 	StreakLine  int  `json:"streakLine"`
 }
@@ -56,6 +57,7 @@ func toDayJSON(s engine.Scored) dayJSON {
 		Points:      s.Row.Points(),
 		MaxBase:     s.Row.MaxBase,
 		Percent:     s.Row.Percent,
+		GoalPercent: score.GoalPercent(s.Row.BasePoints, s.Row.MaxBase),
 		Counted:     s.Row.Counted,
 		StreakLine:  score.CountedPercent,
 	}

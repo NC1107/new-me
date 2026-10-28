@@ -60,7 +60,7 @@ class Reminder {
 
 /// The line for an evening when the day has not counted yet.
 String reminderCopy({required int questsLeft, required int percent}) {
-  final shown = percent.clamp(0, 100);
+  final shown = percent.clamp(0, 99);
   if (questsLeft == 1) return '1 quest left to save your streak';
   if (questsLeft == 2) return '2 quests left to save your streak';
   if (shown <= 0) return 'Your day has not started. One quest gets you going.';
@@ -101,7 +101,7 @@ Map<int, Reminder?> planReminders({
       body: fresh
           ? reminderCopy(
               questsLeft: today.quests.where((q) => !q.done).length,
-              percent: today.day.percent,
+              percent: today.day.goalPercent,
             )
           : _kGenericBody,
     );

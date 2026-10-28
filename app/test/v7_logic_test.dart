@@ -331,7 +331,10 @@ void main() {
         progressPercent: 36,
       );
       expect(repairCopy(repair, 36).title, 'Repair yesterday');
-      expect(repairCopy(repair, 36).body, startsWith('You missed Monday. Reach 100% today before'));
+      expect(
+        repairCopy(repair, 36).body,
+        startsWith('You missed Monday. Earn every point today before'),
+      );
       expect(repairCopy(repair, 100).title, 'Yesterday is repaired');
       expect(weekdayLong('2026-10-26'), 'Monday');
     });

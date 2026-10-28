@@ -17,9 +17,10 @@ type seasonJSON struct {
 }
 
 type boardDayJSON struct {
-	Points  int  `json:"points"`
-	Percent int  `json:"percent"`
-	Counted bool `json:"counted"`
+	Points      int  `json:"points"`
+	Percent     int  `json:"percent"`
+	GoalPercent int  `json:"goalPercent"`
+	Counted     bool `json:"counted"`
 }
 
 type pointsJSON struct {
@@ -31,10 +32,11 @@ type streakCountJSON struct {
 }
 
 type dayMarkJSON struct {
-	Date    score.Date `json:"date"`
-	Percent int        `json:"percent"`
-	Counted bool       `json:"counted"`
-	Rest    bool       `json:"rest"`
+	Date        score.Date `json:"date"`
+	Percent     int        `json:"percent"`
+	GoalPercent int        `json:"goalPercent"`
+	Counted     bool       `json:"counted"`
+	Rest        bool       `json:"rest"`
 	// Frozen, Away and Repaired say how a day that did not count was forgiven. A repaired day is
 	// also frozen.
 	Frozen   bool `json:"frozen"`
@@ -180,7 +182,7 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	for d := today.AddDays(-6); !d.After(today); d = d.AddDays(1) {
 		row := byDate[d]
 		o := streak.Outcome(d)
-		last7 = append(last7, dayMarkJSON{Date: d, Percent: row.Percent, Counted: row.Counted,
+		last7 = append(last7, dayMarkJSON{Date: d, Percent: row.Percent, GoalPercent: score.GoalPercent(row.BasePoints, row.MaxBase), Counted: row.Counted,
 			Rest:   o.Reason == score.ReasonRest,
 			Frozen: o.Status == score.StatusFrozen, Away: o.Status == score.StatusAway,
 			Repaired: o.Reason == score.ReasonRepair})
@@ -220,7 +222,8 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	todayRow := byDate[today]
 	return boardUserJSON{
 		ID: u.ID, Name: u.Name, Color: u.Color,
-		Today:            boardDayJSON{Points: todayRow.Points(), Percent: todayRow.Percent, Counted: todayRow.Counted},
+		Today: boardDayJSON{Points: todayRow.Points(), Percent: todayRow.Percent,
+			GoalPercent: score.GoalPercent(todayRow.BasePoints, todayRow.MaxBase), Counted: todayRow.Counted},
 		Week:             pointsJSON{Points: week},
 		Season:           pointsJSON{Points: total},
 		Streak:           streakCountJSON{Current: streak.Count},

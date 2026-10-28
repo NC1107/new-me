@@ -589,16 +589,22 @@ class Quest {
   };
 }
 
+int _goalPercentOf(int base, int maxBase, int line) {
+  final goal = (maxBase * line / 100).ceil();
+  return goal <= 0 || base <= 0 ? 0 : base * 100 ~/ goal;
+}
+
 class DayScore {
-  const DayScore({
+  DayScore({
     required this.basePoints,
     required this.bonusPoints,
     required this.points,
     required this.maxBase,
     required this.percent,
+    int? goalPercent,
     required this.counted,
     required this.streakLine,
-  });
+  }) : goalPercent = goalPercent ?? _goalPercentOf(basePoints, maxBase, streakLine);
 
   factory DayScore.fromJson(Json j) => DayScore(
     basePoints: _int(j['basePoints']),
@@ -606,6 +612,7 @@ class DayScore {
     points: _int(j['points']),
     maxBase: _int(j['maxBase']),
     percent: _int(j['percent']),
+    goalPercent: j['goalPercent'] == null ? null : _int(j['goalPercent']),
     counted: j['counted'] as bool? ?? false,
     streakLine: _int(j['streakLine'], 70),
   );
@@ -619,9 +626,13 @@ class DayScore {
 
   /// Computed by the server on base points; the app never recomputes it.
   final int percent;
+
+  /// The share of the day's goal reached: 100 or more means the day counts, and it goes above
+  /// 100 when more than the goal is earned. Older data without it is computed from the points.
+  final int goalPercent;
   final bool counted;
 
-  /// The percent a day needs to count toward the streak.
+  /// The percent of the possible points that makes the goal.
   final int streakLine;
 
   Json toJson() => {
@@ -630,6 +641,7 @@ class DayScore {
     'points': points,
     'maxBase': maxBase,
     'percent': percent,
+    'goalPercent': goalPercent,
     'counted': counted,
     'streakLine': streakLine,
   };
@@ -947,16 +959,18 @@ class DayMark {
   const DayMark({
     required this.date,
     required this.percent,
+    int? goalPercent,
     required this.counted,
     required this.rest,
     this.frozen = false,
     this.away = false,
     this.repaired = false,
-  });
+  }) : goalPercent = goalPercent ?? percent * 100 ~/ 70;
 
   factory DayMark.fromJson(Json j) => DayMark(
     date: _str(j['date']),
     percent: _int(j['percent']),
+    goalPercent: j['goalPercent'] == null ? null : _int(j['goalPercent']),
     counted: j['counted'] as bool? ?? false,
     rest: j['rest'] as bool? ?? false,
     frozen: j['frozen'] as bool? ?? false,
@@ -966,6 +980,9 @@ class DayMark {
 
   final String date;
   final int percent;
+
+  /// Share of the day's goal; see [DayScore.goalPercent].
+  final int goalPercent;
   final bool counted;
   final bool rest;
 
@@ -981,6 +998,7 @@ class DayMark {
   Json toJson() => {
     'date': date,
     'percent': percent,
+    'goalPercent': goalPercent,
     'counted': counted,
     'rest': rest,
     if (frozen) 'frozen': true,
@@ -990,19 +1008,33 @@ class DayMark {
 }
 
 class BoardDay {
-  const BoardDay({required this.points, required this.percent, required this.counted});
+  const BoardDay({
+    required this.points,
+    required this.percent,
+    int? goalPercent,
+    required this.counted,
+  }) : goalPercent = goalPercent ?? percent * 100 ~/ 70;
 
   factory BoardDay.fromJson(Json j) => BoardDay(
     points: _int(j['points']),
     percent: _int(j['percent']),
+    goalPercent: j['goalPercent'] == null ? null : _int(j['goalPercent']),
     counted: j['counted'] as bool? ?? false,
   );
 
   final int points;
   final int percent;
+
+  /// Share of the day's goal; see [DayScore.goalPercent].
+  final int goalPercent;
   final bool counted;
 
-  Json toJson() => {'points': points, 'percent': percent, 'counted': counted};
+  Json toJson() => {
+    'points': points,
+    'percent': percent,
+    'goalPercent': goalPercent,
+    'counted': counted,
+  };
 }
 
 class BoardHighlights {

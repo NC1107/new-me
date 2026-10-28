@@ -103,7 +103,7 @@ class TodayTopBar extends StatelessWidget {
                   ? null
                   : Semantics(
                       button: true,
-                      label: '${p.name}, ${p.today.percent} percent today, open Us',
+                      label: '${p.name}, ${p.today.goalPercent} percent of the goal today, open Us',
                       excludeSemantics: true,
                       onTap: onOpenUs,
                       child: Pressable(
@@ -203,7 +203,7 @@ class _PartnerRing extends StatelessWidget {
       width: 42,
       height: 42,
       child: CustomPaint(
-        painter: _RingPainter(percent: user.today.percent / 100, color: palette.fill),
+        painter: _RingPainter(percent: user.today.goalPercent / 100, color: palette.fill),
         child: Center(
           child: Avatar(name: user.name, palette: palette, size: 28),
         ),

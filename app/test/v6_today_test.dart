@@ -213,7 +213,7 @@ void main() {
       final order = [
         find.text('Good morning, Sam'),
         find.text(_bubble),
-        find.text('62%'),
+        find.text('88%'),
         find.text('Take it easy today'),
         find.text('Habits'),
         find.text('Get stronger'),

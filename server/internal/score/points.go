@@ -77,3 +77,22 @@ func ScoreDay(quests []QuestResult) DayScore {
 	}
 	return score
 }
+
+// GoalPoints is the base points a day needs to count: CountedPercent of the possible base points,
+// rounded up.
+func GoalPoints(maxBase int) int {
+	if maxBase <= 0 {
+		return 0
+	}
+	return (maxBase*CountedPercent + 99) / 100
+}
+
+// GoalPercent is the share of the day's goal that the base points reached. A day counts exactly
+// when it is 100 or more, and it can go above 100 when more than the goal is earned.
+func GoalPercent(base, maxBase int) int {
+	goal := GoalPoints(maxBase)
+	if goal <= 0 || base <= 0 {
+		return 0
+	}
+	return base * 100 / goal
+}

@@ -24,8 +24,8 @@ Json companionSnapshot({
     'name': session.userName,
     'accent': {'fill': _hex(accent.fill), 'tint': _hex(accent.tint)},
     'points': today.day.points,
-    'percent': today.day.percent,
-    'streakLine': today.day.streakLine,
+    'percent': today.day.goalPercent,
+    'streakLine': 100,
     'counted': today.day.counted,
     'streak': today.streak.current,
     'quests': [

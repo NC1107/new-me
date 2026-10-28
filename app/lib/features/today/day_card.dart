@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../api/models.dart';
@@ -22,18 +24,18 @@ bool oneQuestAway(DayScore day, List<Quest> quests) {
 /// fresh morning at 0% is not a test already failed.
 String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
   if (day.counted) {
-    return 'You are past the ${day.streakLine}% line. Anything extra still earns points.';
+    return 'Goal reached. Anything extra still earns bonus points.';
   }
   if (oneQuestAway(day, quests)) return 'One more and you count today.';
-  if (streak.current < 1) return 'Hit ${day.streakLine}% today to start your streak.';
-  final base = 'Reach ${day.streakLine}% to keep your streak going.';
+  if (streak.current < 1) return 'Reach 100% today to start your streak.';
+  final base = 'Reach 100% to keep your streak going.';
   return streak.restAvailable && streak.restUsedOn == null
       ? '$base A freeze is ready if you need it.'
       : base;
 }
 
-/// Progress towards the streak line: a thick bar with a flag at the line, the points, and one
-/// plain sentence about what keeps the streak.
+/// Progress towards the day's goal: a thick bar that is full at the goal with any extra shown
+/// as a bonus segment, the points, and one plain sentence about what keeps the streak.
 class DayCard extends StatelessWidget {
   const DayCard({
     super.key,
@@ -48,6 +50,8 @@ class DayCard extends StatelessWidget {
   final Streak streak;
   final VoidCallback onEntries;
 
+  int get bonusPercent => math.max(0, day.goalPercent - 100);
+
   String get _sentence => dayCardSentence(day, streak, quests);
 
   @override
@@ -60,7 +64,16 @@ class DayCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('${day.percent}%', style: AppText.tabular(AppText.display)),
+              Text('${day.goalPercent}%', style: AppText.tabular(AppText.display)),
+              if (bonusPercent > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '+$bonusPercent% bonus',
+                  style: AppText.tabular(
+                    AppText.label.copyWith(color: context.accentText, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -73,10 +86,10 @@ class DayCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           ThickProgressBar(
-            value: day.percent / 100,
-            markerAt: day.streakLine / 100,
+            value: bonusPercent > 0 ? 100 / day.goalPercent : day.goalPercent / 100,
+            bonusValue: bonusPercent > 0 ? bonusPercent / day.goalPercent : 0,
             color: context.accent,
-            semanticLabel: 'Day progress, streak line at ${day.streakLine} percent',
+            semanticLabel: 'Day progress toward the goal',
           ),
           const SizedBox(height: 10),
           Text(_sentence, style: AppText.body.copyWith(fontSize: 15, color: kInkSecondary)),

@@ -211,6 +211,7 @@ func (s *Server) Router() http.Handler {
 		r.Patch("/api/exercises/{key}", s.handlePatchExercise)
 		r.Delete("/api/exercises/{key}", s.handleDeleteExercise)
 		r.Post("/api/exercises/{key}/max", s.handleRecordMaxTest)
+		r.Get("/api/exercises/{key}/images/{n}", s.handleExerciseImage)
 		r.With(s.settleAfter).Post("/api/sets", s.handleCreateSet)
 		r.Get("/api/sets", s.handleListSets)
 		r.With(s.settleAfter).Delete("/api/sets/{id}", s.handleDeleteSet)

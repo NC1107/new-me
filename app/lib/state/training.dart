@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -194,4 +195,10 @@ final trainingProgressProvider = FutureProvider<TrainingProgress>(
 /// The sets of one exercise, oldest first, for its detail page.
 final exerciseSetsProvider = FutureProvider.family<List<ExerciseSet>, String>(
   (ref, key) => _client(ref).sets(exercise: key, days: 365),
+);
+
+/// One how-to photo by its server path. Kept for the session, since photos never change and the
+/// sheet opens often.
+final exerciseImageProvider = FutureProvider.family<Uint8List, String>(
+  (ref, path) => _client(ref).exerciseImage(path),
 );

@@ -12,10 +12,18 @@
   "exercises": [
     {
       "best": null,
+      "cues": [
+        "Keep your hips level with your shoulders.",
+        "The lower the surface, the harder it gets."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": "push_up",
+      "imageUrls": [
+        "/api/exercises/incline_push_up/images/0",
+        "/api/exercises/incline_push_up/images/1"
+      ],
       "key": "incline_push_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -27,14 +35,28 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
+      ],
+      "steps": [
+        "Place your hands on a bench or sturdy ledge, a little wider than your shoulders.",
+        "Step your feet back until your body is one straight line from head to heels.",
+        "Bend your elbows and lower your chest to the edge.",
+        "Press back up until your arms are straight."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Do not let your hips sag or pike up.",
+        "Elbows point back about 45 degrees, not out to the sides."
+      ],
       "custom": false,
       "easierKey": "incline_push_up",
       "equipment": [],
       "harderKey": "decline_push_up",
+      "imageUrls": [
+        "/api/exercises/push_up/images/0",
+        "/api/exercises/push_up/images/1"
+      ],
       "key": "push_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -47,14 +69,28 @@
         "triceps",
         "shoulders",
         "core"
+      ],
+      "steps": [
+        "Start face down on the floor with your hands just wider than your shoulders and your arms straight.",
+        "Keep your body in one straight line from head to heels.",
+        "Lower yourself until your chest almost touches the floor.",
+        "Press back up to straight arms, squeezing your chest at the top."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your core tight so your hips do not sag.",
+        "A higher box shifts more work to your shoulders."
+      ],
       "custom": false,
       "easierKey": "push_up",
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/decline_push_up/images/0",
+        "/api/exercises/decline_push_up/images/1"
+      ],
       "key": "decline_push_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -67,10 +103,20 @@
       "secondaryMuscles": [
         "triceps",
         "core"
+      ],
+      "steps": [
+        "Place your feet on a bench or box and your hands on the floor, a little wider than your shoulders.",
+        "Hold your body in one straight line from head to heels.",
+        "Lower yourself until your chest almost touches the floor.",
+        "Press back up to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Avoid swinging or jerking.",
+        "A thicker band gives more help."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
@@ -78,6 +124,10 @@
         "bands"
       ],
       "harderKey": "negative_pull_up",
+      "imageUrls": [
+        "/api/exercises/band_pull_up/images/0",
+        "/api/exercises/band_pull_up/images/1"
+      ],
       "key": "band_pull_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -88,16 +138,27 @@
       ],
       "secondaryMuscles": [
         "biceps"
+      ],
+      "steps": [
+        "Loop a resistance band around the pull-up bar and put one bent knee in the loop.",
+        "Hold the bar with a grip a little wider than your shoulders and hang with straight arms.",
+        "Pull your elbows down toward your sides until your chin is over the bar.",
+        "Pause, then lower yourself back to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Do not drop; control the whole way down.",
+        "Stop the set when you can no longer lower slowly."
+      ],
       "custom": false,
       "easierKey": "band_pull_up",
       "equipment": [
         "pullup_bar"
       ],
       "harderKey": "pull_up",
+      "imageUrls": [],
       "key": "negative_pull_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -109,16 +170,30 @@
       "secondaryMuscles": [
         "biceps",
         "forearms"
+      ],
+      "steps": [
+        "Use a box or a jump to start with your chin over the bar and your hands a little wider than your shoulders.",
+        "Hold the top position for a moment with your chest up.",
+        "Lower yourself as slowly as you can, aiming for 3 to 5 seconds.",
+        "Hang with straight arms, then step down and reset."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Start each rep from a full hang.",
+        "Keep your body still; no kicking or swinging."
+      ],
       "custom": false,
       "easierKey": "negative_pull_up",
       "equipment": [
         "pullup_bar"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/pull_up/images/0",
+        "/api/exercises/pull_up/images/1"
+      ],
       "key": "pull_up",
       "load": "bodyweight",
       "maxTest": {
@@ -134,16 +209,30 @@
       "secondaryMuscles": [
         "biceps",
         "forearms"
+      ],
+      "steps": [
+        "Hold the bar with your palms facing away, a little wider than your shoulders, and hang with straight arms.",
+        "Lean back slightly and push your chest out.",
+        "Pull your elbows down and back until the bar is near your upper chest.",
+        "Pause, then lower yourself slowly to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Think about pulling the elbows down to your ribs.",
+        "Do not swing or kick."
+      ],
       "custom": false,
       "easierKey": "negative_pull_up",
       "equipment": [
         "pullup_bar"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/chin_up/images/0",
+        "/api/exercises/chin_up/images/1"
+      ],
       "key": "chin_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -155,14 +244,28 @@
       ],
       "secondaryMuscles": [
         "forearms"
+      ],
+      "steps": [
+        "Hold the bar with your palms facing you, hands about shoulder width apart, and hang with straight arms.",
+        "Keep your torso straight and your chest up.",
+        "Pull until your chin is over the bar, keeping your elbows close to your body.",
+        "Pause, then lower yourself slowly to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Squeeze your shoulder blades together at the top.",
+        "Walk your feet closer to make it easier."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": "pull_up",
+      "imageUrls": [
+        "/api/exercises/inverted_row/images/0",
+        "/api/exercises/inverted_row/images/1"
+      ],
       "key": "inverted_row",
       "load": "bodyweight",
       "maxTest": null,
@@ -173,16 +276,27 @@
       ],
       "secondaryMuscles": [
         "biceps"
+      ],
+      "steps": [
+        "Set a bar in a rack at about waist height and lie underneath it.",
+        "Grab the bar a little wider than your shoulders and hang with straight arms and your heels on the floor.",
+        "Keep your body straight and pull your chest to the bar.",
+        "Pause, then lower yourself to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Breathe steadily.",
+        "Stop before your grip fails so you can step down safely."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "pullup_bar"
       ],
       "harderKey": null,
+      "imageUrls": [],
       "key": "dead_hang",
       "load": "bodyweight",
       "maxTest": null,
@@ -194,16 +308,30 @@
       "secondaryMuscles": [
         "back",
         "shoulders"
+      ],
+      "steps": [
+        "Hold a pull-up bar with your palms facing away, hands about shoulder width apart.",
+        "Step off so you hang with straight arms and your feet off the floor.",
+        "Keep a firm grip and let your shoulders stay slightly active, not shrugged to your ears.",
+        "Hang for the planned time, then step down."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your elbows pointing back, not out.",
+        "Bend your knees to make it easier."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "bench"
       ],
       "harderKey": "dip",
+      "imageUrls": [
+        "/api/exercises/bench_dip/images/0",
+        "/api/exercises/bench_dip/images/1"
+      ],
       "key": "bench_dip",
       "load": "bodyweight",
       "maxTest": null,
@@ -215,16 +343,30 @@
       "secondaryMuscles": [
         "chest",
         "shoulders"
+      ],
+      "steps": [
+        "Sit on the edge of a bench and put your hands beside your hips, then slide your hips off the edge.",
+        "Straighten your arms with your legs out in front of you.",
+        "Bend your elbows to about 90 degrees, keeping your back close to the bench.",
+        "Press back up until your arms are straight."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Do not swing your legs.",
+        "Stop if your shoulders pinch at the bottom."
+      ],
       "custom": false,
       "easierKey": "bench_dip",
       "equipment": [
         "dip_bars"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/dip/images/0",
+        "/api/exercises/dip/images/1"
+      ],
       "key": "dip",
       "load": "bodyweight",
       "maxTest": null,
@@ -236,14 +378,28 @@
       ],
       "secondaryMuscles": [
         "shoulders"
+      ],
+      "steps": [
+        "Grip two parallel bars and lift yourself to straight arms.",
+        "Lean slightly forward and keep your chest up.",
+        "Bend your elbows and lower until your upper arms are about parallel to the floor.",
+        "Press back up to straight arms."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your heels on the floor.",
+        "Push your knees out, not in."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": "split_squat",
+      "imageUrls": [
+        "/api/exercises/air_squat/images/0",
+        "/api/exercises/air_squat/images/1"
+      ],
       "key": "air_squat",
       "load": "bodyweight",
       "maxTest": null,
@@ -254,14 +410,25 @@
       ],
       "secondaryMuscles": [
         "glutes"
+      ],
+      "steps": [
+        "Stand with your feet about shoulder width apart and your toes slightly out.",
+        "Sit your hips back and bend your knees, keeping your chest and head up.",
+        "Lower as far as you can with your heels down, with your knees tracking over your toes.",
+        "Drive through your whole foot to stand back up."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Your front knee stays over your foot.",
+        "Keep your feet in the same place for the whole set."
+      ],
       "custom": false,
       "easierKey": "air_squat",
       "equipment": [],
       "harderKey": "bulgarian_split_squat",
+      "imageUrls": [],
       "key": "split_squat",
       "load": "bodyweight",
       "maxTest": null,
@@ -273,16 +440,27 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
+      ],
+      "steps": [
+        "Stand with one foot a long step in front of the other, with your feet hip width apart.",
+        "Keep your torso upright and lower your back knee toward the floor.",
+        "Stop just above the floor with your front heel down.",
+        "Press through the front foot to stand up; finish all reps, then switch legs."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Your front knee stays over your foot.",
+        "Find your step length in the first rep and keep it."
+      ],
       "custom": false,
       "easierKey": "split_squat",
       "equipment": [
         "bench"
       ],
       "harderKey": null,
+      "imageUrls": [],
       "key": "bulgarian_split_squat",
       "load": "bodyweight",
       "maxTest": null,
@@ -294,14 +472,28 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
+      ],
+      "steps": [
+        "Stand a long step in front of a bench and rest the top of one back foot on it.",
+        "Keep your torso upright with most of your weight on the front foot.",
+        "Lower your back knee toward the floor until your front thigh is about parallel.",
+        "Press through the front heel to stand; finish all reps, then switch legs."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Take a long enough step that your front shin stays upright.",
+        "Do not let your front knee collapse inward."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/lunge/images/0",
+        "/api/exercises/lunge/images/1"
+      ],
       "key": "lunge",
       "load": "bodyweight",
       "maxTest": null,
@@ -313,16 +505,30 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
+      ],
+      "steps": [
+        "Stand tall with your feet hip width apart and your hands on your hips.",
+        "Step forward and lower your hips until your back knee nearly touches the floor.",
+        "Keep your front knee over your foot and your torso upright.",
+        "Push through the front heel to return to standing, then repeat on the other leg."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Let the working leg do the lifting, not the push-off foot.",
+        "Holding dumbbells is optional."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "bench"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/step_up/images/0",
+        "/api/exercises/step_up/images/1"
+      ],
       "key": "step_up",
       "load": "bodyweight",
       "maxTest": null,
@@ -332,14 +538,28 @@
         "quads",
         "glutes"
       ],
-      "secondaryMuscles": []
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand facing a sturdy bench or step that puts your thigh about parallel when your foot is on it.",
+        "Place one foot fully on the step.",
+        "Push through that heel to stand up on the step.",
+        "Step back down with control; finish all reps, then switch legs."
+      ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your ribs down; do not arch your lower back.",
+        "Push through your heels."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": "single_leg_glute_bridge",
+      "imageUrls": [
+        "/api/exercises/glute_bridge/images/0",
+        "/api/exercises/glute_bridge/images/1"
+      ],
       "key": "glute_bridge",
       "load": "bodyweight",
       "maxTest": null,
@@ -350,14 +570,28 @@
       ],
       "secondaryMuscles": [
         "hamstrings"
+      ],
+      "steps": [
+        "Lie on your back with your knees bent and your feet flat, about hip width apart.",
+        "Push through your heels and lift your hips until your body is in a line from shoulders to knees.",
+        "Squeeze your glutes and hold for a second at the top.",
+        "Lower slowly to the floor."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your hips level, not tilted to one side.",
+        "Squeeze your glute at the top."
+      ],
       "custom": false,
       "easierKey": "glute_bridge",
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/single_leg_glute_bridge/images/0",
+        "/api/exercises/single_leg_glute_bridge/images/1"
+      ],
       "key": "single_leg_glute_bridge",
       "load": "bodyweight",
       "maxTest": null,
@@ -369,14 +603,25 @@
       "secondaryMuscles": [
         "hamstrings",
         "core"
+      ],
+      "steps": [
+        "Lie on your back with your feet flat and your knees bent.",
+        "Lift one leg and pull that knee toward your chest.",
+        "Push through the heel of the other foot to lift your hips as high as you can.",
+        "Lower slowly; finish all reps, then switch legs."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Hinge at the hips; do not round your back.",
+        "Keep your knees softly bent and still."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [],
       "key": "good_morning",
       "load": "bodyweight",
       "maxTest": null,
@@ -388,14 +633,25 @@
       "secondaryMuscles": [
         "glutes",
         "back"
+      ],
+      "steps": [
+        "Stand with your feet about shoulder width apart, knees slightly bent, and your hands behind your head.",
+        "Push your hips back and lean your chest forward with a flat back.",
+        "Stop when your torso is near parallel to the floor or you feel your hamstrings stretch.",
+        "Drive your hips forward to stand tall."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your knees straight but not locked.",
+        "Use a wall for balance if you need it."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [],
       "key": "calf_raise",
       "load": "bodyweight",
       "maxTest": null,
@@ -404,7 +660,13 @@
       "primaryMuscles": [
         "calves"
       ],
-      "secondaryMuscles": []
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand with the balls of your feet on the floor or the edge of a step, with your feet hip width apart.",
+        "Rise up as high as you can on your toes.",
+        "Pause for a second at the top.",
+        "Lower slowly until your heels are level or just below the step."
+      ]
     },
     {
       "best": {
@@ -414,10 +676,18 @@
         "reps": null,
         "seconds": 45
       },
+      "cues": [
+        "Squeeze your glutes and brace your abs.",
+        "Do not let your hips sag or rise."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/plank/images/0",
+        "/api/exercises/plank/images/1"
+      ],
       "key": "plank",
       "load": "bodyweight",
       "maxTest": null,
@@ -428,14 +698,28 @@
       ],
       "secondaryMuscles": [
         "shoulders"
+      ],
+      "steps": [
+        "Lie face down and prop yourself on your forearms, with your elbows right under your shoulders.",
+        "Lift your hips and rest on your toes.",
+        "Hold your body in one straight line from head to heels.",
+        "Hold for the planned time, breathing steadily."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your hips high and your neck in line with your spine.",
+        "Bend your bottom knee to make it easier."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/side_plank/images/0",
+        "/api/exercises/side_plank/images/1"
+      ],
       "key": "side_plank",
       "load": "bodyweight",
       "maxTest": null,
@@ -446,14 +730,24 @@
       ],
       "secondaryMuscles": [
         "shoulders"
+      ],
+      "steps": [
+        "Lie on your side with your elbow under your shoulder and your legs stacked.",
+        "Lift your hips off the floor so your body is a straight line from head to feet.",
+        "Hold for the planned time, then switch sides."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your lower back flat on the floor.",
+        "Bend your knees or bring your arms to your sides to make it easier."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [],
       "key": "hollow_hold",
       "load": "bodyweight",
       "maxTest": null,
@@ -462,14 +756,25 @@
       "primaryMuscles": [
         "core"
       ],
-      "secondaryMuscles": []
+      "secondaryMuscles": [],
+      "steps": [
+        "Lie on your back with your arms overhead and your legs straight.",
+        "Press your lower back into the floor.",
+        "Lift your shoulders and your straight legs a few inches off the floor.",
+        "Hold the shape for the planned time."
+      ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your core tight in the push-up position.",
+        "Step instead of jumping to make it easier."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [],
       "harderKey": null,
+      "imageUrls": [],
       "key": "burpee",
       "load": "bodyweight",
       "maxTest": null,
@@ -482,16 +787,30 @@
       "secondaryMuscles": [
         "core",
         "shoulders"
+      ],
+      "steps": [
+        "Stand with your feet shoulder width apart.",
+        "Squat down and place your hands on the floor, then jump or step your feet back to a push-up position.",
+        "Lower your chest to the floor, then press up.",
+        "Jump or step your feet back under your hips and jump up with your arms overhead."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Use your elbows to push your knees out at the bottom.",
+        "Keep your heels on the floor."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/goblet_squat/images/0",
+        "/api/exercises/goblet_squat/images/1"
+      ],
       "key": "goblet_squat",
       "load": "external",
       "maxTest": null,
@@ -503,16 +822,30 @@
       ],
       "secondaryMuscles": [
         "core"
+      ],
+      "steps": [
+        "Hold a dumbbell upright against your chest with both hands, elbows pointing down.",
+        "Stand with your feet a little wider than your shoulders and your toes slightly out.",
+        "Squat down between your legs, keeping your chest and head up.",
+        "Pause at the bottom, then stand back up."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep the weights close to your legs.",
+        "Hinge at the hips; your knees stay softly bent and still."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/db_romanian_deadlift/images/0",
+        "/api/exercises/db_romanian_deadlift/images/1"
+      ],
       "key": "db_romanian_deadlift",
       "load": "external",
       "maxTest": null,
@@ -524,10 +857,20 @@
       ],
       "secondaryMuscles": [
         "back"
+      ],
+      "steps": [
+        "Hold a dumbbell in each hand at your sides and stand with your feet about shoulder width apart.",
+        "Soften your knees and push your hips back as you lower the weights along your legs.",
+        "Stop when you feel a stretch in your hamstrings, with your back flat.",
+        "Drive your hips forward to stand tall."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Lower for about twice as long as you lift.",
+        "Keep your wrists straight over your elbows."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
@@ -535,6 +878,10 @@
         "bench"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/db_bench_press/images/0",
+        "/api/exercises/db_bench_press/images/1"
+      ],
       "key": "db_bench_press",
       "load": "external",
       "maxTest": null,
@@ -546,6 +893,12 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
+      ],
+      "steps": [
+        "Lie on a flat bench with a dumbbell in each hand at the sides of your chest, palms facing forward.",
+        "Plant your feet on the floor and keep your shoulder blades pinched together.",
+        "Press the weights straight up until your arms are straight.",
+        "Lower slowly until your elbows are about 90 degrees."
       ]
     },
     {
@@ -556,12 +909,20 @@
         "reps": 10,
         "seconds": null
       },
+      "cues": [
+        "Keep your torso still; the back does the work, not the arm.",
+        "Do not twist as you pull."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/db_row/images/0",
+        "/api/exercises/db_row/images/1"
+      ],
       "key": "db_row",
       "load": "external",
       "maxTest": null,
@@ -572,16 +933,30 @@
       ],
       "secondaryMuscles": [
         "biceps"
+      ],
+      "steps": [
+        "Place one knee and the same-side hand on a bench, with your back flat and a dumbbell in your other hand.",
+        "Let the dumbbell hang at arm's length.",
+        "Pull it up to the side of your chest, keeping your elbow close to your body.",
+        "Lower slowly; finish all reps, then switch sides."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Do not lean back or use your legs.",
+        "Keep your ribs down."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/db_overhead_press/images/0",
+        "/api/exercises/db_overhead_press/images/1"
+      ],
       "key": "db_overhead_press",
       "load": "external",
       "maxTest": null,
@@ -592,16 +967,30 @@
       ],
       "secondaryMuscles": [
         "triceps"
+      ],
+      "steps": [
+        "Stand with your feet shoulder width apart and a dumbbell in each hand at shoulder height, palms forward.",
+        "Brace your core and squeeze your glutes.",
+        "Press the dumbbells straight up until your arms are straight.",
+        "Lower slowly back to your shoulders."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Use a light weight and do not swing.",
+        "Lead with your elbows, as if pouring water from a jug."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/lateral_raise/images/0",
+        "/api/exercises/lateral_raise/images/1"
+      ],
       "key": "lateral_raise",
       "load": "external",
       "maxTest": null,
@@ -610,16 +999,30 @@
       "primaryMuscles": [
         "shoulders"
       ],
-      "secondaryMuscles": []
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand with a dumbbell in each hand at your sides and a slight bend in your elbows.",
+        "Raise your arms out to the sides until they are about parallel to the floor.",
+        "Pause for a second.",
+        "Lower slowly to your sides."
+      ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your upper arms still.",
+        "Do not swing your body to lift the weight."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/biceps_curl/images/0",
+        "/api/exercises/biceps_curl/images/1"
+      ],
       "key": "biceps_curl",
       "load": "external",
       "maxTest": null,
@@ -630,16 +1033,30 @@
       ],
       "secondaryMuscles": [
         "forearms"
+      ],
+      "steps": [
+        "Stand with a dumbbell in each hand at your sides, palms facing forward.",
+        "Keep your elbows pinned to your sides.",
+        "Curl the weights up toward your shoulders.",
+        "Lower slowly until your arms are straight."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Only your forearms move.",
+        "Brace your core so you do not arch your back."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "dumbbells"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/triceps_extension/images/0",
+        "/api/exercises/triceps_extension/images/1"
+      ],
       "key": "triceps_extension",
       "load": "external",
       "maxTest": null,
@@ -648,16 +1065,30 @@
       "primaryMuscles": [
         "triceps"
       ],
-      "secondaryMuscles": []
+      "secondaryMuscles": [],
+      "steps": [
+        "Stand with your feet shoulder width apart, holding one dumbbell with both hands overhead and your arms straight.",
+        "Keep your upper arms close to your head with your elbows pointing forward.",
+        "Bend your elbows to lower the dumbbell behind your head.",
+        "Straighten your arms to lift it back up."
+      ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your chest up and your back flat.",
+        "Use a rack with safety bars set below your lowest point."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "barbell"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/back_squat/images/0",
+        "/api/exercises/back_squat/images/1"
+      ],
       "key": "back_squat",
       "load": "external",
       "maxTest": null,
@@ -670,16 +1101,30 @@
       "secondaryMuscles": [
         "hamstrings",
         "core"
+      ],
+      "steps": [
+        "Set the bar on a rack at just below shoulder height and step under it, with the bar across your upper back.",
+        "Lift it off the rack, step back, and set your feet about shoulder width apart.",
+        "Bend your hips and knees to lower until your thighs are about parallel to the floor.",
+        "Drive through your whole foot to stand back up."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your back flat; do not round it.",
+        "Brace your core before each rep."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "barbell"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/deadlift/images/0",
+        "/api/exercises/deadlift/images/1"
+      ],
       "key": "deadlift",
       "load": "external",
       "maxTest": null,
@@ -693,10 +1138,20 @@
       "secondaryMuscles": [
         "quads",
         "forearms"
+      ],
+      "steps": [
+        "Stand with your feet hip width apart and the bar over your mid-foot.",
+        "Bend down and grip the bar just outside your legs, with your back flat and your chest up.",
+        "Push the floor away and stand up with the bar close to your legs.",
+        "Lower the bar along the same path, then reset."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Keep your shoulder blades pinched and your feet planted.",
+        "Use safety bars or a spotter."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
@@ -704,6 +1159,10 @@
         "bench"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/bench_press/images/0",
+        "/api/exercises/bench_press/images/1"
+      ],
       "key": "bench_press",
       "load": "external",
       "maxTest": null,
@@ -715,16 +1174,30 @@
       "secondaryMuscles": [
         "triceps",
         "shoulders"
+      ],
+      "steps": [
+        "Lie on a flat bench with your eyes under the bar and your feet flat on the floor.",
+        "Grip the bar a little wider than your shoulders and unrack it over your chest.",
+        "Lower the bar to your mid-chest with control.",
+        "Press it back up until your arms are straight."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Move your head back, then through, as the bar passes.",
+        "Do not lean back."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "barbell"
       ],
       "harderKey": null,
+      "imageUrls": [
+        "/api/exercises/overhead_press/images/0",
+        "/api/exercises/overhead_press/images/1"
+      ],
       "key": "overhead_press",
       "load": "external",
       "maxTest": null,
@@ -736,16 +1209,27 @@
       "secondaryMuscles": [
         "triceps",
         "core"
+      ],
+      "steps": [
+        "Set the bar at chest height on a rack and grip it just wider than your shoulders.",
+        "Lift it off, step back, and hold it at your collarbone with your elbows slightly forward.",
+        "Squeeze your glutes and press the bar straight up until your arms are straight.",
+        "Lower it back to your collarbone with control."
       ]
     },
     {
       "best": null,
+      "cues": [
+        "Start with a bigger edge and stay within your plan.",
+        "Stop at any sharp finger pain."
+      ],
       "custom": false,
       "easierKey": null,
       "equipment": [
         "hangboard"
       ],
       "harderKey": null,
+      "imageUrls": [],
       "key": "hangboard_hang",
       "load": "bodyweight",
       "maxTest": null,
@@ -756,6 +1240,12 @@
       ],
       "secondaryMuscles": [
         "back"
+      ],
+      "steps": [
+        "Hold a large hangboard edge with an open hand or half crimp, fingers on the edge.",
+        "Step off the floor with your feet clear of the ground and your arms nearly straight.",
+        "Keep your shoulders engaged, not shrugged.",
+        "Hang for the planned time, then step down."
       ]
     }
   ],

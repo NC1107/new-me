@@ -93,6 +93,9 @@ class Exercise {
     this.custom = false,
     this.best,
     this.maxTest,
+    this.steps = const [],
+    this.cues = const [],
+    this.imageUrls = const [],
   });
 
   static Exercise? tryParse(Object? v) {
@@ -112,6 +115,9 @@ class Exercise {
       custom: j['custom'] == true,
       best: SetAmount.tryParse(j['best']),
       maxTest: SetAmount.tryParse(j['maxTest']),
+      steps: _strings(j['steps']),
+      cues: _strings(j['cues']),
+      imageUrls: _strings(j['imageUrls']),
     );
   }
 
@@ -127,6 +133,14 @@ class Exercise {
   final bool custom;
   final SetAmount? best;
   final SetAmount? maxTest;
+
+  /// The how-to: short numbered steps, form cues and server paths of the start and end photos.
+  /// Empty for custom exercises, and for catalog ones without a fitting photo.
+  final List<String> steps;
+  final List<String> cues;
+  final List<String> imageUrls;
+
+  bool get hasHowTo => steps.isNotEmpty || cues.isNotEmpty || imageUrls.isNotEmpty;
 
   bool get timed => measure == Measure.seconds;
   bool get loaded => load == LoadKind.external;
@@ -144,6 +158,9 @@ class Exercise {
     'custom': custom,
     'best': best?.toJson(),
     'maxTest': maxTest?.toJson(),
+    'steps': steps,
+    'cues': cues,
+    'imageUrls': imageUrls,
   };
 }
 

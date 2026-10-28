@@ -44,18 +44,22 @@ type Exercise struct {
 	EasierKey        string
 	HarderKey        string
 	Position         int
+	// Steps, Cues and Images are the how-to; Images holds embedded photo file names in order.
+	Steps  []string
+	Cues   []string
+	Images []string
 }
 
 // Custom reports whether the exercise belongs to a person rather than the catalog.
 func (e Exercise) Custom() bool { return e.UserID != nil }
 
 const exerciseColumns = `id, key, user_id, name, primary_muscles, secondary_muscles, measure, load,
-	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position`
+	equipment, COALESCE(easier_key, ''), COALESCE(harder_key, ''), position, steps, cues, images`
 
 func scanExercise(row pgx.Row) (Exercise, error) {
 	var e Exercise
 	err := row.Scan(&e.ID, &e.Key, &e.UserID, &e.Name, &e.PrimaryMuscles, &e.SecondaryMuscles, &e.Measure,
-		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position)
+		&e.Load, &e.Equipment, &e.EasierKey, &e.HarderKey, &e.Position, &e.Steps, &e.Cues, &e.Images)
 	return e, err
 }
 

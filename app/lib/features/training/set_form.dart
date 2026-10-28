@@ -9,6 +9,7 @@ import '../log/log_chip.dart';
 import '../me/number_field.dart';
 import '../../util/units.dart';
 import '../../widgets/units_scope.dart';
+import 'set_assist.dart';
 
 /// What one logged set holds before it is sent.
 typedef SetValues = ({int amount, double? loadKg, int? rir});
@@ -20,6 +21,8 @@ const kMaxLoadKg = 500.0;
 
 /// Reps in reserve offered as chips, 0 to 4 (Zourdos et al. 2016).
 const kRirChoices = [0, 1, 2, 3, 4];
+
+enum _Assist { none, counting, timing }
 
 /// Logs one set: reps or seconds on a big stepper, the load for loaded work, and reps in reserve.
 /// Starts from a target so the common case is one tap.
@@ -54,6 +57,7 @@ class _SetFormState extends State<SetForm> {
   late final _load = TextEditingController(text: _initialLoad);
   late int? _rir = widget.initialRir;
   bool _busy = false;
+  _Assist _assist = _Assist.none;
 
   // The units are read once: a set form lives inside one sheet.
   late final Units _units = context.units;
@@ -92,6 +96,13 @@ class _SetFormState extends State<SetForm> {
   }
 
   bool get _valid => (_amountValue ?? 0) > 0 && _amountError == null && _loadError == null;
+
+  void _fill(int amount) {
+    setState(() {
+      _amount.text = '${amount.clamp(1, _max)}';
+      _assist = _Assist.none;
+    });
+  }
 
   void _step(int by) {
     final next = ((_amountValue ?? 0) + by).clamp(0, _max);
@@ -136,6 +147,26 @@ class _SetFormState extends State<SetForm> {
           onChanged: (_) => setState(() {}),
           errorText: _amountError,
         ),
+        const SizedBox(height: 12),
+        switch (_assist) {
+          _Assist.counting => RepCounter(
+            max: _max,
+            onDone: _fill,
+            onCancel: () => setState(() => _assist = _Assist.none),
+          ),
+          _Assist.timing => HoldTimer(
+            seconds: amount,
+            onDone: _fill,
+            onCancel: () => setState(() => _assist = _Assist.none),
+          ),
+          _Assist.none => ChunkyButton.secondary(
+            label: widget.timed ? 'Start timer' : 'Count reps',
+            icon: widget.timed ? Icons.timer_outlined : Icons.touch_app_outlined,
+            onPressed: widget.timed
+                ? (amount > 0 ? () => setState(() => _assist = _Assist.timing) : null)
+                : () => setState(() => _assist = _Assist.counting),
+          ),
+        },
         if (widget.loaded) ...[
           const SizedBox(height: 16),
           NumberField(
@@ -180,7 +211,11 @@ class _SetFormState extends State<SetForm> {
           ),
         ],
         const SizedBox(height: 20),
-        ChunkyButton(label: widget.buttonLabel, busy: _busy, onPressed: _valid ? _submit : null),
+        ChunkyButton(
+          label: widget.buttonLabel,
+          busy: _busy,
+          onPressed: _valid && _assist == _Assist.none ? _submit : null,
+        ),
       ],
     );
   }

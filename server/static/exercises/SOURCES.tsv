@@ -36,3 +36,15 @@ deadlift	Barbell_Deadlift
 bench_press	Barbell_Bench_Press_-_Medium_Grip
 overhead_press	Standing_Military_Press
 hangboard_hang		no entry; steps written from the Pullups family
+cat_stretch	Cat_Stretch
+childs_pose	Childs_Pose
+kneeling_hip_flexor_stretch	Kneeling_Hip_Flexor
+seated_hamstring_stretch	Seated_Floor_Hamstring_Stretch	source photos 0 and 1 are identical; only photo 0 is kept
+figure_four_stretch	Ankle_On_The_Knee
+knee_across_body_stretch	Knee_Across_The_Body
+one_knee_to_chest_stretch	One_Knee_To_Chest
+side_lying_quad_stretch	On_Your_Side_Quad_Stretch
+standing_calf_stretch	Calf_Stretch_Hands_Against_Wall
+standing_trunk_twist	Middle_Back_Stretch
+cross_body_shoulder_stretch	Shoulder_Stretch
+triceps_stretch	Triceps_Stretch

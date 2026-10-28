@@ -79,6 +79,13 @@ class SetAmount {
   };
 }
 
+enum ExerciseKind {
+  strength,
+  stretch;
+
+  static ExerciseKind parse(Object? v) => v == 'stretch' ? stretch : strength;
+}
+
 class Exercise {
   const Exercise({
     required this.key,
@@ -96,6 +103,8 @@ class Exercise {
     this.steps = const [],
     this.cues = const [],
     this.imageUrls = const [],
+    this.kind = ExerciseKind.strength,
+    this.perSide = false,
   });
 
   static Exercise? tryParse(Object? v) {
@@ -118,6 +127,8 @@ class Exercise {
       steps: _strings(j['steps']),
       cues: _strings(j['cues']),
       imageUrls: _strings(j['imageUrls']),
+      kind: ExerciseKind.parse(j['kind']),
+      perSide: j['perSide'] == true,
     );
   }
 
@@ -140,6 +151,14 @@ class Exercise {
   final List<String> cues;
   final List<String> imageUrls;
 
+  /// Stretches belong to mobility sessions, never to strength plans.
+  final ExerciseKind kind;
+
+  /// A stretch done once on each side.
+  final bool perSide;
+
+  bool get stretch => kind == ExerciseKind.stretch;
+
   bool get hasHowTo => steps.isNotEmpty || cues.isNotEmpty || imageUrls.isNotEmpty;
 
   bool get timed => measure == Measure.seconds;
@@ -161,6 +180,8 @@ class Exercise {
     'steps': steps,
     'cues': cues,
     'imageUrls': imageUrls,
+    'kind': kind.name,
+    'perSide': perSide,
   };
 }
 

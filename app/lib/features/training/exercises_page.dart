@@ -32,12 +32,12 @@ import '../../widgets/units_scope.dart';
 /// The muscle an exercise is listed under: its first primary muscle.
 String groupOf(Exercise e) => e.primaryMuscles.firstOrNull ?? 'other';
 
-/// Exercises whose name matches [query], grouped by muscle in the server's muscle order.
+/// Strength exercises whose name matches [query] (stretches live in Mobility), grouped by muscle in the server's muscle order.
 List<(String, List<Exercise>)> groupExercises(ExerciseCatalog catalog, String query) {
   final q = query.trim().toLowerCase();
   final matching = [
     for (final e in catalog.exercises)
-      if (q.isEmpty || e.name.toLowerCase().contains(q)) e,
+      if (!e.stretch && (q.isEmpty || e.name.toLowerCase().contains(q))) e,
   ];
   final order = [...catalog.muscles, 'other'];
   return [

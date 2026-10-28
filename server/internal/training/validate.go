@@ -28,6 +28,8 @@ type CatalogEntry struct {
 	PrimaryMuscles []string
 	Timed          bool
 	Equipment      []string
+	// Stretch marks mobility exercises, which belong to mobility sessions, not strength plans.
+	Stretch bool
 }
 
 // PlanDay is one training day of a weekly plan.
@@ -96,6 +98,9 @@ func WeeklySets(p Plan, catalog map[string]CatalogEntry) map[string]int {
 	weekly := map[string]int{}
 	for _, d := range p.Days {
 		for _, e := range d.Exercises {
+			if catalog[e.Exercise].Stretch {
+				continue
+			}
 			for _, m := range catalog[e.Exercise].PrimaryMuscles {
 				weekly[m] += e.Sets
 			}
@@ -132,6 +137,10 @@ func Validate(p Plan, profile Profile, catalog map[string]CatalogEntry) []Violat
 			entry, ok := catalog[e.Exercise]
 			if !ok {
 				add("exercise", "%q is not in the exercise catalog", e.Exercise)
+				continue
+			}
+			if entry.Stretch {
+				add("exercise", "%q is a stretch; strength plans use strength exercises only", e.Exercise)
 				continue
 			}
 			if !hasEquipment(profile.Equipment, entry.Equipment) {

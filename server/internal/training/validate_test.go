@@ -1,6 +1,7 @@
 package training
 
 import (
+	"maps"
 	"slices"
 	"testing"
 )
@@ -12,6 +13,7 @@ var testCatalog = map[string]CatalogEntry{
 	"split_squat":  {Key: "split_squat", PrimaryMuscles: []string{"quads", "glutes"}},
 	"glute_bridge": {Key: "glute_bridge", PrimaryMuscles: []string{"glutes"}},
 	"plank":        {Key: "plank", PrimaryMuscles: []string{"core"}, Timed: true},
+	"cat_stretch":  {Key: "cat_stretch", PrimaryMuscles: []string{"back", "core"}, Timed: true, Stretch: true},
 }
 
 func day(label string, weekday int, ex ...Prescription) PlanDay {
@@ -119,5 +121,18 @@ func TestWeeklySetsCountsEveryPrimaryMuscle(t *testing.T) {
 	got := WeeklySets(validPlan(), testCatalog)
 	if got["chest"] != 6 || got["quads"] != 6 || got["glutes"] != 6 || got["core"] != 0 {
 		t.Fatalf("weekly = %v", got)
+	}
+}
+
+func TestStretchesAreRejectedAndNeverCounted(t *testing.T) {
+	plan := validPlan()
+	before := WeeklySets(plan, testCatalog)
+	stretch := Prescription{Exercise: "cat_stretch", Sets: 3, Min: 30, Max: 60, RIR: 0, RestSec: 30}
+	plan.Days[0].Exercises = append(plan.Days[0].Exercises, stretch)
+	if after := WeeklySets(plan, testCatalog); !maps.Equal(before, after) {
+		t.Fatalf("a stretch changed the weekly sets: %v -> %v", before, after)
+	}
+	if !slices.Contains(rules(Validate(plan, beginner, testCatalog)), "exercise") {
+		t.Fatalf("a plan with a stretch must be rejected: %+v", Validate(plan, beginner, testCatalog))
 	}
 }

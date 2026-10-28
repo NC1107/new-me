@@ -84,19 +84,19 @@ class HowToSheet extends ConsumerWidget {
       ],
       if (e.imageUrls.isNotEmpty) ...[
         const SizedBox(height: 16),
-        _Photos(urls: e.imageUrls, name: e.name),
+        HowToPhotos(urls: e.imageUrls, name: e.name),
       ],
       if (e.steps.isNotEmpty) ...[
         const SizedBox(height: 20),
         const Text('Steps', style: AppText.headline),
         const SizedBox(height: 8),
-        for (final (i, step) in e.steps.indexed) _Step(number: i + 1, text: step),
+        for (final (i, step) in e.steps.indexed) HowToStep(number: i + 1, text: step),
       ],
       if (e.cues.isNotEmpty) ...[
         const SizedBox(height: 16),
         const Text('Form cues', style: AppText.headline),
         const SizedBox(height: 8),
-        for (final cue in e.cues) _Cue(text: cue),
+        for (final cue in e.cues) HowToCue(text: cue),
       ],
       if (!e.hasHowTo) ...[
         const SizedBox(height: 16),
@@ -112,8 +112,8 @@ class HowToSheet extends ConsumerWidget {
 }
 
 /// The start and end photos side by side, each labelled, so there is nothing to swipe.
-class _Photos extends StatelessWidget {
-  const _Photos({required this.urls, required this.name});
+class HowToPhotos extends StatelessWidget {
+  const HowToPhotos({super.key, required this.urls, required this.name});
 
   final List<String> urls;
   final String name;
@@ -197,8 +197,8 @@ class _PhotoPlaceholder extends StatelessWidget {
       const Center(child: Icon(Icons.image_not_supported_outlined, color: kInkMuted));
 }
 
-class _Step extends StatelessWidget {
-  const _Step({required this.number, required this.text});
+class HowToStep extends StatelessWidget {
+  const HowToStep({super.key, required this.number, required this.text});
 
   final int number;
   final String text;
@@ -236,8 +236,8 @@ class _Step extends StatelessWidget {
   }
 }
 
-class _Cue extends StatelessWidget {
-  const _Cue({required this.text});
+class HowToCue extends StatelessWidget {
+  const HowToCue({super.key, required this.text});
 
   final String text;
 

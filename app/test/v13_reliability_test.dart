@@ -204,6 +204,42 @@ void main() {
       expect(today.day.points, 222, reason: 'the older answer must not rescore the day');
     });
 
+    test('when the newest mark fails after an older one succeeded, Today is reloaded', () async {
+      final first = Completer<void>();
+      final second = Completer<void>();
+      var todayGets = 0;
+      final adapter = StubAdapter({
+        'GET /api/today': (_) {
+          todayGets++;
+          return StubResponse(200, todayJson()..['habits'] = [countState(4, 'Water')]);
+        },
+        'GET /api/board': (_) => StubResponse(200, boardJson()),
+        'PUT /api/habits/4/marks/2026-10-26': (req) async {
+          if ((req.data as Map)['count'] == 1) {
+            await first.future;
+            return StubResponse(200, countAnswer(1, 111));
+          }
+          await second.future;
+          return const StubResponse(422, {'error': 'no'});
+        },
+      });
+      final c = _container(adapter);
+      await c.read(todayProvider.future);
+      final marks = c.read(habitMarksProvider);
+
+      final older = marks.setCount(4, 1);
+      await pumpEventQueue();
+      final newer = marks.setCount(4, 2);
+      await pumpEventQueue();
+      first.complete();
+      expect(await older, isTrue);
+      second.complete();
+      expect(await newer, isFalse);
+      await pumpEventQueue();
+
+      expect(todayGets, 2, reason: 'the skipped score is fetched again');
+    });
+
     test('a refusal puts the habit back after an earlier request settled', () async {
       final adapter = StubAdapter({
         'GET /api/today': (_) =>

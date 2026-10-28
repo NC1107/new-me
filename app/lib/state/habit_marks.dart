@@ -80,17 +80,27 @@ class HabitMarks {
     try {
       final result = await send(_client, date);
       settleOnce();
-      await _apply(notifier, date, result, habitId, newest: request == _requests);
+      final newest = request == _requests;
+      // An older answer's score is skipped in favour of the newest; if the newest then fails,
+      // nothing would ever show the server's score, so Today is reloaded instead.
+      _scoreSkipped = !newest;
+      await _apply(notifier, date, result, habitId, newest: newest);
       _refreshBoard();
       return true;
     } on ApiException {
       settleOnce();
       if (!_stillPending(habitId)) await _revert(notifier, date, before);
+      if (request == _requests && _scoreSkipped) {
+        _scoreSkipped = false;
+        unawaited(notifier.refresh());
+      }
       return false;
     } finally {
       settleOnce();
     }
   }
+
+  bool _scoreSkipped = false;
 
   void _settle(int habitId) => _pending[habitId] = (_pending[habitId] ?? 1) - 1;
 

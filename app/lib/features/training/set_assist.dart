@@ -125,9 +125,18 @@ enum _HoldPhase { leadIn, running }
 /// big digits and a firm haptic at the end. Calls [onDone] with the seconds held, which is the full
 /// time unless stopped early.
 class HoldTimer extends StatefulWidget {
-  const HoldTimer({super.key, required this.seconds, required this.onDone, required this.onCancel});
+  const HoldTimer({
+    super.key,
+    required this.seconds,
+    required this.onDone,
+    required this.onCancel,
+    this.now = DateTime.now,
+  });
 
   final int seconds;
+
+  /// The wall clock, read only to measure time spent in the background.
+  final DateTime Function() now;
   final ValueChanged<int> onDone;
   final VoidCallback onCancel;
 
@@ -137,6 +146,10 @@ class HoldTimer extends StatefulWidget {
 
 class _HoldTimerState extends State<HoldTimer> {
   Timer? _ticker;
+  // Ticks stop while the app is in the background, so a locked phone mid-hold catches up on
+  // the time it was away when it comes back.
+  late final AppLifecycleListener _lifecycle;
+  DateTime? _hiddenAt;
   _HoldPhase _phase = _HoldPhase.leadIn;
   int _leadIn = kHoldLeadInSeconds;
   late int _remaining = widget.seconds;
@@ -146,6 +159,7 @@ class _HoldTimerState extends State<HoldTimer> {
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), _tick);
+    _lifecycle = AppLifecycleListener(onHide: () => _hiddenAt = widget.now(), onShow: _catchUp);
     HapticFeedback.selectionClick();
   }
 
@@ -161,7 +175,18 @@ class _HoldTimerState extends State<HoldTimer> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _lifecycle.dispose();
     super.dispose();
+  }
+
+  void _catchUp() {
+    final hiddenAt = _hiddenAt;
+    _hiddenAt = null;
+    if (hiddenAt == null || !(_ticker?.isActive ?? false)) return;
+    for (var away = widget.now().difference(hiddenAt).inSeconds; away > 0; away--) {
+      _tick(_ticker!);
+      if (!(_ticker?.isActive ?? false)) break;
+    }
   }
 
   int get _held => widget.seconds - _remaining;

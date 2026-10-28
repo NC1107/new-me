@@ -95,7 +95,12 @@ void main() {
       });
     server.on(
       'POST /api/foods',
-      const StubResponse(201, {'id': 12, 'name': 'Apple sauce', 'servingText': '1 cup', 'kcal': 100}),
+      const StubResponse(201, {
+        'id': 12,
+        'name': 'Apple sauce',
+        'servingText': '1 cup',
+        'kcal': 100,
+      }),
     );
     final app = await _open(tester, server);
 

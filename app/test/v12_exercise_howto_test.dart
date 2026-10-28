@@ -364,4 +364,34 @@ void main() {
       handle.dispose();
     });
   });
+
+  testWidgets('a hold timer catches up on time spent in the background', (tester) async {
+    var now = DateTime(2026, 10, 28, 7);
+    int? done;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HoldTimer(seconds: 10, onDone: (s) => done = s, onCancel: () {}, now: () => now),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('10'), findsWidgets);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    now = now.add(const Duration(seconds: 4));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.text('6'), findsWidgets);
+
+    now = now.add(const Duration(seconds: 20));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(done, isNull, reason: 'no time passed while hidden this time');
+  });
 }

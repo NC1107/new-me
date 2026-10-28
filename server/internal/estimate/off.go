@@ -202,13 +202,13 @@ func (p offProduct) servingGrams() float64 {
 }
 
 func (p offProduct) toFood() (Food, bool) {
-	name := strings.TrimSpace(p.Name)
+	name := tidyName(strings.TrimSpace(p.Name))
 	if name == "" || p.Code == "" {
 		return Food{}, false
 	}
 	f := Food{
 		Source: SourceOpenFoodFacts, ID: p.Code, Name: name,
-		Brand: strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " ")), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
+		Brand: tidyName(strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " "))), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
 	}
 	f.ImageURL = firstOFFImage(p.ImageSmallURL, p.ImageFrontURL)
 	f.SourceURL = OFFBaseURL + "/product/" + url.PathEscape(p.Code)

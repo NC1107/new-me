@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -88,8 +90,15 @@ func TestFoodSearchReturnsRemoteCandidatesOnlyOnRequest(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
+		var req struct {
+			DataType []string `json:"dataType"`
+		}
+		if r.Method != http.MethodPost || json.NewDecoder(r.Body).Decode(&req) != nil {
+			http.Error(w, "bad search", http.StatusBadRequest)
+			return
+		}
 		foods := []obj{}
-		if r.URL.Query().Get("dataType") != "Branded" {
+		if !slices.Contains(req.DataType, "Branded") {
 			foods = append(foods, obj{"fdcId": 171688, "description": "Apples, raw, with skin", "dataType": "SR Legacy",
 				"foodNutrients": []obj{{"nutrientId": 1008, "value": 52}, {"nutrientId": 1003, "value": 0.26}}})
 		}

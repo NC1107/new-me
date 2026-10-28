@@ -33,3 +33,15 @@ func TestLiveNicksExample(t *testing.T) {
 		fmt.Printf("%-22s %-14s %-10s %-45q kcal=%d grams=%v conf=%s\n", r.Text, r.Source, r.SourceID, r.MatchedName, r.Kcal, r.Grams, r.Confidence)
 	}
 }
+
+// Run by hand: go test -tags live -run TestLiveSearchDefaults -v ./internal/estimate
+func TestLiveSearchDefaults(t *testing.T) {
+	foods := NewFoods(os.Getenv("NEWME_USDA_API_KEY"), "live")
+	for _, q := range []string{"chicken", "milk", "potato", "coffee", "bread", "yogurt", "beef", "eggs", "chicken breast"} {
+		fmt.Println("==", q)
+		for _, f := range foods.SearchRemote(context.Background(), q) {
+			v := f.Serving()
+			fmt.Printf("   %-50s %-14s %s %.0f kcal\n", f.Name, f.DataType, v.Text, v.N.Kcal)
+		}
+	}
+}

@@ -211,3 +211,57 @@ func TestOFFImageAcceptsOnlyHTTPSOpenFoodFactsHosts(t *testing.T) {
 		t.Errorf("fallback = %q", got)
 	}
 }
+
+func TestSearchRemotePutsTheSurveyDefaultFirstForABareName(t *testing.T) {
+	fake, f2 := newFakeFoods(t)
+	survey := func(id int, name string) obj {
+		return obj{"fdcId": id, "description": name, "dataType": "Survey (FNDDS)",
+			"foodNutrients": []obj{{"nutrientId": 1008, "value": 190}, {"nutrientId": 1003, "value": 28}},
+			"foodMeasures": []obj{
+				{"gramWeight": 2.5, "modifier": "63480", "rank": 3, "disseminationText": "Guideline amount per fl oz of beverage"},
+				{"gramWeight": 85, "modifier": "90000", "rank": 4, "disseminationText": "Quantity not specified"},
+				{"gramWeight": 140, "modifier": "10205", "rank": 1, "disseminationText": "1 cup, chopped or diced"},
+				{"gramWeight": 28, "modifier": "30000", "rank": 2, "disseminationText": "1 oz"},
+			}}
+	}
+	fake.usda = func(query, dataType string) any {
+		switch dataType {
+		case "Survey (FNDDS)":
+			if query != "chicken AND (NFS OR NS)" {
+				t.Errorf("survey query = %q", query)
+			}
+			return obj{"foods": []obj{
+				survey(1, "Chicken nuggets, NFS"),
+				survey(2, "Chicken, NS as to part, rotisserie, NS as to skin eaten"),
+				survey(3, "Chicken, NS as to part and cooking method, NS as to skin eaten"),
+			}}
+		case "Branded":
+			return obj{"foods": []obj{}}
+		}
+		return obj{"foods": []obj{{"fdcId": 9, "description": "Chicken spread", "dataType": "SR Legacy",
+			"foodNutrients": []obj{{"nutrientId": 1008, "value": 158}}}}}
+	}
+	got := f2.SearchRemote(context.Background(), "Chicken!")
+	if len(got) < 2 || got[0].ID != "3" || got[0].Name != "Chicken, any kind" {
+		t.Fatalf("candidates = %+v", got)
+	}
+	if v := got[0].Serving(); v.Text != "1 cup, chopped or diced" || v.Grams != 140 || int(v.N.Kcal+0.5) != 266 || len(v.Alts) != 1 {
+		t.Fatalf("default serving = %+v", v)
+	}
+}
+
+func TestSearchRemoteSkipsADefaultThatNamesAPreparation(t *testing.T) {
+	fake, f2 := newFakeFoods(t)
+	fake.usda = func(_, dataType string) any {
+		if dataType != "Survey (FNDDS)" {
+			return obj{"foods": []obj{}}
+		}
+		return obj{"foods": []obj{{"fdcId": 1, "description": "Potato, boiled, NFS", "dataType": "Survey (FNDDS)",
+			"foodNutrients": []obj{{"nutrientId": 1008, "value": 87}}}}}
+	}
+	for _, c := range f2.SearchRemote(context.Background(), "potato") {
+		if c.ID == "1" {
+			t.Fatalf("a prepared default was promoted: %+v", c)
+		}
+	}
+}

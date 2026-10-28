@@ -27,3 +27,11 @@ func TestTidyNamesAndBrands(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenFoodFactsNamesInCapitalsAreTidied(t *testing.T) {
+	f, ok := offProduct{Code: "1", Name: "SPORTYFEEL SPICY CHICKEN & 'NDUJA PIZZA", Brands: "SPORTYFEEL",
+		Nutriments: map[string]any{"energy-kcal_100g": 252.0}}.toFood()
+	if !ok || f.Name != "Sportyfeel Spicy Chicken & 'Nduja Pizza" || f.Brand != "Sportyfeel" {
+		t.Fatalf("food = %q by %q (%v)", f.Name, f.Brand, ok)
+	}
+}

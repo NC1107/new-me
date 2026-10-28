@@ -103,11 +103,20 @@ func newFakeFoods(t *testing.T) (*fakeFoods, *Foods) {
 		}
 		switch {
 		case r.URL.Path == "/foods/search":
+			var req struct {
+				Query    string   `json:"query"`
+				DataType []string `json:"dataType"`
+			}
+			if r.Method != http.MethodPost || json.NewDecoder(r.Body).Decode(&req) != nil {
+				http.Error(w, "bad search", http.StatusBadRequest)
+				return
+			}
+			dataType := strings.Join(req.DataType, ",")
 			ff.usdaSearch.Add(1)
 			ff.mu.Lock()
-			ff.usdaQueries = append(ff.usdaQueries, r.URL.Query().Get("query")+"|"+r.URL.Query().Get("dataType"))
+			ff.usdaQueries = append(ff.usdaQueries, req.Query+"|"+dataType)
 			ff.mu.Unlock()
-			_ = json.NewEncoder(w).Encode(ff.usda(r.URL.Query().Get("query"), r.URL.Query().Get("dataType")))
+			_ = json.NewEncoder(w).Encode(ff.usda(req.Query, dataType))
 		case strings.HasPrefix(r.URL.Path, "/food/"):
 			ff.usdaDetail.Add(1)
 			_ = json.NewEncoder(w).Encode(obj{"fdcId": 171688, "foodPortions": []obj{

@@ -1,6 +1,7 @@
 package estimate
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -94,15 +96,31 @@ type usdaMeasure struct {
 	GramWeight float64 `json:"gramWeight"`
 	Modifier   string  `json:"modifier"`
 	Text       string  `json:"disseminationText"`
+	Rank       int     `json:"rank"`
 }
 
 func (u *USDA) get(ctx context.Context, path string, q url.Values, out any) error {
+	return u.do(ctx, http.MethodGet, path, q, nil, out)
+}
+
+func (u *USDA) do(ctx context.Context, method, path string, q url.Values, body any, out any) error {
 	q.Set("api_key", u.Key)
 	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.BaseURL+path+"?"+q.Encode(), nil)
+	var reqBody io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		reqBody = bytes.NewReader(raw)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u.BaseURL+path+"?"+q.Encode(), reqBody)
 	if err != nil {
 		return err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	resp, err := u.HTTP.Do(req)
 	if err != nil {
@@ -120,14 +138,17 @@ func (u *USDA) get(ctx context.Context, path string, q url.Values, out any) erro
 
 // Search returns candidates for a query, restricted to the given data types.
 func (u *USDA) Search(ctx context.Context, query string, dataTypes ...string) ([]Food, error) {
-	q := url.Values{}
-	q.Set("query", query)
-	q.Set("dataType", strings.Join(dataTypes, ","))
-	q.Set("pageSize", "25")
+	// The search is posted because the GET form intermittently answers 400 when the query or the
+	// "Survey (FNDDS)" data type carries parentheses.
+	req := struct {
+		Query    string   `json:"query"`
+		DataType []string `json:"dataType"`
+		PageSize int      `json:"pageSize"`
+	}{query, dataTypes, 25}
 	var body struct {
 		Foods []usdaFood `json:"foods"`
 	}
-	if err := u.get(ctx, "/foods/search", q, &body); err != nil {
+	if err := u.do(ctx, http.MethodPost, "/foods/search", url.Values{}, req, &body); err != nil {
 		return nil, err
 	}
 	var out []Food
@@ -208,10 +229,16 @@ func (f usdaFood) portions() []Portion {
 			out = append(out, Portion{Label: label, Grams: p.GramWeight / amount})
 		}
 	}
-	for _, m := range f.FoodMeasures {
+	measures := slices.Clone(f.FoodMeasures)
+	slices.SortStableFunc(measures, func(a, b usdaMeasure) int { return a.Rank - b.Rank })
+	for _, m := range measures {
 		label := strings.TrimSpace(m.Modifier)
-		if label == "" {
+		// Survey foods carry a numeric portion code as the modifier and the wording in the text.
+		if label == "" || measureCode.MatchString(label) {
 			label = strings.TrimSpace(m.Text)
+		}
+		if surveyOnlyMeasure.MatchString(label) {
+			continue
 		}
 		if p, ok := portionFromLabel(label, m.GramWeight); ok {
 			out = append(out, p)
@@ -219,6 +246,12 @@ func (f usdaFood) portions() []Portion {
 	}
 	return out
 }
+
+var measureCode = regexp.MustCompile(`^\d+$`)
+
+// surveyOnlyMeasure matches FNDDS measures that are coding aids rather than portions a person
+// would pick: per-ounce guideline amounts and the weight used when no quantity was reported.
+var surveyOnlyMeasure = regexp.MustCompile(`(?i)^(guideline amount|quantity not specified)`)
 
 func (f usdaFood) toFood() (Food, bool) {
 	per100, ok := f.per100()

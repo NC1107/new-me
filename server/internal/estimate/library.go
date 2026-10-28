@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -263,7 +264,7 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 		return nil
 	}
 	it := Item{Food: q}
-	var generic, branded, off []Food
+	var generic, branded, off, survey []Food
 	var wg sync.WaitGroup
 	run := func(fn func()) {
 		wg.Add(1)
@@ -278,6 +279,13 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 		run(func() {
 			branded, _ = cached(c, "usda|branded|"+key, func() ([]Food, error) { return f.USDA.Search(ctx, q, typeBranded) })
 		})
+		if words := strings.Fields(nonAlnum.ReplaceAllString(key, " ")); len(words) > 0 {
+			run(func() {
+				survey, _ = cached(c, "usda|default|"+key, func() ([]Food, error) {
+					return f.USDA.Search(ctx, strings.Join(words, " ")+" AND (NFS OR NS)", typeSurvey)
+				})
+			})
+		}
 	}
 	if f.OFF != nil {
 		run(func() { off, _ = cached(c, "off|"+key, func() ([]Food, error) { return f.OFF.Search(ctx, q) }) })
@@ -303,6 +311,9 @@ func (f *Foods) SearchRemote(ctx context.Context, q string) []Food {
 		return out
 	}
 	var out []Food
+	if fd, ok := unspecifiedDefault(q, survey); ok {
+		out = append(out, fd)
+	}
 	for i, fd := range top(generic, 4) {
 		if i < 3 && len(fd.Portions) == 0 && f.USDA != nil {
 			if ps, err := cached(c, "usda|portions|"+fd.ID, func() ([]Portion, error) { return f.USDA.Portions(ctx, fd.ID) }); err == nil {
@@ -352,4 +363,35 @@ func searchScore(it Item, m match) float64 {
 		}
 	}
 	return m.Score
+}
+
+// unspecifiedMarker matches the FNDDS descriptors "NFS" (not further specified) and "NS as to ..."
+// (not specified).
+var unspecifiedMarker = regexp.MustCompile(`^(?:NFS|NS as to .+)$`)
+
+// unspecifiedDefault finds the FNDDS food a dietary survey records when someone names the food
+// with no detail, such as "Milk, NFS" for "milk". FNDDS bases those foods' nutrients and portions on
+// how often each kind is reported in What We Eat in America (FNDDS 2021-2023 documentation, "NFS
+// and NS food codes"), so it is the best answer to a bare food name. Only a food whose every
+// descriptor is unspecified qualifies; "Potato, boiled, NFS" already says how it was cooked.
+func unspecifiedDefault(q string, survey []Food) (Food, bool) {
+	want := tokens(q)
+	for _, fd := range survey {
+		parts := strings.Split(fd.Name, ",")
+		if len(parts) < 2 || !slices.Equal(tokens(parts[0]), want) {
+			continue
+		}
+		plain := true
+		for _, p := range parts[1:] {
+			if !unspecifiedMarker.MatchString(strings.TrimSpace(p)) {
+				plain = false
+				break
+			}
+		}
+		if plain {
+			fd.Name = strings.TrimSpace(parts[0]) + ", any kind"
+			return fd, true
+		}
+	}
+	return Food{}, false
 }

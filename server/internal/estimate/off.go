@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // OFFBaseURL is Open Food Facts' world database.
@@ -23,12 +24,22 @@ type OpenFoodFacts struct {
 	// UserAgent identifies the app, which Open Food Facts asks every client to do.
 	UserAgent string
 	HTTP      *http.Client
+	// searches and reads hold calls to Open Food Facts' published limits of 10 searches and 15
+	// product reads per minute per IP address, past which it answers 503 and may ban the address
+	// (API documentation, "Rate limits"). Nil means unlimited.
+	searches, reads *perMinute
 }
 
 // NewOpenFoodFacts builds a client that identifies itself as NewMe/<version>.
 func NewOpenFoodFacts(version string) *OpenFoodFacts {
-	return &OpenFoodFacts{BaseURL: OFFBaseURL, UserAgent: offUserAgent(version), HTTP: &http.Client{Timeout: lookupTimeout}}
+	return &OpenFoodFacts{
+		BaseURL: OFFBaseURL, UserAgent: offUserAgent(version), HTTP: &http.Client{Timeout: lookupTimeout},
+		searches: newPerMinute(10, time.Now), reads: newPerMinute(15, time.Now),
+	}
 }
+
+// errOFFBusy is a call skipped to stay inside Open Food Facts' rate limits.
+var errOFFBusy = fmt.Errorf("%w: openfoodfacts: over its rate limit, skipped", ErrLookup)
 
 func offUserAgent(version string) string {
 	if version == "" {
@@ -50,6 +61,9 @@ type offProduct struct {
 
 // Search returns up to five products for the query.
 func (o *OpenFoodFacts) Search(ctx context.Context, query string) ([]Food, error) {
+	if !o.searches.allow() {
+		return nil, errOFFBusy
+	}
 	q := url.Values{}
 	q.Set("search_terms", query)
 	q.Set("search_simple", "1")
@@ -115,6 +129,9 @@ var ErrNoProduct = errors.New("estimate: no product for barcode")
 // Product looks one barcode up. A product that is missing, unnamed or without calories is
 // ErrNoProduct; a failed call is ErrLookup.
 func (o *OpenFoodFacts) Product(ctx context.Context, code string) (Food, error) {
+	if !o.reads.allow() {
+		return Food{}, errOFFBusy
+	}
 	q := url.Values{}
 	q.Set("fields", "code,product_name,brands,serving_size,serving_quantity,nutriments,image_front_small_url,image_front_url")
 	ctx, cancel := context.WithTimeout(ctx, lookupTimeout)

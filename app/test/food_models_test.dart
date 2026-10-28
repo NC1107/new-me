@@ -98,6 +98,64 @@ void main() {
         }),
       );
       expect((saved.source, saved.sourceId, saved.unit), (FoodSource.library, '4', 'tbsp'));
+      expect((saved.quantity, saved.kcal), (2, 90));
+    });
+
+    group('base serving', () {
+      SavedFood chicken({int? id}) => SavedFood.fromJson({
+        'id': id,
+        'name': 'Chicken, ground, raw',
+        'servingText': '100 g',
+        'servingGrams': 100,
+        'kcal': 143,
+        'protein': 17.4,
+        'fat': 8.1,
+        'source': 'usda',
+        'sourceId': '171116',
+      });
+
+      test('a per 100 g food starts at 100 g and 143 kcal, not at 1 g', () {
+        final item = MealItem.fromFood(chicken());
+        expect((item.quantity, item.unit, item.kcal), (100, 'g', 143));
+        expect(item.protein, 17.4);
+        expect(item.grams, 100);
+      });
+
+      test('stepping a gram food by its step moves kcal in proportion', () {
+        final item = MealItem.fromFood(chicken());
+        final up = item.withQuantity(item.quantity + quantityStep(item.unit));
+        expect((up.quantity, up.kcal), (110, 157));
+        expect(item.withQuantity(50).kcal, 72);
+      });
+
+      test('a per serving food starts at one serving with its own numbers', () {
+        final item = MealItem.fromFood(
+          SavedFood.fromJson({
+            'name': 'Apple',
+            'servingText': '1 medium (182 g)',
+            'servingGrams': 182,
+            'kcal': 95,
+            'source': 'usda',
+          }),
+        );
+        expect((item.quantity, item.kcal, item.grams), (1, 95, 182));
+        expect(item.withQuantity(2).kcal, 190);
+        expect(quantityStep(item.unit), 0.5);
+      });
+
+      test('a saved gram food scales the same way and saves back unchanged', () {
+        final item = MealItem.fromFood(chicken(id: 9)).withQuantity(250);
+        expect((item.source, item.kcal), (FoodSource.library, 358));
+        final saved = item.toSavedFood();
+        expect((saved.servingText, saved.kcal, saved.servingGrams), ('100 g', 143, 100));
+      });
+
+      test('fractions in the serving text are the base amount', () {
+        final item = MealItem.fromFood(
+          SavedFood.fromJson({'name': 'Pizza', 'servingText': '1/2 pizza', 'kcal': 400}),
+        );
+        expect((item.quantity, item.unit, item.kcal), (0.5, 'pizza', 400));
+      });
     });
   });
 

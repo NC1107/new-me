@@ -31,9 +31,7 @@ const kMobilityCitation =
     'Garber et al., ACSM position stand, Med Sci Sports Exerc 2011;43:1334: 60 seconds per '
     'stretch, at least 2 days a week.';
 
-const kMobilityOrderNote =
-    'The order is New Me\'s own sequence, not from a trial. Each stretch is 60 seconds as two '
-    '30 second holds, one per side where it has sides.';
+const kMobilityOrderNote = 'The order is New Me\'s own, not from a trial.';
 
 /// One timed hold: which stretch it belongs to and how to tell it apart from its other hold.
 @immutable

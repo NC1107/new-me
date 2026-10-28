@@ -321,8 +321,7 @@ class _Intro extends StatelessWidget {
         Text(
           list == null || list.isEmpty
               ? 'Guided stretching, one stretch at a time.'
-              : '${stretches.length} stretches, about $minutes minutes. '
-                    'A timer runs each hold and moves on by itself.',
+              : '${stretches.length} stretches, about $minutes minutes, timed for you.',
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 8),
@@ -366,7 +365,7 @@ class _Intro extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Stretch to a mild pull, never pain. It counts toward your yoga quest when you finish.',
+            'Stretch to a mild pull, never pain. Counts toward yoga.',
             style: AppText.caption.copyWith(color: kInkMuted),
           ),
         ],

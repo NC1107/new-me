@@ -170,6 +170,12 @@ class HealthSyncController extends Notifier<HealthSyncState> {
     return granted;
   }
 
+  /// Completes when no sync is running, at once when none is.
+  Future<void> whenIdle() async {
+    final running = _inFlight;
+    if (running != null) await running;
+  }
+
   /// Joins a sync already in progress instead of starting a second one.
   Future<bool> sync(SyncTrigger trigger) {
     final running = _inFlight;

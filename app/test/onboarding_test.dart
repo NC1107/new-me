@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart' show RequestOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,48 +118,60 @@ class _App {
   }
 }
 
-/// Answers profile PATCHes the way the server does, keeping the units once they are chosen.
-StubHandler _patchMe() {
-  var units = 'metric';
-  return (req) {
-    final body = req.data;
-    if (body is Map && body['units'] is String) units = body['units'] as String;
+/// The profile the fake server holds: PATCHes change its units, and reads return them.
+class _FakeMe {
+  /// Null until chosen, like a new profile on the server.
+  String? units;
+
+  StubResponse _answer() {
     final me = meJson();
     return StubResponse(200, {
       ...me,
       'user': {...(me['user'] as Map<String, dynamic>), 'units': units},
     });
-  };
+  }
+
+  StubResponse patch(RequestOptions req) {
+    final body = req.data;
+    if (body is Map && body['units'] is String) units = body['units'] as String;
+    return _answer();
+  }
+
+  StubResponse get(RequestOptions _) => _answer();
 }
 
 Map<String, dynamic> _targets(String name) =>
     (jsonDecode(File('test/contract_v8/$name.json').readAsStringSync()) as Map)['body']!
         as Map<String, dynamic>;
 
-StubAdapter _server({Map<String, dynamic> info = _info}) => StubAdapter()
-  ..on('GET /api/server-info', StubResponse(200, info))
-  ..on(
-    'POST /api/join',
-    const StubResponse(201, {
-      'user': {
-        'id': 2,
-        'name': 'Ana',
-        'color': 'sky',
-        'timezone': 'America/New_York',
-        'isAdmin': false,
-      },
-      'token': 'new-token',
-    }),
-  )
-  ..routes['PATCH /api/me'] = _patchMe()
-  ..on(
-    'POST /api/invites/check',
-    const StubResponse(200, {
-      'valid': true,
-      'users': [_nick],
-      'canJoinNew': true,
-    }),
-  );
+StubAdapter _server({Map<String, dynamic> info = _info}) {
+  final me = _FakeMe();
+  return StubAdapter()
+    ..on('GET /api/server-info', StubResponse(200, info))
+    ..routes['GET /api/me'] = me.get
+    ..on(
+      'POST /api/join',
+      const StubResponse(201, {
+        'user': {
+          'id': 2,
+          'name': 'Ana',
+          'color': 'sky',
+          'timezone': 'America/New_York',
+          'isAdmin': false,
+        },
+        'token': 'new-token',
+      }),
+    )
+    ..routes['PATCH /api/me'] = me.patch
+    ..on(
+      'POST /api/invites/check',
+      const StubResponse(200, {
+        'valid': true,
+        'users': [_nick],
+        'canJoinNew': true,
+      }),
+    );
+}
 
 void main() {
   testWidgets('first join walks name, colour, units, Health, About you, schedule, focus and daily '
@@ -239,7 +252,6 @@ void main() {
     tester,
   ) async {
     final adapter = _server(info: {..._info, 'initialized': false})
-      ..on('GET /api/me', StubResponse(200, meJson()))
       ..on('GET /api/targets', StubResponse(200, _targets('targets')))
       ..on(
         'POST /api/targets/apply',
@@ -556,7 +568,6 @@ void main() {
   group('the About you steps', () {
     StubAdapter aboutServer({String targets = 'targets_missing'}) =>
         _server(info: {..._info, 'initialized': false})
-          ..on('GET /api/me', StubResponse(200, meJson()))
           ..on('GET /api/targets', StubResponse(200, _targets(targets)))
           ..on('PUT /api/health/daily', const StubResponse(200, {'days': []}));
 
@@ -666,6 +677,30 @@ void main() {
         adapter.to('PUT /api/health/daily').where((r) => '${r.data}'.contains('manual')),
         isEmpty,
       );
+    });
+
+    testWidgets('a slow first Health sync fills the empty fields when it lands', (tester) async {
+      final adapter = aboutServer()
+        ..on(
+          'GET /api/targets',
+          const StubResponse(200, {'inputs': [], 'targets': [], 'sources': {}}),
+        );
+      final app = _App(tester, adapter);
+      app.health.latency = const Duration(seconds: 2);
+      await app.joinFirst();
+      await app.tapText('Pounds and feet');
+      await app.tapButton('Continue');
+      await app.tapButton('Connect Apple Health');
+      expect(find.text('About you'), findsOneWidget, reason: 'Health no longer holds the screen');
+      expect(find.text('From Apple Health'), findsNothing);
+      // The sync lands and the server now has Health's height and weight.
+      adapter.on('GET /api/targets', StubResponse(200, _targets('targets')));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await app.settle();
+      expect(find.text('From Apple Health'), findsNWidgets(2));
+      expect(find.widgetWithText(TextField, '181.7'), findsOneWidget);
     });
 
     testWidgets('the back arrow returns from the goal to About you', (tester) async {

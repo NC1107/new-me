@@ -7,6 +7,7 @@ import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../health/health_source.dart';
 import '../../state/clock.dart';
+import '../../state/health_sync.dart';
 import '../../state/me.dart';
 import '../../state/session.dart';
 import '../../state/targets.dart';
@@ -66,6 +67,7 @@ class AboutYouState {
     this.units = Units.metric,
     this.heightCm,
     this.heightTyped = true,
+    this.heightEdited = false,
     this.heightFromHealth = false,
     this.weight = '',
     this.weightFromHealth = false,
@@ -90,6 +92,9 @@ class AboutYouState {
 
   /// False while the height field holds something impossible, so Continue waits.
   final bool heightTyped;
+
+  /// True once the person typed a height, so a late Health value never replaces it.
+  final bool heightEdited;
 
   /// The prefilled value came from Apple Health and has not been edited.
   final bool heightFromHealth;
@@ -132,6 +137,7 @@ class AboutYouState {
     double? heightCm,
     bool clearHeight = false,
     bool? heightTyped,
+    bool? heightEdited,
     bool? heightFromHealth,
     String? weight,
     bool? weightFromHealth,
@@ -149,6 +155,7 @@ class AboutYouState {
     units: units ?? this.units,
     heightCm: clearHeight ? null : (heightCm ?? this.heightCm),
     heightTyped: heightTyped ?? this.heightTyped,
+    heightEdited: heightEdited ?? this.heightEdited,
     heightFromHealth: heightFromHealth ?? this.heightFromHealth,
     weight: weight ?? this.weight,
     weightFromHealth: weightFromHealth ?? this.weightFromHealth,
@@ -209,6 +216,31 @@ class AboutYouController extends Notifier<AboutYouState> {
       kind: goal.kind,
       pace: goal.paceKgPerWeek,
     );
+    unawaited(_fillFromHealthLater());
+  }
+
+  /// Health's first sync may still be running when the questions open; once it lands, a height
+  /// or weight it shared fills the fields that are still empty and were not typed in.
+  Future<void> _fillFromHealthLater() async {
+    final sync = ref.read(healthSyncProvider.notifier);
+    if (!ref.read(healthSyncProvider).syncing) return;
+    await sync.whenIdle();
+    try {
+      await ref.read(targetsProvider.notifier).refresh();
+    } on Object catch (e) {
+      debugPrint('[NEWME] about you: targets unavailable after sync: $e');
+      return;
+    }
+    final report = ref.read(targetsProvider).value?.data;
+    final height = _health(report?.input('heightCm'));
+    final weight = _health(report?.input('weightKg'));
+    final s = state;
+    state = s.copyWith(
+      heightCm: s.heightCm == null && !s.heightEdited ? height : null,
+      heightFromHealth: s.heightCm == null && !s.heightEdited && height != null ? true : null,
+      weight: s.weight.isEmpty && weight != null ? _plain(s.units.weightIn(weight)) : null,
+      weightFromHealth: s.weight.isEmpty && weight != null ? true : null,
+    );
   }
 
   double? _health(TargetInput? input) =>
@@ -226,6 +258,7 @@ class AboutYouController extends Notifier<AboutYouState> {
     heightCm: cm,
     clearHeight: cm == null,
     heightTyped: valid,
+    heightEdited: true,
     heightFromHealth: false,
     clearError: true,
   );

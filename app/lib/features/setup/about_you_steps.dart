@@ -294,6 +294,15 @@ class _AboutYouBodyStepState extends ConsumerState<AboutYouBodyStep> {
   late final _weight = TextEditingController(text: ref.read(aboutYouProvider).weight);
 
   @override
+  void initState() {
+    super.initState();
+    // A weight that arrives from Health after the screen opened fills the empty field.
+    ref.listenManual(aboutYouProvider.select((s) => (s.weight, s.weightFromHealth)), (_, next) {
+      if (next.$2 && _weight.text.isEmpty) _weight.text = next.$1;
+    });
+  }
+
+  @override
   void dispose() {
     _year.dispose();
     _weight.dispose();

@@ -115,12 +115,12 @@ class HealthKitSource implements HealthSource {
         return minutes > 0 ? minutes : null;
       },
       HealthMetric.workouts: () async => _workoutCount(await _workouts(health, start, end)),
+      // Time covered within the day, not summed durations: two apps recording one session would
+      // count it twice, and a workout over midnight or left running would put more than a day's
+      // minutes on the day it started, which the server rejects along with the rest of that day.
       HealthMetric.workoutMinutes: () async {
-        final workouts = await _workouts(health, start, end);
-        final minutes = workouts.fold<double>(
-          0,
-          (a, w) => a + w.end.difference(w.start).inSeconds / 60,
-        );
+        final workouts = await _points(health, [HealthDataType.WORKOUT], start, end);
+        final minutes = coveredMinutes(workouts, start, end);
         return minutes > 0 ? minutes : null;
       },
     }, onError: (key, e) => debugPrint('[NEWME] health $key unreadable: $e'));

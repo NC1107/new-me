@@ -328,17 +328,16 @@ class _MealPaneState extends State<MealPane> {
 
   static String _gramsText(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
 
-  /// Shows the itemized result; a server without itemizing answers one meal, which fills the
-  /// form as it always did.
+  /// Adds the itemized result to what is already listed, since a food the databases lack is
+  /// often described after the rest were picked from search. A server without itemizing answers
+  /// one meal, which fills the form as it always did.
   void _applyBreakdown(MealBreakdown b) {
     if (b.items.isEmpty) {
       _applyEstimate(b.legacy);
       return;
     }
     setState(() {
-      _entries
-        ..clear()
-        ..addAll(b.items.map(MealEntry.new));
+      _entries.addAll(b.items.map(MealEntry.new));
       _estimate = null;
     });
   }

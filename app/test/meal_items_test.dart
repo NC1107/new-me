@@ -272,6 +272,49 @@ void main() {
     expect(server.to('POST /api/foods/4/use'), hasLength(1));
   });
 
+  testWidgets('describing more foods adds them to the ones already picked from search', (
+    tester,
+  ) async {
+    final server = _server()
+      ..on(
+        'GET /api/foods',
+        const StubResponse(200, {
+          'foods': [
+            {
+              'id': 4,
+              'name': 'Gala Apple',
+              'servingText': '1 medium (182 g)',
+              'servingGrams': 182,
+              'kcal': 95,
+              'protein': 0.5,
+              'source': 'usda',
+              'servings': [],
+              'useCount': 6,
+            },
+          ],
+          'candidates': [],
+        }),
+      )
+      ..on('POST /api/meals/estimate', StubResponse(200, _breakdown));
+    final app = TestApp(tester, server, surfaceHeight: 2400);
+    await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
+    await app.enter(_searchField, 'gala');
+    await app.settle(4);
+    await app.tap(find.textContaining('1 medium (182 g) · 95 kcal'));
+
+    await app.tap(find.text('DESCRIBE IT'));
+    await app.enter(
+      find.widgetWithText(TextField, '').first,
+      'an apple, a chomp meat stick, and a hotpocket',
+    );
+    await app.tap(find.text('ESTIMATE'));
+
+    expect(fieldWith('Gala Apple'), findsOneWidget);
+    expect(fieldWith('Chomps stick'), findsOneWidget);
+    await app.tap(find.text('LOG AS ONE MEAL'));
+    expect(app.body('POST /api/logs')['kcal'], 95 + 485);
+  });
+
   testWidgets('database results follow a pause in typing, and are added as unsaved candidates', (
     tester,
   ) async {

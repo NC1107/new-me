@@ -61,7 +61,7 @@ class AppleHealthPage extends ConsumerWidget {
                               ? 'Connect it so your days count on their own.'
                               : synced == null
                               ? 'Not synced yet'
-                              : 'Last sync ${relativeTime(synced, ref.watch(clockProvider)())}',
+                              : lastSyncLabel(ref, synced),
                           style: AppText.label.copyWith(color: kInkSecondary),
                         ),
                       ],

@@ -160,7 +160,7 @@ class _MeBody extends ConsumerWidget {
                   ? 'Not connected'
                   : synced == null
                   ? 'Connected, not synced yet'
-                  : 'Last sync ${relativeTime(synced, now)}',
+                  : lastSyncLabel(ref, synced),
               onTap: () => pushPage(context, const AppleHealthPage()),
             ),
             if (me.audiobookshelf case final link?)

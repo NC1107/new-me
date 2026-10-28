@@ -60,6 +60,8 @@ type DayInputs struct {
 	ReadingMinutes int
 	ReadingPages   int
 	YogaMinutes    int
+	// WaterLoggedML is water logged by hand; the water quest takes the larger of it and Health.
+	WaterLoggedML int
 	// OtherFullMinutes and OtherEasyMinutes are manual activity minutes by intensity: moderate
 	// and hard count fully toward exercise, easy counts half.
 	OtherFullMinutes int
@@ -98,13 +100,14 @@ func (in DayInputs) Connected(key string) bool { return in.Synced[key] }
 func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date) (DayInputs, error) {
 	var in DayInputs
 	err := q.QueryRow(ctx, `
-		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.other_full, a.other_easy,
+		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.other_full, a.other_easy,
 		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber
 		FROM (
 			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups'), 0)::int AS pushups,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_minutes'), 0)::int AS reading_minutes,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_pages'), 0)::int AS reading_pages,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'yoga_minutes'), 0)::int AS yoga_minutes,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'water_ml'), 0)::int AS water_ml,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity <> 'easy'), 0)::int AS other_full,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity = 'easy'), 0)::int AS other_easy
 			FROM activity_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
@@ -117,7 +120,7 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(fiber_g), 0)::float8 AS fiber
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
 		) m`, userID, date).Scan(
-		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.OtherFullMinutes, &in.OtherEasyMinutes,
+		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.OtherFullMinutes, &in.OtherEasyMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
 	if err != nil {
 		return in, err

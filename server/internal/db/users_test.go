@@ -23,8 +23,8 @@ func TestCreateUserSeedsTemplatesAndInitializes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(templates) != 8 {
-		t.Fatalf("templates = %d, want 8", len(templates))
+	if len(templates) != 9 {
+		t.Fatalf("templates = %d, want 9", len(templates))
 	}
 	for i, tpl := range templates {
 		off := tpl.Key == db.QuestYoga
@@ -345,8 +345,8 @@ func TestEnsureSnapshotIsStableAcrossTemplateEdits(t *testing.T) {
 		}
 	}
 	quests, err := db.GetDayQuests(ctx, database.Pool, u.ID, day)
-	if err != nil || len(quests) != 7 {
-		t.Fatalf("snapshot = %d quests (%v), want the 7 enabled ones", len(quests), err)
+	if err != nil || len(quests) != 8 {
+		t.Fatalf("snapshot = %d quests (%v), want the 8 enabled ones", len(quests), err)
 	}
 	if quests[0].Key != db.QuestSteps || quests[2].Key != db.QuestReading || quests[2].TargetAlt == nil {
 		t.Fatalf("snapshot order or reading target wrong: %+v", quests)
@@ -389,7 +389,7 @@ func TestEnsureSnapshotIgnoresTemplatesEnabledAfterwards(t *testing.T) {
 	if err := db.EnsureSnapshot(ctx, database.Pool, u.ID, day); err != nil {
 		t.Fatal(err)
 	}
-	if quests, _ := db.GetDayQuests(ctx, database.Pool, u.ID, day); len(quests) != 7 {
+	if quests, _ := db.GetDayQuests(ctx, database.Pool, u.ID, day); len(quests) != 8 {
 		t.Fatalf("enabling yoga added it to a day already in progress: %d quests", len(quests))
 	}
 	if err := db.EnsureSnapshot(ctx, database.Pool, u.ID, day.AddDays(1)); err != nil {

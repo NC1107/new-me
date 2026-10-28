@@ -16,19 +16,26 @@ const (
 	QuestYoga        = "yoga"
 	QuestExercise    = "exercise"
 	QuestSleep       = "sleep"
+	QuestWater       = "water"
 
 	ActivityPushups        = "pushups"
 	ActivityReadingMinutes = "reading_minutes"
 	ActivityReadingPages   = "reading_pages"
 	ActivityYogaMinutes    = "yoga_minutes"
 	ActivityOtherMinutes   = "other_minutes"
+	ActivityWaterML        = "water_ml"
 
 	MetricSteps        = "steps"
 	MetricActiveEnergy = "active_energy"
 	MetricExercise     = "exercise_minutes"
 	MetricSleep        = "sleep_minutes"
 	MetricWeight       = "weight_kg"
+	MetricWater        = "water_ml"
 )
+
+// DefaultWaterTarget is the water goal in ml until the person sets their sex, which moves it to
+// the figure for men (3000) or women (2200).
+const DefaultWaterTarget = 2200
 
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
 const DefaultProteinTarget = 100
@@ -74,6 +81,7 @@ func DefaultTemplates() []QuestTemplate {
 		{Key: QuestYoga, Target: 20, Unit: "minutes", Points: 50, Enabled: false, Position: 5},
 		{Key: QuestExercise, Target: 30, Unit: "min", Points: 100, Enabled: true, Position: 6},
 		{Key: QuestSleep, Target: 420, Unit: "min", Points: 50, Enabled: true, Position: 7},
+		{Key: QuestWater, Target: DefaultWaterTarget, Unit: "ml", Points: 50, Enabled: true, Position: 8},
 	}
 }
 

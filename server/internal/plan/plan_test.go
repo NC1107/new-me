@@ -106,6 +106,7 @@ func TestFinishText(t *testing.T) {
 		{Quest{Key: "steps", Target: 8000, Actual: 5000}, "3,000 more steps"},
 		{Quest{Key: "protein", Target: 100, Actual: 75}, "25 g more protein"},
 		{Quest{Key: "meals_logged", Target: 2, Actual: 1}, "logging 1 more meal"},
+		{Quest{Key: "water", Target: 2200, Actual: 1400}, "0.8 L more water"},
 	}
 	for _, tc := range cases {
 		if got, ok := FinishText(tc.q); !ok || got != tc.want {

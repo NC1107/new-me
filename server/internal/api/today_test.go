@@ -38,6 +38,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 		"protein":      {target: 100, actual: 0, points: 50},
 		"exercise":     {target: 30, points: 100},
 		"sleep":        {target: 420, points: 50},
+		"water":        {target: 2200, points: 50},
 	}
 	have := questsByKey(got)
 	if len(have) != len(want) {

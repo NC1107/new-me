@@ -138,6 +138,9 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 	case db.QuestYoga:
 		return candidate{fmt.Sprintf("Yoga: %d more %s.", left, plural(left, "minute", "minutes")),
 			fmt.Sprintf("%d minutes of yoga", left), frac}, true
+	case db.QuestWater:
+		litres := litresText(left)
+		return candidate{fmt.Sprintf("Water: %s to go.", litres), litres + " more water", frac}, true
 	case db.QuestExercise:
 		return candidate{fmt.Sprintf("Exercise: %d more %s.", left, plural(left, "minute", "minutes")),
 			fmt.Sprintf("%d more minutes of exercise", left), frac}, true
@@ -202,15 +205,21 @@ func doneText(q Quest) string {
 	switch q.Key {
 	case db.QuestSteps:
 		return fmt.Sprintf("%s done: %s", title, Thousands(q.Actual))
+	case db.QuestWater:
+		return fmt.Sprintf("%s done: %s", title, litresText(q.Actual))
 	case db.QuestReading, db.QuestYoga, db.QuestExercise:
 		return fmt.Sprintf("%s done: %d min", title, q.Actual)
 	}
 	return title + " done"
 }
 
+// litresText words millilitres as litres with one decimal. The plan has no unit setting, so the
+// water text stays in one unit that reads the same in both systems.
+func litresText(ml int) string { return fmt.Sprintf("%.1f L", float64(ml)/1000) }
+
 var titles = map[string]string{
 	db.QuestSteps: "Steps", db.QuestPushups: "Push-ups", db.QuestReading: "Reading", db.QuestMealsLogged: "Meals",
-	db.QuestProtein: "Protein", db.QuestYoga: "Yoga", db.QuestExercise: "Exercise", db.QuestSleep: "Sleep",
+	db.QuestProtein: "Protein", db.QuestYoga: "Yoga", db.QuestExercise: "Exercise", db.QuestSleep: "Sleep", db.QuestWater: "Water",
 }
 
 func workoutTitle(t string) string {

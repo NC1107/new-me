@@ -36,5 +36,7 @@ var Sources = map[string]string{
 	"zourdos2016":      "Zourdos et al., J Strength Cond Res 2016",
 	"schoenfeld2017":   "Schoenfeld et al., J Sports Sci 2017;35:1073",
 	"acsm2009":         "ACSM position stand on progression, Med Sci Sports Exerc 2009;41:687",
+	"nasem2005":        "National Academies (IOM), Dietary Reference Intakes for Water, Potassium, Sodium, Chloride, and Sulfate, 2005",
+	"efsa2010":         "EFSA Panel on Dietetic Products, Nutrition and Allergies, EFSA Journal 2010;8(3):1459",
 	"impellizzeri2020": "Impellizzeri et al., Int J Sports Physiol Perform 2020;15:907",
 }

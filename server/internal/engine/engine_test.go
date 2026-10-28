@@ -228,7 +228,7 @@ func TestRecomputeDayScoresAndStores(t *testing.T) {
 		t.Fatalf("stored = %+v %v", stored, err)
 	}
 	quests, err := db.GetDayQuests(ctx, database.Pool, u.ID, day)
-	if err != nil || len(quests) != 7 {
+	if err != nil || len(quests) != 8 {
 		t.Fatalf("snapshot = %d quests, %v", len(quests), err)
 	}
 }

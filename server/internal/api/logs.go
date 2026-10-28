@@ -24,6 +24,7 @@ const (
 	maxReps       = 500
 	maxPages      = 2000
 	maxMinutes    = 1440
+	maxWaterML    = 5000
 	maxKcal       = 10000
 	maxMacroGrams = 5000
 	maxMealName   = 80
@@ -80,6 +81,7 @@ var wireActivity = map[string][2]string{
 	db.ActivityReadingPages:   {"reading", "pages"},
 	db.ActivityYogaMinutes:    {"yoga", "minutes"},
 	db.ActivityOtherMinutes:   {"other", "minutes"},
+	db.ActivityWaterML:        {"water", "ml"},
 }
 
 // storedActivity resolves the wire's type and unit to a stored type. The stored names are
@@ -95,6 +97,8 @@ func storedActivity(typ, unit string) (string, bool) {
 		return db.ActivityReadingPages, true
 	case typ == "yoga" && (unit == "" || unit == "minutes"):
 		return db.ActivityYogaMinutes, true
+	case typ == "water" && (unit == "" || unit == "ml"):
+		return db.ActivityWaterML, true
 	case typ == "other" && (unit == "" || unit == "minutes"):
 		return db.ActivityOtherMinutes, true
 	}
@@ -107,6 +111,8 @@ func activityCap(stored string) int {
 		return maxReps
 	case db.ActivityReadingPages:
 		return maxPages
+	case db.ActivityWaterML:
+		return maxWaterML
 	}
 	return maxMinutes
 }
@@ -141,7 +147,7 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 	case db.KindActivity:
 		stored, ok := storedActivity(req.Type, req.Unit)
 		if !ok {
-			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga or other")
+			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga, water (unit ml) or other")
 		}
 		activity := db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
 		if stored == db.ActivityOtherMinutes {

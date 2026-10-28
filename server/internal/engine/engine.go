@@ -20,6 +20,7 @@ var healthMetric = map[string]string{
 	db.QuestSteps:    db.MetricSteps,
 	db.QuestExercise: db.MetricExercise,
 	db.QuestSleep:    db.MetricSleep,
+	db.QuestWater:    db.MetricWater,
 }
 
 // QuestResults measures each snapshotted quest against the day's inputs. A Health-fed quest
@@ -39,16 +40,29 @@ func QuestResults(quests []db.DayQuest, in db.DayInputs) []score.QuestResult {
 
 // connected is whether a Health-fed quest has data to be measured against. Manual activity is
 // data for the exercise quest, so someone who logs a run by hand is scored on it before Health
-// has ever reported exercise minutes.
+// has ever reported exercise minutes. Water logged by hand does the same for the water quest.
 func connected(key, metric string, in db.DayInputs) bool {
-	return in.Connected(metric) || (key == db.QuestExercise && in.ManualExerciseMinutes() > 0)
+	switch {
+	case in.Connected(metric):
+		return true
+	case key == db.QuestExercise:
+		return in.ManualExerciseMinutes() > 0
+	case key == db.QuestWater:
+		return in.WaterLoggedML > 0
+	}
+	return false
 }
 
 // healthUnits is the quest's amount from Health, and for exercise the minutes logged by hand.
 func healthUnits(key string, in db.DayInputs) int {
 	units := wholeUnits(in.Metric(healthMetric[key]))
-	if key == db.QuestExercise {
+	switch key {
+	case db.QuestExercise:
 		units += in.ManualExerciseMinutes()
+	case db.QuestWater:
+		// Health and the log hold the same water, so the larger of the two is the day's amount;
+		// adding them would count a drink twice for someone who records it in both places.
+		units = max(units, in.WaterLoggedML)
 	}
 	return units
 }
@@ -56,7 +70,7 @@ func healthUnits(key string, in db.DayInputs) int {
 // progress returns the quest's actual and target in one shared unit.
 func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 	switch q.Key {
-	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater:
 		return healthUnits(q.Key, in), q.Target
 	case db.QuestPushups:
 		actual, _ = score.StrengthProgress(in.Pushups, q.Target, in.TrainingSession, in.Workouts, in.HIITMinHR)
@@ -89,7 +103,7 @@ func tenthsOfGrams(g float64) int { return int(math.Round(g * 10)) }
 // pages separately. It is what the Today screen shows beside the target.
 func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 	switch q.Key {
-	case db.QuestSteps, db.QuestExercise, db.QuestSleep:
+	case db.QuestSteps, db.QuestExercise, db.QuestSleep, db.QuestWater:
 		return healthUnits(q.Key, in), nil
 	case db.QuestPushups:
 		return in.Pushups, nil

@@ -34,6 +34,7 @@ const (
 	tgtActivity    = "activity"
 	tgtSteps       = "steps"
 	tgtPushups     = "pushups"
+	tgtWater       = "water"
 )
 
 // Input keys.
@@ -494,6 +495,7 @@ func computeTargets(d targetData) targetsResponse {
 	add(d.activityTarget())
 	add(d.stepsTarget(tpl(db.QuestSteps)))
 	add(d.pushupsTarget(tpl(db.QuestPushups)))
+	add(d.waterTarget(tpl(db.QuestWater)))
 
 	return targetsResponse{AsOf: d.Today, Disclaimer: targetsDisclaimer, Inputs: d.inputs(), Targets: out, Sources: targets.Sources}
 }
@@ -668,6 +670,38 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 	return t
 }
 
+// mlPerFlOz converts US fluid ounces to millilitres.
+const mlPerFlOz = 29.5735
+
+// volume words an amount of drinks the way the person reads it: litres, with US fluid ounces
+// beside them for an imperial person.
+func (d targetData) volume(ml int) string {
+	litres := fmt.Sprintf("%.1f L", float64(ml)/1000)
+	if d.User.Imperial() {
+		return fmt.Sprintf("%s (%d fl oz)", litres, int(math.Round(float64(ml)/mlPerFlOz)))
+	}
+	return litres
+}
+
+// waterTarget is the National Academies adequate intake of drinks, which is fixed by sex.
+func (d targetData) waterTarget(current *int) targetJSON {
+	w := targets.ComputeWater(d.Sex)
+	t := targetJSON{Key: tgtWater, Unit: "ml", Label: labelGuideline, Applicable: true, Current: current,
+		Value: intp(w.ML), Missing: []string{}, Sources: []string{"nasem2005", "efsa2010"}}
+	totalL, who := targets.WaterFemaleTotalL, "women"
+	if d.Sex != nil && *d.Sex == targets.Male {
+		totalL, who = targets.WaterMaleTotalL, "men"
+	}
+	t.Formula = fmt.Sprintf("Adequate intake of total water for %s aged 19 and over is %s L a day, and about 81%% of it comes from drinking water and other drinks = %s.",
+		who, trim(totalL, 1), d.volume(w.ML))
+	if !w.Personalized {
+		t.Formula += " Set your sex in About you and this becomes the figure for you; until then it is the one for women."
+	}
+	t.Details = map[string]any{"personalized": w.Personalized, "totalWaterL": totalL, "drinksShare": 0.81,
+		"note": "The Academies report that needs rise with activity and in heat; this is an adequate intake, not a requirement. EFSA (2010) also sets it by sex, at 2.5 L (men) and 2.0 L (women) of total water."}
+	return t
+}
+
 // find returns the target with the key.
 func (r targetsResponse) find(key string) (targetJSON, bool) {
 	for _, t := range r.Targets {
@@ -776,6 +810,8 @@ func (s *Server) handleApplyTargets(w http.ResponseWriter, r *http.Request) {
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestSteps, Target: &v})
 		case tgtSleep:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestSleep, Target: &v})
+		case tgtWater:
+			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestWater, Target: &v})
 		case tgtPushups:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestPushups, Target: &v})
 		}

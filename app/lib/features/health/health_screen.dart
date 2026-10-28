@@ -12,6 +12,8 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import 'health_metrics.dart';
+import '../../health/health_source.dart';
+import 'cardio_screen.dart';
 import 'metric_screen.dart';
 import '../../widgets/units_scope.dart';
 
@@ -92,6 +94,11 @@ class _GroupHeader extends StatelessWidget {
   );
 }
 
+/// VO2 max opens the cardio fitness page; every other metric opens its plain trend.
+Widget _pageFor(HealthMetricSpec metric, HealthGroup group) => metric.key == HealthMetric.vo2max
+    ? const CardioScreen()
+    : MetricScreen(metric: metric, group: group);
+
 class _MetricRow extends StatelessWidget {
   const _MetricRow({required this.metric, required this.group, required this.health});
 
@@ -111,10 +118,10 @@ class _MetricRow extends StatelessWidget {
       button: true,
       excludeSemantics: true,
       label: '${metric.name}, ${text ?? 'no data yet'}${asOf == null ? '' : ', as of $asOf'}',
-      onTap: () => pushPage(context, MetricScreen(metric: metric, group: group)),
+      onTap: () => pushPage(context, _pageFor(metric, group)),
       child: Pressable(
         scale: 0.99,
-        onTap: () => pushPage(context, MetricScreen(metric: metric, group: group)),
+        onTap: () => pushPage(context, _pageFor(metric, group)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(

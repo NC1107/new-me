@@ -726,6 +726,11 @@ class ApiClient {
     (data) => HealthTrend.fromJson(data as Json),
   );
 
+  Future<CardioFitness> cardioFitness() => _send(
+    () => _dio.get<dynamic>('/api/health/cardio'),
+    (data) => CardioFitness.fromJson(data as Json),
+  );
+
   /// Answers the stored cheer for both a first send (201) and a repeat (200).
   Future<Cheer> sendCheer({required int to, required CheerKind kind}) => _send(
     () => _dio.post<dynamic>('/api/cheers', data: {'to': to, 'kind': kind.name}),

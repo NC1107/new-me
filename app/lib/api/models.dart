@@ -1657,6 +1657,70 @@ class HealthTrend {
   };
 }
 
+/// How GET /health/cardio reads: why the page can or cannot compare the latest VO2 max.
+enum CardioStatus {
+  ready,
+  noReading,
+  needsProfile,
+  ageOutOfRange;
+
+  static CardioStatus parse(String? v) => switch (v) {
+    'ready' => ready,
+    'needs_profile' => needsProfile,
+    'age_out_of_range' => ageOutOfRange,
+    _ => noReading,
+  };
+}
+
+/// GET /health/cardio: the newest VO2 max and where it falls among people of the same sex and
+/// age decade, or what the comparison still needs.
+class CardioFitness {
+  const CardioFitness({
+    required this.status,
+    this.latestDate,
+    this.latestValue,
+    this.needs = const [],
+    this.ageGroup,
+    this.sex,
+    this.percentileLow,
+    this.percentileHigh,
+    this.median,
+    this.source,
+  });
+
+  factory CardioFitness.fromJson(Json j) {
+    final latest = j['latest'] as Json?;
+    final norm = j['norm'] as Json?;
+    return CardioFitness(
+      status: CardioStatus.parse(j['status'] as String?),
+      latestDate: latest == null ? null : _str(latest['date']),
+      latestValue: latest == null ? null : _num(latest['value']),
+      needs: [for (final n in j['needs'] as List? ?? const []) n as String],
+      ageGroup: norm == null ? null : _str(norm['ageGroup']),
+      sex: norm == null ? null : _str(norm['sex']),
+      percentileLow: norm == null ? null : _intOrNull(norm['percentileLow']),
+      percentileHigh: norm == null ? null : _intOrNull(norm['percentileHigh']),
+      median: norm == null ? null : _num(norm['median']),
+      source: norm == null ? null : _str(norm['source']),
+    );
+  }
+
+  final CardioStatus status;
+  final String? latestDate;
+  final num? latestValue;
+
+  /// Profile fields the comparison is waiting for: `birthYear` and `sex`.
+  final List<String> needs;
+  final String? ageGroup;
+  final String? sex;
+
+  /// The percentile band: 0 means below the 10th, and a high of 100 means above the 90th.
+  final int? percentileLow;
+  final int? percentileHigh;
+  final num? median;
+  final String? source;
+}
+
 /// One workout of PUT /health/workouts. [type] is one of `WorkoutType.all`.
 class WorkoutUpload {
   const WorkoutUpload({

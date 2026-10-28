@@ -35,3 +35,18 @@ func TestOpenFoodFactsNamesInCapitalsAreTidied(t *testing.T) {
 		t.Fatalf("food = %q by %q (%v)", f.Name, f.Brand, ok)
 	}
 }
+
+func TestOpenFoodFactsBrandListsReadAsOneLabel(t *testing.T) {
+	for _, c := range []struct{ name, brands, want string }{
+		{"Nutella", "Nutella, Ferrero", "Ferrero"},
+		{"Nutella", "Nutella,Ferrero France Commerciale", "Ferrero France Commerciale"},
+		{"Protein bar", "Grenade,  Grenade , Mondelez", "Grenade Mondelez"},
+		{"Oat milk", "", ""},
+	} {
+		f, ok := offProduct{Code: "1", Name: c.name, Brands: c.brands,
+			Nutriments: map[string]any{"energy-kcal_100g": 50.0}}.toFood()
+		if !ok || f.Brand != c.want {
+			t.Errorf("%q by %q: brand = %q, want %q", c.name, c.brands, f.Brand, c.want)
+		}
+	}
+}

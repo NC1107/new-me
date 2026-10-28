@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -201,6 +202,28 @@ func (p offProduct) servingGrams() float64 {
 	return 0
 }
 
+// offBrand turns Open Food Facts' comma list of brands into one label. A brand the name already
+// says is left out when another remains, so "Nutella, Ferrero" on "Nutella" lists as
+// "Ferrero Nutella".
+func offBrand(brands, name string) string {
+	var all, other []string
+	lower := strings.ToLower(name)
+	for _, b := range strings.Split(brands, ",") {
+		b = tidyName(strings.Join(strings.Fields(b), " "))
+		if b == "" || slices.Contains(all, b) {
+			continue
+		}
+		all = append(all, b)
+		if !strings.Contains(lower, strings.ToLower(b)) {
+			other = append(other, b)
+		}
+	}
+	if len(other) > 0 {
+		return strings.Join(other, " ")
+	}
+	return strings.Join(all, " ")
+}
+
 func (p offProduct) toFood() (Food, bool) {
 	name := tidyName(strings.TrimSpace(p.Name))
 	if name == "" || p.Code == "" {
@@ -208,7 +231,7 @@ func (p offProduct) toFood() (Food, bool) {
 	}
 	f := Food{
 		Source: SourceOpenFoodFacts, ID: p.Code, Name: name,
-		Brand: tidyName(strings.TrimSpace(strings.ReplaceAll(p.Brands, ",", " "))), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
+		Brand: offBrand(p.Brands, name), ServingGrams: p.servingGrams(), ServingText: strings.TrimSpace(p.ServingSize),
 	}
 	f.ImageURL = firstOFFImage(p.ImageSmallURL, p.ImageFrontURL)
 	f.SourceURL = OFFBaseURL + "/product/" + url.PathEscape(p.Code)

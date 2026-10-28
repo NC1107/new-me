@@ -148,7 +148,7 @@ void main() {
       expect(find.byType(Image), findsNothing);
     });
 
-    testWidgets('the exercises page opens it from a row and from the exercise page', (
+    testWidgets('the exercises page opens it from a row and shows it on the exercise page', (
       tester,
     ) async {
       final app = TestApp(tester, _server(), surfaceHeight: 8000);
@@ -163,10 +163,13 @@ void main() {
 
       await tester.tap(find.text('Plank'));
       await tester.pumpAndSettle();
-      await tester.tap(_button('How to do it'));
-      await tester.pumpAndSettle();
+      expect(find.byType(ExercisePage), findsOneWidget);
+      expect(find.text('How to do it'), findsOneWidget, reason: 'shown on the page, not a sheet');
+      expect(_button('How to do it'), findsNothing);
       expect(find.text('Steps'), findsOneWidget);
       expect(find.text(plank.steps.first), findsOneWidget);
+      expect(find.text(plank.cues.first), findsOneWidget);
+      expect(find.byType(HowToSheet), findsNothing);
     });
 
     testWidgets('a failed photo shows a placeholder, not an error', (tester) async {

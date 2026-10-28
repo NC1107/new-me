@@ -82,32 +82,48 @@ class HowToSheet extends ConsumerWidget {
         const SizedBox(height: 4),
         Text('Works $muscles', style: AppText.caption.copyWith(color: kInkSecondary)),
       ],
-      if (e.imageUrls.isNotEmpty) ...[
-        const SizedBox(height: 16),
-        HowToPhotos(urls: e.imageUrls, name: e.name),
-      ],
-      if (e.steps.isNotEmpty) ...[
-        const SizedBox(height: 20),
-        const Text('Steps', style: AppText.headline),
-        const SizedBox(height: 8),
-        for (final (i, step) in e.steps.indexed) HowToStep(number: i + 1, text: step),
-      ],
-      if (e.cues.isNotEmpty) ...[
-        const SizedBox(height: 16),
-        const Text('Form cues', style: AppText.headline),
-        const SizedBox(height: 8),
-        for (final cue in e.cues) HowToCue(text: cue),
-      ],
-      if (!e.hasHowTo) ...[
-        const SizedBox(height: 16),
-        Text(
-          e.custom
-              ? 'Your own exercises have no steps or photos.'
-              : 'No steps for this exercise yet.',
-          style: AppText.body.copyWith(color: kInkSecondary),
-        ),
-      ],
+      const SizedBox(height: 16),
+      HowToDetails(exercise: e),
     ];
+  }
+}
+
+/// Photos, numbered steps and form cues of one exercise, in the how-to sheet and on the
+/// exercise's own page.
+class HowToDetails extends StatelessWidget {
+  const HowToDetails({super.key, required this.exercise});
+
+  final Exercise exercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = exercise;
+    final photos = e.imageUrls.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (photos) HowToPhotos(urls: e.imageUrls, name: e.name),
+        if (e.steps.isNotEmpty) ...[
+          if (photos) const SizedBox(height: 20),
+          const Text('Steps', style: AppText.headline),
+          const SizedBox(height: 8),
+          for (final (i, step) in e.steps.indexed) HowToStep(number: i + 1, text: step),
+        ],
+        if (e.cues.isNotEmpty) ...[
+          if (photos || e.steps.isNotEmpty) const SizedBox(height: 16),
+          const Text('Form cues', style: AppText.headline),
+          const SizedBox(height: 8),
+          for (final cue in e.cues) HowToCue(text: cue),
+        ],
+        if (!e.hasHowTo)
+          Text(
+            e.custom
+                ? 'Your own exercises have no steps or photos.'
+                : 'No steps for this exercise yet.',
+            style: AppText.body.copyWith(color: kInkSecondary),
+          ),
+      ],
+    );
   }
 }
 

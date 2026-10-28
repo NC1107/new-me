@@ -139,7 +139,8 @@ class _Library extends StatelessWidget {
               child: Column(
                 children: [
                   for (final (i, e) in list.indexed) ...[
-                    if (i > 0) const Divider(height: 1, color: kBorder),
+                    if (i > 0)
+                      const Divider(height: kBorderWidth, thickness: kBorderWidth, color: kBorder),
                     _ExerciseRow(
                       exercise: e,
                       onTap: () => pushPage(context, ExercisePage(exerciseKey: e.key)),
@@ -313,12 +314,6 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                   style: AppText.caption.copyWith(color: kInkSecondary),
                 ),
               ],
-              const SizedBox(height: 12),
-              ChunkyButton.secondary(
-                label: 'How to do it',
-                icon: Icons.info_outline_rounded,
-                onPressed: () => showHowTo(context, exerciseKey: e.key, name: e.name),
-              ),
               if (!e.loaded) ...[
                 const SizedBox(height: 12),
                 ChunkyButton.secondary(label: 'Record a max test', onPressed: () => _maxTest(e)),
@@ -326,6 +321,11 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
             ],
           ),
         ),
+        if (e.hasHowTo) ...[
+          const SizedBox(height: 20),
+          const FieldLabel('How to do it'),
+          AppCard(child: HowToDetails(exercise: e)),
+        ],
         const SizedBox(height: 12),
         switch (ref.watch(exerciseHistoryProvider(e.key))) {
           AsyncValue(:final value?) => StrengthChart(history: value, units: context.units),

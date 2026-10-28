@@ -74,25 +74,32 @@ type Service struct {
 type Delivery int
 
 const (
-	// NotSent means nothing was queued: push is off, the person switched the event off, or it
-	// is quiet hours or an away day. Nothing was lost that should be retried.
+	// NotSent means nothing was queued: push is off or the person switched the event off.
+	// Nothing was lost that should be retried. SendClaimed also answers NotSent while the
+	// person is in quiet hours or away, without claiming, so a later pass tries again.
 	NotSent Delivery = iota
 	// Queued means the dispatcher accepted the message.
 	Queued
 	// Failed means the dispatcher refused it (its queue was full). The caller may release a
 	// claim so the message is tried again.
 	Failed
+	// Deferred means it is quiet hours or an away day, so the message was stored and the
+	// scheduler delivers it at the person's next allowed time, see DeliverHeld.
+	Deferred
 )
 
-// Notify queues a message unless the person turned that event off or it is a quiet moment for
-// them. It never fails the caller.
+// Notify queues a message unless the person turned that event off; in a quiet moment for them it
+// is held until their next allowed time. It never fails the caller.
 func (s *Service) Notify(to db.User, m push.Message) { s.Deliver(to, m) }
 
 // Deliver is Notify for callers that hold a claim on the message and must release it when the
 // message could not be queued.
 func (s *Service) Deliver(to db.User, m push.Message) Delivery {
-	if !s.Wants(to, m.Kind) {
+	if s.Notifier == nil || !wants(to.Notify, m.Kind) {
 		return NotSent
+	}
+	if held, after := s.holdUntil(to, m.Kind); held {
+		return s.hold(to, m, after)
 	}
 	m.UserID = to.ID
 	if !s.Notifier.Enqueue(m) {
@@ -454,7 +461,20 @@ func (s *Service) settleReward(ctx context.Context, users []db.User) error {
 			s.Notify(u, push.Message{Kind: EventReward, Title: "Reward ready", Body: r.Name})
 		}
 	}
-	return nil
+	return s.notifyFocusProgress(ctx, bank)
+}
+
+// notifyFocusProgress tells the pair about the focus reward at its 50 and 90 percent marks. The
+// 100 percent mark is the "Reward ready" push, so a reward the bank already covers says nothing.
+func (s *Service) notifyFocusProgress(ctx context.Context, bank int) error {
+	focus, err := db.FocusReward(ctx, s.DB.Pool)
+	if errors.Is(err, db.ErrNotFound) {
+		return nil
+	}
+	if err != nil || focus.Status != db.RewardApproved || focus.Price <= 0 || RewardReady(bank, focus.Price) {
+		return err
+	}
+	return s.NotifyRewardProgress(ctx, focus.ID, focus.Name, RewardProgress(bank, focus.Price)*100/focus.Price)
 }
 
 func (s *Service) announcePartnersDone(ctx context.Context, users []db.User, now time.Time) error {

@@ -77,16 +77,20 @@ type Challenge struct {
 	Title       string
 	Target      int
 	CompletedAt *time.Time
+	// PickReason is why the kind was chosen; empty for challenges from before v13.
+	PickReason string
+	// MissedAt is set at week end on a challenge that was not finished.
+	MissedAt *time.Time
 }
 
 // EndsOn is the Sunday of the challenge's week.
 func (c Challenge) EndsOn() score.Date { return c.WeekStart.AddDays(6) }
 
-const challengeColumns = `id, week_start::text, kind, title, target, completed_at`
+const challengeColumns = `id, week_start::text, kind, title, target, completed_at, COALESCE(pick_reason, ''), missed_at`
 
 func scanChallenge(row interface{ Scan(...any) error }) (Challenge, error) {
 	var c Challenge
-	err := row.Scan(&c.ID, &c.WeekStart, &c.Kind, &c.Title, &c.Target, &c.CompletedAt)
+	err := row.Scan(&c.ID, &c.WeekStart, &c.Kind, &c.Title, &c.Target, &c.CompletedAt, &c.PickReason, &c.MissedAt)
 	return c, err
 }
 
@@ -101,8 +105,8 @@ func GetChallenge(ctx context.Context, q Querier, weekStart score.Date) (Challen
 // one either way, so two racing creators agree on the target.
 func InsertChallenge(ctx context.Context, q Querier, c Challenge) (Challenge, error) {
 	if _, err := q.Exec(ctx, `
-		INSERT INTO challenges (week_start, kind, title, target) VALUES ($1::date, $2, $3, $4)
-		ON CONFLICT (week_start) DO NOTHING`, c.WeekStart, c.Kind, c.Title, c.Target); err != nil {
+		INSERT INTO challenges (week_start, kind, title, target, pick_reason) VALUES ($1::date, $2, $3, $4, NULLIF($5, ''))
+		ON CONFLICT (week_start) DO NOTHING`, c.WeekStart, c.Kind, c.Title, c.Target, c.PickReason); err != nil {
 		return Challenge{}, err
 	}
 	return GetChallenge(ctx, q, c.WeekStart)
@@ -307,6 +311,40 @@ func ClaimNotice(ctx context.Context, q Querier, kind string, userID int64, date
 		INSERT INTO notice_log (kind, user_id, local_date) VALUES ($1, $2, $3::date)
 		ON CONFLICT DO NOTHING`, kind, userID, date)
 	return tag.RowsAffected() == 1, err
+}
+
+// ReleaseNotice withdraws a claim whose push could not be queued, so the next pass sends it.
+func ReleaseNotice(ctx context.Context, q Querier, kind string, userID int64, date score.Date) error {
+	_, err := q.Exec(ctx, `DELETE FROM notice_log WHERE kind = $1 AND user_id = $2 AND local_date = $3::date`,
+		kind, userID, date)
+	return err
+}
+
+// CountNoticesWithPrefix is how many notices whose kind starts with the prefix were sent to a
+// person for a local date.
+func CountNoticesWithPrefix(ctx context.Context, q Querier, userID int64, date score.Date, prefix string) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, `
+		SELECT count(*)::int FROM notice_log
+		WHERE user_id = $1 AND local_date = $2::date AND starts_with(kind, $3)`, userID, date, prefix).Scan(&n)
+	return n, err
+}
+
+// NoticeEverSent reports whether a person has a notice of the kind on any date.
+func NoticeEverSent(ctx context.Context, q Querier, userID int64, kind string) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM notice_log WHERE user_id = $1 AND kind = $2)`,
+		userID, kind).Scan(&ok)
+	return ok, err
+}
+
+// CheeredToday reports whether the sender has cheered the recipient on their local date.
+func CheeredToday(ctx context.Context, q Querier, from, to int64, date score.Date) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM cheers WHERE from_user = $1 AND to_user = $2 AND local_date = $3::date)`,
+		from, to, date).Scan(&ok)
+	return ok, err
 }
 
 // ReadingMinutesUser is one person's logged reading minutes plus Audiobookshelf listening on

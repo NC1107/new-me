@@ -372,3 +372,40 @@ func (b blockingSender) Send(ctx context.Context, _ string, _ Message) error {
 	}
 	return nil
 }
+
+func TestShutdownDeliversWhatIsQueuedThenRefusesMore(t *testing.T) {
+	store := &fakeStore{tokens: map[int64][]string{3: {"a"}}}
+	sender := &fakeSender{sent: make(chan string, 64), fail: map[string]error{}}
+	d := NewDispatcher(context.Background(), sender, store)
+	for range 20 {
+		if !d.Enqueue(Message{UserID: 3, Kind: "cheer"}) {
+			t.Fatal("enqueue refused")
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := d.Shutdown(ctx); err != nil {
+		t.Fatalf("shutdown: %v", err)
+	}
+	if got := len(sender.sent); got != 20 {
+		t.Fatalf("delivered %d of 20 queued messages", got)
+	}
+	if d.Enqueue(Message{UserID: 3}) {
+		t.Fatal("a closed dispatcher accepted a message")
+	}
+	if err := d.Shutdown(ctx); err != nil {
+		t.Fatalf("second shutdown: %v", err)
+	}
+}
+
+func TestShutdownGivesUpWhenDeliveryIsStuck(t *testing.T) {
+	release := make(chan struct{})
+	defer close(release)
+	d := NewDispatcher(context.Background(), blockingSender{release}, &fakeStore{tokens: map[int64][]string{1: {"t"}}})
+	d.Enqueue(Message{UserID: 1})
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	if err := d.Shutdown(ctx); err == nil {
+		t.Fatal("shutdown should report that the queue was not drained")
+	}
+}

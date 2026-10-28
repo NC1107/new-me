@@ -93,6 +93,12 @@ type Notifications struct {
 	// The v7 events: milestones and the monthly look-back.
 	Milestones bool
 	Lookback   bool
+	// The v13 switches. PartnerNudges covers the gentle partner pushes (cheer prompt, reward
+	// progress, challenge check-in), Cover the freeze events and Approvals the habit proposals.
+	// PartnerDone is the partner-counted push.
+	PartnerNudges bool
+	Cover         bool
+	Approvals     bool
 }
 
 // ChosenTimezone is the zone the user last picked, which is what their profile shows.
@@ -123,7 +129,8 @@ const userColumns = `u.id, u.name, u.color, u.timezone, u.is_admin, u.kcal_targe
 	u.notify_behind_pace, u.notify_close_to_done, u.notify_wind_down, u.notify_morning_plan, u.notify_weekly_recap,
 	u.notify_milestones, u.notify_lookback, u.streak_rules_from::text, u.protein_auto, u.workdays,
 	u.workday_wake_min, u.workday_bed_min, u.dayoff_wake_min, u.dayoff_bed_min, u.first_notification_offset_min,
-	u.height_cm::float8, u.sex, u.goal_kind, u.goal_pace_kg::float8, COALESCE(u.units, '')`
+	u.height_cm::float8, u.sex, u.goal_kind, u.goal_pace_kg::float8, COALESCE(u.units, ''),
+	u.notify_partner_nudges, u.notify_cover, u.notify_approvals`
 
 // scanUser reads userColumns, after any leading columns the query selected first.
 func scanUser(row pgx.Row, leading ...any) (User, error) {
@@ -134,7 +141,8 @@ func scanUser(row pgx.Row, leading ...any) (User, error) {
 		&u.Notify.BehindPace, &u.Notify.CloseToDone, &u.Notify.WindDown, &u.Notify.MorningPlan, &u.Notify.WeeklyRecap,
 		&u.Notify.Milestones, &u.Notify.Lookback, &u.StreakRulesFrom, &u.ProteinAuto, &u.Schedule.Workdays,
 		&u.Schedule.Workday.WakeMin, &u.Schedule.Workday.BedMin, &u.Schedule.DayOff.WakeMin, &u.Schedule.DayOff.BedMin,
-		&u.Schedule.FirstOffsetMin, &u.HeightCm, &u.Sex, &u.GoalKind, &u.GoalPaceKg, &u.Units)
+		&u.Schedule.FirstOffsetMin, &u.HeightCm, &u.Sex, &u.GoalKind, &u.GoalPaceKg, &u.Units,
+		&u.Notify.PartnerNudges, &u.Notify.Cover, &u.Notify.Approvals)
 	return u, row.Scan(dest...)
 }
 
@@ -239,14 +247,16 @@ func UpdateUser(ctx context.Context, q Querier, u User) error {
 			notify_milestones = $18, notify_lookback = $19, workdays = $20,
 			workday_wake_min = $21, workday_bed_min = $22, dayoff_wake_min = $23, dayoff_bed_min = $24,
 			first_notification_offset_min = $25, protein_auto = $26,
-			height_cm = $27::numeric, sex = $28, goal_kind = $29, goal_pace_kg = $30::numeric, units = $31
+			height_cm = $27::numeric, sex = $28, goal_kind = $29, goal_pace_kg = $30::numeric, units = $31,
+			notify_partner_nudges = $32, notify_cover = $33, notify_approvals = $34
 		WHERE id = $1 AND deleted_at IS NULL`,
 		u.ID, u.Name, u.Color, u.KcalTarget, u.ProteinTarget, u.CarbsTarget, u.FatTarget, u.BirthYear,
 		u.Notify.PartnerDone, u.Notify.Cheers, u.Notify.Challenge, u.Notify.Reward,
 		u.Notify.BehindPace, u.Notify.CloseToDone, u.Notify.WindDown, u.Notify.MorningPlan, u.Notify.WeeklyRecap,
 		u.Notify.Milestones, u.Notify.Lookback, u.Schedule.Workdays,
 		u.Schedule.Workday.WakeMin, u.Schedule.Workday.BedMin, u.Schedule.DayOff.WakeMin, u.Schedule.DayOff.BedMin,
-		u.Schedule.FirstOffsetMin, u.ProteinAuto, u.HeightCm, u.Sex, u.GoalKind, u.GoalPaceKg, nullIfEmpty(u.Units))
+		u.Schedule.FirstOffsetMin, u.ProteinAuto, u.HeightCm, u.Sex, u.GoalKind, u.GoalPaceKg, nullIfEmpty(u.Units),
+		u.Notify.PartnerNudges, u.Notify.Cover, u.Notify.Approvals)
 	if err != nil {
 		switch violatedConstraint(err) {
 		case "users_name_live":

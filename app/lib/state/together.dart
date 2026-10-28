@@ -156,6 +156,9 @@ Future<void> setNotificationPref(WidgetRef ref, NotificationPatch patch) async {
         weeklyRecap: patch.weeklyRecap ?? p.weeklyRecap,
         milestones: patch.milestones ?? p.milestones,
         lookback: patch.lookback ?? p.lookback,
+        partnerNudges: patch.partnerNudges ?? p.partnerNudges,
+        cover: patch.cover ?? p.cover,
+        approvals: patch.approvals ?? p.approvals,
       ),
     ),
   );

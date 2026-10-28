@@ -42,6 +42,8 @@ type ChallengeResult struct {
 	Target    int    `json:"target"`
 	Progress  int    `json:"progress"`
 	Completed bool   `json:"completed"`
+	// Missed is true when the week ended with the challenge unfinished. It costs nothing.
+	Missed bool `json:"missed"`
 }
 
 // Recap is the answer of GET /api/recap.
@@ -102,7 +104,7 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 		if err != nil {
 			return out, err
 		}
-		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress, Completed: ch.CompletedAt != nil}
+		out.Challenge = &ChallengeResult{Kind: ch.Kind, Title: ch.Title, Target: status.Target, Progress: status.Progress, Completed: ch.CompletedAt != nil, Missed: ch.MissedAt != nil}
 	case !errors.Is(err, db.ErrNotFound):
 		return out, err
 	}
@@ -184,17 +186,15 @@ func (s *Service) PushDue(ctx context.Context, now time.Time) error {
 		if sent >= nudge.DailyBudget {
 			continue
 		}
-		first, err := db.ClaimNotice(ctx, s.DB.Pool, together.EventWeeklyRecap, u.ID, today)
-		if err != nil || !first {
+		for _, p := range rc.People {
+			if p.UserID != u.ID {
+				continue
+			}
+			_, err := s.Together.SendClaimed(ctx, together.Claim{Kind: together.EventWeeklyRecap, UserID: u.ID, Date: today}, u,
+				push.Message{Kind: together.EventWeeklyRecap, Title: "Your week",
+					Body: SummaryLine(p.This, p.Previous, rc.Pair.This)})
 			if err != nil {
 				errs = append(errs, err)
-			}
-			continue
-		}
-		for _, p := range rc.People {
-			if p.UserID == u.ID {
-				s.Together.Notify(u, push.Message{Kind: together.EventWeeklyRecap, Title: "Your week",
-					Body: SummaryLine(p.This, p.Previous, rc.Pair.This)})
 			}
 		}
 	}

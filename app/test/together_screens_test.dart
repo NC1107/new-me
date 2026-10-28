@@ -30,6 +30,14 @@ Map<String, dynamic> _challenge({int progress = 21000, bool done = false}) => {
   'endsOn': '2026-11-01',
 };
 
+Map<String, dynamic> _kindChallenge(String kind, String title, int target, int progress) => {
+  ..._challenge(progress: progress),
+  'kind': kind,
+  'title': title,
+  'target': target,
+  'reason': 'Sleep was your lowest area against your own targets: 40% lately.',
+};
+
 Map<String, dynamic> _reward({
   int id = 3,
   int progress = 500,
@@ -236,6 +244,89 @@ void main() {
       expect(find.textContaining('21,000 of 70,000 steps'), findsNothing);
     });
 
+    test('every kind has its own unit, icon and colour', () {
+      const kinds = {
+        'steps': 'steps',
+        'workouts': 'workouts',
+        'counted_days': 'days',
+        'reading': 'min',
+        'sleep_nights': 'nights',
+        'meal_days': 'days',
+        'protein_days': 'days',
+        'pushup_reps': 'push-ups',
+        'yoga_minutes': 'min',
+        'habit_marks': 'marks',
+        'active_days': 'days',
+      };
+      for (final MapEntry(key: kind, value: unit) in kinds.entries) {
+        expect(challengeUnit(kind), unit, reason: kind);
+        expect(challengeIcon(kind), isNot(Icons.flag_rounded), reason: kind);
+      }
+      expect(challengeUnit('something_new'), isEmpty);
+      expect(challengeIcon('something_new'), Icons.flag_rounded);
+    });
+
+    testWidgets('a v13 kind shows its figures, unit and the reason it was picked', (tester) async {
+      final app = TestApp(
+        tester,
+        _server(
+          challenge: _kindChallenge(
+            'sleep_nights',
+            'Sleep your target on 10 nights together',
+            10,
+            4,
+          ),
+        ),
+      );
+      await _openUs(app);
+
+      expect(find.text('Sleep your target on 10 nights together'), findsOneWidget);
+      expect(find.text('4 of 10 nights'), findsOneWidget);
+      expect(find.textContaining('lowest area'), findsOneWidget);
+      expect(find.byIcon(Icons.bedtime_rounded), findsWidgets);
+    });
+
+    testWidgets('last week missed shows a quiet card with nothing lost', (tester) async {
+      final server = _server(challenge: _challenge())
+        ..on(
+          'GET /api/board',
+          StubResponse(200, {
+            ...board([
+              boardUser(2, 'Sam', 'violet'),
+              boardUser(1, 'Ana', 'amber', points: 90, percent: 20),
+            ]),
+            'challenge': _challenge(),
+            'lastChallenge': {
+              ..._kindChallenge('pushup_reps', 'Do 250 push-ups together', 250, 180),
+              'missed': true,
+              'done': false,
+            },
+          }),
+        );
+      final app = TestApp(tester, server);
+      await _openUs(app);
+
+      expect(find.text('Last week'), findsOneWidget);
+      expect(find.text('Do 250 push-ups together'), findsOneWidget);
+      expect(find.textContaining('Missed, with nothing lost'), findsOneWidget);
+      expect(find.textContaining('180 of 250 push-ups'), findsWidgets);
+      expect(
+        find.textContaining('days left'),
+        findsOneWidget,
+        reason: 'only this week counts down',
+      );
+    });
+
+    test('missed and the reason survive a parse and a re-encode', () {
+      final c = Challenge.tryParse({..._challenge(), 'missed': true, 'reason': 'Because.'})!;
+      expect((c.missed, c.reason), (true, 'Because.'));
+      expect(Challenge.tryParse(c.toJson())!.missed, isTrue);
+      final plain = Challenge.tryParse(_challenge())!;
+      expect((plain.missed, plain.reason), (false, ''));
+      expect(plain.toJson().containsKey('missed'), isFalse);
+      expect(plain.toJson().containsKey('reason'), isFalse);
+    });
+
     test('days left counts today and names the last day', () {
       final c = Challenge.tryParse(_challenge())!;
       expect(challengeDaysLeft(c, '2026-10-26'), '7 days left');
@@ -416,7 +507,7 @@ void main() {
         prefs: {'partnerDone': false, 'cheers': true, 'challenge': true, 'reward': false},
       );
       final handle = tester.ensureSemantics();
-      expect(find.bySemanticsLabel('Notifications, 7 of 11 on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Notifications, 10 of 14 on'), findsOneWidget);
       await app.tap(find.text('Notifications'));
       expect(find.byType(NotificationsPage), findsOneWidget);
       handle.dispose();
@@ -444,6 +535,50 @@ void main() {
 
       expect(find.text('nope'), findsOneWidget);
       expect(tester.widgetList<Switch>(find.byType(Switch)).take(4).every((s) => s.value), isTrue);
+    });
+
+    testWidgets('the v13 switches send their own PATCH keys', (tester) async {
+      final (app, _) = await open(tester);
+      await app.tap(find.text('Notifications'));
+
+      for (final (title, key) in [
+        ('Nudges about your partner', 'partnerNudges'),
+        ('Cover', 'cover'),
+        ('Approvals', 'approvals'),
+      ]) {
+        await tester.scrollUntilVisible(
+          find.text(title),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await app.tap(find.text(title));
+        expect(app.body('PATCH /api/me'), {
+          'notifications': {key: false},
+        }, reason: title);
+      }
+    });
+
+    testWidgets('the quiet hours are read off the schedule', (tester) async {
+      final (app, _) = await open(tester);
+      await app.tap(find.text('Notifications'));
+      expect(find.textContaining('Quiet from 23:00 to 07:10, and on away days.'), findsOneWidget);
+    });
+
+    test('quiet hours words follow workdays, days off and a bedtime after midnight', () {
+      const late = DayTimes(wake: 10 * 60, bed: 60);
+      expect(
+        quietHoursText(const Schedule(workday: late, dayOff: late, firstNotificationOffsetMin: 30)),
+        'Quiet from 00:00 to 10:30, and on away days.',
+      );
+      expect(
+        quietHoursText(
+          const Schedule(
+            workday: DayTimes(wake: 6 * 60, bed: 22 * 60),
+            dayOff: DayTimes(wake: 9 * 60, bed: 23 * 60),
+          ),
+        ),
+        'Quiet from 22:00 to 06:10 on workdays and 23:00 to 09:10 on days off, and on away days.',
+      );
     });
 
     testWidgets('it links on to the evening reminder', (tester) async {

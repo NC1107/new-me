@@ -25,6 +25,11 @@ type Dispatcher struct {
 	store  Store
 	queue  chan Message
 	wg     sync.WaitGroup
+	cancel context.CancelFunc
+
+	// mu guards closed, so a message is never sent on the closed queue.
+	mu     sync.RWMutex
+	closed bool
 }
 
 const (
@@ -32,9 +37,11 @@ const (
 	defaultQueue   = 64
 )
 
-// NewDispatcher starts workers that run until ctx ends. A full queue drops new messages.
+// NewDispatcher starts workers that run until ctx ends or Shutdown is called. A full queue
+// drops new messages.
 func NewDispatcher(ctx context.Context, sender Sender, store Store) *Dispatcher {
-	d := &Dispatcher{sender: sender, store: store, queue: make(chan Message, defaultQueue)}
+	ctx, cancel := context.WithCancel(ctx)
+	d := &Dispatcher{sender: sender, store: store, queue: make(chan Message, defaultQueue), cancel: cancel}
 	for range defaultWorkers {
 		d.wg.Add(1)
 		go d.work(ctx)
@@ -43,8 +50,14 @@ func NewDispatcher(ctx context.Context, sender Sender, store Store) *Dispatcher 
 }
 
 // Enqueue hands a message to the workers without waiting. It reports false when the queue is
-// full and the message was dropped.
+// full or the dispatcher is shutting down and the message was dropped.
 func (d *Dispatcher) Enqueue(m Message) bool {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	if d.closed {
+		log.Printf("[NEWME] push is shutting down, dropped %s for user %d", m.Kind, m.UserID)
+		return false
+	}
 	select {
 	case d.queue <- m:
 		return true
@@ -57,13 +70,42 @@ func (d *Dispatcher) Enqueue(m Message) bool {
 // Wait blocks until the workers have stopped, which happens after their context ends.
 func (d *Dispatcher) Wait() { d.wg.Wait() }
 
+// Shutdown stops accepting messages, lets the workers deliver what is already queued and waits
+// for them. When ctx ends first the remaining deliveries are cancelled and ctx's error is
+// returned.
+func (d *Dispatcher) Shutdown(ctx context.Context) error {
+	d.mu.Lock()
+	if !d.closed {
+		d.closed = true
+		close(d.queue)
+	}
+	d.mu.Unlock()
+	done := make(chan struct{})
+	go func() {
+		d.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		d.cancel()
+		return nil
+	case <-ctx.Done():
+		d.cancel()
+		<-done
+		return ctx.Err()
+	}
+}
+
 func (d *Dispatcher) work(ctx context.Context) {
 	defer d.wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case m := <-d.queue:
+		case m, ok := <-d.queue:
+			if !ok {
+				return
+			}
 			d.deliver(ctx, m)
 		}
 	}

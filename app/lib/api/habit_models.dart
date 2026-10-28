@@ -55,7 +55,7 @@ const kGemsPerMinute = 3;
 const kMaxHabitGems = 100;
 
 /// The choices for how long a habit takes; null is "only track".
-const kHabitMinuteChoices = <int?>[null, 1, 2, 5, 10, 15, 20, 30];
+const kHabitMinuteChoices = <int?>[null, 2, 5, 10, 15, 30];
 
 int habitGems(int? minutes) =>
     minutes == null ? 0 : (minutes * kGemsPerMinute).clamp(0, kMaxHabitGems);

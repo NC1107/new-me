@@ -41,7 +41,7 @@ void main() {
 
   group('models', () {
     test('minutes pay 3 gems each, capped at 100', () {
-      expect([for (final m in kHabitMinuteChoices) habitGems(m)], [0, 3, 6, 15, 30, 45, 60, 90]);
+      expect([for (final m in kHabitMinuteChoices) habitGems(m)], [0, 6, 15, 30, 45, 90]);
       expect(habitGems(40), 100);
     });
 
@@ -124,8 +124,8 @@ void main() {
         ..on('POST /api/habits', StubResponse(201, {'habit': habitJson(9, 'Brush teeth')}));
       final app = await open(tester, adapter, const HabitEditorPage());
       await app.tap(find.bySemanticsLabel('Brush teeth'));
-      expect(find.text('How long it takes'), findsOneWidget);
-      await app.tap(find.bySemanticsLabel('5 min'));
+      expect(find.text('Minutes it takes'), findsOneWidget);
+      await app.tap(find.bySemanticsLabel('5 minutes'));
       expect(find.text('15 gems'), findsOneWidget);
       await app.tap(_button('Save'));
       final body = app.body('POST /api/habits');

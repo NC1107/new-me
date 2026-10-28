@@ -62,7 +62,7 @@ void main() {
     expect(find.text('150'), findsOneWidget, reason: "today's points beside the gem");
     expect(find.text('3'), findsOneWidget, reason: 'the streak beside the flame');
     expect(find.text('88%'), findsOneWidget);
-    expect(find.text('130 of 400 points'), findsOneWidget);
+    expect(find.text('130 of 280 points'), findsOneWidget);
     expect(find.textContaining('Reach 100% to keep your streak going'), findsOneWidget);
     expect(find.text('Nice, keep it rolling.'), findsOneWidget);
 

@@ -111,7 +111,7 @@ void main() {
       );
       expect(count.toJson().containsKey('slots'), isFalse);
       expect(count.toJson()['target'], 8);
-      expect([for (final m in kHabitMinuteChoices) habitGems(m)], [0, 3, 6, 15, 30, 45, 60, 90]);
+      expect([for (final m in kHabitMinuteChoices) habitGems(m)], [0, 6, 15, 30, 45, 90]);
       expect(habitGems(40), 100);
     });
   });

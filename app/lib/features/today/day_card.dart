@@ -77,7 +77,7 @@ class DayCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '${day.basePoints.formatted} of ${day.maxBase.formatted} points',
+                  '${day.basePoints.formatted} of ${day.goalPoints.formatted} points',
                   textAlign: TextAlign.end,
                   style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
                 ),

@@ -11,11 +11,15 @@ class Segmented<T> extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onChanged,
+    this.spokenLabel,
   });
 
   final List<(T value, String label)> options;
   final T selected;
   final ValueChanged<T> onChanged;
+
+  /// What VoiceOver reads for an option whose short label needs its unit, like "5 minutes".
+  final String Function(T value)? spokenLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,7 @@ class Segmented<T> extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: value == selected,
-                label: label,
+                label: spokenLabel?.call(value) ?? label,
                 excludeSemantics: true,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,

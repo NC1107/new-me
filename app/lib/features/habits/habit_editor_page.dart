@@ -344,24 +344,18 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           ],
         ),
         const SizedBox(height: 20),
-        const FieldLabel('How long it takes'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final m in kHabitMinuteChoices)
-              _Pill(
-                label: m == null ? 'Only track' : '$m min',
-                selected: _minutesChosen && m == _minutes,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _minutes = m;
-                    _minutesChosen = true;
-                  });
-                },
-              ),
-          ],
+        const FieldLabel('Minutes it takes'),
+        // A habit from before minutes has none chosen, so -1 selects no segment until one is.
+        Segmented<int>(
+          options: [for (final m in kHabitMinuteChoices) (m ?? 0, m == null ? 'Track' : '$m')],
+          selected: _minutesChosen ? (_minutes ?? 0) : -1,
+          spokenLabel: (m) => m == 0 ? 'Only track' : '$m minutes',
+          onChanged: (m) {
+            setState(() {
+              _minutes = m == 0 ? null : m;
+              _minutesChosen = true;
+            });
+          },
         ),
         const SizedBox(height: 8),
         _GemsNote(

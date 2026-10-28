@@ -589,8 +589,10 @@ class Quest {
   };
 }
 
+int _goalPointsOf(int maxBase, int line) => (maxBase * line / 100).ceil();
+
 int _goalPercentOf(int base, int maxBase, int line) {
-  final goal = (maxBase * line / 100).ceil();
+  final goal = _goalPointsOf(maxBase, line);
   return goal <= 0 || base <= 0 ? 0 : base * 100 ~/ goal;
 }
 
@@ -630,6 +632,9 @@ class DayScore {
   /// The share of the day's goal reached: 100 or more means the day counts, and it goes above
   /// 100 when more than the goal is earned. Older data without it is computed from the points.
   final int goalPercent;
+
+  /// The points that make the day count: 100% of the goal.
+  int get goalPoints => _goalPointsOf(maxBase, streakLine);
   final bool counted;
 
   /// The percent of the possible points that makes the goal.

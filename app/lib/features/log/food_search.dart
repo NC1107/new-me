@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
@@ -124,7 +125,7 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
         if (open) ...[
           const SizedBox(height: 8),
           for (final food in _result.foods.take(6))
-            _FoodTile(food: food, enabled: widget.enabled, onTap: () => _add(food)),
+            FoodTile(food: food, enabled: widget.enabled, onTap: () => _add(food)),
           if (_result.foods.isEmpty && !_failed)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -154,7 +155,12 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
             const SizedBox(height: 8),
             const FieldLabel('From the databases'),
             for (final food in _candidates)
-              _FoodTile(food: food, enabled: widget.enabled, onTap: () => _add(food)),
+              FoodTile(
+                food: food,
+                enabled: widget.enabled,
+                onTap: () => _add(food),
+                reserveThumbnail: _candidates.any((c) => c.imageUrl != null),
+              ),
           ],
         ],
       ],
@@ -162,53 +168,171 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
   }
 }
 
-class _FoodTile extends StatelessWidget {
-  const _FoodTile({required this.food, required this.enabled, required this.onTap});
+const _thumbSize = 44.0;
+const _thumbGap = 10.0;
+
+Future<void> _openSource(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null || uri.scheme != 'https') return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+/// One food in a search list. A food with a photo shows it; [reserveThumbnail] keeps its siblings
+/// without one aligned with it.
+class FoodTile extends StatelessWidget {
+  const FoodTile({
+    super.key,
+    required this.food,
+    required this.enabled,
+    required this.onTap,
+    this.reserveThumbnail = false,
+    this.onOpenSource = _openSource,
+  });
 
   final SavedFood food;
   final bool enabled;
   final VoidCallback onTap;
+  final bool reserveThumbnail;
+  final ValueChanged<String> onOpenSource;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    enabled: enabled,
-    label: '${food.title}, ${food.servingText}, ${food.kcal} kilocalories, ${food.source.chip}',
-    excludeSemantics: true,
-    onTap: enabled ? onTap : null,
-    child: Pressable(
-      onTap: enabled ? onTap : null,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final imageUrl = food.imageUrl;
+    final sourceUrl = food.sourceUrl;
+    final showThumb = imageUrl != null || reserveThumbnail;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          enabled: enabled,
+          label:
+              '${food.title}, ${food.servingText}, ${food.kcal} kilocalories, ${food.source.chip}',
+          excludeSemantics: true,
+          onTap: enabled ? onTap : null,
+          child: Pressable(
+            onTap: enabled ? onTap : null,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: EdgeInsets.only(top: 6, bottom: sourceUrl == null ? 6 : 0),
+                child: Row(
                   children: [
-                    Text(
-                      food.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                    if (showThumb) ...[
+                      FoodThumbnail(url: imageUrl),
+                      const SizedBox(width: _thumbGap),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            food.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          Text(
+                            '${food.servingText}  -  ${food.kcal.formatted} kcal  -  ${food.source.chip}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption.copyWith(color: kInkSecondary),
+                          ),
+                        ],
+                      ),
                     ),
-                    Text(
-                      '${food.servingText}  -  ${food.kcal.formatted} kcal  -  ${food.source.chip}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption.copyWith(color: kInkSecondary),
-                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.add_circle_outline_rounded, color: kInkSecondary),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.add_circle_outline_rounded, color: kInkSecondary),
-            ],
+            ),
           ),
         ),
+        if (sourceUrl != null)
+          Padding(
+            padding: EdgeInsets.only(left: showThumb ? _thumbSize + _thumbGap : 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Semantics(
+                button: true,
+                link: true,
+                label: 'Open Food Facts page for ${food.title}',
+                excludeSemantics: true,
+                onTap: () => onOpenSource(sourceUrl),
+                child: Pressable(
+                  onTap: () => onOpenSource(sourceUrl),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Open Food Facts',
+                          style: AppText.caption.copyWith(
+                            color: kInkSecondary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.open_in_new_rounded, size: 12, color: kInkSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A rounded product photo that fades in, with the food icon behind it while it loads and in
+/// its place when the photo is missing or fails.
+class FoodThumbnail extends StatelessWidget {
+  const FoodThumbnail({super.key, required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = Container(
+      color: kBorder,
+      alignment: Alignment.center,
+      child: const Icon(Icons.restaurant_rounded, size: 20, color: kInkSecondary),
+    );
+    final cacheWidth = (_thumbSize * MediaQuery.devicePixelRatioOf(context)).round();
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: _thumbSize,
+          height: _thumbSize,
+          child: url == null
+              ? placeholder
+              : Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    placeholder,
+                    Image.network(
+                      url!,
+                      fit: BoxFit.cover,
+                      cacheWidth: cacheWidth,
+                      gaplessPlayback: true,
+                      frameBuilder: (context, child, frame, sync) => sync
+                          ? child
+                          : AnimatedOpacity(
+                              opacity: frame == null ? 0 : 1,
+                              duration: const Duration(milliseconds: 200),
+                              child: child,
+                            ),
+                      errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

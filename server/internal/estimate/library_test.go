@@ -154,7 +154,8 @@ func TestSearchRemoteReturnsRankedCandidatesWithServings(t *testing.T) {
 	}
 	fake.off = func(string) any {
 		return obj{"products": []obj{{"code": "9", "product_name": "Apple sauce", "brands": "Mott's", "serving_size": "1 cup (240 g)",
-			"nutriments": obj{"energy-kcal_serving": 100, "energy-kcal_100g": 42}}}}
+			"image_front_small_url": "https://images.openfoodfacts.org/images/products/9/front.200.jpg",
+			"nutriments":            obj{"energy-kcal_serving": 100, "energy-kcal_100g": 42}}}}
 	}
 	got := f2.SearchRemote(context.Background(), "apple")
 	if len(got) < 2 {
@@ -179,7 +180,34 @@ func TestSearchRemoteReturnsRankedCandidatesWithServings(t *testing.T) {
 	if sv := sauce.Serving(); sv.Text != "1 cup (240 g)" || sv.N.Kcal != 100 {
 		t.Fatalf("sauce serving = %+v", sv)
 	}
+	if sauce.ImageURL != "https://images.openfoodfacts.org/images/products/9/front.200.jpg" ||
+		sauce.SourceURL != "https://world.openfoodfacts.org/product/9" {
+		t.Fatalf("sauce links = %q %q", sauce.ImageURL, sauce.SourceURL)
+	}
+	if apple.ImageURL != "" || apple.SourceURL != "" {
+		t.Fatalf("usda food has links: %+v", apple)
+	}
 	if fake.offSearch.Load() != 1 {
 		t.Fatalf("off calls = %d", fake.offSearch.Load())
+	}
+}
+
+func TestOFFImageAcceptsOnlyHTTPSOpenFoodFactsHosts(t *testing.T) {
+	cases := map[string]string{
+		"https://images.openfoodfacts.org/a.jpg":      "https://images.openfoodfacts.org/a.jpg",
+		"https://static.openfoodfacts.org/a.jpg":      "https://static.openfoodfacts.org/a.jpg",
+		"http://images.openfoodfacts.org/a.jpg":       "",
+		"https://evil.example/a.jpg":                  "",
+		"https://openfoodfacts.org.evil.example/a.jp": "",
+		"https://notopenfoodfacts.org/a.jpg":          "",
+		"javascript:alert(1)":                         "",
+	}
+	for in, want := range cases {
+		if got := firstOFFImage(in); got != want {
+			t.Errorf("firstOFFImage(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := firstOFFImage("http://x.test/a.jpg", "https://images.openfoodfacts.org/b.jpg"); got != "https://images.openfoodfacts.org/b.jpg" {
+		t.Errorf("fallback = %q", got)
 	}
 }

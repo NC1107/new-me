@@ -56,6 +56,9 @@ type Food struct {
 	// ServingText is the label's wording of one serving, such as "1 stick (32 g)".
 	ServingText string
 	Portions    []Portion
+	// ImageURL and SourceURL are the product photo and page, set only for Open Food Facts rows.
+	ImageURL  string
+	SourceURL string
 }
 
 func (f Food) per100() (Nutrients, bool) {

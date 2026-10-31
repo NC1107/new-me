@@ -63,6 +63,9 @@ type DayInputs struct {
 	ReadingMinutes int
 	ReadingPages   int
 	YogaMinutes    int
+	// CalisthenicsMinutes are guided calisthenics sessions: exercise minutes, and a strength
+	// workout in the eyes of the push-ups quest.
+	CalisthenicsMinutes int
 	// WaterLoggedML is water logged by hand; the water quest takes the larger of it and Health.
 	WaterLoggedML int
 	// ProduceServings and BreathingLoggedMin are fruit and vegetable servings and breathing minutes
@@ -113,7 +116,9 @@ func (in DayInputs) Location() *time.Location {
 }
 
 // ManualExerciseMinutes is what manual activity adds to the day's exercise minutes.
-func (in DayInputs) ManualExerciseMinutes() int { return in.OtherFullMinutes + in.OtherEasyMinutes/2 }
+func (in DayInputs) ManualExerciseMinutes() int {
+	return in.OtherFullMinutes + in.OtherEasyMinutes/2 + in.CalisthenicsMinutes
+}
 
 // Metric is the day's reading for a metric, or 0 when there is none.
 func (in DayInputs) Metric(key string) float64 { return in.Metrics[key] }
@@ -132,7 +137,7 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 	in.RepsExercise = repsExercise
 	var mealProduce targets.ProduceGramsToday
 	err = q.QueryRow(ctx, `
-		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.produce, a.breathing, a.other_full, a.other_easy,
+		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.produce, a.breathing, a.calisthenics, a.other_full, a.other_easy,
 		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber, m.produce, m.juice, m.pulse
 		FROM (
 			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups' AND exercise = $3), 0)::int AS pushups,
@@ -142,6 +147,7 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'water_ml'), 0)::int AS water_ml,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'produce_servings'), 0)::int AS produce,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'breathing_minutes'), 0)::int AS breathing,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'calisthenics_minutes'), 0)::int AS calisthenics,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity <> 'easy'), 0)::int AS other_full,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'other_minutes' AND intensity = 'easy'), 0)::int AS other_easy
 			FROM activity_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
@@ -157,7 +163,7 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(pulse_g), 0)::float8 AS pulse
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
 		) m`, userID, date, repsExercise).Scan(
-		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceLogged, &in.BreathingLoggedMin, &in.OtherFullMinutes, &in.OtherEasyMinutes,
+		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceLogged, &in.BreathingLoggedMin, &in.CalisthenicsMinutes, &in.OtherFullMinutes, &in.OtherEasyMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG, &mealProduce.Whole, &mealProduce.Juice, &mealProduce.Pulse)
 	if err != nil {
 		return in, err
@@ -177,6 +183,9 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 	}
 	if in.Workouts, err = WorkoutSpans(ctx, q, userID, date); err != nil {
 		return in, err
+	}
+	if in.CalisthenicsMinutes > 0 {
+		in.Workouts = append(in.Workouts, score.WorkoutSpan{Type: score.WorkoutStrength, DurationMin: float64(in.CalisthenicsMinutes)})
 	}
 	in.Metrics, in.Synced, err = loadHealthDay(ctx, q, userID, date)
 	if err != nil {

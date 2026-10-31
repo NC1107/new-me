@@ -17,19 +17,26 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
 
 const kRewardNameIdeas = ['Date night', 'Dinner out', 'Movie night', 'Day trip'];
+const kTreatNameIdeas = ['Monster energy drink', 'Big Gulp', 'Ice cream', 'Coffee'];
 const kRewardNameMax = 40;
 const kRewardPriceMax = 100000;
 
-/// Adds a reward to the wishlist, or edits [reward].
-Future<void> showRewardSheet(BuildContext context, {Reward? reward}) =>
-    showAppSheet<void>(context, builder: (_) => RewardSheet(reward: reward));
+/// Adds a reward to the wishlist, or edits [reward]. With [treat] it adds a personal treat.
+Future<void> showRewardSheet(BuildContext context, {Reward? reward, bool treat = false}) =>
+    showAppSheet<void>(
+      context,
+      builder: (_) => RewardSheet(reward: reward, treat: treat),
+    );
 
 /// Name a treat and price it in gems, with prices suggested from the pair's own pace. For an
 /// existing reward it also holds what can be done with it: withdraw, cancel, focus or claim.
 class RewardSheet extends ConsumerStatefulWidget {
-  const RewardSheet({super.key, this.reward});
+  const RewardSheet({super.key, this.reward, this.treat = false});
 
   final Reward? reward;
+
+  /// A new treat of mine; an existing [reward] says for itself whether it is one.
+  final bool treat;
 
   @override
   ConsumerState<RewardSheet> createState() => _RewardSheetState();
@@ -38,12 +45,21 @@ class RewardSheet extends ConsumerStatefulWidget {
 class _RewardSheetState extends ConsumerState<RewardSheet> {
   late final TextEditingController _name = TextEditingController(text: widget.reward?.name ?? '');
   late final TextEditingController _price = TextEditingController(
-    text: widget.reward == null ? _suggestedStart() : '${widget.reward!.price}',
+    text: widget.reward == null
+        ? (widget.treat ? '' : _suggestedStart())
+        : '${widget.reward!.price}',
   );
   bool _busy = false;
   String? _error;
 
   Reward? get _existing => widget.reward;
+
+  bool get _isTreat => widget.treat || (_existing?.isTreat ?? false);
+
+  List<String> get _ideas => _isTreat ? kTreatNameIdeas : kRewardNameIdeas;
+
+  /// A treat's price is not paced by what the pair earns, so no suggestions are made for it.
+  PriceHelp? get _help => _isTreat ? null : ref.read(rewardsProvider).value?.priceHelp;
 
   String _suggestedStart() {
     final options = ref.read(rewardsProvider).value?.priceHelp?.options ?? const <PriceOption>[];
@@ -97,7 +113,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
     final existing = _existing;
     return _run(
       (rewards) => existing == null
-          ? rewards.propose(name: name, price: price)
+          ? rewards.propose(name: name, price: price, treat: _isTreat)
           : rewards.edit(
               existing.id,
               name: name == existing.name ? null : name,
@@ -108,7 +124,8 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
 
   String _submitLabel(String? partner) {
     final existing = _existing;
-    if (existing == null) return partner == null ? 'Add reward' : 'Propose reward';
+    final noun = _isTreat ? 'treat' : 'reward';
+    if (existing == null) return partner == null ? 'Add $noun' : 'Propose $noun';
     if (existing.declined) return 'Propose again';
     if (_priceChangesApproved && partner != null) return 'Propose new price';
     return 'Save';
@@ -116,6 +133,11 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
 
   String _caption(String? partner) {
     final existing = _existing;
+    if (existing == null && _isTreat) {
+      return partner == null
+          ? 'Redeem it as often as you like from your own gems.'
+          : '$partner agrees on the price first, so neither of you sets your own.';
+    }
     if (existing == null) {
       return partner == null
           ? 'Gems you earn pile up in the shared bank.'
@@ -128,21 +150,30 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
     if (_priceChangesApproved && partner != null) {
       return 'A new price goes to $partner to approve again.';
     }
+    if (_isTreat) {
+      return 'Only you rename it. A new price needs ${partner ?? 'your partner'} to agree.';
+    }
     return 'Both of you can rename it.';
+  }
+
+  String _gemsLine(RewardList list, int? userId) {
+    final mine = list.balanceOf(userId);
+    if (!_isTreat || mine == null) return 'Bank: ${list.bank.formatted} gems';
+    return 'Your gems: ${mine.balance.formatted}';
   }
 
   @override
   Widget build(BuildContext context) {
     // The price help may arrive after the sheet opened; fill the suggestion then if untouched.
     ref.listen(rewardsProvider, (_, _) {
-      if (_existing != null || _price.text.isNotEmpty) return;
+      if (_existing != null || _isTreat || _price.text.isNotEmpty) return;
       final suggested = _suggestedStart();
       if (suggested.isNotEmpty) setState(() => _price.text = suggested);
     });
     final person = context.accentPalette;
     final partner = ref.watch(partnerNameProvider);
     final list = ref.watch(rewardsProvider).value;
-    final help = list?.priceHelp;
+    final help = _help;
     final userId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     final existing = _existing;
     final mine = existing != null && existing.proposedByUser(userId);
@@ -160,7 +191,12 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
         children: [
           Semantics(
             header: true,
-            child: Text(existing == null ? 'Add a reward' : 'Edit reward', style: AppText.title),
+            child: Text(
+              existing == null
+                  ? (_isTreat ? 'Add a treat' : 'Add a reward')
+                  : (_isTreat ? 'Edit treat' : 'Edit reward'),
+              style: AppText.title,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -168,11 +204,11 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
             style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 18),
-          const FieldLabel('What are you earning?'),
+          FieldLabel(_isTreat ? 'What is the treat?' : 'What are you earning?'),
           AppTextField(
             controller: _name,
-            hint: 'Date night',
-            semanticLabel: 'Reward name',
+            hint: _ideas.first,
+            semanticLabel: _isTreat ? 'Treat name' : 'Reward name',
             textCapitalization: TextCapitalization.sentences,
             inputFormatters: [LengthLimitingTextInputFormatter(kRewardNameMax)],
             onChanged: (_) => setState(() {}),
@@ -183,7 +219,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final idea in kRewardNameIdeas)
+                for (final idea in _ideas)
                   _Pill(
                     label: idea,
                     selected: _name.text.trim() == idea,
@@ -235,7 +271,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
           ),
           if (list != null) ...[
             const SizedBox(height: 8),
-            Text('Bank: ${list.bank.formatted} gems', style: AppText.caption),
+            Text(_gemsLine(list, userId), style: AppText.caption),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -271,7 +307,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
                     onPressed: _valid && !_busy ? _submit : null,
                   ),
           ),
-          if (existing != null && existing.approved && !existing.focus) ...[
+          if (existing != null && existing.approved && !existing.focus && !_isTreat) ...[
             const SizedBox(height: 10),
             ChunkyButton.secondary(
               label: 'Make it the focus',
@@ -289,7 +325,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
           if (existing != null && existing.approved) ...[
             const SizedBox(height: 10),
             ChunkyButton.secondary(
-              label: 'Cancel reward',
+              label: _isTreat ? 'Remove treat' : 'Cancel reward',
               onPressed: _busy ? null : () => _run((r) => r.cancel(existing.id)),
             ),
           ],

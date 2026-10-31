@@ -93,7 +93,9 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
               child: Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  '$from wants ${r.name} for ${r.price.formatted} gems',
+                  r.isTreat
+                      ? '$from wants ${r.name} as a treat for ${r.price.formatted} gems'
+                      : '$from wants ${r.name} for ${r.price.formatted} gems',
                   style: AppText.label.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),

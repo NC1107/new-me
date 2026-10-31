@@ -24,6 +24,7 @@ import 'reward_card.dart';
 import 'reward_proposals_card.dart';
 import 'reward_sheet.dart';
 import 'reward_wishlist.dart';
+import 'treats_section.dart';
 
 /// Everything shared on Us below the two people: the weekly challenge, the reward and the
 /// rewards already earned. Also where the "we did it" celebrations play, once each.
@@ -153,6 +154,11 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         ],
         const SizedBox(height: kCardGap),
         const RewardProposalsCard(),
+        const SizedBox(height: kCardGap),
+        Semantics(header: true, child: const Text('Together', style: AppText.headline)),
+        const SizedBox(height: 4),
+        const Text('Shared rewards come out of the bank you both fill.', style: AppText.caption),
+        const SizedBox(height: 10),
         if (reward != null || waiting.isEmpty)
           RewardCard(
             reward: reward,
@@ -177,6 +183,12 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
           const SizedBox(height: 10),
           RewardHistory(rewards: history.take(5).toList()),
         ],
+        const SizedBox(height: 28),
+        Semantics(header: true, child: const Text('Treats', style: AppText.headline)),
+        const SizedBox(height: 4),
+        const Text('Yours to enjoy, paid from your own gems.', style: AppText.caption),
+        const SizedBox(height: 10),
+        TreatsSection(users: board.users),
       ],
     );
   }

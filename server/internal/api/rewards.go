@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nc1107/new-me/server/internal/db"
+	"github.com/nc1107/new-me/server/internal/gems"
 	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/together"
@@ -20,6 +21,8 @@ const (
 	codeRewardNotReached = "reward_not_reached"
 	codeRewardState      = "reward_state"
 	codeWishlistFull     = "wishlist_full"
+	codeInsufficient     = "insufficient_gems"
+	codeTreatsFull       = "treats_full"
 
 	// priceHelperDays is how far back the pair's own pace is read.
 	priceHelperDays = 14
@@ -36,25 +39,29 @@ type rewardJSON struct {
 	Target   int `json:"target"`
 	Progress int `json:"progress"`
 	// Status is pending, declined, approved or claimed.
-	Status         string  `json:"status"`
-	Focus          bool    `json:"focus"`
-	Ready          bool    `json:"ready"`
-	ProposedBy     *int64  `json:"proposedBy"`
-	ProposedByName string  `json:"proposedByName"`
-	CreatedBy      *int64  `json:"createdBy"`
-	StartedAt      string  `json:"startedAt"`
-	ReachedAt      *string `json:"reachedAt"`
-	ClaimedAt      *string `json:"claimedAt"`
+	Status         string `json:"status"`
+	Focus          bool   `json:"focus"`
+	Ready          bool   `json:"ready"`
+	ProposedBy     *int64 `json:"proposedBy"`
+	ProposedByName string `json:"proposedByName"`
+	CreatedBy      *int64 `json:"createdBy"`
+	// OwnerID and OwnerName are set on a treat, which only its owner redeems.
+	OwnerID   *int64  `json:"ownerId"`
+	OwnerName string  `json:"ownerName"`
+	StartedAt string  `json:"startedAt"`
+	ReachedAt *string `json:"reachedAt"`
+	ClaimedAt *string `json:"claimedAt"`
 }
 
 // rewardView renders rewards against one reading of the bank and the people's names.
 type rewardView struct {
-	bank  int
-	names map[int64]string
+	bank   int
+	names  map[int64]string
+	people db.PersonGems
 }
 
 func (s *Server) rewardView(ctx context.Context) (rewardView, error) {
-	bank, err := s.together.Bank(ctx)
+	people, err := db.ReadPersonGems(ctx, s.db.Pool)
 	if err != nil {
 		return rewardView{}, err
 	}
@@ -66,22 +73,63 @@ func (s *Server) rewardView(ctx context.Context) (rewardView, error) {
 	for _, u := range users {
 		names[u.ID] = u.Name
 	}
-	return rewardView{bank: bank, names: names}, nil
+	return rewardView{bank: gems.Bank(people.Gems()), names: names, people: people}, nil
 }
 
 func (v rewardView) json(r db.Reward) rewardJSON {
-	progress := together.RewardProgress(v.bank, r.Price)
+	funds := v.bank
+	if r.OwnerID != nil {
+		owner, _ := v.people.Find(*r.OwnerID)
+		funds = owner.Balance()
+	}
+	progress := together.RewardProgress(funds, r.Price)
 	if r.Status == db.RewardClaimed {
 		progress = r.Price
 	}
 	out := rewardJSON{ID: r.ID, Name: r.Name, Price: r.Price, Target: r.Price, Progress: progress,
-		Status: r.Status, Focus: r.Focus, Ready: r.Status == db.RewardApproved && together.RewardReady(v.bank, r.Price),
+		Status: r.Status, Focus: r.Focus, Ready: r.Status == db.RewardApproved && together.RewardReady(funds, r.Price),
+		OwnerID:    r.OwnerID,
 		ProposedBy: r.ProposedBy, CreatedBy: r.ProposedBy, StartedAt: wireTime(r.StartedAt),
 		ReachedAt: wireTimePtr(r.ReachedAt), ClaimedAt: wireTimePtr(r.ClaimedAt)}
 	if r.ProposedBy != nil {
 		out.ProposedByName = v.names[*r.ProposedBy]
 	}
+	if r.OwnerID != nil {
+		out.OwnerName = v.names[*r.OwnerID]
+	}
 	return out
+}
+
+type balanceJSON struct {
+	UserID  int64  `json:"userId"`
+	Name    string `json:"name"`
+	Earned  int    `json:"earned"`
+	Paid    int    `json:"paid"`
+	Balance int    `json:"balance"`
+}
+
+// balances is each person's own gems, the figures treats are paid from.
+func (v rewardView) balances() []balanceJSON {
+	out := make([]balanceJSON, len(v.people))
+	for i, p := range v.people {
+		out[i] = balanceJSON{UserID: p.UserID, Name: p.Name, Earned: p.Earned, Paid: p.Paid, Balance: p.Balance()}
+	}
+	return out
+}
+
+type redemptionJSON struct {
+	ID         int64  `json:"id"`
+	TreatID    *int64 `json:"treatId"`
+	UserID     int64  `json:"userId"`
+	UserName   string `json:"userName"`
+	Name       string `json:"name"`
+	Price      int    `json:"price"`
+	RedeemedAt string `json:"redeemedAt"`
+}
+
+func (v rewardView) redemption(r db.Redemption) redemptionJSON {
+	return redemptionJSON{ID: r.ID, TreatID: r.TreatID, UserID: r.UserID, UserName: v.names[r.UserID],
+		Name: r.Name, Price: r.Price, RedeemedAt: wireTime(r.CreatedAt)}
 }
 
 // focusRewardJSON is the reward /board shows for builds that only know one: the focus.
@@ -173,14 +221,35 @@ func (s *Server) handleListRewards(w http.ResponseWriter, r *http.Request) {
 	for i, rw := range claimed {
 		history[i] = view.json(rw)
 	}
+	treatRows, err := db.ListTreats(ctx, s.db.Pool)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	treats := make([]rewardJSON, len(treatRows))
+	for i, t := range treatRows {
+		treats[i] = view.json(t)
+	}
+	redemptions, err := db.ListRedemptions(ctx, s.db.Pool)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	treatHistory := make([]redemptionJSON, len(redemptions))
+	for i, red := range redemptions {
+		treatHistory[i] = view.redemption(red)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"reward": focus, "rewards": wishlist, "history": history,
-		"bank": view.bank, "priceHelp": help})
+		"bank": view.bank, "priceHelp": help, "treats": treats, "treatHistory": treatHistory,
+		"balances": view.balances()})
 }
 
 type rewardRequest struct {
 	Name   *string `json:"name"`
 	Price  *int    `json:"price"`
 	Target *int    `json:"target"`
+	// Treat proposes a personal treat for the caller instead of a shared reward.
+	Treat bool `json:"treat"`
 }
 
 // price is the requested price, with the pre-v13 field name as a fallback.
@@ -212,8 +281,11 @@ func rewardStateErr(msg string) *httpError {
 
 // notifyRewardProposal tells the partner that a reward or a new price waits for their answer.
 func (s *Server) notifyRewardProposal(to, from db.User, r db.Reward) {
-	s.together.Notify(to, push.Message{Kind: together.EventRewardProposal, Title: "Reward to approve",
-		Body: fmt.Sprintf("%s wants %s for %d gems", from.Name, r.Name, r.Price)})
+	title, body := "Reward to approve", fmt.Sprintf("%s wants %s for %d gems", from.Name, r.Name, r.Price)
+	if r.OwnerID != nil {
+		title, body = "Treat to approve", fmt.Sprintf("%s wants %s as a treat for %d gems", from.Name, r.Name, r.Price)
+	}
+	s.together.Notify(to, push.Message{Kind: together.EventRewardProposal, Title: title, Body: body})
 }
 
 // handleCreateReward proposes a reward. The partner approves it; alone, it is approved at once.
@@ -250,13 +322,17 @@ func (s *Server) handleCreateReward(w http.ResponseWriter, r *http.Request) {
 	if partner == nil || legacy {
 		status = db.RewardApproved
 	}
+	var owner *int64
+	if req.Treat {
+		owner = &c.user.ID
+	}
 	var reward db.Reward
 	duplicate := false
 	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := db.LockRewards(ctx, tx); err != nil {
 			return err
 		}
-		existing, err := db.PendingRewardByName(ctx, tx, c.user.ID, name)
+		existing, err := db.PendingRewardByName(ctx, tx, c.user.ID, owner, name)
 		if err == nil {
 			reward, duplicate = existing, true
 			return nil
@@ -264,14 +340,24 @@ func (s *Server) handleCreateReward(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, db.ErrNotFound) {
 			return err
 		}
-		n, err := db.CountOpenRewards(ctx, tx)
-		if err != nil {
-			return err
+		if owner != nil {
+			n, err := db.CountOpenTreats(ctx, tx, *owner)
+			if err != nil {
+				return err
+			}
+			if n >= gems.MaxTreatsPerPerson {
+				return newErr(http.StatusConflict, codeTreatsFull, "you have too many treats")
+			}
+		} else {
+			n, err := db.CountOpenRewards(ctx, tx)
+			if err != nil {
+				return err
+			}
+			if n >= maxWishlist {
+				return newErr(http.StatusConflict, codeWishlistFull, "the wishlist is full")
+			}
 		}
-		if n >= maxWishlist {
-			return newErr(http.StatusConflict, codeWishlistFull, "the wishlist is full")
-		}
-		reward, err = db.InsertReward(ctx, tx, name, *req.price(), c.user.ID, status)
+		reward, err = db.InsertReward(ctx, tx, name, *req.price(), c.user.ID, owner, status)
 		return err
 	})
 	if err != nil {
@@ -294,7 +380,7 @@ func (s *Server) writeReward(w http.ResponseWriter, r *http.Request, status int,
 		fail(w, r, err)
 		return
 	}
-	writeJSON(w, status, map[string]any{"reward": view.json(reward), "bank": view.bank})
+	writeJSON(w, status, map[string]any{"reward": view.json(reward), "bank": view.bank, "balances": view.balances()})
 }
 
 // changeReward runs one locked change to a reward and answers with it. The change returns the
@@ -357,6 +443,9 @@ func (s *Server) handlePatchReward(w http.ResponseWriter, r *http.Request) {
 	c := callerFrom(r)
 	s.changeReward(w, r, func(_ pgx.Tx, rw db.Reward, partner *db.User) (db.Reward, bool, *httpError) {
 		if req.Name != nil {
+			if rw.OwnerID != nil && *rw.OwnerID != c.user.ID {
+				return rw, false, newErr(http.StatusForbidden, codeForbidden, "only the owner renames a treat")
+			}
 			name, herr := cleanName(*req.Name)
 			if herr != nil {
 				return rw, false, invalid("name must be 1 to 40 characters without control characters")
@@ -474,9 +563,14 @@ func (s *Server) answerReward(w http.ResponseWriter, r *http.Request, approve bo
 	})
 }
 
-// handleCancelReward drops an approved reward from the wishlist; either person may.
+// handleCancelReward drops an approved reward from the wishlist; either person may, except that a
+// treat is removed by its owner.
 func (s *Server) handleCancelReward(w http.ResponseWriter, r *http.Request) {
+	c := callerFrom(r)
 	s.changeReward(w, r, func(_ pgx.Tx, rw db.Reward, _ *db.User) (db.Reward, bool, *httpError) {
+		if rw.OwnerID != nil && *rw.OwnerID != c.user.ID {
+			return rw, false, newErr(http.StatusForbidden, codeForbidden, "only the owner removes a treat")
+		}
 		if rw.Status != db.RewardApproved {
 			return rw, false, rewardStateErr("only an approved reward can be cancelled")
 		}
@@ -502,8 +596,8 @@ func (s *Server) handleFocusReward(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		if rw.Status != db.RewardApproved {
-			return rewardStateErr("only an approved reward can be the focus")
+		if rw.Status != db.RewardApproved || rw.OwnerID != nil {
+			return rewardStateErr("only an approved shared reward can be the focus")
 		}
 		focus, err = db.SetFocus(ctx, tx, id)
 		return err
@@ -543,4 +637,76 @@ func (s *Server) handleClaimReward(w http.ResponseWriter, r *http.Request) {
 	default:
 		s.writeReward(w, r, http.StatusOK, claimed)
 	}
+}
+
+type redeemRequest struct {
+	// RequestID is made once per tap by the app, so a retry or a double tap redeems once.
+	RequestID string `json:"requestId"`
+}
+
+// handleRedeemTreat spends the price of the caller's own treat from their own balance and tells
+// the partner. Redeeming again with the same request id returns the first redemption.
+func (s *Server) handleRedeemTreat(w http.ResponseWriter, r *http.Request) {
+	id, herr := rewardID(r)
+	if herr != nil {
+		fail(w, r, herr)
+		return
+	}
+	var req redeemRequest
+	if err := decodeJSON(r, &req); err != nil {
+		fail(w, r, err)
+		return
+	}
+	if n := len(req.RequestID); n < 8 || n > 64 {
+		fail(w, r, invalid("requestId must be 8 to 64 characters"))
+		return
+	}
+	ctx := r.Context()
+	c := callerFrom(r)
+	var red db.Redemption
+	created := false
+	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var err error
+		red, created, err = db.RedeemTreat(ctx, tx, c.user.ID, id, req.RequestID)
+		return err
+	})
+	switch {
+	case errors.Is(err, db.ErrNotFound):
+		fail(w, r, errNoReward)
+		return
+	case errors.Is(err, db.ErrNotTreatOwner):
+		fail(w, r, newErr(http.StatusForbidden, codeForbidden, "that treat belongs to the other person"))
+		return
+	case errors.Is(err, db.ErrInsufficientGems):
+		fail(w, r, newErr(http.StatusConflict, codeInsufficient, "your own gems do not cover that treat yet"))
+		return
+	case errors.Is(err, db.ErrRewardState):
+		fail(w, r, rewardStateErr("only an approved treat can be redeemed"))
+		return
+	case err != nil:
+		fail(w, r, err)
+		return
+	}
+	if created {
+		if partner, err := s.partnerOf(ctx, s.db.Pool, c.user.ID); err == nil && partner != nil {
+			s.together.Notify(*partner, push.Message{Kind: together.EventTreat, Title: "Treat redeemed",
+				Body: fmt.Sprintf("%s redeemed %s", c.user.Name, red.Name)})
+		}
+	}
+	view, err := s.rewardView(ctx)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	treat, err := db.GetReward(ctx, s.db.Pool, id)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	status := http.StatusCreated
+	if !created {
+		status = http.StatusOK
+	}
+	writeJSON(w, status, map[string]any{"redemption": view.redemption(red), "reward": view.json(treat),
+		"bank": view.bank, "balances": view.balances()})
 }

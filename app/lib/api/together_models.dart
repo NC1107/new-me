@@ -153,6 +153,8 @@ class Reward {
     this.claimedAt,
     this.proposedBy,
     this.proposedByName = '',
+    this.ownerId,
+    this.ownerName = '',
   });
 
   static Reward? tryParse(Object? v) {
@@ -176,6 +178,8 @@ class Reward {
       claimedAt: claimedAt,
       proposedBy: (j['proposedBy'] as num?)?.toInt() ?? (j['createdBy'] as num?)?.toInt(),
       proposedByName: _str(j['proposedByName']),
+      ownerId: (j['ownerId'] as num?)?.toInt(),
+      ownerName: _str(j['ownerName']),
     );
   }
 
@@ -193,6 +197,13 @@ class Reward {
   final DateTime? claimedAt;
   final int? proposedBy;
   final String proposedByName;
+
+  /// Who a treat belongs to; null for a shared reward.
+  final int? ownerId;
+  final String ownerName;
+
+  bool get isTreat => ownerId != null;
+  bool ownedBy(int? userId) => userId != null && ownerId == userId;
 
   bool get pending => status == 'pending';
   bool get declined => status == 'declined';
@@ -219,7 +230,71 @@ class Reward {
     'proposedBy': proposedBy,
     'proposedByName': proposedByName,
     'createdBy': proposedBy,
+    'ownerId': ?ownerId,
+    if (ownerName.isNotEmpty) 'ownerName': ownerName,
   };
+}
+
+/// One person's own gems: what they earned and what they paid out on treats and on their share
+/// of shared rewards. [balance] is what they can spend on a treat.
+class GemBalance {
+  const GemBalance({
+    required this.userId,
+    required this.name,
+    required this.earned,
+    required this.paid,
+    required this.balance,
+  });
+
+  static GemBalance? tryParse(Object? v) {
+    final j = _map(v);
+    if (j == null || _int(j['userId']) < 1) return null;
+    return GemBalance(
+      userId: _int(j['userId']),
+      name: _str(j['name']),
+      earned: _int(j['earned']),
+      paid: _int(j['paid']),
+      balance: _int(j['balance']),
+    );
+  }
+
+  final int userId;
+  final String name;
+  final int earned;
+  final int paid;
+  final int balance;
+}
+
+/// One treat bought with its owner's gems, at the name and price it had then.
+class TreatRedemption {
+  const TreatRedemption({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.name,
+    required this.price,
+    this.redeemedAt,
+  });
+
+  static TreatRedemption? tryParse(Object? v) {
+    final j = _map(v);
+    if (j == null || _int(j['id']) < 1) return null;
+    return TreatRedemption(
+      id: _int(j['id']),
+      userId: _int(j['userId']),
+      userName: _str(j['userName']),
+      name: _str(j['name']),
+      price: _int(j['price']),
+      redeemedAt: _time(j['redeemedAt']),
+    );
+  }
+
+  final int id;
+  final int userId;
+  final String userName;
+  final String name;
+  final int price;
+  final DateTime? redeemedAt;
 }
 
 /// A suggested price: what the pair earns at its own pace over [days] days.
@@ -273,6 +348,9 @@ class RewardList {
     this.history = const [],
     this.bank = 0,
     this.priceHelp,
+    this.treats = const [],
+    this.treatHistory = const [],
+    this.balances = const [],
   });
 
   factory RewardList.fromJson(Map<String, dynamic> j) => RewardList(
@@ -287,6 +365,18 @@ class RewardList {
     ],
     bank: _int(j['bank']),
     priceHelp: PriceHelp.tryParse(j['priceHelp']),
+    treats: [
+      if (j['treats'] is List)
+        for (final item in j['treats'] as List) ?Reward.tryParse(item),
+    ],
+    treatHistory: [
+      if (j['treatHistory'] is List)
+        for (final item in j['treatHistory'] as List) ?TreatRedemption.tryParse(item),
+    ],
+    balances: [
+      if (j['balances'] is List)
+        for (final item in j['balances'] as List) ?GemBalance.tryParse(item),
+    ],
   );
 
   final Reward? active;
@@ -294,6 +384,40 @@ class RewardList {
   final List<Reward> history;
   final int bank;
   final PriceHelp? priceHelp;
+
+  /// Every open treat of both people, grouped by owner.
+  final List<Reward> treats;
+
+  /// Treats redeemed by either person, newest first.
+  final List<TreatRedemption> treatHistory;
+
+  /// Each person's own gems, in a stable order.
+  final List<GemBalance> balances;
+
+  GemBalance? balanceOf(int? userId) {
+    for (final b in balances) {
+      if (b.userId == userId) return b;
+    }
+    return null;
+  }
+
+  /// My approved treats, cheapest first.
+  List<Reward> myTreats(int? userId) => [
+    for (final t in treats)
+      if (t.approved && t.ownedBy(userId)) t,
+  ]..sort((a, b) => a.price.compareTo(b.price));
+
+  /// My partner's approved treats, shown read-only.
+  List<Reward> partnerTreats(int? userId) => [
+    for (final t in treats)
+      if (t.approved && !t.ownedBy(userId)) t,
+  ];
+
+  /// Treat proposals I made that are still pending or were declined.
+  List<Reward> treatsWaiting(int? userId) => [
+    for (final t in treats)
+      if ((t.pending || t.declined) && t.proposedByUser(userId)) t,
+  ];
 
   /// Approved rewards waiting behind the focus.
   List<Reward> get queued => [
@@ -303,7 +427,7 @@ class RewardList {
 
   /// Proposals from my partner that wait for my answer.
   List<Reward> proposalsFor(int? userId) => [
-    for (final r in items)
+    for (final r in [...items, ...treats])
       if (r.pending && !r.proposedByUser(userId)) r,
   ];
 

@@ -44,7 +44,7 @@ Future<void> _seconds(WidgetTester tester, int n) async {
   }
 }
 
-Finder _speaker() => find.bySemanticsLabel(RegExp(r'^Sounds'));
+Finder _speaker() => find.bySemanticsLabel(RegExp(r'^(Sounds|Voice)'));
 
 GuidedRoutine get _flow10 => yogaRoutine(kYogaFlows.first);
 
@@ -127,7 +127,7 @@ void main() {
             expect(tester.getRect(finder).bottom, lessThanOrEqualTo(height - 80), reason: step);
           }
           if (i != steps.last) {
-            await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+            await tester.tap(find.byTooltip('Next pose'));
             await tester.pump();
           }
         }
@@ -140,7 +140,7 @@ void main() {
       await _open(tester, routine: mobilityRoutine, width: 375, height: 667);
       for (var i = 0; i < 10; i++) {
         _expectOnOneScreen(tester, 'stretch ${i + 1}');
-        await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+        await tester.tap(find.byTooltip('Next stretch'));
         await tester.pump();
       }
       await _leave(tester);
@@ -212,7 +212,7 @@ void main() {
       final app = await _open(tester);
       // Easy, cat-cow, dog, then the low lunge's left side.
       for (var i = 0; i < 3; i++) {
-        await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+        await tester.tap(find.byTooltip('Next pose'));
         await tester.pump();
       }
       app.audio.cues.clear();
@@ -229,7 +229,7 @@ void main() {
       expect(played, contains('play: yoga_easy.cue'));
       expect(played.where((c) => c.contains('breath')), isNotEmpty);
       expect(played.where((c) => c.contains('stay')), isEmpty);
-      await tester.tap(_button('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pump();
       expect(app.audio.cues.last, 'stop');
       await _leave(tester);
@@ -255,11 +255,11 @@ void main() {
     testWidgets('skip and previous name the pose again', (tester) async {
       final app = await _open(tester);
       app.audio.cues.clear();
-      await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+      await tester.tap(find.byTooltip('Next pose'));
       await tester.pump();
       expect(app.audio.cues.last, 'play: yoga_cat_cow.again');
       app.audio.cues.clear();
-      await tester.tap(find.widgetWithText(TextButton, 'Previous'));
+      await tester.tap(find.byTooltip('Previous pose'));
       await tester.pump();
       expect(app.audio.cues.last, 'play: yoga_easy.again');
       await _leave(tester);
@@ -313,7 +313,7 @@ void main() {
       final app = await _open(tester);
       final handle = tester.ensureSemantics();
       await tester.pump();
-      expect(find.bySemanticsLabel('Sounds and voice on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Voice on'), findsOneWidget);
       expect(tester.getSize(_speaker()).width, greaterThanOrEqualTo(44));
       expect(tester.getSize(_speaker()).height, greaterThanOrEqualTo(44));
 
@@ -329,7 +329,7 @@ void main() {
 
       await tester.tap(_speaker());
       await tester.pump();
-      expect(find.bySemanticsLabel('Sounds off'), findsOneWidget);
+      expect(find.bySemanticsLabel('Voice off'), findsOneWidget);
       app.audio.cues.clear();
       await _seconds(tester, 3 + 26 + 3 + 1);
       expect(app.audio.cues.where((c) => c != 'stop'), isEmpty);
@@ -340,7 +340,7 @@ void main() {
 
       await tester.tap(_speaker());
       await tester.pump();
-      expect(find.bySemanticsLabel('Sounds and voice on'), findsOneWidget);
+      expect(find.bySemanticsLabel('Voice on'), findsOneWidget);
       handle.dispose();
       await _leave(tester);
     });
@@ -373,7 +373,7 @@ void main() {
     testWidgets('pausing cuts the voice off', (tester) async {
       final app = await _open(tester);
       app.audio.cues.clear();
-      await tester.tap(_button('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pump();
       expect(app.audio.cues, ['stop']);
       await _leave(tester);

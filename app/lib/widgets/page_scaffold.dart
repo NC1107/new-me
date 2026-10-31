@@ -31,6 +31,7 @@ class PageScaffold extends StatelessWidget {
     this.subtitle,
     this.footer,
     this.banner,
+    this.actions = const [],
   });
 
   final String title;
@@ -42,6 +43,9 @@ class PageScaffold extends StatelessWidget {
 
   /// Sits between the header and the content, for the offline strip.
   final Widget? banner;
+
+  /// Trailing buttons in the title row.
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,7 @@ class PageScaffold extends StatelessWidget {
                           ),
                         ),
                       ),
+                      ...actions,
                     ],
                   ),
                 ),

@@ -49,8 +49,6 @@ Finder _digits(String value) => find.byWidgetPredicate(
   description: 'countdown $value',
 );
 
-Finder _action(String label) => find.widgetWithText(TextButton, label);
-
 /// The back arrow ends a session, after asking.
 Finder _end() => find.byTooltip('Back');
 
@@ -282,9 +280,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await tester.pump();
-      await tester.tap(_action('Skip'));
+      await tester.tap(find.byTooltip('Next stretch'));
       await tester.pump();
-      await tester.tap(_action('Skip'));
+      await tester.tap(find.byTooltip('Next stretch'));
       await tester.pump();
       expect(find.text('Kneeling hip flexor stretch'), findsOneWidget);
       expect(find.text('Left side'), findsOneWidget);
@@ -299,12 +297,12 @@ void main() {
       await tester.tap(_button('Start'));
       await _seconds(tester, 5);
       expect(_digits('28'), findsOneWidget);
-      await tester.tap(_button('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pump();
       expect(find.text('Paused'), findsOneWidget);
       await _seconds(tester, 20);
       expect(_digits('28'), findsOneWidget);
-      await tester.tap(_button('Resume'));
+      await tester.tap(find.byTooltip('Resume'));
       await tester.pump();
       await _seconds(tester, 2);
       expect(_digits('26'), findsOneWidget);
@@ -316,11 +314,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await tester.pump();
-      expect(tester.widget<TextButton>(_action('Previous')).onPressed, isNull);
-      await tester.tap(_action('Skip'));
+      expect(
+        tester
+            .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.skip_previous_rounded))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.byTooltip('Next stretch'));
       await tester.pump();
       expect(find.text('Stretch 2 of 10'), findsOneWidget);
-      await tester.tap(_action('Previous'));
+      await tester.tap(find.byTooltip('Previous stretch'));
       await tester.pump();
       expect(find.text('Stretch 1 of 10'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 100));
@@ -460,7 +463,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await _seconds(tester, 3);
-      await tester.tap(_button('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pump();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
@@ -479,7 +482,7 @@ void main() {
       await tester.tap(_button('Start'));
       await tester.pump();
       for (var i = 0; i < 10; i++) {
-        await tester.tap(_action('Skip'));
+        await tester.tap(find.byTooltip('Next stretch'));
         await tester.pump();
       }
       await tester.pumpAndSettle();
@@ -546,8 +549,8 @@ void main() {
       expect(find.bySemanticsLabel('Hold timer running'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp(r'^\d+$')), findsNothing);
       expect(find.bySemanticsLabel('Session progress'), findsOneWidget);
-      for (final label in ['Previous', 'Skip']) {
-        final size = tester.getSize(_action(label));
+      for (final label in ['Previous stretch', 'Next stretch']) {
+        final size = tester.getSize(find.byTooltip(label));
         expect(size.width, greaterThanOrEqualTo(44), reason: label);
         expect(size.height, greaterThanOrEqualTo(44), reason: label);
       }

@@ -578,7 +578,6 @@ class _Running extends StatelessWidget {
         photos.length > 1 &&
         credits.length > 1 &&
         credits.every((c) => c.label == credits.first.label);
-    final roomy = MediaQuery.textScalerOf(context).scale(16) <= 16 * 1.3;
     final tall = MediaQuery.sizeOf(context).height >= 740;
     final next = _GuidedPageState.nextPhrase(hold, session.next);
 
@@ -646,12 +645,11 @@ class _Running extends StatelessWidget {
       subtitle:
           '${routine.stepNoun[0].toUpperCase()}${routine.stepNoun.substring(1)} '
           '${hold.stepIndex + 1} of ${session.stepCount}',
+      actions: [_SoundButton(sound: sound, onTap: onSound)],
       footer: _Controls(
-        roomy: roomy,
+        stepNoun: routine.stepNoun,
         paused: paused,
-        sound: sound,
         canGoBack: session.canGoBack,
-        onSound: onSound,
         onPause: onPause,
         onSkip: onSkip,
         onBack: onBack,
@@ -814,62 +812,113 @@ class _CueLine extends StatelessWidget {
   }
 }
 
-/// Pause in the middle with Previous and Skip beside it and the sound button; at large text sizes
-/// the actions wrap under the button instead.
+/// A media-player transport: previous pose, a large play/pause button, next pose. The sound
+/// toggle lives in the app bar so it never crowds the transport.
 class _Controls extends StatelessWidget {
   const _Controls({
-    required this.roomy,
+    required this.stepNoun,
     required this.paused,
-    required this.sound,
     required this.canGoBack,
-    required this.onSound,
     required this.onPause,
     required this.onSkip,
     required this.onBack,
   });
 
-  final bool roomy;
+  final String stepNoun;
   final bool paused;
-  final GuidedSound sound;
   final bool canGoBack;
-  final VoidCallback onSound;
   final VoidCallback onPause;
   final VoidCallback onSkip;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    final pause = ChunkyButton(
-      label: paused ? 'Resume' : 'Pause',
-      icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-      onPressed: onPause,
-    );
-    final previous = _TextAction(label: 'Previous', onTap: canGoBack ? onBack : null);
-    final skip = _TextAction(label: 'Skip', onTap: onSkip);
-    final speaker = _SoundButton(sound: sound, onTap: onSound);
-    if (roomy) {
-      return Row(
-        children: [
-          speaker,
-          previous,
-          Expanded(child: pause),
-          skip,
-        ],
-      );
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final accent = context.accentPalette;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        pause,
-        const SizedBox(height: 4),
-        // Wraps rather than overflows when the text is scaled up.
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [previous, speaker, skip],
+        _TransportButton(
+          icon: Icons.skip_previous_rounded,
+          label: 'Previous $stepNoun',
+          onTap: canGoBack ? onBack : null,
         ),
+        const SizedBox(width: 24),
+        _TransportButton(
+          icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+          label: paused ? 'Resume' : 'Pause',
+          onTap: onPause,
+          diameter: 58,
+          iconSize: 36,
+          fill: accent.fill,
+          color: accent.onFill,
+        ),
+        const SizedBox(width: 24),
+        _TransportButton(icon: Icons.skip_next_rounded, label: 'Next $stepNoun', onTap: onSkip),
       ],
+    );
+  }
+}
+
+/// A round icon button with a tooltip, which also names it for VoiceOver. Null [onTap] disables it.
+class _TransportButton extends StatelessWidget {
+  const _TransportButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.diameter = 48,
+    this.iconSize = 28,
+    this.fill,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final double diameter;
+  final double iconSize;
+  final Color? fill;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Named(
+      label: label,
+      onTap: onTap,
+      child: IconButton(
+        onPressed: onTap,
+        tooltip: label,
+        icon: Icon(icon, size: iconSize),
+        style: IconButton.styleFrom(
+          fixedSize: Size(diameter, diameter),
+          minimumSize: Size(diameter, diameter),
+          padding: EdgeInsets.zero,
+          shape: const CircleBorder(),
+          backgroundColor: fill,
+          foregroundColor: color ?? context.accentPalette.lip,
+          disabledForegroundColor: kInkMuted.withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+}
+
+/// Names an icon button for VoiceOver once, without the tooltip repeating it.
+class _Named extends StatelessWidget {
+  const _Named({required this.label, required this.onTap, required this.child});
+
+  final String label;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: child,
     );
   }
 }
@@ -884,24 +933,18 @@ class _SoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label) = switch ((sound.sound, sound.voice)) {
-      (true, true) => (Icons.volume_up_rounded, 'Sounds and voice on'),
+      (true, true) => (Icons.volume_up_rounded, 'Voice on'),
       (true, false) => (Icons.volume_down_rounded, 'Sounds on, voice off'),
-      _ => (Icons.volume_off_rounded, 'Sounds off'),
+      _ => (Icons.volume_off_rounded, 'Voice off'),
     };
-    return Semantics(
-      button: true,
+    return _Named(
       label: label,
-      hint: 'Double tap to change',
-      excludeSemantics: true,
       onTap: onTap,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 24,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: context.accentPalette.lip, size: 26),
-        ),
+      child: IconButton(
+        onPressed: onTap,
+        tooltip: label,
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+        icon: Icon(icon, color: context.accentPalette.lip, size: 26),
       ),
     );
   }
@@ -1036,30 +1079,6 @@ class _Finished extends StatelessWidget {
             ),
         ],
       ],
-    );
-  }
-}
-
-/// A plain text action with a 44 point tap target.
-class _TextAction extends StatelessWidget {
-  const _TextAction({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(64, 48),
-        tapTargetSize: MaterialTapTargetSize.padded,
-        overlayColor: Colors.transparent,
-        foregroundColor: context.accentPalette.lip,
-        disabledForegroundColor: kInkMuted,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-      ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
     );
   }
 }

@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'voice_clips.dart';
+
 /// What a guided session plays. The page asks for cues by meaning, so tests use a fake and a later
 /// spoken-instruction or time-call cue only adds a method here.
 abstract class SessionAudio {
@@ -24,7 +26,11 @@ abstract class SessionAudio {
   /// Says [text] through text-to-speech.
   void speak(String text);
 
-  /// Cuts speech off, for a pause or an early end.
+  /// Plays the recorded class voice clips by id, one after the other, in place of anything
+  /// already playing. An id with no recording is spoken as its text.
+  void playClips(List<String> ids);
+
+  /// Cuts speech and recorded clips off, for a pause or an early end.
   void stopSpeaking();
 
   Future<void> dispose();
@@ -43,8 +49,17 @@ class PlatformSessionAudio implements SessionAudio {
   final _tickPlayer = AudioPlayer(playerId: 'newme.session.tick');
   final _chimePlayer = AudioPlayer(playerId: 'newme.session.chime');
   final _halfwayPlayer = AudioPlayer(playerId: 'newme.session.halfway');
+  final _voicePlayer = AudioPlayer(playerId: 'newme.session.voice');
   final _tts = FlutterTts();
   bool _ready = false;
+
+  /// Bumped by every new request and every stop, so a sequence that was cut off ends quietly.
+  int _voiceRun = 0;
+  Completer<void>? _clipDone;
+  StreamSubscription<void>? _clipEnds;
+
+  /// Lets the chime that marks a change of pose ring before the voice starts over it.
+  static const _chimeGap = Duration(milliseconds: 450);
 
   /// Every call is guarded: a cue that cannot play must never end a session.
   Future<void> _guard(Future<void> Function() run) async {
@@ -59,6 +74,7 @@ class PlatformSessionAudio implements SessionAudio {
   Future<void> prepare() => _guard(() async {
     if (_ready) return;
     _ready = true;
+    _clipEnds = _voicePlayer.onPlayerComplete.listen((_) => _finishClip());
     await AudioPlayer.global.setAudioContext(
       AudioContext(
         iOS: AudioContextIOS(
@@ -99,15 +115,54 @@ class PlatformSessionAudio implements SessionAudio {
   );
 
   @override
-  void stopSpeaking() => unawaited(
-    _guard(() async {
-      await _tts.stop();
-    }),
-  );
+  void playClips(List<String> ids) => unawaited(_guard(() => _playClips(ids)));
+
+  void _finishClip() {
+    final done = _clipDone;
+    _clipDone = null;
+    if (done != null && !done.isCompleted) done.complete();
+  }
+
+  Future<void> _playClips(List<String> ids) async {
+    final run = ++_voiceRun;
+    await _stopAll();
+    await Future<void>.delayed(_chimeGap);
+    for (final id in ids) {
+      if (run != _voiceRun) return;
+      final clip = kVoiceClips[id];
+      final done = _clipDone = Completer<void>();
+      try {
+        await _voicePlayer.play(AssetSource('audio/voice/$id.m4a'));
+      } on Object catch (e) {
+        debugPrint('[NEWME] voice clip $id: $e');
+        _finishClip();
+        if (clip != null && run == _voiceRun) await _tts.speak(clip.text);
+        return;
+      }
+      // A clip that never reports its end must not hold up the rest of the sequence.
+      final limit = Duration(seconds: (clip?.seconds.ceil() ?? 10) + 5);
+      await done.future.timeout(limit, onTimeout: () {});
+    }
+  }
+
+  Future<void> _stopAll() async {
+    _finishClip();
+    await _tts.stop();
+    await _voicePlayer.stop();
+  }
+
+  @override
+  void stopSpeaking() {
+    _voiceRun++;
+    unawaited(_guard(_stopAll));
+  }
 
   @override
   Future<void> dispose() => _guard(() async {
-    await _tts.stop();
+    _voiceRun++;
+    await _clipEnds?.cancel();
+    await _stopAll();
+    await _voicePlayer.dispose();
     await _tickPlayer.dispose();
     await _chimePlayer.dispose();
     await _halfwayPlayer.dispose();

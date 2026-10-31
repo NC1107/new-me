@@ -71,6 +71,7 @@ flutter:
   assets:
     - assets/fonts/OFL.txt
     - assets/audio/
+    - assets/audio/voice/
 
   fonts:
     - family: Nunito

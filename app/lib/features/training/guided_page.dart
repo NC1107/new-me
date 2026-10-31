@@ -24,6 +24,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import 'how_to_sheet.dart';
 import 'guided_session.dart';
+import 'guided_voice.dart';
 import 'set_assist.dart' show kHoldLeadInSeconds;
 
 enum _Stage { intro, running, finished }
@@ -105,6 +106,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
   void initState() {
     super.initState();
     _awake = ref.read(screenAwakeProvider);
+    _audio = ref.read(sessionAudioProvider);
     // Read now so the saved choice has loaded by the time Start is tapped.
     ref.read(guidedSoundProvider);
     _lifecycle = AppLifecycleListener(onHide: _hide, onShow: _show);
@@ -114,6 +116,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
   void dispose() {
     _ticker?.cancel();
     _releaseScreen();
+    _audio.stopSpeaking();
     _lifecycle.dispose();
     _session?.dispose();
     super.dispose();
@@ -126,17 +129,42 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
 
   String _holdPhrase(GuidedHold h) => '${h.exercise.name}, ${h.label}';
 
-  SessionAudio get _audio => ref.read(sessionAudioProvider);
+  final _voice = const GuidedVoice();
+  int _cueIndex = -1;
+  Map<int, String> _cues = const {};
+
+  late final SessionAudio _audio;
 
   /// A tone, unless sounds are off. Ticks and chimes are also fine with VoiceOver on.
   void _tone(void Function(SessionAudio audio) cue) {
     if (ref.read(guidedSoundProvider).sound) cue(_audio);
   }
 
-  /// Speech, unless voice is off. VoiceOver already announces each change, so it is not spoken twice.
-  void _say(String text) {
-    if (!ref.read(guidedSoundProvider).voice || MediaQuery.accessibleNavigationOf(context)) return;
-    _audio.speak(text);
+  /// Voice is off when the person chose it, and with VoiceOver on, which already announces each
+  /// change and must not be spoken over twice.
+  bool get _voiceOn =>
+      ref.read(guidedSoundProvider).voice && !MediaQuery.accessibleNavigationOf(context);
+
+  /// The recorded class voice for a moment, or the plain text-to-speech line where the pose has
+  /// no recording.
+  void _narrate(List<String> clips, String fallback) {
+    if (!_voiceOn) return;
+    if (clips.isEmpty) {
+      _audio.speak(fallback);
+    } else {
+      _audio.playClips(clips);
+    }
+  }
+
+  /// The recorded cue due at this second of the hold, if any.
+  void _cueVoice(GuidedController session) {
+    if (session.phase != GuidedPhase.hold || !_voiceOn) return;
+    if (_cueIndex != session.index) {
+      _cueIndex = session.index;
+      _cues = _voice.cues(session.holds, session.index);
+    }
+    final clip = _cues[session.current.seconds - session.holdLeft];
+    if (clip != null) _audio.playClips([clip]);
   }
 
   void _releaseScreen() {
@@ -160,7 +188,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     _screenHeld = true;
     unawaited(_awake.enable());
     unawaited(_audio.prepare());
-    _say('Starting with ${nextPhrase(null, session.current)}');
+    _narrate(_voice.opening(holds), 'Starting with ${nextPhrase(null, session.current)}');
     _startTicker();
     setState(() => _stage = _Stage.running);
     HapticFeedback.selectionClick();
@@ -209,6 +237,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     GuidedEvent? last;
     for (var i = 0; i < seconds && !session.finished; i++) {
       final event = session.tick();
+      if (!quiet) _cueVoice(session);
       if (event == null) continue;
       if (!quiet) _react(event, session);
       last = event;
@@ -232,7 +261,10 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
         if (loud) {
           HapticFeedback.lightImpact();
           _tone((a) => a.chime());
-          _say('Next: ${nextPhrase(session.holds[session.index - 1], session.current)}');
+          _narrate(
+            _voice.advance(session.holds, session.index),
+            'Next: ${nextPhrase(session.holds[session.index - 1], session.current)}',
+          );
         }
         _announce('Next. ${_holdPhrase(session.current)}');
       case GuidedEvent.finished:
@@ -272,7 +304,10 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
       _finish();
     } else {
       _announce('Skipped. Next. ${_holdPhrase(session.current)}');
-      _say('Next: ${nextPhrase(null, session.current)}');
+      _narrate(
+        _voice.jump(session.holds, session.index),
+        'Next: ${nextPhrase(null, session.current)}',
+      );
     }
   }
 
@@ -281,13 +316,17 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     session.backStep();
     HapticFeedback.selectionClick();
     _announce('Back. ${_holdPhrase(session.current)}');
-    _say('Back to ${nextPhrase(null, session.current)}');
+    _narrate(
+      _voice.jump(session.holds, session.index),
+      'Back to ${nextPhrase(null, session.current)}',
+    );
   }
 
   void _finish() {
     final session = _session!;
     _ticker?.cancel();
     _releaseScreen();
+    _audio.stopSpeaking();
     HapticFeedback.heavyImpact();
     if (!session.worthLogging) {
       setState(() {

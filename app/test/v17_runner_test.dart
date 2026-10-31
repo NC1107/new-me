@@ -173,9 +173,12 @@ void main() {
   });
 
   group('sound cues', () {
+    List<String> tones(FakeSessionAudio audio) =>
+        audio.cues.where((c) => !c.startsWith('play:')).toList();
+
     testWidgets('prepare at the start and speak the first pose', (tester) async {
       final app = await _open(tester);
-      expect(app.audio.cues, ['prepare', 'say: Starting with Easy pose']);
+      expect(app.audio.cues, ['prepare', 'play: welcome yoga_easy.again']);
       await _leave(tester);
     });
 
@@ -187,21 +190,21 @@ void main() {
       app.audio.cues.clear();
 
       await _seconds(tester, 14);
-      expect(app.audio.cues, isEmpty, reason: 'nothing before the midpoint');
+      expect(tones(app.audio), isEmpty, reason: 'nothing before the midpoint');
       await _seconds(tester, 1);
-      expect(app.audio.cues, ['halfway']);
+      expect(tones(app.audio), ['halfway']);
       app.audio.cues.clear();
 
       await _seconds(tester, 11);
-      expect(app.audio.cues, isEmpty);
+      expect(tones(app.audio), isEmpty);
       await _seconds(tester, 1);
       await _seconds(tester, 1);
       await _seconds(tester, 1);
-      expect(app.audio.cues, ['tick', 'tick', 'tick']);
+      expect(tones(app.audio), ['tick', 'tick', 'tick']);
       app.audio.cues.clear();
 
       await _seconds(tester, 1);
-      expect(app.audio.cues, ['chime', 'say: Next: Cat-cow']);
+      expect(app.audio.cues, ['chime', 'play: yoga_cat_cow.intro']);
       await _leave(tester);
     });
 
@@ -214,7 +217,34 @@ void main() {
       }
       app.audio.cues.clear();
       await _seconds(tester, 33);
-      expect(app.audio.cues.last, 'say: Next: Right side');
+      expect(app.audio.cues.last, 'play: switch_sides');
+      await _leave(tester);
+    });
+
+    testWidgets('the pose is cued during its hold and stops with a pause', (tester) async {
+      final app = await _open(tester);
+      await _seconds(tester, 3 + 29);
+      final played = app.audio.cues.where((c) => c.startsWith('play:')).toList();
+      expect(played.first, 'play: welcome yoga_easy.again');
+      expect(played, contains('play: yoga_easy.cue'));
+      expect(played.where((c) => c.contains('breath')), isNotEmpty);
+      expect(played.where((c) => c.contains('stay')), isEmpty);
+      await tester.tap(_button('Pause'));
+      await tester.pump();
+      expect(app.audio.cues.last, 'stop');
+      await _leave(tester);
+    });
+
+    testWidgets('skip and previous name the pose again', (tester) async {
+      final app = await _open(tester);
+      app.audio.cues.clear();
+      await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+      await tester.pump();
+      expect(app.audio.cues.last, 'play: yoga_cat_cow.again');
+      app.audio.cues.clear();
+      await tester.tap(find.widgetWithText(TextButton, 'Previous'));
+      await tester.pump();
+      expect(app.audio.cues.last, 'play: yoga_easy.again');
       await _leave(tester);
     });
 
@@ -223,7 +253,7 @@ void main() {
       await _seconds(tester, 20 * 33);
       await tester.pumpAndSettle();
       expect(app.audio.cues.where((c) => c == 'chime').length, greaterThan(10));
-      expect(app.audio.cues.last, 'chime');
+      expect(app.audio.cues.where((c) => c != 'stop').last, 'chime');
     });
 
     testWidgets('time spent in the background plays no catch-up cues', (tester) async {
@@ -278,7 +308,7 @@ void main() {
       expect(app.audio.cues.where((c) => c == 'tick'), hasLength(3));
       await _seconds(tester, 1);
       expect(app.audio.cues, contains('chime'));
-      expect(app.audio.cues.where((c) => c.startsWith('say')), isEmpty);
+      expect(app.audio.cues.where((c) => c.startsWith('say') || c.startsWith('play')), isEmpty);
 
       await tester.tap(_speaker());
       await tester.pump();
@@ -303,7 +333,10 @@ void main() {
       final app = await _open(tester);
       await tester.pump(const Duration(milliseconds: 50));
       await _seconds(tester, 3 + 27);
-      expect(app.audio.cues.where((c) => c == 'tick' || c.startsWith('say')), isEmpty);
+      expect(
+        app.audio.cues.where((c) => c == 'tick' || c.startsWith('say') || c.startsWith('play')),
+        isEmpty,
+      );
       await _leave(tester);
     });
 
@@ -314,7 +347,7 @@ void main() {
       addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       final app = await _open(tester);
       await _seconds(tester, 3 + 30);
-      expect(app.audio.cues.where((c) => c.startsWith('say')), isEmpty);
+      expect(app.audio.cues.where((c) => c.startsWith('say') || c.startsWith('play')), isEmpty);
       expect(app.audio.cues, contains('chime'));
       expect(app.audio.cues, contains('tick'));
       await _leave(tester);

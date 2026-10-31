@@ -303,6 +303,9 @@ class FakeSessionAudio implements SessionAudio {
   void speak(String text) => cues.add('say: $text');
 
   @override
+  void playClips(List<String> ids) => cues.add('play: ${ids.join(' ')}');
+
+  @override
   void stopSpeaking() => cues.add('stop');
 
   @override

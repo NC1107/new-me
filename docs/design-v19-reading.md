@@ -5,7 +5,19 @@
 The reading quest has a minutes target and an alternative pages target.
 The pages target was a fixed 15, an arbitrary default, and 15 pages is not much reading next to 30 minutes.
 Audiobook listening counted one for one as reading time, although a narrator speaks more slowly than an adult reads.
-This change derives the pages figure from the minutes and converts audiobook time by words.
+This change derives the pages figure from the minutes and gives audiobook time a fixed exchange rate.
+
+## The rule in use
+
+The first version below converted by words (238 words a minute, 250 a page, narration at 155).
+Nick and Nadia chose a round rule instead, shipped with migration 0037:
+
+- A page for each minute of reading, so 30 minutes is 30 pages.
+- An audiobook minute counts as half a reading minute, so 30 pages is 60 minutes of audiobook.
+
+The research below is why the rule is close to honest: 238/250 is 0.95 pages a minute, and narration is about two thirds of reading speed, which the rule rounds down to a half.
+The app says plainly that the rule is their choice and quotes the research beside it.
+The sections that follow record the research and the first version's reasoning; where they give 0.95 pages or two thirds, the rule above replaced them.
 
 ## Research
 
@@ -45,7 +57,7 @@ Choosing 250 over 300 errs towards more pages for the same time, so the pages wa
 
 ## The formulas
 
-All three live in `server/internal/score/points.go`.
+These were the first version's formulas, replaced by the rule above; the code lives in `server/internal/score/points.go`.
 
 - Pages for minutes: `round(minutes x 238 / 250)`, never below 1.
   20 minutes is 19 pages, 30 is 29, 45 is 43, 60 is 57.
@@ -68,7 +80,8 @@ It costs the listener: 30 minutes of audiobook now earns 19 reading minutes, so 
 Listening at faster playback is not seen, because Audiobookshelf reports time listened and not words heard, so a person at 1.5 times speed is under credited.
 The tradeoff is accepted and the copy says it.
 
-Decision: convert by words.
+Decision at first: convert by words.
+Replaced by the half rule, which keeps the same direction (listening counts less than reading) with a number anyone can check.
 
 ## Pages follow the minutes
 
@@ -78,7 +91,8 @@ The rule on the server needs no new API field.
 When a patch sets `targetAlt`, the template is custom if the figure differs from the derived one, and follows again if it equals it.
 Applying the new `reading` target in Me > Targets sets the derived figure and so goes back to following.
 
-New users start at 20 minutes and 19 pages.
+New users start at 20 minutes and 20 pages.
+Migration 0037 moves every template that follows the minutes to a page a minute; a typed pages figure stays.
 
 ## Old data
 
@@ -91,11 +105,12 @@ New users start at 20 minutes and 19 pages.
 
 ## Copy
 
-- Quest sheet, Why this goal: "30 minutes, or about 29 pages: adults read non-fiction at about 238 words a minute, and a page is taken as about 250 words (30 x 238 / 250)." Then the audiobook credit and the sources.
-- Goal picker, under the pages field: "About 29 pages: reading at about 238 words a minute, about 250 words a page. It follows the minutes unless you type your own." When the figure is the person's own, it says so and what the minutes would give.
-- Me > Targets, Habits: a "Reading, in pages" target with the same formula and sources `brysbaert2019`, `acx`, `pagewords`.
-- Audiobookshelf page and onboarding: listening counts for the words heard, about two thirds of its length.
-- Today plan line: "An audiobook counts for about two thirds of its length."
+- Quest sheet, Why this goal: "Recommended: 30 pages for your 30 minutes", then "A page for each minute of reading, so 30 minutes is 30 pages, or 60 minutes of audiobook." and the audiobook note.
+- Goal picker, under the pages field: "30 pages: a page for each minute, or 60 minutes of audiobook. It follows the minutes unless you type your own."
+- Me > Targets, Habits: a "Reading, in pages" target labelled as a convention, with sources `brysbaert2019` and `pagewords`.
+- Audiobookshelf page: "Listening counts toward reading at half: an hour of audiobook is 30 minutes of reading."
+- Onboarding: "An audiobook minute counts as half a reading minute once you link Audiobookshelf in Me."
+- Today plan line: "An audiobook minute counts as half."
 
 ## Tests
 

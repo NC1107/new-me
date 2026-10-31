@@ -144,13 +144,13 @@ void main() {
         'enabled': true,
         'target': 20,
         'unit': 'minutes',
-        'targetAlt': 19,
+        'targetAlt': 20,
         'unitAlt': 'pages',
         'points': 100,
         'position': 2,
       });
 
-      Future<TestApp> openReading(WidgetTester tester, {int alt = 19}) async {
+      Future<TestApp> openReading(WidgetTester tester, {int alt = 20}) async {
         final app = TestApp(tester, fullServer(), surfaceHeight: 2000);
         await app.pump(
           GoalPickerPage(quest: reading(), target: 20, targetAlt: alt),
@@ -159,30 +159,29 @@ void main() {
         return app;
       }
 
-      testWidgets('the pages figure is minutes x 238 words a minute over 250 words a page', (
-        tester,
-      ) async {
+      testWidgets('the pages figure is a page a minute, never below one', (tester) async {
         expect(
           [
-            for (final m in [1, 10, 20, 30, 45, 60]) pagesForMinutes(m),
+            for (final m in [0, 1, 20, 30, 60]) pagesForMinutes(m),
           ],
-          [1, 10, 19, 29, 43, 57],
+          [1, 1, 20, 30, 60],
         );
-        expect(kReadingWpm, 238);
-        expect(kWordsPerPage, 250);
+        expect(kListeningMinutesPerReadingMinute, 2);
       });
 
-      testWidgets('the pages follow the minutes and say why', (tester) async {
+      testWidgets('the pages follow the minutes and say what the audiobook takes', (tester) async {
         final app = await openReading(tester);
         expect(
-          find.textContaining('About 19 pages: reading at about 238 words a minute'),
+          find.textContaining('20 pages: a page for each minute, or 40 minutes of audiobook'),
           findsOneWidget,
         );
-        expect(find.textContaining('about 250 words a page'), findsOneWidget);
 
         await app.tap(find.text('30 min'));
-        expect(find.widgetWithText(TextField, '29'), findsOneWidget);
-        expect(find.textContaining('About 29 pages'), findsOneWidget);
+        expect(find.widgetWithText(TextField, '30'), findsWidgets);
+        expect(
+          find.textContaining('30 pages: a page for each minute, or 60 minutes'),
+          findsOneWidget,
+        );
       });
 
       testWidgets('a pages figure of your own stays put until you type the matching one', (
@@ -190,18 +189,18 @@ void main() {
       ) async {
         final app = await openReading(tester, alt: 40);
         expect(
-          find.textContaining('Your own figure. 20 minutes of reading is about 19 pages'),
+          find.textContaining('Your own figure. 20 minutes of reading is 20 pages'),
           findsOneWidget,
         );
 
-        await app.tap(find.text('30 min'));
+        await app.tap(find.text('45 min'));
         expect(find.widgetWithText(TextField, '40'), findsOneWidget);
 
-        await tester.enterText(find.widgetWithText(TextField, '40'), '29');
+        await tester.enterText(find.widgetWithText(TextField, '40'), '45');
         await tester.pump();
-        expect(find.textContaining('About 29 pages'), findsOneWidget);
-        await app.tap(find.text('45 min'));
-        expect(find.widgetWithText(TextField, '43'), findsOneWidget);
+        expect(find.textContaining('45 pages: a page for each minute'), findsOneWidget);
+        await app.tap(find.text('30 min'));
+        expect(find.textContaining('30 pages: a page for each minute'), findsOneWidget);
       });
     });
 

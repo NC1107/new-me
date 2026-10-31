@@ -772,6 +772,13 @@ func breathingTarget(current *int) targetJSON {
 
 // readingTarget is the pages that take as long to read as the reading minutes goal, at the
 // average adult silent reading rate. The minutes themselves are the person's call.
+// readingWPM and wordsPerPage are only quoted beside the reading rule, to show how close it is
+// to research: Brysbaert 2019 for the rate, the typesetting convention for the page.
+const (
+	readingWPM   = 238
+	wordsPerPage = 250
+)
+
 func (d targetData) readingTarget() targetJSON {
 	minutes := db.DefaultReadingMinutes
 	var current *int
@@ -779,17 +786,16 @@ func (d targetData) readingTarget() targetJSON {
 		minutes, current = tpl.Target, tpl.TargetAlt
 	}
 	pages := score.PagesForMinutes(minutes)
-	t := targetJSON{Key: tgtReading, Unit: "pages", Label: labelGuideline, Applicable: true, Current: current,
-		Value: intp(pages), Missing: []string{}, Sources: []string{"brysbaert2019", "acx", "pagewords"}}
-	t.Formula = fmt.Sprintf("%d minutes, or about %d pages: adults read non-fiction at about %d words a minute, and a page is taken as about %d words (%d x %d / %d).",
-		minutes, pages, score.ReadingWPM, score.WordsPerPage, minutes, score.ReadingWPM, score.WordsPerPage)
-	t.Why = fmt.Sprintf("Adults read about %d words a minute and a page holds about %d words, so %d minutes is about %d pages.",
-		score.ReadingWPM, score.WordsPerPage, minutes, pages)
+	t := targetJSON{Key: tgtReading, Unit: "pages", Label: labelConvention, Applicable: true, Current: current,
+		Value: intp(pages), Missing: []string{}, Sources: []string{"brysbaert2019", "pagewords"}}
+	t.Formula = fmt.Sprintf("%d minutes, or %d pages: a page for each minute of reading, or %d minutes of audiobook. This is a round rule you chose; research puts an adult at about %d words a minute against a page of about %d words, close to a page a minute.",
+		minutes, pages, minutes*score.ListeningMinutesPerReadingMinute, readingWPM, wordsPerPage)
+	t.Why = fmt.Sprintf("A page for each minute of reading, so %d minutes is %d pages, or %d minutes of audiobook.",
+		minutes, pages, minutes*score.ListeningMinutesPerReadingMinute)
 	t.Details = map[string]any{
-		"minutes": minutes, "readingWpm": score.ReadingWPM, "wordsPerPage": score.WordsPerPage,
-		"narrationWpm": score.NarrationWPM,
-		"note": fmt.Sprintf("An audiobook minute counts as %d%% of a reading minute, because a narrator speaks about %d words a minute against the %d an adult reads. The %d words a page is a convention, not a measured average: no study of printed books was found, and real pages run from about 230 to 300 words.",
-			score.NarrationWPM*100/score.ReadingWPM, score.NarrationWPM, score.ReadingWPM, score.WordsPerPage),
+		"minutes": minutes, "pagesPerMinute": score.PagesPerReadingMinute,
+		"listeningMinutesPerMinute": score.ListeningMinutesPerReadingMinute,
+		"note":                      "An audiobook minute counts as half a reading minute. Narrators speak about two thirds as fast as an adult reads, and the rule rounds that down to a half to keep it simple.",
 	}
 	return t
 }

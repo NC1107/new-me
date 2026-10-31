@@ -146,9 +146,8 @@ class _AudiobookshelfPageState extends ConsumerState<AudiobookshelfPage> {
       ),
       children: [
         Text(
-          'Listening counts toward reading for the words you hear: a narrator speaks about 155 words a '
-          'minute and an adult reads about 238, so an hour of listening is about 39 minutes of '
-          'reading. New Me signs in once and does not keep your password.',
+          'Listening counts toward reading at half: an hour of audiobook is 30 minutes of reading. '
+          'New Me signs in once and does not keep your password.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),

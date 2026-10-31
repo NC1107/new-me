@@ -95,7 +95,7 @@ func TestListeningCountsTowardTheReadingQuest(t *testing.T) {
 	h.logActivity(nick, "reading", "pages", 5).expect(http.StatusCreated)
 
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.num("quests.2.basePoints") != 86 {
+	if before.num("quests.2.basePoints") != 85 {
 		t.Fatalf("reading before linking = %s", before.Body)
 	}
 

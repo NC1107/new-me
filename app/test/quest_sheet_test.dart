@@ -29,22 +29,18 @@ Map<String, dynamic> _day(String date, bool tracked, {num actual = 0, bool done 
 /// The reading target as GET /api/targets sends it for a 20 minute goal.
 const _readingTarget = {
   'key': 'reading',
-  'value': 19,
+  'value': 20,
   'unit': 'pages',
-  'current': 19,
+  'current': 20,
   'formula':
-      '20 minutes, or about 19 pages: adults read non-fiction at about 238 words a minute, and a '
-      'page is taken as about 250 words (20 x 238 / 250).',
-  'sources': ['brysbaert2019', 'acx', 'pagewords'],
-  'label': 'guideline',
+      '20 minutes, or 20 pages: a page for each minute of reading, or 40 minutes of audiobook.',
+  'why':
+      'A page for each minute of reading, so 20 minutes is 20 pages, or 40 minutes of audiobook.',
+  'sources': ['brysbaert2019', 'pagewords'],
+  'label': 'convention',
   'missing': <String>[],
   'applicable': true,
-  'details': {
-    'minutes': 20,
-    'note':
-        'An audiobook minute counts as 65% of a reading minute, because a narrator speaks about '
-        '155 words a minute against the 238 an adult reads.',
-  },
+  'details': {'minutes': 20, 'note': 'An audiobook minute counts as half a reading minute.'},
 };
 
 Map<String, dynamic> _targetsBody() {
@@ -178,8 +174,8 @@ void main() {
     ) async {
       await _open(tester, _server(), 'reading');
 
-      expect(find.text('Recommended: about 19 pages for your 20 minutes'), findsOneWidget);
-      expect(find.textContaining('An audiobook minute counts as 65%'), findsOneWidget);
+      expect(find.text('Recommended: 20 pages for your 20 minutes'), findsOneWidget);
+      expect(find.textContaining('An audiobook minute counts as half'), findsOneWidget);
       expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsOneWidget);
       // The fixture's pages goal is the old 15.
       expect(find.text('Your goal is 15 pages, below the recommendation.'), findsOneWidget);

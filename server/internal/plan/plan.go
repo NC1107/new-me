@@ -134,7 +134,7 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 			fmt.Sprintf("%d %s", left, db.RepsNoun(q.Exercise, left)), frac}, true
 	case db.QuestReading:
 		minutes := readingMinutesLeft(q)
-		return candidate{fmt.Sprintf("Reading: %d more %s. An audiobook counts for about two thirds of its length.", minutes, plural(minutes, "minute", "minutes")),
+		return candidate{fmt.Sprintf("Reading: %d more %s. An audiobook minute counts as half.", minutes, plural(minutes, "minute", "minutes")),
 			fmt.Sprintf("%d minutes of reading", minutes), readingFraction(q)}, true
 	case db.QuestMealsLogged:
 		return candidate{fmt.Sprintf("Meals: log %d more %s.", left, plural(left, "meal", "meals")),

@@ -35,11 +35,11 @@ func TestBoardShowsTodayStreakAndSyncForEachPerson(t *testing.T) {
 		!got.isNull("users.0.syncedAt") || got.num("users.0.streak.current") != 0 {
 		t.Fatalf("Nadia = %s", got.Body)
 	}
-	if got.num("users.1.today.points") != 329 || got.num("users.1.today.percent") != 74 || got.num("users.1.today.goalPercent") != 106 || !got.flag("users.1.today.counted") ||
+	if got.num("users.1.today.points") != 328 || got.num("users.1.today.percent") != 74 || got.num("users.1.today.goalPercent") != 106 || !got.flag("users.1.today.counted") ||
 		got.isNull("users.1.syncedAt") || got.num("users.1.streak.current") != 1 {
 		t.Fatalf("Nick = %s", got.Body)
 	}
-	if got.num("users.1.week.points") != 329 || got.num("users.1.season.points") != 329 {
+	if got.num("users.1.week.points") != 328 || got.num("users.1.season.points") != 328 {
 		t.Fatalf("Nick totals = %s", got.Body)
 	}
 

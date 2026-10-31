@@ -244,11 +244,11 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
             const SizedBox(height: 8),
             Text(
               _altOwn
-                  ? 'Your own figure. ${_value!} minutes of reading is about '
+                  ? 'Your own figure. ${_value!} minutes of reading is '
                         '${pagesForMinutes(_value!)} pages; type that to follow the minutes again.'
-                  : 'About ${pagesForMinutes(_value!)} pages: reading at about $kReadingWpm words a '
-                        'minute, about $kWordsPerPage words a page. It follows the minutes unless '
-                        'you type your own.',
+                  : '${pagesForMinutes(_value!)} pages: a page for each minute, or '
+                        '${_value! * kListeningMinutesPerReadingMinute} minutes of audiobook. It '
+                        'follows the minutes unless you type your own.',
               style: AppText.caption,
             ),
           ],

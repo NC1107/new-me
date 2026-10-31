@@ -50,10 +50,10 @@ func byKey(results []score.QuestResult, key string) (score.QuestResult, bool) {
 	return score.QuestResult{}, false
 }
 
-func TestQuestResultsCreditListeningByWordsHeard(t *testing.T) {
+func TestQuestResultsCreditAnAudiobookMinuteAsHalf(t *testing.T) {
 	in := db.DayInputs{ReadingMinutes: 5, ListeningMinutes: 15, ReadingPages: 3}
 	r, ok := byKey(engine.QuestResults(quests(), in), db.QuestReading)
-	if !ok || r.Actual != (5+9)*15+3*20 || r.Target != 20*15 {
+	if !ok || r.Actual != (5+7)*15+3*20 || r.Target != 20*15 {
 		t.Fatalf("reading = %+v", r)
 	}
 	var q db.DayQuest
@@ -63,7 +63,7 @@ func TestQuestResultsCreditListeningByWordsHeard(t *testing.T) {
 		}
 	}
 	minutes, pages := engine.Actuals(q, in)
-	if minutes != 14 || pages == nil || *pages != 3 {
+	if minutes != 12 || pages == nil || *pages != 3 {
 		t.Fatalf("actuals = %d %v", minutes, pages)
 	}
 }

@@ -24,7 +24,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 	fixtureDay(h, nick)
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("day.basePoints") != 299 || got.num("day.bonusPoints") != 30 || got.num("day.points") != 329 ||
+	if got.num("day.basePoints") != 298 || got.num("day.bonusPoints") != 30 || got.num("day.points") != 328 ||
 		got.num("day.maxBase") != 400 || got.num("day.percent") != 74 || got.num("day.goalPercent") != 106 || !got.flag("day.counted") ||
 		got.num("day.streakLine") != 70 {
 		t.Fatalf("day = %s", got.Body)
@@ -33,7 +33,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 	want := map[string]questView{
 		"steps":        {target: 8000, actual: 5000, points: 100, base: 63},
 		"pushups":      {target: 30, actual: 30, points: 100, base: 100, bonus: 20, done: true},
-		"reading":      {target: 20, actual: 12, points: 100, base: 86},
+		"reading":      {target: 20, actual: 12, points: 100, base: 85},
 		"meals_logged": {target: 2, actual: 2, points: 50, base: 50, bonus: 10, done: true},
 		"protein":      {target: 100, actual: 0, points: 50},
 		"exercise":     {target: 30, points: 100},
@@ -49,7 +49,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 			t.Errorf("%s = %+v, want %+v", key, have[key], w)
 		}
 	}
-	if got.num("quests.2.actualAlt") != 5 || got.num("quests.2.targetAlt") != 19 || got.str("quests.2.unitAlt") != "pages" {
+	if got.num("quests.2.actualAlt") != 5 || got.num("quests.2.targetAlt") != 20 || got.str("quests.2.unitAlt") != "pages" {
 		t.Fatalf("reading detail = %s", got.Body)
 	}
 

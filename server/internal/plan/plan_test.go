@@ -39,7 +39,7 @@ func TestBuildFullDay(t *testing.T) {
 		"done|pushups|Push-ups done by your Strength workout, 42 min",
 		"done|meals_logged|Meals done",
 		"todo|steps|Steps: 3,200 to go. A 30-minute walk around midday covers it.",
-		"todo|reading|Reading: 14 more minutes. An audiobook counts for about two thirds of its length.",
+		"todo|reading|Reading: 14 more minutes. An audiobook minute counts as half.",
 		"habit|habit:3|Vitamins at 18:00",
 		"habit|habit:7|Stretch at 21:00",
 		"habit|habit:9|Water: 3 of 8 so far",

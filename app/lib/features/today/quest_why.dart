@@ -81,7 +81,7 @@ String _recommendedLine(Quest quest, Target target, Units units) {
     'protein' => '$amount of protein a day',
     'produce' => '$amount of fruit and veg a day (${v * kProduceServingGrams} g)',
     'breathing' => '$amount of breathing a day',
-    'reading' => 'about $amount for your ${quest.target.round()} minutes',
+    'reading' => '$amount for your ${quest.target.round()} minutes',
     _ => '$amount a day',
   };
   return 'Recommended: $line';

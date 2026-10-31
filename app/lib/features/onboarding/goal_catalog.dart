@@ -98,7 +98,8 @@ final Map<String, GoalSpec> kGoalSpecs = {
       questKey: 'reading',
       question: 'How long will you read?',
       noResearch: _yourCall,
-      note: 'Audiobooks count for the words you hear, about two thirds of their length, once you link Audiobookshelf in Me.',
+      note:
+          'An audiobook minute counts as half a reading minute once you link Audiobookshelf in Me.',
       options: _plain([10, 20, 30, 45]),
       defaultValue: 20,
       label: _minutes,

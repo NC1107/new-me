@@ -36,7 +36,7 @@ func TestGetMe(t *testing.T) {
 		got.num("questTemplates.7.points") != 50 || got.str("questTemplates.7.title") != "Sleep" {
 		t.Fatalf("templates = %s", got.Body)
 	}
-	if got.num("questTemplates.2.targetAlt") != 19 || got.str("questTemplates.2.unitAlt") != "pages" {
+	if got.num("questTemplates.2.targetAlt") != 20 || got.str("questTemplates.2.unitAlt") != "pages" {
 		t.Fatalf("reading template = %s", got.Body)
 	}
 }

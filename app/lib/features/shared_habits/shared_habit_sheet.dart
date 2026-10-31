@@ -23,6 +23,20 @@ Future<void> showSharedHabitSheet(BuildContext context, {SharedHabit? habit}) =>
 const _kDefaultIcon = 'home';
 const _kEveryNDefault = 3;
 
+/// The household icons come first, since those are what a chore usually needs.
+const _kChoreIcons = [
+  'home',
+  'local_laundry_service',
+  'cleaning_services',
+  'delete',
+  'shopping_cart',
+];
+final _kIconOrder = [
+  ..._kChoreIcons,
+  for (final key in kHabitIcons.keys)
+    if (!_kChoreIcons.contains(key)) key,
+];
+
 /// Name a chore, pick its icon and how often it comes round. For an existing one it also holds
 /// the delete, which asks first because it goes away for both of you.
 class SharedHabitSheet extends ConsumerStatefulWidget {
@@ -192,7 +206,7 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final key in kHabitIcons.keys)
+              for (final key in _kIconOrder)
                 HabitIconChoice(
                   iconKey: key,
                   selected: key == _icon,

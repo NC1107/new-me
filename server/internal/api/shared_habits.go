@@ -61,8 +61,12 @@ func (s *Server) toSharedHabitJSON(h db.SharedHabit, last *db.SharedMark, names 
 		doneByMe = doneToday && last.UserID == c.user.ID
 	}
 	st := score.SharedDue(h.Schedule(), h.StartOn, lastDay, today)
+	days := []int{}
+	if h.Kind == score.SharedWeekdays {
+		days = score.ISOWeekdays(h.Weekdays)
+	}
 	return sharedHabitJSON{ID: h.ID, Name: h.Name, Icon: h.Icon,
-		Schedule: sharedScheduleJSON{Kind: h.Kind, Weekdays: score.ISOWeekdays(h.Weekdays), EveryDays: h.EveryDays},
+		Schedule: sharedScheduleJSON{Kind: h.Kind, Weekdays: days, EveryDays: h.EveryDays},
 		Last:     lastJSON, State: st.State, DueOn: st.DueOn, DaysFromToday: st.Days,
 		DoneToday: doneToday, DoneByMe: doneByMe, Gems: score.SharedHabitGems}
 }

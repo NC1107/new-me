@@ -19,18 +19,17 @@ import '../../widgets/offline_banner.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
-import '../log/log_kind.dart';
-import '../log/log_sheet.dart';
 import '../setup/about_you.dart';
 import '../setup/about_you_page.dart';
 import 'apple_health_page.dart';
+import 'daily_reps_page.dart';
 import 'me_support.dart';
 import 'target_row.dart';
 import 'target_sheet.dart';
 import 'targets_logic.dart';
 
 /// Research-backed targets (docs/design-v8.md): each with its formula, label and sources, and a
-/// way to make it the setting in force from tomorrow.
+/// way to make it the setting in force from today.
 class TargetsPage extends ConsumerStatefulWidget {
   const TargetsPage({super.key});
 
@@ -91,7 +90,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
       case FixAt.health:
         await pushPage(context, const AppleHealthPage());
       case FixAt.pushupMax:
-        await showLogSheet(context, kind: LogKind.pushups, maxTest: true);
+        await pushPage(context, const DailyRepsPage());
     }
     if (mounted) unawaited(ref.read(targetsProvider.notifier).refresh());
   }

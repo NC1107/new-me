@@ -23,6 +23,8 @@ type ActivityLog struct {
 	// Name and Intensity describe an "other" activity and are empty for every other type.
 	Name      string
 	Intensity string
+	// Exercise is the daily-reps exercise of a pushups entry; other types keep the default.
+	Exercise string
 }
 
 // MealLog is one meal entry with its macros in grams.
@@ -43,7 +45,7 @@ type MealLog struct {
 }
 
 const activityColumns = `id, user_id, local_date::text, type, quantity, client_op_id::text,
-	logged_at, updated_at, deleted_at, COALESCE(name, ''), COALESCE(intensity, '')`
+	logged_at, updated_at, deleted_at, COALESCE(name, ''), COALESCE(intensity, ''), exercise`
 
 const mealColumns = `id, user_id, local_date::text, name, kcal, protein_g::float8, carbs_g::float8,
 	fat_g::float8, fiber_g::float8, client_op_id::text, logged_at, updated_at, deleted_at`
@@ -51,7 +53,7 @@ const mealColumns = `id, user_id, local_date::text, name, kcal, protein_g::float
 func scanActivity(row pgx.Row) (ActivityLog, error) {
 	var l ActivityLog
 	err := row.Scan(&l.ID, &l.UserID, &l.LocalDate, &l.Type, &l.Quantity, &l.ClientOpID,
-		&l.LoggedAt, &l.UpdatedAt, &l.DeletedAt, &l.Name, &l.Intensity)
+		&l.LoggedAt, &l.UpdatedAt, &l.DeletedAt, &l.Name, &l.Intensity, &l.Exercise)
 	return l, err
 }
 
@@ -72,6 +74,8 @@ type NewActivityLog struct {
 	// Name and Intensity are set for the "other" type only.
 	Name      string
 	Intensity string
+	// Exercise is the daily-reps exercise of a pushups entry; empty means push-ups.
+	Exercise string
 }
 
 // InsertActivityLog stores an entry exactly once per (user, clientOpId). On a replay it
@@ -79,10 +83,11 @@ type NewActivityLog struct {
 // retry can never undelete.
 func InsertActivityLog(ctx context.Context, q Querier, n NewActivityLog) (log ActivityLog, created bool, err error) {
 	log, err = scanActivity(q.QueryRow(ctx, `
-		INSERT INTO activity_logs (user_id, local_date, type, quantity, client_op_id, name, intensity)
-		VALUES ($1, $2::date, $3, $4, $5::uuid, NULLIF($6, ''), NULLIF($7, ''))
+		INSERT INTO activity_logs (user_id, local_date, type, quantity, client_op_id, name, intensity, exercise)
+		VALUES ($1, $2::date, $3, $4, $5::uuid, NULLIF($6, ''), NULLIF($7, ''), COALESCE(NULLIF($8, ''), $9))
 		ON CONFLICT (user_id, client_op_id) DO NOTHING
-		RETURNING `+activityColumns, n.UserID, n.LocalDate, n.Type, n.Quantity, n.ClientOpID, n.Name, n.Intensity))
+		RETURNING `+activityColumns, n.UserID, n.LocalDate, n.Type, n.Quantity, n.ClientOpID, n.Name, n.Intensity,
+		n.Exercise, DefaultRepsExercise))
 	if err == nil {
 		return log, true, nil
 	}

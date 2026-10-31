@@ -43,7 +43,7 @@ func PushupsByDay(ctx context.Context, q Querier, userID int64, from, to score.D
 	return dailySeries(ctx, q, `
 		SELECT d, sum(n)::float8 FROM (
 			SELECT local_date::text AS d, quantity AS n FROM activity_logs
-			WHERE user_id = $1 AND type = 'pushups' AND deleted_at IS NULL
+			WHERE user_id = $1 AND type = 'pushups' AND exercise = 'push_up' AND deleted_at IS NULL
 			  AND local_date BETWEEN $2::date AND $3::date
 			UNION ALL
 			SELECT s.local_date::text, s.reps FROM exercise_sets s JOIN exercises e ON e.id = s.exercise_id

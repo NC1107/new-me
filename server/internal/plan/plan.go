@@ -33,9 +33,11 @@ const (
 
 // Quest is one quest of the day as the plan reads it.
 type Quest struct {
-	Key       string
-	Target    int
-	Actual    int
+	Key    string
+	Target int
+	Actual int
+	// Exercise is the daily-reps exercise of the pushups quest.
+	Exercise  string
 	TargetAlt *int
 	ActualAlt *int
 	Done      bool
@@ -124,8 +126,12 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 		text := fmt.Sprintf("Steps: %s to go. %s", Thousands(left), walkAdvice(walk, nowMinute))
 		return candidate{text, Thousands(left) + " more steps", frac}, true
 	case db.QuestPushups:
-		return candidate{fmt.Sprintf("Push-ups: %d more %s finishes it.", left, plural(left, "rep", "reps")),
-			fmt.Sprintf("%d push-ups", left), frac}, true
+		title := db.QuestTitles[db.QuestPushups]
+		if e, ok := db.RepsExerciseByKey(q.Exercise); ok {
+			title = e.Name
+		}
+		return candidate{fmt.Sprintf("%s: %d more %s finishes it.", title, left, plural(left, "rep", "reps")),
+			fmt.Sprintf("%d %s", left, db.RepsNoun(q.Exercise, left)), frac}, true
 	case db.QuestReading:
 		minutes := readingMinutesLeft(q)
 		return candidate{fmt.Sprintf("Reading: %d more %s. An audiobook counts.", minutes, plural(minutes, "minute", "minutes")),

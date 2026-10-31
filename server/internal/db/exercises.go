@@ -35,10 +35,6 @@ var (
 	Equipment = []string{"pullup_bar", "dumbbells", "barbell", "bench", "bands", "dip_bars", "hangboard", "low_bar", "gym"}
 )
 
-// PushupKeys are the catalog exercises whose reps count toward the push-ups quest, so logging a
-// set of incline push-ups moves the same quest as the original push-up log.
-var PushupKeys = []string{"incline_push_up", "push_up", "decline_push_up"}
-
 // Exercise is a catalog exercise (UserID nil) or one person's custom exercise.
 type Exercise struct {
 	ID               int64
@@ -282,17 +278,6 @@ func ListExerciseSets(ctx context.Context, q Querier, userID int64, from, to sco
 		out = append(out, s)
 	}
 	return out, rows.Err()
-}
-
-// PushupSetReps is the reps of the day's live sets of the push-up exercises, which count toward
-// the push-ups quest alongside push-up activity logs.
-func PushupSetReps(ctx context.Context, q Querier, userID int64, date score.Date) (int, error) {
-	var reps int
-	err := q.QueryRow(ctx, `SELECT COALESCE(sum(s.reps), 0)::int
-		FROM exercise_sets s JOIN exercises e ON e.id = s.exercise_id
-		WHERE s.user_id = $1 AND s.local_date = $2::date AND s.deleted_at IS NULL AND e.key = ANY($3)`,
-		userID, date, PushupKeys).Scan(&reps)
-	return reps, err
 }
 
 // MaxTest is one recorded max test.

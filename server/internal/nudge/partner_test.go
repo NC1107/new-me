@@ -118,7 +118,7 @@ func TestPartnerWordsFollowTheRules(t *testing.T) {
 		for _, freezes := range []int{1, 2, 3} {
 			all = append(all, CoverWords(name, freezes))
 		}
-		for _, q := range []HardQuest{{"steps", 10432}, {"pushups", 30}, {"reading", 45}, {"exercise", 50}, {"other", 1}} {
+		for _, q := range []HardQuest{{Key: "steps", Actual: 10432}, {Key: "pushups", Actual: 30}, {Key: "pushups", Actual: 30, Noun: "squats"}, {Key: "reading", Actual: 45}, {Key: "exercise", Actual: 50}, {Key: "other", Actual: 1}} {
 			all = append(all, CheerWords(name, q))
 		}
 	}

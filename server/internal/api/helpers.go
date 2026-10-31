@@ -212,3 +212,13 @@ func questTitle(key string) string {
 	}
 	return db.QuestTitles[key]
 }
+
+// questTitleFor is questTitle with the daily-reps exercise, which retitles the pushups quest.
+func questTitleFor(key, exercise string) string {
+	if key == db.QuestPushups {
+		if e, ok := db.RepsExerciseByKey(exercise); ok {
+			return e.Name
+		}
+	}
+	return questTitle(key)
+}

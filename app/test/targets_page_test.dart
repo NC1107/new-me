@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/log/log_kind.dart';
 import 'package:newme/features/log/log_sheet.dart';
+import 'package:newme/features/me/daily_reps_page.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/me/target_row.dart';
 import 'package:newme/features/me/profile_page.dart';
@@ -213,7 +214,7 @@ void main() {
       expect(find.text('Add these to work out your targets'), findsOneWidget);
       expect(find.text('Height'), findsOneWidget);
       expect(find.text('Sex'), findsOneWidget);
-      expect(find.text('Push-up max test'), findsOneWidget);
+      expect(find.text('Daily reps max test'), findsOneWidget);
       // The rows explain themselves instead of showing a number.
       expect(find.text('Not yet'), findsWidgets);
       await app.tap(_row('Resting energy'));
@@ -226,12 +227,24 @@ void main() {
       expect(find.text('How tall are you?'), findsOneWidget);
     });
 
-    testWidgets('the push-up max link opens the push-up sheet on Max test', (tester) async {
-      final app = await _open(tester, _server(targets: 'targets_missing'));
+    testWidgets('the max link opens the daily reps setup', (tester) async {
+      final server = _server(targets: 'targets_missing')
+        ..on(
+          'GET /api/daily-reps',
+          const StubResponse(200, {
+            'exercise': 'push_up',
+            'target': 30,
+            'enabled': true,
+            'dayExercise': 'push_up',
+            'sets': 3,
+            'exercises': <Object>[],
+            'sources': <Object>[],
+          }),
+        );
+      final app = await _open(tester, server);
 
-      await app.tap(find.bySemanticsLabel(RegExp('^Push-up max test\\.')));
-      expect(find.text('Log push-ups'), findsOneWidget);
-      expect(find.text('SAVE MAX TEST'), findsOneWidget);
+      await app.tap(find.bySemanticsLabel(RegExp('^Daily reps max test\\.')));
+      expect(find.byType(DailyRepsPage), findsOneWidget);
     });
 
     testWidgets('nothing to use hides Use all', (tester) async {

@@ -80,7 +80,7 @@ class _TargetSheet extends StatelessWidget {
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(targetName(t.key), style: AppText.title),
+              Text(nameOf(t), style: AppText.title),
               LabelChip(label: t.label),
             ],
           ),

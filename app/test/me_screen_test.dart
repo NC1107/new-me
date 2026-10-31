@@ -213,15 +213,16 @@ void main() {
       expect(adapter.to('PATCH /api/me'), isEmpty);
 
       await app.tap(find.byType(Switch).at(4));
-      await app.tap(find.text('Push-ups'));
-      await app.tap(find.text('50 push-ups'));
+      await app.tap(find.text('Steps'));
+      await tester.enterText(find.byType(TextField), '12000');
+      await tester.pumpAndSettle();
       await app.tap(find.text('DONE'));
-      expect(find.text('50 push-ups'), findsOneWidget);
+      expect(find.text('12,000 steps'), findsOneWidget);
 
       await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {
         'questTemplates': [
-          {'key': 'pushups', 'target': 50},
+          {'key': 'steps', 'target': 12000},
           {'key': 'exercise', 'enabled': true},
         ],
       });

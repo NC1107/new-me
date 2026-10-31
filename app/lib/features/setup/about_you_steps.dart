@@ -574,7 +574,7 @@ class _ReviewStep extends ConsumerWidget {
         const SizedBox(height: 12),
         Text(
           stillNeeded.isEmpty
-              ? 'Changes start tomorrow. This is general guidance, not medical advice.'
+              ? 'Changes apply today. This is general guidance, not medical advice.'
               : 'Still needed: ${stillNeeded.join(', ')}. This is general guidance, not medical '
                     'advice.',
           style: AppText.caption,

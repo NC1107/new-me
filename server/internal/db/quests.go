@@ -82,6 +82,9 @@ type QuestTemplate struct {
 	Points    int
 	Enabled   bool
 	Position  int
+	// Exercise is the daily-reps exercise of the pushups quest; other quests leave it at the
+	// default and ignore it.
+	Exercise string
 }
 
 // DayQuest is one quest as snapshotted for a local day.
@@ -93,6 +96,7 @@ type DayQuest struct {
 	UnitAlt   *string
 	Points    int
 	Position  int
+	Exercise  string
 }
 
 func intPtr(n int) *int { return &n }
@@ -137,7 +141,7 @@ func SeedDefaultTemplates(ctx context.Context, q Querier, userID int64) error {
 // GetQuestTemplates lists a user's templates in display order.
 func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTemplate, error) {
 	rows, err := q.Query(ctx, `
-		SELECT key, target, unit, target_alt, unit_alt, points, enabled, position
+		SELECT key, target, unit, target_alt, unit_alt, points, enabled, position, exercise
 		FROM quest_templates WHERE user_id = $1 ORDER BY position, id`, userID)
 	if err != nil {
 		return nil, err
@@ -147,7 +151,7 @@ func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTem
 	for rows.Next() {
 		var t QuestTemplate
 		if err := rows.Scan(&t.Key, &t.Target, &t.Unit, &t.TargetAlt, &t.UnitAlt, &t.Points,
-			&t.Enabled, &t.Position); err != nil {
+			&t.Enabled, &t.Position, &t.Exercise); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -155,15 +159,17 @@ func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTem
 	return out, rows.Err()
 }
 
-// UpsertQuestTemplate changes the editable parts of a template (enabled and the targets),
-// creating it if missing. Points and units never change after creation.
+// UpsertQuestTemplate changes the editable parts of a template (enabled, the targets and the
+// daily-reps exercise), creating it if missing. Points and units never change after creation.
 func UpsertQuestTemplate(ctx context.Context, q Querier, userID int64, t QuestTemplate) error {
 	_, err := q.Exec(ctx, `
-		INSERT INTO quest_templates (user_id, key, target, unit, target_alt, unit_alt, points, enabled, position)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO quest_templates (user_id, key, target, unit, target_alt, unit_alt, points, enabled, position, exercise)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE(NULLIF($10, ''), $11))
 		ON CONFLICT (user_id, key) DO UPDATE
-		SET target = EXCLUDED.target, target_alt = EXCLUDED.target_alt, enabled = EXCLUDED.enabled`,
-		userID, t.Key, t.Target, t.Unit, t.TargetAlt, t.UnitAlt, t.Points, t.Enabled, t.Position)
+		SET target = EXCLUDED.target, target_alt = EXCLUDED.target_alt, enabled = EXCLUDED.enabled,
+		    exercise = EXCLUDED.exercise`,
+		userID, t.Key, t.Target, t.Unit, t.TargetAlt, t.UnitAlt, t.Points, t.Enabled, t.Position,
+		t.Exercise, DefaultRepsExercise)
 	return err
 }
 
@@ -174,7 +180,7 @@ func UpsertQuestTemplate(ctx context.Context, q Querier, userID int64, t QuestTe
 // per-kilogram default, 1.6 g/kg of the latest weight on or before the date.
 func EnsureSnapshot(ctx context.Context, q Querier, userID int64, date score.Date) error {
 	_, err := q.Exec(ctx, `
-		INSERT INTO day_quests (user_id, local_date, key, target, unit, target_alt, unit_alt, points, position)
+		INSERT INTO day_quests (user_id, local_date, key, target, unit, target_alt, unit_alt, points, position, exercise)
 		SELECT t.user_id, $2::date, t.key,
 		       CASE WHEN t.key = 'protein' THEN COALESCE(u.protein_target,
 		           CASE WHEN u.protein_auto THEN (
@@ -182,7 +188,7 @@ func EnsureSnapshot(ctx context.Context, q Querier, userID int64, date score.Dat
 		               WHERE h.user_id = t.user_id AND h.metric = 'weight_kg' AND h.local_date <= $2::date
 		               ORDER BY h.local_date DESC LIMIT 1) END,
 		           t.target) ELSE t.target END,
-		       t.unit, t.target_alt, t.unit_alt, t.points, t.position
+		       t.unit, t.target_alt, t.unit_alt, t.points, t.position, t.exercise
 		FROM quest_templates t JOIN users u ON u.id = t.user_id
 		WHERE t.user_id = $1 AND t.enabled
 		  AND NOT EXISTS (SELECT 1 FROM day_quests d WHERE d.user_id = $1 AND d.local_date = $2::date)
@@ -205,7 +211,7 @@ func ResetDaySnapshot(ctx context.Context, q Querier, userID int64, date score.D
 // GetDayQuests returns the date's snapshot in display order.
 func GetDayQuests(ctx context.Context, q Querier, userID int64, date score.Date) ([]DayQuest, error) {
 	rows, err := q.Query(ctx, `
-		SELECT key, target, unit, target_alt, unit_alt, points, position
+		SELECT key, target, unit, target_alt, unit_alt, points, position, exercise
 		FROM day_quests WHERE user_id = $1 AND local_date = $2::date ORDER BY position, id`, userID, date)
 	if err != nil {
 		return nil, err
@@ -214,7 +220,7 @@ func GetDayQuests(ctx context.Context, q Querier, userID int64, date score.Date)
 	var out []DayQuest
 	for rows.Next() {
 		var d DayQuest
-		if err := rows.Scan(&d.Key, &d.Target, &d.Unit, &d.TargetAlt, &d.UnitAlt, &d.Points, &d.Position); err != nil {
+		if err := rows.Scan(&d.Key, &d.Target, &d.Unit, &d.TargetAlt, &d.UnitAlt, &d.Points, &d.Position, &d.Exercise); err != nil {
 			return nil, err
 		}
 		out = append(out, d)

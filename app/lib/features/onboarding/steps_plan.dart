@@ -15,6 +15,11 @@ import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_icon_button.dart';
 import '../../widgets/skeletons.dart';
+import '../../api/daily_reps_models.dart';
+import '../../util/reps_exercises.dart';
+import '../../widgets/page_scaffold.dart';
+import '../log/log_chip.dart';
+import '../me/daily_reps_page.dart';
 import 'goal_catalog.dart';
 import 'onboarding_controller.dart';
 import 'step_layout.dart';
@@ -199,6 +204,23 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
     });
   }
 
+  Future<void> _chooseReps(int i) async {
+    final saved = await pushPage<DailyReps>(context, const DailyRepsPage());
+    if (saved == null || !mounted) return;
+    final exercise = saved.exercise;
+    setState(
+      () => _goals![i] = PlanGoal(
+        key: 'pushups',
+        name: repsTitle(exercise),
+        value: saved.target,
+        step: saved.sets,
+        min: saved.sets,
+        why: '${saved.sets} sets sized from your own max.',
+        label: (v) => '$v ${repsNoun(exercise, v)}',
+      ),
+    );
+  }
+
   void _change(int i, int by) {
     final g = _goals![i];
     final next = (g.value + by * g.step).clamp(g.min, 100000);
@@ -249,7 +271,12 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
         else ...[
           for (final (i, g) in goals.indexed) ...[
             if (i > 0) const SizedBox(height: 10),
-            _GoalRow(goal: g, onLess: () => _change(i, -1), onMore: () => _change(i, 1)),
+            _GoalRow(
+              goal: g,
+              onLess: () => _change(i, -1),
+              onMore: () => _change(i, 1),
+              onChoose: g.key == 'pushups' ? () => _chooseReps(i) : null,
+            ),
           ],
           if (s.wantsFood && !goals.any((g) => g.key == 'calories')) ...[
             const SizedBox(height: 10),
@@ -272,7 +299,10 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
 }
 
 class _GoalRow extends StatelessWidget {
-  const _GoalRow({required this.goal, required this.onLess, required this.onMore});
+  const _GoalRow({required this.goal, required this.onLess, required this.onMore, this.onChoose});
+
+  /// Opens the daily-reps setup, for the push-ups goal only.
+  final VoidCallback? onChoose;
 
   final PlanGoal goal;
   final VoidCallback onLess;
@@ -293,6 +323,10 @@ class _GoalRow extends StatelessWidget {
               Text(goal.why, style: AppText.caption.copyWith(color: kInkSecondary)),
               for (final line in goal.extra)
                 Text(line, style: AppText.caption.copyWith(color: kInkSecondary)),
+              if (onChoose != null) ...[
+                const SizedBox(height: 6),
+                LogChip(label: 'Pick an exercise and test your max', onTap: onChoose!),
+              ],
             ],
           ),
         ),

@@ -53,6 +53,9 @@ type createLogRequest struct {
 	Carbs     float64 `json:"carbs"`
 	Fat       float64 `json:"fat"`
 	Fiber     float64 `json:"fiber"`
+	// Exercise is for type pushups: the daily-reps exercise the set was of. Left out, it is the
+	// exercise the day's quest counts.
+	Exercise string `json:"exercise"`
 }
 
 // logJSON is the tagged union of an activity or a meal entry; fields of the other kind are
@@ -67,6 +70,7 @@ type logJSON struct {
 	Quantity  int    `json:"quantity,omitempty"`
 	Unit      string `json:"unit,omitempty"`
 	Intensity string `json:"intensity,omitempty"`
+	Exercise  string `json:"exercise,omitempty"`
 
 	Name    string   `json:"name,omitempty"`
 	Kcal    *int     `json:"kcal,omitempty"`
@@ -127,8 +131,12 @@ func activityCap(stored string) int {
 
 func toActivityJSON(l db.ActivityLog) logJSON {
 	wire := wireActivity[l.Type]
-	return logJSON{ID: l.ID, Kind: db.KindActivity, LocalDate: l.LocalDate, LoggedAt: wireTime(l.LoggedAt),
+	out := logJSON{ID: l.ID, Kind: db.KindActivity, LocalDate: l.LocalDate, LoggedAt: wireTime(l.LoggedAt),
 		Type: wire[0], Quantity: l.Quantity, Unit: wire[1], Name: l.Name, Intensity: l.Intensity}
+	if l.Type == db.ActivityPushups {
+		out.Exercise = l.Exercise
+	}
+	return out
 }
 
 func toMealJSON(l db.MealLog) logJSON {
@@ -165,6 +173,12 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 			}
 		} else if req.Intensity != "" || req.Name != "" || req.Minutes != 0 {
 			return v, invalid("name, minutes and intensity are only for type other")
+		}
+		if req.Exercise != "" {
+			if _, known := db.RepsExerciseByKey(req.Exercise); !known || stored != db.ActivityPushups {
+				return v, invalid("exercise is only for type pushups and must be a daily-reps exercise")
+			}
+			activity.Exercise = req.Exercise
 		}
 		if activity.Quantity < 1 || activity.Quantity > activityCap(stored) {
 			return v, invalid("quantity is out of range for " + req.Type)
@@ -275,6 +289,11 @@ func (s *Server) handleCreateLog(w http.ResponseWriter, r *http.Request) {
 		if v.activity != nil {
 			n := *v.activity
 			n.UserID, n.LocalDate = c.user.ID, date
+			if n.Type == db.ActivityPushups && n.Exercise == "" {
+				if n.Exercise, err = db.RepsExerciseOf(ctx, tx, c.user.ID, date); err != nil {
+					return err
+				}
+			}
 			var l db.ActivityLog
 			if l, created, err = db.InsertActivityLog(ctx, tx, n); err != nil {
 				return err

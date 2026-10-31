@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"regexp"
 	"slices"
@@ -26,11 +27,13 @@ const (
 	maxMinutes         = 1440
 	maxWaterML         = 5000
 	maxProduceServings = 30
-	maxBreathMin       = 120
-	maxKcal            = 10000
-	maxMacroGrams      = 5000
-	maxMealName        = 80
-	maxNote            = 200
+	// maxMealProduceG mirrors the table checks on a meal's produce grams.
+	maxMealProduceG = 10000
+	maxBreathMin    = 120
+	maxKcal         = 10000
+	maxMacroGrams   = 5000
+	maxMealName     = 80
+	maxNote         = 200
 )
 
 var uuidShape = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -53,6 +56,11 @@ type createLogRequest struct {
 	Carbs     float64 `json:"carbs"`
 	Fat       float64 `json:"fat"`
 	Fiber     float64 `json:"fiber"`
+	// ProduceG, JuiceG and PulseG are, for a meal, the grams in it of fruit and vegetables, of
+	// juice and of pulses, worked out where the meal was built.
+	ProduceG float64 `json:"produceG"`
+	JuiceG   float64 `json:"juiceG"`
+	PulseG   float64 `json:"pulseG"`
 	// Exercise is for type pushups: the daily-reps exercise the set was of. Left out, it is the
 	// exercise the day's quest counts.
 	Exercise string `json:"exercise"`
@@ -78,6 +86,10 @@ type logJSON struct {
 	Carbs   *float64 `json:"carbs,omitempty"`
 	Fat     *float64 `json:"fat,omitempty"`
 	Fiber   *float64 `json:"fiber,omitempty"`
+	// ProduceG, JuiceG and PulseG are left out of a meal with no produce in it.
+	ProduceG *float64 `json:"produceG,omitempty"`
+	JuiceG   *float64 `json:"juiceG,omitempty"`
+	PulseG   *float64 `json:"pulseG,omitempty"`
 }
 
 // wireActivity maps the stored activity types onto the wire's type and unit.
@@ -140,8 +152,15 @@ func toActivityJSON(l db.ActivityLog) logJSON {
 }
 
 func toMealJSON(l db.MealLog) logJSON {
+	positive := func(g float64) *float64 {
+		if g <= 0 {
+			return nil
+		}
+		return &g
+	}
 	return logJSON{ID: l.ID, Kind: db.KindMeal, LocalDate: l.LocalDate, LoggedAt: wireTime(l.LoggedAt),
-		Name: l.Name, Kcal: &l.Kcal, Protein: &l.ProteinG, Carbs: &l.CarbsG, Fat: &l.FatG, Fiber: &l.FiberG}
+		Name: l.Name, Kcal: &l.Kcal, Protein: &l.ProteinG, Carbs: &l.CarbsG, Fat: &l.FatG, Fiber: &l.FiberG,
+		ProduceG: positive(l.ProduceG), JuiceG: positive(l.JuiceG), PulseG: positive(l.PulseG)}
 }
 
 // validated is a create request that passed every field check.
@@ -195,8 +214,14 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 		if herr := validMacros(req.Protein, req.Carbs, req.Fat, req.Fiber); herr != nil {
 			return v, herr
 		}
+		for _, g := range []float64{req.ProduceG, req.JuiceG, req.PulseG} {
+			if math.IsNaN(g) || g < 0 || g > maxMealProduceG {
+				return v, invalid("produceG, juiceG and pulseG must be between 0 and 10000 grams")
+			}
+		}
 		v.meal = &db.NewMealLog{Name: name, Kcal: req.Kcal, ProteinG: req.Protein, CarbsG: req.Carbs,
-			FatG: req.Fat, FiberG: req.Fiber, ClientOpID: v.opID}
+			FatG: req.Fat, FiberG: req.Fiber, ClientOpID: v.opID,
+			ProduceG: roundTenth(req.ProduceG), JuiceG: roundTenth(req.JuiceG), PulseG: roundTenth(req.PulseG)}
 	default:
 		return v, invalid("kind must be activity or meal")
 	}
@@ -528,12 +553,15 @@ func (s *Server) handlePatchLog(w http.ResponseWriter, r *http.Request) {
 }
 
 type recentMealJSON struct {
-	Name    string  `json:"name"`
-	Kcal    int     `json:"kcal"`
-	Protein float64 `json:"protein"`
-	Carbs   float64 `json:"carbs"`
-	Fat     float64 `json:"fat"`
-	Fiber   float64 `json:"fiber"`
+	Name     string  `json:"name"`
+	Kcal     int     `json:"kcal"`
+	Protein  float64 `json:"protein"`
+	Carbs    float64 `json:"carbs"`
+	Fat      float64 `json:"fat"`
+	Fiber    float64 `json:"fiber"`
+	ProduceG float64 `json:"produceG"`
+	JuiceG   float64 `json:"juiceG"`
+	PulseG   float64 `json:"pulseG"`
 }
 
 const (
@@ -561,7 +589,7 @@ func (s *Server) handleRecentMeals(w http.ResponseWriter, r *http.Request) {
 	out := make([]recentMealJSON, 0, len(meals))
 	for _, m := range meals {
 		out = append(out, recentMealJSON{Name: m.Name, Kcal: m.Kcal, Protein: m.ProteinG, Carbs: m.CarbsG,
-			Fat: m.FatG, Fiber: m.FiberG})
+			Fat: m.FatG, Fiber: m.FiberG, ProduceG: m.ProduceG, JuiceG: m.JuiceG, PulseG: m.PulseG})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"meals": out})
 }

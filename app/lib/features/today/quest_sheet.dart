@@ -24,17 +24,9 @@ import '../../widgets/thick_progress_bar.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../me/goal_picker_page.dart';
-import '../me/targets_logic.dart';
 import '../../widgets/page_scaffold.dart';
 import 'day_detail_sheet.dart';
-
-/// The target in `GET /api/targets` that explains a quest's number, or null where the number is
-/// the person's own pick and no published research sets it.
-String? targetKeyForQuest(String questKey) => switch (questKey) {
-  'steps' || 'protein' || 'sleep' || 'water' || 'produce' || 'breathing' || 'pushups' => questKey,
-  'exercise' => 'activity',
-  _ => null,
-};
+import 'quest_why.dart';
 
 /// Where a mixed quest's progress comes from when it was not logged in New Me.
 const _otherSource = {
@@ -59,13 +51,16 @@ String questSourceLine(String key) => switch (key) {
   'yoga' => 'Yoga you log, or a yoga workout from Apple Health',
   'meals_logged' => 'Counted from the meals you log',
   'protein' => 'Added up from the meals you log',
-  'produce' => 'Servings you log',
+  'produce' => 'Meals, and servings you log',
   _ => 'Counted from what you log',
 };
 
 /// Whether a logged entry feeds the quest, so the sheet lists only that quest's entries.
 bool entryFeedsQuest(String questKey, LogEntry entry) => switch (entry) {
-  MealLog() => questKey == 'meals_logged' || questKey == 'protein',
+  MealLog(:final produce) =>
+    questKey == 'meals_logged' ||
+        questKey == 'protein' ||
+        (questKey == 'produce' && !produce.isEmpty),
   ActivityLog(:final type) => switch (questKey) {
     'exercise' => type == 'other',
     _ => type == questKey,
@@ -262,7 +257,7 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
         style: AppText.body.copyWith(color: kInkSecondary),
       );
     }
-    return EntryList(
+    final list = EntryList(
       date: date,
       shrinkWrap: true,
       matches: (e) => entryFeedsQuest(quest.key, e),
@@ -270,6 +265,18 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       emptyText: quest.actual > 0 && _otherSource[quest.key] != null
           ? 'Nothing logged here yet. What counts so far came from ${_otherSource[quest.key]}.'
           : 'Nothing logged for this yet.',
+    );
+    final split = quest.key == 'produce' ? produceSplitLine(quest) : null;
+    if (split == null) return list;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(split, style: AppText.label.copyWith(color: kInkSecondary)),
+        const SizedBox(height: 4),
+        const Text(kProduceMealsNote, style: AppText.caption),
+        const SizedBox(height: 8),
+        list,
+      ],
     );
   }
 
@@ -284,45 +291,14 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
     return QuestWeek(days: days, questKey: quest.key);
   }
 
-  /// The formula's number is a suggestion; a goal set to something else is said to be the
-  /// person's own, so the sentence above never reads as the reason for a different number.
-  bool _differs(Quest quest, Target target) =>
-      target.value != null && target.unit == quest.unit && target.value != quest.target.round();
-
-  String _goalText(Quest quest, Target target) =>
-      formatTargetValue(quest.target.round(), target.unit, units: ref.watch(unitsProvider));
-
   List<Widget> _why(Quest quest) {
-    final key = targetKeyForQuest(quest.key);
-    final report = ref.watch(targetsProvider).value?.data;
-    final target = key == null ? null : report?.target(key);
-    if (key != null && (target == null || target.formula.isEmpty)) return const [];
+    final why = questWhy(quest, ref.watch(targetsProvider).value?.data, ref.watch(unitsProvider));
+    if (why == null) return const [];
     return [
       const SizedBox(height: 24),
       _Section(
         title: 'Why this goal',
-        child: key == null
-            ? Text(
-                'No published research sets this number. It is the goal you picked.',
-                style: AppText.body.copyWith(color: kInkSecondary),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(target!.formula, style: AppText.body),
-                  if (_differs(quest, target)) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Your goal is ${_goalText(quest, target)}, which is your own pick.',
-                      style: AppText.label.copyWith(color: kInkSecondary),
-                    ),
-                  ],
-                  if (target.sources.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(report!.citation(target.sources.first), style: AppText.caption),
-                  ],
-                ],
-              ),
+        child: QuestWhySection(why: why),
       ),
     ];
   }

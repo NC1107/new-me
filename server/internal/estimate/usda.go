@@ -308,6 +308,7 @@ func (f usdaFood) toFood() (Food, bool) {
 		Per100g: &per100, Portions: f.portions(), UnspecifiedGrams: f.unspecifiedGrams(),
 		Category: f.category(),
 	}
+	food.Produce = usdaProduceKind(f.DataType, food.Category, f.Description)
 	switch strings.ToLower(f.ServingUnit) {
 	case "g", "grm":
 		food.ServingGrams = f.ServingSize

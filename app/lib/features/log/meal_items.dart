@@ -66,6 +66,10 @@ String joinedMealName(List<MealItem> items) {
   );
 }
 
+/// The produce in all the items, for the one meal they are logged as.
+MealProduce mealProduce(List<MealItem> items) =>
+    items.fold(MealProduce.none, (sum, i) => sum + i.produce);
+
 String _g(num v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
 
 /// The itemized result of "Describe it" or the food search: one editable row per food, the

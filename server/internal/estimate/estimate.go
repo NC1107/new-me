@@ -47,6 +47,11 @@ type Estimate struct {
 	Fiber      float64 `json:"fiber"`
 	Confidence string  `json:"confidence"`
 	Notes      string  `json:"notes"`
+	// ProduceKind and ProduceG are Claude's estimate of the fruit, vegetable, juice or pulse in
+	// the amount and its grams, asked for on a single food only; they are not part of the wire
+	// form of a one-meal estimate.
+	ProduceKind string  `json:"-"`
+	ProduceG    float64 `json:"-"`
 }
 
 var (
@@ -118,14 +123,16 @@ func ValidateImage(mediaType, b64 string) (string, error) {
 // answer unusable; the other numbers default to zero and the confidence to low.
 func Parse(raw json.RawMessage) (Estimate, error) {
 	var in struct {
-		Name       string   `json:"name"`
-		Kcal       *float64 `json:"kcal"`
-		Protein    *float64 `json:"protein"`
-		Carbs      *float64 `json:"carbs"`
-		Fat        *float64 `json:"fat"`
-		Fiber      *float64 `json:"fiber"`
-		Confidence string   `json:"confidence"`
-		Notes      string   `json:"notes"`
+		Name        string   `json:"name"`
+		Kcal        *float64 `json:"kcal"`
+		Protein     *float64 `json:"protein"`
+		Carbs       *float64 `json:"carbs"`
+		Fat         *float64 `json:"fat"`
+		Fiber       *float64 `json:"fiber"`
+		Confidence  string   `json:"confidence"`
+		Notes       string   `json:"notes"`
+		ProduceKind string   `json:"produceKind"`
+		ProduceG    *float64 `json:"produceG"`
 	}
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return Estimate{}, fmt.Errorf("%w: %v", ErrUnusable, err)
@@ -145,6 +152,9 @@ func Parse(raw json.RawMessage) (Estimate, error) {
 	}
 	if out.Name == "" {
 		out.Name = "Meal"
+	}
+	if kind := strings.ToLower(strings.TrimSpace(in.ProduceKind)); kind != "" && kind != "none" && ValidProduceKind(kind) {
+		out.ProduceKind, out.ProduceG = kind, grams(in.ProduceG)
 	}
 	switch out.Confidence {
 	case ConfidenceLow, ConfidenceMedium, ConfidenceHigh:
@@ -187,10 +197,14 @@ type Estimator struct {
 }
 
 func (e *Estimator) run(ctx context.Context, system string, user []anthropic.Block) (Estimate, error) {
+	return e.runWith(ctx, system, user, schema())
+}
+
+func (e *Estimator) runWith(ctx context.Context, system string, user []anthropic.Block, schema map[string]any) (Estimate, error) {
 	raw, err := e.Client.ToolInput(ctx, anthropic.Request{
 		System: system, User: user, MaxTokens: 600,
 		Tool: &anthropic.Tool{
-			Name: "report_meal_estimate", Description: "Report the estimated nutrition of the meal.", Schema: schema()},
+			Name: "report_meal_estimate", Description: "Report the estimated nutrition of the meal.", Schema: schema},
 	})
 	if err != nil {
 		return Estimate{}, err

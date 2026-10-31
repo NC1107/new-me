@@ -9,6 +9,7 @@ import 'package:newme/features/today/quest_sheet.dart';
 import 'package:newme/state/me.dart';
 import 'package:newme/state/today.dart';
 import 'package:newme/theme/accent.dart';
+import 'package:newme/features/today/quest_why.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
 import 'package:newme/widgets/quest_card.dart';
@@ -122,7 +123,7 @@ void main() {
 
     test('only quests with published research name a target', () {
       expect(targetKeyForQuest('steps'), 'steps');
-      expect(targetKeyForQuest('exercise'), 'activity');
+      expect(targetKeyForQuest('exercise'), 'exercise');
       expect(targetKeyForQuest('reading'), isNull);
     });
   });
@@ -137,7 +138,8 @@ void main() {
       expect(find.text('+100 points, 25% of today'), findsOneWidget);
       expect(find.textContaining('Nothing to log here'), findsOneWidget);
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);
-      expect(find.textContaining('7,000 steps a day'), findsOneWidget);
+      expect(find.text('Recommended: 7,000 steps a day'), findsOneWidget);
+      expect(find.text('Source: Ding D et al., Lancet Public Health 2025;10:e668'), findsOneWidget);
       expect(find.text('Log water'), findsNothing);
     });
 
@@ -157,10 +159,7 @@ void main() {
       expect(find.text('Water'), findsNothing);
       expect(_chunky('Log a meal'), findsOneWidget);
       expect(_chunky('Change goal'), findsOneWidget);
-      expect(
-        find.text('No published research sets this number. It is the goal you picked.'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('No published research sets a number for this'), findsOneWidget);
       expect(app.adapter.to('GET /api/quests/meals_logged/history'), isNotEmpty);
     });
 

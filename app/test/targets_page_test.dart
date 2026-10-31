@@ -165,7 +165,7 @@ void main() {
       final app = await _open(tester, _server());
 
       await app.tap(_row('Water'));
-      expect(find.textContaining('adequate intake of drinks for men'), findsOneWidget);
+      expect(find.textContaining('enough drinks a day for men'), findsOneWidget);
       expect(
         find.text('2.0 L: EFSA: 2.5 L of total water for men, the drinks part'),
         findsOneWidget,

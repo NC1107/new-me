@@ -27,22 +27,25 @@ type Food struct {
 	Carbs        float64
 	Fat          float64
 	Fiber        float64
-	Source       string
-	SourceID     string
-	Servings     []FoodServing
-	CreatedBy    *int64
-	UseCount     int
-	LastUsedAt   *time.Time
+	// ProduceKind is fruit, vegetable, juice or pulse when the database that supplied the food
+	// said so, empty otherwise.
+	ProduceKind string
+	Source      string
+	SourceID    string
+	Servings    []FoodServing
+	CreatedBy   *int64
+	UseCount    int
+	LastUsedAt  *time.Time
 }
 
 const foodColumns = `id, name, brand, serving_text, serving_grams::float8, kcal, protein_g::float8, carbs_g::float8,
-	fat_g::float8, fiber_g::float8, source, source_id, alt_servings, created_by, use_count, last_used_at`
+	fat_g::float8, fiber_g::float8, produce_kind, source, source_id, alt_servings, created_by, use_count, last_used_at`
 
 func scanFood(row pgx.Row) (Food, error) {
 	var f Food
 	var alts []byte
 	err := row.Scan(&f.ID, &f.Name, &f.Brand, &f.ServingText, &f.ServingGrams, &f.Kcal, &f.Protein, &f.Carbs,
-		&f.Fat, &f.Fiber, &f.Source, &f.SourceID, &alts, &f.CreatedBy, &f.UseCount, &f.LastUsedAt)
+		&f.Fat, &f.Fiber, &f.ProduceKind, &f.Source, &f.SourceID, &alts, &f.CreatedBy, &f.UseCount, &f.LastUsedAt)
 	if err != nil {
 		return f, err
 	}
@@ -98,10 +101,10 @@ func InsertFood(ctx context.Context, q Querier, f Food, createdBy int64) (Food, 
 		return f, err
 	}
 	return scanFood(q.QueryRow(ctx, `INSERT INTO foods (name, brand, serving_text, serving_grams, kcal, protein_g, carbs_g,
-		fat_g, fiber_g, source, source_id, alt_servings, created_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING `+foodColumns,
+		fat_g, fiber_g, source, source_id, alt_servings, created_by, produce_kind)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING `+foodColumns,
 		f.Name, f.Brand, f.ServingText, f.ServingGrams, f.Kcal, f.Protein, f.Carbs, f.Fat, f.Fiber, f.Source, f.SourceID,
-		alts, createdBy))
+		alts, createdBy, f.ProduceKind))
 }
 
 // UpdateFood replaces the editable fields of a food.
@@ -111,8 +114,8 @@ func UpdateFood(ctx context.Context, q Querier, f Food) (Food, error) {
 		return f, err
 	}
 	out, err := scanFood(q.QueryRow(ctx, `UPDATE foods SET name=$2, brand=$3, serving_text=$4, serving_grams=$5, kcal=$6,
-		protein_g=$7, carbs_g=$8, fat_g=$9, fiber_g=$10, alt_servings=$11, updated_at=now() WHERE id=$1 RETURNING `+foodColumns,
-		f.ID, f.Name, f.Brand, f.ServingText, f.ServingGrams, f.Kcal, f.Protein, f.Carbs, f.Fat, f.Fiber, alts))
+		protein_g=$7, carbs_g=$8, fat_g=$9, fiber_g=$10, alt_servings=$11, produce_kind=$12, updated_at=now() WHERE id=$1 RETURNING `+foodColumns,
+		f.ID, f.Name, f.Brand, f.ServingText, f.ServingGrams, f.Kcal, f.Protein, f.Carbs, f.Fat, f.Fiber, alts, f.ProduceKind))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, ErrNotFound
 	}

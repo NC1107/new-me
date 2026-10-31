@@ -61,7 +61,7 @@ void main() {
 
       expect(find.text('Recommended for you'), findsOneWidget);
       expect(find.text('3.0 L'), findsOneWidget);
-      expect(find.textContaining('adequate intake of drinks for men'), findsOneWidget);
+      expect(find.textContaining('enough drinks a day for men'), findsOneWidget);
       expect(find.text('Source: National Academies 2005'), findsOneWidget);
       // Another published figure says what it is.
       expect(find.text('EFSA: 2.5 L of total water for men, the drinks part'), findsOneWidget);

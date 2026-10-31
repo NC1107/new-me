@@ -17,6 +17,60 @@ String _plain(double v) => v % 1 == 0 ? '${v.toInt()}' : v.toStringAsFixed(1);
 
 DateTime? _time(Object? v) => v is String ? DateTime.tryParse(v) : null;
 
+/// What a food is for the fruit and vegetable quest, as the server's `produceKind` says it.
+enum ProduceKind {
+  none,
+  fruit,
+  vegetable,
+  juice,
+  pulse;
+
+  static ProduceKind parse(Object? v) =>
+      ProduceKind.values.where((k) => k.name == v).firstOrNull ?? ProduceKind.none;
+}
+
+/// The grams of fruit and vegetables, of juice and of pulses in a meal. They are kept apart
+/// because juice and pulses count at most once a day.
+class MealProduce {
+  const MealProduce({this.produceG = 0, this.juiceG = 0, this.pulseG = 0});
+
+  factory MealProduce.fromJson(Map<String, dynamic> j) => MealProduce(
+    produceG: _dbl(j['produceG']),
+    juiceG: _dbl(j['juiceG']),
+    pulseG: _dbl(j['pulseG']),
+  );
+
+  static const none = MealProduce();
+
+  final double produceG;
+  final double juiceG;
+  final double pulseG;
+
+  bool get isEmpty => produceG <= 0 && juiceG <= 0 && pulseG <= 0;
+
+  /// Everything in the meal that is fruit, vegetables, juice or pulses, before the daily caps.
+  double get totalG => produceG + juiceG + pulseG;
+
+  MealProduce scaled(double factor) => MealProduce(
+    produceG: _tenth(produceG * factor),
+    juiceG: _tenth(juiceG * factor),
+    pulseG: _tenth(pulseG * factor),
+  );
+
+  MealProduce operator +(MealProduce o) => MealProduce(
+    produceG: produceG + o.produceG,
+    juiceG: juiceG + o.juiceG,
+    pulseG: pulseG + o.pulseG,
+  );
+
+  /// Only the buckets with something in them, so a meal with no produce sends nothing extra.
+  Map<String, dynamic> toJson() => {
+    if (produceG > 0) 'produceG': produceG,
+    if (juiceG > 0) 'juiceG': juiceG,
+    if (pulseG > 0) 'pulseG': pulseG,
+  };
+}
+
 /// Where an item's numbers came from.
 enum FoodSource {
   usda('USDA'),
@@ -75,6 +129,7 @@ class SavedFood {
     this.imageUrl,
     this.category,
     this.sourceUrl,
+    this.produceKind = ProduceKind.none,
   });
 
   factory SavedFood.fromJson(Map<String, dynamic> j) => SavedFood(
@@ -100,6 +155,7 @@ class SavedFood {
     imageUrl: _url(j['imageUrl']),
     category: j['category'] as String?,
     sourceUrl: _url(j['sourceUrl']),
+    produceKind: ProduceKind.parse(j['produceKind']),
   );
 
   final int? id;
@@ -127,6 +183,9 @@ class SavedFood {
   final String? category;
   final String? sourceUrl;
 
+  /// What the food's database says it is for the fruit and vegetable quest.
+  final ProduceKind produceKind;
+
   bool get saved => id != null;
 
   /// The name with its brand, for lists.
@@ -146,6 +205,7 @@ class SavedFood {
     'source': source.name,
     'sourceId': sourceId,
     'servings': [for (final s in servings) s.toJson()],
+    if (produceKind != ProduceKind.none) 'produceKind': produceKind.name,
   };
 }
 
@@ -189,6 +249,8 @@ class MealItem {
     required this.saveToLibrary,
     required this.servingText,
     this.baseAmount = 1,
+    this.produceKind = ProduceKind.none,
+    this.perProduce = 0,
   });
 
   /// An item from the estimate endpoint.
@@ -214,6 +276,8 @@ class MealItem {
       perGrams: _dbl(j['grams']) / quantity,
       saveToLibrary: false,
       servingText: '',
+      produceKind: ProduceKind.parse(j['produceKind']),
+      perProduce: _dbl(j['produceGrams']) / quantity,
     );
   }
 
@@ -242,6 +306,8 @@ class MealItem {
       saveToLibrary: false,
       servingText: f.servingText,
       baseAmount: base,
+      produceKind: f.produceKind,
+      perProduce: f.produceKind == ProduceKind.none ? 0 : f.servingGrams / base,
     );
   }
 
@@ -273,12 +339,28 @@ class MealItem {
   final double perFiber;
   final double perGrams;
 
+  /// What the item is for the fruit and vegetable quest, and the grams of one unit that count.
+  final ProduceKind produceKind;
+  final double perProduce;
+
   int get kcal => (perKcal * quantity).round().clamp(0, 10000);
   double get protein => _tenth(perProtein * quantity);
   double get carbs => _tenth(perCarbs * quantity);
   double get fat => _tenth(perFat * quantity);
   double get fiber => _tenth(perFiber * quantity);
   double get grams => _tenth(perGrams * quantity);
+
+  /// The grams of this item that count toward fruit and vegetables, in the bucket its kind
+  /// belongs to.
+  MealProduce get produce {
+    final g = _tenth(perProduce * quantity);
+    return switch (produceKind) {
+      ProduceKind.none => MealProduce.none,
+      ProduceKind.fruit || ProduceKind.vegetable => MealProduce(produceG: g),
+      ProduceKind.juice => MealProduce(juiceG: g),
+      ProduceKind.pulse => MealProduce(pulseG: g),
+    };
+  }
 
   /// Counts toward "from nutrition databases": a database row, a label, or a saved food that
   /// began as one.
@@ -307,6 +389,8 @@ class MealItem {
     saveToLibrary: saveToLibrary ?? this.saveToLibrary,
     servingText: servingText,
     baseAmount: baseAmount,
+    produceKind: produceKind,
+    perProduce: perProduce,
   );
 
   MealItem withQuantity(double q) => _copy(quantity: q);
@@ -338,6 +422,8 @@ class MealItem {
     saveToLibrary: false,
     servingText: servingText,
     baseAmount: baseAmount,
+    produceKind: produceKind,
+    perProduce: perProduce,
   );
 
   MealItem withName(String n) => _copy(name: n);
@@ -362,6 +448,11 @@ class MealItem {
       fiber: _tenth(perFiber * baseAmount),
       source: source,
       sourceId: sourceId,
+      // An estimate's produce is Claude's guess for this one meal, so only a database's own
+      // classification is kept on the saved food.
+      produceKind: source.fromDatabase || source == FoodSource.library
+          ? produceKind
+          : ProduceKind.none,
     );
   }
 }

@@ -29,15 +29,20 @@ type ActivityLog struct {
 
 // MealLog is one meal entry with its macros in grams.
 type MealLog struct {
-	ID         int64
-	UserID     int64
-	LocalDate  score.Date
-	Name       string
-	Kcal       int
-	ProteinG   float64
-	CarbsG     float64
-	FatG       float64
-	FiberG     float64
+	ID        int64
+	UserID    int64
+	LocalDate score.Date
+	Name      string
+	Kcal      int
+	ProteinG  float64
+	CarbsG    float64
+	FatG      float64
+	FiberG    float64
+	// ProduceG, JuiceG and PulseG are the grams of fruit and vegetables, juice and pulses in the
+	// meal, kept apart because juice and pulses count at most once a day.
+	ProduceG   float64
+	JuiceG     float64
+	PulseG     float64
 	ClientOpID string
 	LoggedAt   time.Time
 	UpdatedAt  time.Time
@@ -48,7 +53,8 @@ const activityColumns = `id, user_id, local_date::text, type, quantity, client_o
 	logged_at, updated_at, deleted_at, COALESCE(name, ''), COALESCE(intensity, ''), exercise`
 
 const mealColumns = `id, user_id, local_date::text, name, kcal, protein_g::float8, carbs_g::float8,
-	fat_g::float8, fiber_g::float8, client_op_id::text, logged_at, updated_at, deleted_at`
+	fat_g::float8, fiber_g::float8, produce_g::float8, juice_g::float8, pulse_g::float8, client_op_id::text,
+	logged_at, updated_at, deleted_at`
 
 func scanActivity(row pgx.Row) (ActivityLog, error) {
 	var l ActivityLog
@@ -60,7 +66,7 @@ func scanActivity(row pgx.Row) (ActivityLog, error) {
 func scanMeal(row pgx.Row) (MealLog, error) {
 	var l MealLog
 	err := row.Scan(&l.ID, &l.UserID, &l.LocalDate, &l.Name, &l.Kcal, &l.ProteinG, &l.CarbsG,
-		&l.FatG, &l.FiberG, &l.ClientOpID, &l.LoggedAt, &l.UpdatedAt, &l.DeletedAt)
+		&l.FatG, &l.FiberG, &l.ProduceG, &l.JuiceG, &l.PulseG, &l.ClientOpID, &l.LoggedAt, &l.UpdatedAt, &l.DeletedAt)
 	return l, err
 }
 
@@ -110,6 +116,9 @@ type NewMealLog struct {
 	CarbsG     float64
 	FatG       float64
 	FiberG     float64
+	ProduceG   float64
+	JuiceG     float64
+	PulseG     float64
 	ClientOpID string
 }
 
@@ -117,11 +126,11 @@ type NewMealLog struct {
 // InsertActivityLog.
 func InsertMealLog(ctx context.Context, q Querier, n NewMealLog) (log MealLog, created bool, err error) {
 	log, err = scanMeal(q.QueryRow(ctx, `
-		INSERT INTO meal_logs (user_id, local_date, name, kcal, protein_g, carbs_g, fat_g, fiber_g, client_op_id)
-		VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9::uuid)
+		INSERT INTO meal_logs (user_id, local_date, name, kcal, protein_g, carbs_g, fat_g, fiber_g, produce_g, juice_g, pulse_g, client_op_id)
+		VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::uuid)
 		ON CONFLICT (user_id, client_op_id) DO NOTHING
 		RETURNING `+mealColumns,
-		n.UserID, n.LocalDate, n.Name, n.Kcal, n.ProteinG, n.CarbsG, n.FatG, n.FiberG, n.ClientOpID))
+		n.UserID, n.LocalDate, n.Name, n.Kcal, n.ProteinG, n.CarbsG, n.FatG, n.FiberG, n.ProduceG, n.JuiceG, n.PulseG, n.ClientOpID))
 	if err == nil {
 		return log, true, nil
 	}

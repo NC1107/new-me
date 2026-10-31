@@ -20,9 +20,9 @@ func (d targetData) addAdvice(t *targetJSON) {
 	case tgtSteps:
 		low, high := insights.Band(d.Age)
 		t.Cite = "Paluch 2022, Ding 2025"
-		t.Why = "Around where the benefit of walking starts to level off, 5,000 to 7,000 steps."
+		t.Why = "The health benefit of walking starts to level off between 5,000 and 7,000 steps a day, so 7,000 is a solid daily aim."
 		if v > targets.DefaultSteps {
-			t.Why = fmt.Sprintf("You already walk more than 7,000, so this is the next step toward %s to %s for your age.", plan.Thousands(low), plan.Thousands(high))
+			t.Why = fmt.Sprintf("You already walk more than 7,000 a day, so this is the next step toward %s to %s, where the benefit levels off for your age.", plan.Thousands(low), plan.Thousands(high))
 		}
 		t.Alternatives = targets.StepAlternatives(low, high, v)
 	case tgtSleep:
@@ -35,9 +35,9 @@ func (d targetData) addAdvice(t *targetJSON) {
 		if d.Sex != nil && *d.Sex == targets.Male {
 			who = "men"
 		}
-		t.Why = fmt.Sprintf("The adequate intake of drinks for %s, about 81%% of total water. Needs rise with activity and heat.", who)
+		t.Why = fmt.Sprintf("About what health bodies say is enough drinks a day for %s: 81%% of the water you need, the rest comes from food. You need more with activity and heat.", who)
 		if d.Sex == nil {
-			t.Why = "The adequate intake of drinks for women, the lower figure. Set your sex in About you for yours."
+			t.Why = "About what health bodies say is enough drinks a day for women, the lower figure. Set your sex in About you for yours."
 		}
 		t.Alternatives = targets.WaterAlternatives(d.Sex)
 	case tgtProtein:
@@ -54,8 +54,10 @@ func (d targetData) addAdvice(t *targetJSON) {
 		}
 	case tgtProduce:
 		t.Cite = "WHO, NHS 5 A Day"
-		t.Why = fmt.Sprintf("WHO advises at least %d g a day. One serving is %d g, so %d servings.", targets.ProduceWHOGrams, targets.ProduceServingGrams, targets.ProduceServings)
+		t.Why = fmt.Sprintf("WHO advises at least %d g of fruit and vegetables a day. One serving is %d g, so that is %d servings.", targets.ProduceWHOGrams, targets.ProduceServingGrams, targets.ProduceServings)
 		t.Alternatives = targets.ProduceAlternatives()
+	case tgtPushups:
+		t.Cite = "Zourdos 2016"
 	case tgtBreathing:
 		t.Cite = "Balban 2023"
 		t.Why = "Five minutes a day of cyclic sighing lifted mood in a month-long trial."

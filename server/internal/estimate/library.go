@@ -21,6 +21,8 @@ type LibraryFood struct {
 	SourceID     string
 	Servings     []Portion
 	UseCount     int
+	// Produce is the saved food's produce kind, empty when it is not produce.
+	Produce string
 }
 
 // Library lists the saved foods, most used first.
@@ -32,7 +34,7 @@ func (l LibraryFood) food() Food {
 	n := l.N
 	f := Food{
 		Source: SourceLibrary, ID: strconv.FormatInt(l.ID, 10), Name: l.Name, Brand: l.Brand, DataType: "Library", Origin: l.Source,
-		PerServing: &n, ServingGrams: l.ServingGrams, ServingText: l.ServingText,
+		PerServing: &n, ServingGrams: l.ServingGrams, ServingText: l.ServingText, Produce: l.Produce,
 	}
 	if p, ok := portionFromLabel(l.ServingText, l.ServingGrams); ok {
 		f.Portions = append(f.Portions, p)

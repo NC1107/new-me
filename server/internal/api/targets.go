@@ -682,7 +682,7 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 		Details: map[string]any{"exercise": d.RepsExercise}}
 	if d.PushupMax == nil {
 		t.Missing = []string{"pushupMax"}
-		t.Formula = fmt.Sprintf("3 sets at about 70 to 80%% of your latest max of %s, a derivation from reps-in-reserve guidance rather than a published constant. Record a max test (one set to near failure) to size it.", name)
+		t.Formula = fmt.Sprintf("3 sets at about 70 to 80%% of your latest max of %s. This is worked out from research on stopping a set with reps left in reserve; the research does not publish the number itself. Record a max test (one set to near failure) to size it.", name)
 		return t
 	}
 	perSet := 0
@@ -697,11 +697,15 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 	}
 	p := targets.ComputePushups(d.PushupMax.Reps, perSet, completed)
 	t.Value = intp(p.Daily())
-	t.Formula = fmt.Sprintf("%d sets × %d reps, 75%% (the middle of 70 to 80%%) of your latest max of %d %s, a derivation from reps-in-reserve guidance rather than a published constant.",
+	t.Formula = fmt.Sprintf("%d sets × %d reps. Each set is 75%% (the middle of 70 to 80%%) of your latest max of %d %s. This is worked out from research on stopping a set with reps left in reserve; the research does not publish the number itself.",
 		targets.PushupSets, p.RepsPerSet, p.Max, name)
 	if p.Progressed {
-		t.Formula = fmt.Sprintf("%d sets × %d reps: %d reps a set raised by 5%% (at least 1 rep) because every set was completed on %d of the last 7 days, a derivation from reps-in-reserve and progression guidance.",
+		t.Formula = fmt.Sprintf("%d sets × %d reps. Last time you worked with %d reps a set, raised by 5%% (at least 1 rep) because every set was completed on %d of the last 7 days. This is worked out from research on reps in reserve and gradual progression; the research does not publish the number itself.",
 			targets.PushupSets, p.RepsPerSet, p.ProgressedFrom, completed)
+	}
+	t.Why = fmt.Sprintf("About three quarters of your best set of %d, so each set ends with some reps left in the tank.", p.Max)
+	if p.Progressed {
+		t.Why = fmt.Sprintf("Up 5%% from %d reps a set, because you finished every set on %d of the last 7 days.", p.ProgressedFrom, completed)
 	}
 	t.Details = map[string]any{"exercise": d.RepsExercise, "sets": targets.PushupSets, "repsPerSet": p.RepsPerSet,
 		"rangePerSet": []int{p.Low, p.High}, "latestMax": p.Max, "latestMaxDate": d.PushupMax.Date,

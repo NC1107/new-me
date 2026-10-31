@@ -56,7 +56,7 @@ The water quest in `design-v16-water.md` is the pattern these follow.
   That is an approximation of the accelerometer index in the papers, which sees naps and wake periods in the night.
 - The answer is `sleep.regularity` in `GET /api/insights`.
 
-## Eat 5 a day (`produce`)
+## Eat fruit and veg (`produce`)
 
 ### Research
 
@@ -71,7 +71,8 @@ The water quest in `design-v16-water.md` is the pattern these follow.
 - Default target 5 servings, unit `servings`, allowed from 1 to 30.
 - Five is the WHO minimum, so it is the default and the Targets page says it is a floor and that risk kept falling up to about 10.
 - The Targets page lists it (source keys `who2003`, `nhs5aday`, `aune2017`), and "Use" sets the template target from the next day.
-- It is logged by tap and is never inferred from meals.
+- It is logged by tap.
+  Since v19 the fruit and vegetables inside logged meals count too (`design-v19-produce.md`).
 - The activity type is `produce_servings` on the server and `produce` with unit `servings` on the wire, 1 to 30 per entry.
 - The log form has "Add 1 serving", chips for 2, 3 and 4, and the list of what one serving is, taken from the NHS guide:
   - 1 medium fruit such as an apple, banana, pear or orange.
@@ -135,7 +136,7 @@ The water quest in `design-v16-water.md` is the pattern these follow.
 
 ## App
 
-- Quest icons, colours and copy: "Keep a steady bedtime", "Eat 5 a day", "Breathe 5 min".
+- Quest icons, colours and copy: "Keep a steady bedtime", "Eat fruit and veg", "Breathe 5 min".
 - The steady bedtime is Health-fed, so its card has no + button and shows the bed and wake time lines against the usual times.
 - The fruit and vegetables and breathing cards open their log forms.
 - The daily goals picker offers named presets and accepts only what the server accepts.

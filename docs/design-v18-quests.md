@@ -19,9 +19,8 @@ The sheet shows, top to bottom:
   Health-fed quests have nothing to log and say where the number comes from instead.
 - The last 7 days: a bar per day filled to how far the quest got, a check on days it was done, and a dash on days it was not part of the day.
   The data comes from `GET /api/quests/{key}/history?days=7`, which reads the stored day snapshots and never writes.
-- "Why this goal": the formula and first source from `GET /api/targets` where a matching target exists (steps, protein, sleep, water, fruit and vegetables, breathing, exercise, push-ups).
+- "Why this goal": read in the order recommendation, reason, comparison, source (v19, `design-v19-produce.md`).
   Quests with no published research behind the number say so plainly.
-  When the goal differs from the formula, the sheet says the goal is the person's own pick.
 - Actions: log (the existing log sheet for the quest's `LogKind`), "Change goal" (the existing `GoalPickerPage`, saved through the `questTemplates` patch of `PATCH /api/me`) and "Turn off this quest".
 
 Turning a quest off asks first, then shows an Undo snack bar on Today.

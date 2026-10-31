@@ -3,22 +3,36 @@ import 'package:flutter/material.dart';
 import '../../api/models.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import 'log_chip.dart';
 import 'log_panes.dart';
 
-/// What counts as one serving of fruit or vegetables: 80 g, per the NHS 5 A Day portion guide
-/// (nhs.uk/live-well/eat-well/5-a-day/portion-sizes). The list is short on purpose, so two
-/// people count the same plate the same way.
-const kServingExamples = [
-  '1 medium fruit: an apple, banana, pear or orange',
-  '2 small fruit: plums, satsumas or kiwi fruit',
-  '7 strawberries or 14 cherries',
-  '3 heaped tablespoons of cooked vegetables, such as carrots, peas or sweetcorn',
-  '3 celery sticks, a 5 cm piece of cucumber or 1 medium tomato',
-  '1 heaped tablespoon of dried fruit, about 30 g',
-  'Anything else: about 80 g',
+/// Grams in one serving of fruit or vegetables, per the NHS 5 A Day portion guide
+/// (nhs.uk/live-well/eat-well/5-a-day/portion-sizes).
+const kServingGrams = 80;
+
+/// What counts as one serving, grouped the way the NHS guide groups it. The list is short on
+/// purpose, so two people count the same plate the same way.
+const kServingGroups = [
+  (
+    'Fruit',
+    [
+      '1 medium fruit: an apple, banana, pear or orange',
+      '2 small fruit: plums, satsumas or kiwi fruit',
+      '7 strawberries or 14 cherries',
+    ],
+  ),
+  (
+    'Vegetables',
+    [
+      '3 heaped tablespoons of cooked vegetables, peas, sweetcorn or pulses',
+      'A cereal bowl of salad',
+      '3 celery sticks, a 5 cm piece of cucumber or 1 medium tomato',
+    ],
+  ),
+  ('Dried fruit', ['1 heaped tablespoon of raisins or other dried fruit, about 30 g']),
 ];
 
 /// Beans and juice are capped by the guide, and potatoes are starch rather than a vegetable.
@@ -29,7 +43,16 @@ const kServingFootnote =
 /// Log fruit and vegetables: tap to add one serving at once, or a few at a time. The pane never
 /// guesses servings from meals.
 class ProducePane extends StatelessWidget {
-  const ProducePane({super.key, required this.busy, required this.failed, required this.onLog});
+  const ProducePane({
+    super.key,
+    required this.busy,
+    required this.failed,
+    required this.onLog,
+    this.servingsToday,
+  });
+
+  /// Servings logged so far today, when Today is loaded.
+  final num? servingsToday;
 
   final bool busy;
   final bool failed;
@@ -48,38 +71,61 @@ class ProducePane extends StatelessWidget {
     );
   }
 
+  Widget _chips(BuildContext context) {
+    final chips = [
+      for (final n in const [2, 3, 4])
+        LogChip(
+          label: '+$n (${n * kServingGrams} g)',
+          semanticLabel: 'Add $n servings',
+          enabled: !busy,
+          compact: true,
+          onTap: () => _log(n),
+        ),
+    ];
+    // Three chips share one row until Dynamic Type makes them too wide for it.
+    final fitsInRow = MediaQuery.textScalerOf(context).scale(15) <= 19;
+    if (!fitsInRow) {
+      return Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: chips);
+    }
+    return Row(
+      children: [
+        for (var i = 0; i < chips.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: chips[i]),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (servingsToday case final n?) ...[
+          Text(
+            'Today so far: ${_servings(n)} (${(n * kServingGrams).round()} g)',
+            textAlign: TextAlign.center,
+            style: AppText.label.copyWith(color: kInkSecondary),
+          ),
+          const SizedBox(height: 16),
+        ],
         ChunkyButton(
-          label: failed ? 'Try again' : 'Add 1 serving',
+          label: failed ? 'Try again' : 'Add 1 serving ($kServingGrams g)',
           icon: Icons.add_rounded,
           busy: busy,
           onPressed: busy ? null : () => _log(1),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final n in const [2, 3, 4])
-              LogChip(
-                label: '+$n',
-                semanticLabel: 'Add $n servings',
-                enabled: !busy,
-                onTap: () => _log(n),
-              ),
-          ],
-        ),
+        _chips(context),
         const SizedBox(height: 24),
         const _ServingGuide(),
       ],
     );
   }
 }
+
+String _servings(num n) => '${n.formatted} ${n == 1 ? 'serving' : 'servings'}';
 
 class _ServingGuide extends StatelessWidget {
   const _ServingGuide();
@@ -90,28 +136,30 @@ class _ServingGuide extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: const Text('One serving is about 80 g', style: AppText.headline),
-        ),
-        const SizedBox(height: 8),
-        for (final line in kServingExamples)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // A text bullet sits on the line's baseline at any text size.
-                ExcludeSemantics(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text('•', style: AppText.body.copyWith(color: kInkMuted)),
+        Semantics(header: true, child: const Text('One serving is 80 g', style: AppText.headline)),
+        const Text('About a handful of fruit or vegetables.', style: AppText.caption),
+        for (final (group, lines) in kServingGroups) ...[
+          const SizedBox(height: 12),
+          Text(group, style: AppText.label.copyWith(color: kInkSecondary)),
+          const SizedBox(height: 2),
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // A text bullet sits on the line's baseline at any text size.
+                  ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text('•', style: AppText.body.copyWith(color: kInkMuted)),
+                    ),
                   ),
-                ),
-                Expanded(child: Text(line, style: AppText.body)),
-              ],
+                  Expanded(child: Text(line, style: AppText.body)),
+                ],
+              ),
             ),
-          ),
+        ],
         const SizedBox(height: 8),
         Text(kServingFootnote, style: AppText.caption.copyWith(color: kInkSecondary)),
         const SizedBox(height: 4),

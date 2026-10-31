@@ -154,7 +154,7 @@ void main() {
   });
 
   group('the recap screen', () {
-    testWidgets('leads with the couple, then each person, then the challenge and suggestions', (
+    testWidgets('leads with the couple, then what went well, what to work on, and each person', (
       tester,
     ) async {
       final server = fullServer()
@@ -204,16 +204,16 @@ void main() {
       expect(find.text('Oct 19 to Oct 25'), findsOneWidget);
       final order = [
         find.text('Together'),
-        find.text('Best day together'),
+        find.text('What went well'),
         find.text('Challenge done'),
-        find.text('For next week'),
+        find.text('To work on'),
         find.text('Each of you'),
       ];
       final tops = [for (final f in order) tester.getTopLeft(f).dy];
       expect([...tops]..sort(), tops);
       expect(find.text('Walk after dinner.'), findsOneWidget);
       expect(find.text('For Ana'), findsOneWidget);
-      expect(find.textContaining('+50 points each'), findsOneWidget);
+      expect(find.textContaining('+50 each'), findsOneWidget);
       expect(
         find.textContaining('+100', findRichText: true),
         findsWidgets,
@@ -256,7 +256,7 @@ void main() {
       final app = TestApp(tester, server, surfaceHeight: 2000);
       await app.pump(const RecapScreen());
       expect(find.text('This week is still running.'), findsOneWidget);
-      expect(find.textContaining('last week 1,000'), findsOneWidget);
+      expect(find.text('Last week 1,000'), findsOneWidget);
       expect(find.text('Challenge so far'), findsOneWidget);
     });
 

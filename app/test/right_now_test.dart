@@ -260,9 +260,7 @@ void main() {
       expect(done[3].change, '+30 min');
 
       final running = recapRows(now, before, complete: false);
-      expect(running.every((r) => r.change == null), isTrue);
-      expect(running.first.before, '150');
-      expect(running[3].before, '7 h');
+      expect(running.every((r) => r.change == null && r.direction == 0), isTrue);
     });
 
     test('sleep is not compared without nights on both sides', () {
@@ -270,7 +268,7 @@ void main() {
         const RecapStats(),
         const RecapStats(sleepAvgMin: 400, sleepNights: 3),
       );
-      expect(rows[3].value, 'None recorded');
+      expect(rows[3].value, 'No data');
       expect(rows[3].change, isNull);
     });
   });

@@ -56,21 +56,23 @@ func TestSuggestFirstMatchingRuleWins(t *testing.T) {
 		name      string
 		cur, prev Stats
 		complete  bool
+		midWeek   bool
 		wantHas   string
 	}{
-		{"few counted days", with(good, func(s *Stats) { s.CountedDays = 3 }), good, true, "Aim for 5 counted days next week. You had 3."},
-		{"a running week is not judged", with(good, func(s *Stats) { s.CountedDays = 1; s.Steps = 40000 }), good, false, "still running"},
-		{"steps slipped", with(good, func(s *Stats) { s.Steps = 50000 }), good, true, "Steps slipped 17%"},
-		{"steps within 10 percent", with(good, func(s *Stats) { s.Steps = 54500 }), good, true, "Solid week"},
-		{"short sleep", with(good, func(s *Stats) { s.SleepAvgMin = 385 }), good, true, "averaged 6 h 25 of sleep"},
-		{"sleep needs three nights", with(good, func(s *Stats) { s.SleepAvgMin = 300; s.SleepNights = 2 }), good, true, "Solid week"},
-		{"no workouts", with(good, func(s *Stats) { s.Workouts = 0 }), good, true, "No workouts this week"},
-		{"points dipped", with(good, func(s *Stats) { s.Points = 1800 }), good, true, "Points dipped"},
-		{"solid", good, good, true, "try to beat 2,000 points"},
+		{"few counted days", with(good, func(s *Stats) { s.CountedDays = 3 }), good, true, false, "Aim for 5 counted days next week. You had 3."},
+		{"a mid-week joiner is not judged on counted days", with(good, func(s *Stats) { s.CountedDays = 1 }), Stats{}, true, true, "Solid week"},
+		{"a running week is not judged", with(good, func(s *Stats) { s.CountedDays = 1; s.Steps = 40000 }), good, false, false, "still running"},
+		{"steps slipped", with(good, func(s *Stats) { s.Steps = 50000 }), good, true, false, "Steps slipped 17%"},
+		{"steps within 10 percent", with(good, func(s *Stats) { s.Steps = 54500 }), good, true, false, "Solid week"},
+		{"short sleep", with(good, func(s *Stats) { s.SleepAvgMin = 385 }), good, true, false, "averaged 6 h 25 of sleep"},
+		{"sleep needs three nights", with(good, func(s *Stats) { s.SleepAvgMin = 300; s.SleepNights = 2 }), good, true, false, "Solid week"},
+		{"no workouts", with(good, func(s *Stats) { s.Workouts = 0 }), good, true, false, "No workouts this week"},
+		{"points dipped", with(good, func(s *Stats) { s.Points = 1800 }), good, true, false, "Points dipped"},
+		{"solid", good, good, true, false, "try to beat 2,000 points"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := Suggest(tc.cur, tc.prev, tc.complete); !strings.Contains(got, tc.wantHas) {
+			if got := Suggest(tc.cur, tc.prev, tc.complete, tc.midWeek); !strings.Contains(got, tc.wantHas) {
 				t.Fatalf("got %q, want it to contain %q", got, tc.wantHas)
 			}
 		})

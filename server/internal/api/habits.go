@@ -35,6 +35,8 @@ var habitIcons = []string{
 	"local_cafe", "restaurant", "lunch_dining", "fitness_center", "directions_walk",
 	"directions_run", "directions_bike", "sports_gymnastics", "self_improvement", "spa", "bedtime",
 	"wb_sunny", "menu_book", "edit_note", "favorite", "bolt", "eco", "star", "pets",
+	// The v18 household chores.
+	"local_laundry_service", "cleaning_services", "delete", "shopping_cart", "home",
 }
 
 var slotTime = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)

@@ -41,6 +41,10 @@ const (
 	// EventHabitProposal asks the partner to approve a habit's gems (v11).
 	EventHabitProposal = "habit_proposal"
 
+	// EventSharedHabit tells a person their partner did a shared household habit (v18). It
+	// follows the partner-done switch.
+	EventSharedHabit = "shared_habit"
+
 	// The v13 partner nudges. They are gentle prompts about the other person, on a budget of
 	// their own, see partner.go.
 	EventPartnerCover     = "partner_cover"
@@ -110,7 +114,7 @@ func (s *Service) Deliver(to db.User, m push.Message) Delivery {
 
 func wants(n db.Notifications, kind string) bool {
 	switch kind {
-	case EventPartnerDone:
+	case EventPartnerDone, EventSharedHabit:
 		return n.PartnerDone
 	case EventCheer:
 		return n.Cheers

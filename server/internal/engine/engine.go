@@ -270,7 +270,7 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 }
 
 // withHabitsAndBonus adds what does not come from quests: the due habits' worth (which counts
-// toward the daily goal) and the weekly challenge award. A finalized day keeps everything it was
+// toward the daily goal), the weekly challenge award and the gems of shared habits done. A finalized day keeps everything it was
 // finalized with, so editing or deleting a habit later can never change history.
 func withHabitsAndBonus(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, day score.DayScore) (score.DayScore, error) {
 	stored, err := db.GetDayScore(ctx, tx, userID, date)
@@ -290,5 +290,9 @@ func withHabitsAndBonus(ctx context.Context, tx pgx.Tx, userID int64, date score
 	if err != nil {
 		return day, err
 	}
-	return day.WithHabits(score.HabitScore(db.HabitDays(states))).WithBonus(award), nil
+	shared, err := db.SharedBonus(ctx, tx, userID, date)
+	if err != nil {
+		return day, err
+	}
+	return day.WithHabits(score.HabitScore(db.HabitDays(states))).WithBonus(award + shared), nil
 }

@@ -264,6 +264,13 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/habits/{id}/decline", s.handleDeclineHabit)
 		r.With(s.settleAfter).Put("/api/habits/{id}/marks/{date}", s.handlePutHabitMark)
 
+		r.Get("/api/shared-habits", s.handleListSharedHabits)
+		r.Post("/api/shared-habits", s.handleCreateSharedHabit)
+		r.Patch("/api/shared-habits/{id}", s.handlePatchSharedHabit)
+		r.Delete("/api/shared-habits/{id}", s.handleDeleteSharedHabit)
+		r.With(s.settleAfter).Post("/api/shared-habits/{id}/done", s.handleDoneSharedHabit)
+		r.With(s.settleAfter).Delete("/api/shared-habits/{id}/done", s.handleUndoSharedHabit)
+
 		r.Post("/api/cheers", s.handleCreateCheer)
 		r.Get("/api/rewards", s.handleListRewards)
 		r.With(s.settleAfter).Post("/api/rewards", s.handleCreateReward)

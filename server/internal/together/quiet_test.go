@@ -80,7 +80,7 @@ func TestHeldAppliesToEveryKindExceptSafetyOnes(t *testing.T) {
 	svc := &Service{Now: func() time.Time { return night }}
 	user := db.User{ID: 1, Timezone: "UTC", Schedule: score.DefaultSchedule()}
 	for _, kind := range []string{EventPartnerDone, EventCheer, EventChallenge, EventReward, EventCover,
-		EventHabitProposal, EventMilestone, EventPartnerCover, EventRewardProgress, EventBehindPaceAfternoon} {
+		EventHabitProposal, EventSharedHabit, EventMilestone, EventPartnerCover, EventRewardProgress, EventBehindPaceAfternoon} {
 		if !svc.Held(user, kind) {
 			t.Errorf("%s should wait for the morning", kind)
 		}

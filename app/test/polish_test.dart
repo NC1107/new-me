@@ -67,7 +67,7 @@ void main() {
 
       testWidgets('the Targets page', (tester) async {
         await open(tester, const TargetsPage());
-        expect(find.text('Use this'), findsWidgets);
+        expect(find.textContaining('USE ALL RECOMMENDED'), findsOneWidget);
         expect(smallTargets(tester), isEmpty);
       });
 

@@ -40,7 +40,7 @@ func WaterAlternatives(sex *Sex) []Alternative {
 	if sex != nil && *sex == Male {
 		totalL, who = 2.5, "men"
 	}
-	ml := int(math.Round(totalL*1000*drinksShare/50)) * 50
+	ml := int(math.Round(totalL*1000*drinksShare/100)) * 100
 	return []Alternative{{Value: ml, Label: fmt.Sprintf("EFSA: %.1f L of total water for %s, the drinks part", totalL, who)}}
 }
 

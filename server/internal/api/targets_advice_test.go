@@ -28,7 +28,7 @@ func TestGoalTargetsCarryAPlainWhyACitationAndNamedAlternatives(t *testing.T) {
 	}
 	// EFSA: 2.5 L of total water for men, 81% of it from drinks.
 	water := targetPath(t, got, "water")
-	if got.num(water+".alternatives.0.value") != 2050 || !strings.Contains(got.str(water+".alternatives.0.label"), "EFSA") {
+	if got.num(water+".alternatives.0.value") != 2000 || !strings.Contains(got.str(water+".alternatives.0.label"), "EFSA") {
 		t.Errorf("water alternatives = %s", got.Body)
 	}
 	protein := targetPath(t, got, "protein")

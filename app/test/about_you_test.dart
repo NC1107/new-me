@@ -265,7 +265,7 @@ void main() {
 
       await _tapButton(app, 'Use all');
       expect(app.body('POST /api/targets/apply'), {
-        'keys': ['calories', 'protein', 'fat', 'carbs', 'sleep'],
+        'keys': ['calories', 'protein', 'fat', 'carbs', 'sleep', 'water'],
       });
       expect(find.byType(AboutYouPage), findsNothing);
     });

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,7 +52,12 @@ Map<String, dynamic> _me({
   };
 }
 
+Map<String, dynamic> _targets() =>
+    (jsonDecode(File('test/contract_v8/targets.json').readAsStringSync()) as Map)['body']!
+        as Map<String, dynamic>;
+
 StubAdapter _server({bool admin = false}) => fullServer()
+  ..on('GET /api/targets', StubResponse(200, _targets()))
   ..on('GET /api/me', StubResponse(200, _me(admin: admin)))
   ..on('PATCH /api/me', StubResponse(200, _me(admin: admin)));
 
@@ -168,14 +175,14 @@ void main() {
   });
 
   group('daily goals', () {
-    testWidgets('lists every quest including exercise and sleep, with the tomorrow note', (
+    testWidgets('lists every quest including exercise and sleep, with the today note', (
       tester,
     ) async {
       final app = _app(tester, _server());
       await app.pump(const MeScreen());
       await app.tap(find.text('Daily goals'));
 
-      expect(find.textContaining('Changes start tomorrow'), findsOneWidget);
+      expect(find.textContaining('Changes apply today'), findsOneWidget);
       for (final title in ['Steps', 'Push-ups', 'Reading', 'Yoga', 'Exercise', 'Sleep']) {
         expect(find.text(title), findsOneWidget, reason: title);
       }
@@ -207,7 +214,7 @@ void main() {
 
       await app.tap(find.byType(Switch).at(4));
       await app.tap(find.text('Push-ups'));
-      await app.tap(find.text('Intense'));
+      await app.tap(find.text('50 push-ups'));
       await app.tap(find.text('DONE'));
       expect(find.text('50 push-ups'), findsOneWidget);
 
@@ -222,7 +229,9 @@ void main() {
       expect(find.text('Daily goals'), findsOneWidget);
     });
 
-    testWidgets('the picker offers onboarding presets and a number of your own', (tester) async {
+    testWidgets('the picker leads with the recommendation and a number of your own', (
+      tester,
+    ) async {
       final adapter = _server();
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
@@ -230,11 +239,16 @@ void main() {
       await app.tap(find.text('Steps'));
 
       expect(find.text('How many steps a day?'), findsOneWidget);
-      for (final option in ['Casual', 'Regular', 'Serious', 'Intense']) {
-        expect(find.text(option), findsOneWidget);
+      expect(find.text('Recommended for you'), findsOneWidget);
+      expect(find.text('7,000 steps'), findsOneWidget);
+      expect(find.textContaining('benefit of walking starts to level off'), findsOneWidget);
+      expect(find.text('Source: Paluch 2022, Ding 2025'), findsOneWidget);
+      expect(find.text('Other published figures'), findsOneWidget);
+      expect(find.text('10,000 steps'), findsOneWidget);
+      // No made-up tiers.
+      for (final tier in ['Casual', 'Regular', 'Serious', 'Intense']) {
+        expect(find.text(tier), findsNothing, reason: tier);
       }
-      expect(find.text('5,000 steps'), findsOneWidget);
-      expect(find.text('12,000 steps'), findsOneWidget);
 
       await app.enter(find.byType(TextField).first, '9500');
       await app.tap(find.text('DONE'));
@@ -253,12 +267,12 @@ void main() {
       await app.tap(find.text('Daily goals'));
 
       await app.tap(find.text('Sleep'));
-      await app.tap(find.text('8 h'));
+      await app.tap(find.text('9 h'));
       await app.tap(find.text('DONE'));
       await app.tap(find.text('SAVE'));
       expect(app.body('PATCH /api/me'), {
         'questTemplates': [
-          {'key': 'sleep', 'enabled': true, 'target': 480},
+          {'key': 'sleep', 'enabled': true, 'target': 540},
         ],
       });
     });

@@ -153,7 +153,23 @@
           "perMealG": 33,
           "perMealTip": "About 0.4 g/kg a meal, 33 g, across 4 meals.",
           "bmi": 25.4
-        }
+        },
+        "why": "1.6 g per kg of your 82.4 kg, to maintain muscle.",
+        "cite": "ISSN 2017",
+        "alternatives": [
+          {
+            "value": 65,
+            "label": "0.8 g per kg, the RDA for adults who do not train"
+          },
+          {
+            "value": 115,
+            "label": "1.4 g per kg, the low end of the range for training"
+          },
+          {
+            "value": 165,
+            "label": "2.0 g per kg, the top of the range for training"
+          }
+        ]
       },
       {
         "key": "fat",
@@ -263,7 +279,19 @@
             "advice": "Keep sleep and wake times regular; there is no threshold.",
             "note": "Sleep Regularity Index (Phillips 2017) from your night records: 100 is perfectly regular. Only the 18:00 to 12:00 span each night record describes is compared."
           }
-        }
+        },
+        "why": "Adults need 7 to 9 hours, and 7 h 30 is the middle of that range.",
+        "cite": "AASM and SRS 2015",
+        "alternatives": [
+          {
+            "value": 420,
+            "label": "The low end of the recommended 7 to 9 hours"
+          },
+          {
+            "value": 540,
+            "label": "The top of the recommended 7 to 9 hours"
+          }
+        ]
       },
       {
         "key": "activity",
@@ -285,6 +313,32 @@
         }
       },
       {
+        "key": "exercise",
+        "value": 22,
+        "unit": "min",
+        "current": 30,
+        "formula": "150 minutes of moderate activity a week (WHO 2020) spread over 7 days = 22 minutes a day, rounded up. The guideline is a weekly figure, so a rest day is fine as long as the week adds up.",
+        "sources": [
+          "who2020",
+          "piercy2018"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "perWeekMin": 150,
+          "perWeekMaxMin": 300
+        },
+        "why": "WHO advises 150 to 300 minutes of moderate activity a week. Spread over the week that is about 22 minutes a day.",
+        "cite": "WHO 2020",
+        "alternatives": [
+          {
+            "value": 43,
+            "label": "300 min a week, the top of the WHO range"
+          }
+        ]
+      },
+      {
         "key": "steps",
         "value": 7000,
         "unit": "steps",
@@ -300,7 +354,19 @@
         "details": {
           "incrementSteps": 1000,
           "median14": 8300
-        }
+        },
+        "why": "Around where the benefit of walking starts to level off, 5,000 to 7,000 steps.",
+        "cite": "Paluch 2022, Ding 2025",
+        "alternatives": [
+          {
+            "value": 8000,
+            "label": "The low end of where the benefit levels off for your age"
+          },
+          {
+            "value": 10000,
+            "label": "The top of where the benefit levels off for your age"
+          }
+        ]
       },
       {
         "key": "pushups",
@@ -330,6 +396,69 @@
           "progressionDays": 5,
           "suggestRetestEveryWeeks": "2 to 4"
         }
+      },
+      {
+        "key": "water",
+        "value": 3000,
+        "unit": "ml",
+        "current": 2200,
+        "formula": "Adequate intake of total water for men aged 19 and over is 3.7 L a day, and about 81% of it comes from drinking water and other drinks = 3.0 L.",
+        "sources": [
+          "nasem2005",
+          "efsa2010"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "drinksShare": 0.81,
+          "personalized": true,
+          "totalWaterL": 3.7,
+          "note": "The Academies report that needs rise with activity and in heat; this is an adequate intake, not a requirement."
+        },
+        "why": "The adequate intake of drinks for men, about 81% of total water. Needs rise with activity and heat.",
+        "cite": "National Academies 2005",
+        "alternatives": [
+          {
+            "value": 2000,
+            "label": "EFSA: 2.5 L of total water for men, the drinks part"
+          }
+        ]
+      },
+      {
+        "key": "produce",
+        "value": 5,
+        "unit": "servings",
+        "current": 5,
+        "formula": "WHO advises at least 400 g of fruit and vegetables a day, and one serving is 80 g (NHS 5 A Day), so 5 servings = 400 g.",
+        "sources": [
+          "who2003",
+          "nhs5aday",
+          "aune2017"
+        ],
+        "label": "guideline",
+        "missing": [],
+        "applicable": true,
+        "details": {
+          "lowestRiskGrams": 800,
+          "servingGrams": 80,
+          "whoMinGrams": 400,
+          "servingExamples": [
+            "1 medium apple, banana, pear or orange",
+            "2 plums, kiwis or satsumas",
+            "3 heaped tablespoons of cooked vegetables",
+            "1 cereal bowl of salad"
+          ],
+          "note": "Potatoes do not count, beans and pulses count once a day, and juice and smoothies count once however much you drink."
+        },
+        "why": "WHO advises at least 400 g a day. One serving is 80 g, so 5 servings.",
+        "cite": "WHO, NHS 5 A Day",
+        "alternatives": [
+          {
+            "value": 10,
+            "label": "800 g, where risk was still falling (Aune 2017)"
+          }
+        ]
       }
     ],
     "sources": {
@@ -366,7 +495,12 @@
       "paluch2022": "Paluch AE et al., Lancet Public Health 2022;7:e219",
       "zourdos2016": "Zourdos MC et al., J Strength Cond Res 2016",
       "schoenfeld2017": "Schoenfeld BJ et al., J Sports Sci 2017;35:1073",
-      "acsm2009": "ACSM position stand on progression models, Med Sci Sports Exerc 2009;41:687"
+      "acsm2009": "ACSM position stand on progression models, Med Sci Sports Exerc 2009;41:687",
+      "nasem2005": "National Academies (IOM), Dietary Reference Intakes for Water, Potassium, Sodium, Chloride, and Sulfate, 2005",
+      "efsa2010": "EFSA Panel on Dietetic Products, Nutrition and Allergies, EFSA Journal 2010;8(3):1459",
+      "who2003": "WHO/FAO, Diet, Nutrition and the Prevention of Chronic Diseases, WHO Technical Report Series 916, 2003",
+      "nhs5aday": "NHS, 5 A Day portion sizes (80 g of fruit or vegetables is one portion)",
+      "aune2017": "Aune et al., Int J Epidemiol 2017;46:1029"
     }
   }
 }

@@ -15,7 +15,7 @@ func TestWaterAlternativeIsEFSATotalLessFood(t *testing.T) {
 	for _, c := range []struct {
 		sex  *Sex
 		want int
-	}{{&male, 2050}, {&female, 1600}, {nil, 1600}} {
+	}{{&male, 2000}, {&female, 1600}, {nil, 1600}} {
 		got := WaterAlternatives(c.sex)
 		if len(got) != 1 || got[0].Value != c.want {
 			t.Errorf("WaterAlternatives(%v) = %+v, want %d", c.sex, got, c.want)

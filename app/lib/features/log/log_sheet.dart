@@ -76,6 +76,15 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     return (localToday: localToday, until: until);
   }
 
+  Quest? _waterQuest() => _quest('water');
+
+  num? _questActual(String key) => _quest(key)?.actual;
+
+  Quest? _quest(String key) {
+    final today = ref.watch(todayProvider).value?.data;
+    return today?.quests.where((q) => q.key == key).firstOrNull;
+  }
+
   Future<bool> _confirmed(String? confirm) async =>
       confirm == null ||
       await confirmDialog(context, title: 'Log this?', message: confirm, confirmLabel: 'Log it');
@@ -340,12 +349,15 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.water => WaterPane(
                   key: const ValueKey(LogKind.water),
                   units: ref.watch(unitsProvider),
+                  drankMl: _yesterday ? null : _waterQuest()?.actual,
+                  goalMl: _waterQuest()?.target,
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,
                 ),
                 LogKind.produce => ProducePane(
                   key: const ValueKey(LogKind.produce),
+                  servingsToday: _yesterday ? null : _questActual('produce'),
                   busy: _busy,
                   failed: _error != null,
                   onLog: _submit,

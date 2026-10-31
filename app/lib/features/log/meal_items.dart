@@ -10,6 +10,7 @@ import '../../widgets/accent_text.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/chunky_icon_button.dart';
 import '../../widgets/pressable.dart';
+import 'log_panes.dart' show gramsInputFormatter, gramsText;
 
 const kMaxItemQuantity = 1000.0;
 const kMinItemQuantity = 0.25;
@@ -194,6 +195,11 @@ class _ItemRow extends StatefulWidget {
 class _ItemRowState extends State<_ItemRow> {
   late final _name = TextEditingController(text: widget.entry.item.name);
   late final _quantity = TextEditingController(text: quantityText(widget.entry.item.quantity));
+  final _kcal = TextEditingController();
+  final _protein = TextEditingController();
+  final _carbs = TextEditingController();
+  final _fat = TextEditingController();
+  bool _fixing = false;
 
   MealItem get _item => widget.entry.item;
 
@@ -201,6 +207,9 @@ class _ItemRowState extends State<_ItemRow> {
   void dispose() {
     _name.dispose();
     _quantity.dispose();
+    for (final c in [_kcal, _protein, _carbs, _fat]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -210,6 +219,63 @@ class _ItemRowState extends State<_ItemRow> {
     if (rewrite) _quantity.text = quantityText(clamped);
     widget.onChanged();
   }
+
+  void _toggleFix() {
+    if (!_fixing) {
+      _kcal.text = '${_item.kcal}';
+      _protein.text = gramsText(_item.protein);
+      _carbs.text = gramsText(_item.carbs);
+      _fat.text = gramsText(_item.fat);
+    }
+    setState(() => _fixing = !_fixing);
+  }
+
+  void _typedNumbers() {
+    final kcal = int.tryParse(_kcal.text);
+    if (kcal == null || kcal > _kMaxMealKcal) return;
+    num grams(TextEditingController c) => num.tryParse(c.text) ?? 0;
+    widget.entry.item = _item.withNumbers(
+      kcal: kcal,
+      protein: grams(_protein).toDouble(),
+      carbs: grams(_carbs).toDouble(),
+      fat: grams(_fat).toDouble(),
+    );
+    widget.onChanged();
+  }
+
+  Widget _numberField(String label, TextEditingController c, {bool whole = false}) => Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, textAlign: TextAlign.center, style: AppText.caption),
+        const SizedBox(height: 4),
+        Semantics(
+          label: '$label of ${_item.name}',
+          child: TextField(
+            controller: c,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.numberWithOptions(decimal: !whole),
+            inputFormatters: whole
+                ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(5)]
+                : [gramsInputFormatter],
+            style: AppText.tabular(AppText.body.copyWith(fontWeight: FontWeight.w800)),
+            cursorColor: context.accent,
+            onChanged: (_) => _typedNumbers(),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: kSunken,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(kRadiusField),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   void _typedQuantity(String text) {
     final q = double.tryParse(text);
@@ -335,6 +401,53 @@ class _ItemRowState extends State<_ItemRow> {
               '${item.kcal.formatted} kcal   protein ${_g(item.protein)} g   '
               'carbs ${_g(item.carbs)} g   fat ${_g(item.fat)} g',
               style: AppText.label.copyWith(color: kInkSecondary),
+            ),
+          ),
+          if (_fixing)
+            Padding(
+              padding: const EdgeInsets.only(top: 12, right: 8),
+              child: Row(
+                children: [
+                  _numberField('kcal', _kcal, whole: true),
+                  const SizedBox(width: 6),
+                  _numberField('Protein g', _protein),
+                  const SizedBox(width: 6),
+                  _numberField('Carbs g', _carbs),
+                  const SizedBox(width: 6),
+                  _numberField('Fat g', _fat),
+                ],
+              ),
+            ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Semantics(
+              button: true,
+              label: _fixing ? 'Done fixing ${item.name}' : 'Fix the numbers of ${item.name}',
+              excludeSemantics: true,
+              onTap: _toggleFix,
+              child: Pressable(
+                onTap: _toggleFix,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _fixing ? Icons.check_rounded : Icons.tune_rounded,
+                        size: 20,
+                        color: context.accentText,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _fixing ? 'Done' : 'Fix the numbers',
+                          style: AppText.label.copyWith(color: context.accentText),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           if (item.source == FoodSource.estimated)

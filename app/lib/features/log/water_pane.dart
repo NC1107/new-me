@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../api/models.dart';
+import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/chunky_button.dart';
 import 'big_number_stepper.dart';
@@ -13,21 +14,21 @@ const kMaxWaterMl = 5000;
 /// Above this one entry asks before it is saved.
 const kConfirmWaterMl = 2000;
 
-/// The quick-add amounts and the typed amount's start and step, in the person's unit.
+/// The quick-add amounts and the typed amount's step, in the person's unit.
 class WaterAmounts {
-  const WaterAmounts({required this.chips, required this.start, required this.step});
+  const WaterAmounts({required this.chips, required this.step});
 
   final List<int> chips;
-  final int start;
   final int step;
 
   static WaterAmounts of(Units units) => units.isImperial
-      ? const WaterAmounts(chips: [8, 16], start: 8, step: 1)
-      : const WaterAmounts(chips: [250, 500], start: 250, step: 50);
+      ? const WaterAmounts(chips: [8, 16], step: 1)
+      : const WaterAmounts(chips: [250, 500], step: 50);
 }
 
-/// Log water: tap a glass-sized chip to add it at once, or type an amount. Amounts are shown in
-/// the person's unit and always stored in millilitres.
+/// Log water: the chips add a glass-sized amount to the number, which can also be typed or
+/// stepped, and Save logs the total. Amounts are shown in the person's unit and always stored in
+/// millilitres.
 class WaterPane extends StatefulWidget {
   const WaterPane({
     super.key,
@@ -35,7 +36,13 @@ class WaterPane extends StatefulWidget {
     required this.busy,
     required this.failed,
     required this.onLog,
+    this.drankMl,
+    this.goalMl,
   });
+
+  /// Today's water so far and the goal, in millilitres, when Today is loaded.
+  final num? drankMl;
+  final num? goalMl;
 
   final Units units;
   final bool busy;
@@ -48,7 +55,7 @@ class WaterPane extends StatefulWidget {
 
 class _WaterPaneState extends State<WaterPane> {
   late final _amounts = WaterAmounts.of(widget.units);
-  late final _field = TextEditingController(text: '${_amounts.start}');
+  late final _field = TextEditingController(text: '0');
 
   @override
   void dispose() {
@@ -71,6 +78,8 @@ class _WaterPaneState extends State<WaterPane> {
 
   void _set(int value) => setState(() => _field.text = '${value.clamp(0, _cap)}');
 
+  void _add(int amount) => _set((_quantity ?? 0) + amount);
+
   void _log(int amount) {
     final ml = widget.units.mlFromDrink(amount);
     widget.onLog(
@@ -89,6 +98,10 @@ class _WaterPaneState extends State<WaterPane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.drankMl case final drank?) ...[
+          _TodaySoFar(units: widget.units, drankMl: drank, goalMl: widget.goalMl),
+          const SizedBox(height: 20),
+        ],
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 10,
@@ -96,15 +109,19 @@ class _WaterPaneState extends State<WaterPane> {
           children: [
             for (final v in _amounts.chips)
               LogChip(
-                label: '$v $_unitWord',
-                semanticLabel: 'Add $v $_unitWord of water',
-                enabled: !widget.busy,
-                onTap: () => _log(v),
+                label: '+$v $_unitWord',
+                semanticLabel: 'Add $v $_unitWord to the amount',
+                enabled: !widget.busy && q < _cap,
+                onTap: () => _add(v),
               ),
           ],
         ),
         const SizedBox(height: 24),
-        const Text('Or enter an amount', textAlign: TextAlign.center, style: AppText.caption),
+        const Text(
+          'Tap to add, or type the amount',
+          textAlign: TextAlign.center,
+          style: AppText.caption,
+        ),
         const SizedBox(height: 12),
         BigNumberStepper(
           controller: _field,
@@ -121,6 +138,27 @@ class _WaterPaneState extends State<WaterPane> {
           onPressed: _valid && !widget.busy ? () => _log(_quantity!) : null,
         ),
       ],
+    );
+  }
+}
+
+class _TodaySoFar extends StatelessWidget {
+  const _TodaySoFar({required this.units, required this.drankMl, this.goalMl});
+
+  final Units units;
+  final num drankMl;
+  final num? goalMl;
+
+  @override
+  Widget build(BuildContext context) {
+    final goal = goalMl;
+    final text = goal == null || goal <= 0
+        ? 'Today so far: ${units.volume(drankMl)}'
+        : 'Today so far: ${units.volumeNumber(drankMl)} of ${units.volume(goal)}';
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: AppText.label.copyWith(color: kInkSecondary),
     );
   }
 }

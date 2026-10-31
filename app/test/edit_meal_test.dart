@@ -16,12 +16,23 @@ Map<String, dynamic> _patched([Map<String, dynamic>? meal]) => {
   'day': logResultJson()['day'],
 };
 
-StubAdapter _server({List<Map<String, dynamic>>? logs}) => fullServer()
-  ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()))
-  ..on('GET /api/logs', StubResponse(200, logsJson(logs ?? [mealLogJson()])))
-  ..on('PATCH /api/logs/78', StubResponse(200, _patched()))
-  ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
-  ..on('POST /api/logs', StubResponse(201, logResultJson()));
+/// Serves [logs] for today and [yesterday] for the day before, as the real endpoint filters by date.
+StubAdapter _server({List<Map<String, dynamic>>? logs, List<Map<String, dynamic>>? yesterday}) {
+  final adapter = fullServer()
+    ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()))
+    ..on('PATCH /api/logs/78', StubResponse(200, _patched()))
+    ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
+    ..on('POST /api/logs', StubResponse(201, logResultJson()));
+  adapter.routes['GET /api/logs'] = (request) => StubResponse(
+    200,
+    logsJson(
+      request.queryParameters['date'] == '2026-10-25'
+          ? (yesterday ?? const [])
+          : (logs ?? [mealLogJson()]),
+    ),
+  );
+  return adapter;
+}
 
 Finder _chunky(String label) =>
     find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
@@ -184,6 +195,87 @@ void main() {
 
     await app.tap(find.text('Undo'));
     expect(app.body('POST /api/logs')['name'], 'Chicken bowl');
+  });
+
+  testWidgets('Log again today copies the meal as a new entry and offers Undo', (tester) async {
+    final adapter = _server();
+    final app = await _openFromFood(tester, adapter);
+
+    await app.tap(_chunky('Log again today'));
+    final body = app.body('POST /api/logs');
+    expect(body['kind'], 'meal');
+    expect(body['name'], 'Chicken bowl');
+    expect(body['kcal'], 600);
+    expect(body.containsKey('date'), isFalse, reason: 'no date means today');
+    expect(find.text('Edit meal'), findsNothing);
+    expect(find.text('Logged Chicken bowl again'), findsOneWidget);
+
+    await app.tap(find.text('Undo'));
+    expect(adapter.to('DELETE /api/logs/77'), hasLength(1));
+  });
+
+  testWidgets('a meal on a closed day can still be logged again', (tester) async {
+    final closed = mealLogJson()..['localDate'] = '2026-10-24';
+    final app = await _openFromFood(tester, _server(logs: [closed]));
+
+    expect(find.text('Edit meal'), findsNothing);
+    await app.tap(_chunky('Log again today'));
+    expect(app.body('POST /api/logs')['name'], 'Chicken bowl');
+  });
+
+  testWidgets('Save to My foods keeps the meal as a food with its numbers', (tester) async {
+    final adapter = _server()
+      ..on(
+        'POST /api/foods',
+        const StubResponse(201, {
+          'id': 5,
+          'name': 'Chicken bowl',
+          'servingText': '1 meal',
+          'kcal': 600,
+        }),
+      );
+    final app = await _openFromFood(tester, adapter);
+
+    await app.tap(find.text('Save to My foods'));
+    final body = app.body('POST /api/foods');
+    expect(body['name'], 'Chicken bowl');
+    expect(body['servingText'], '1 meal');
+    expect(body['kcal'], 600);
+    expect(body['protein'], 40);
+    expect(find.text('Saved Chicken bowl to My foods'), findsOneWidget);
+  });
+
+  testWidgets('moving a meal to yesterday sends its new time and keeps the clock time', (
+    tester,
+  ) async {
+    final adapter = _server();
+    final app = await _openFromFood(tester, adapter);
+    final before = DateTime.parse('2026-10-26T12:00:00Z').toLocal();
+
+    expect(find.text('Yesterday'), findsOneWidget);
+    expect(_saveEnabled(tester), isFalse);
+    await app.tap(find.text('Yesterday'));
+    expect(_saveEnabled(tester), isTrue);
+    await app.tap(_chunky('Save'));
+
+    final sent = DateTime.parse(app.body('PATCH /api/logs/78')['loggedAt'] as String).toLocal();
+    expect((sent.day, sent.hour, sent.minute), (25, before.hour, before.minute));
+  });
+
+  testWidgets('Yesterday on the Food tab lists its meals, which open in the same editor', (
+    tester,
+  ) async {
+    final dinner = mealLogJson(id: 79)
+      ..['localDate'] = '2026-10-25'
+      ..['name'] = 'Lentil stew';
+    final app = TestApp(tester, _server(yesterday: [dinner]), surfaceHeight: 2000);
+    await app.pump(const FoodScreen());
+
+    expect(find.text('Yesterday'), findsOneWidget);
+    await app.tap(find.text('Lentil stew'));
+    expect(find.text('Edit meal'), findsOneWidget);
+    expect(fieldWith('Lentil stew'), findsOneWidget);
+    expect(_chunky('Log again today'), findsOneWidget);
   });
 
   testWidgets('at text scale 2.0 nothing overflows and every target is 44pt', (tester) async {

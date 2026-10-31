@@ -68,6 +68,7 @@ class _FoodBody extends ConsumerWidget {
       onRefresh: () async {
         await ref.read(todayProvider.notifier).refresh();
         ref.invalidate(mealsTodayProvider);
+        ref.invalidate(mealsYesterdayProvider);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -86,6 +87,7 @@ class _FoodBody extends ConsumerWidget {
           Semantics(header: true, child: const Text('Meals today', style: AppText.headline)),
           const SizedBox(height: 10),
           const _MealsToday(),
+          const _MealsYesterday(),
           const SizedBox(height: 24),
           SettingsGroup(
             rows: [
@@ -147,6 +149,49 @@ class _MealsToday extends ConsumerWidget {
       ),
       _ => const SkeletonBlock(height: 120, radius: kRadiusCard),
     };
+  }
+}
+
+/// Yesterday's meals, only when there are some: the way back to log one again or fix it.
+class _MealsYesterday extends ConsumerWidget {
+  const _MealsYesterday();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final meals = ref.watch(mealsYesterdayProvider).value ?? const <MealLog>[];
+    if (meals.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        Semantics(header: true, child: const Text('Yesterday', style: AppText.headline)),
+        const SizedBox(height: 10),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final (i, m) in meals.indexed) ...[
+                if (i > 0) const Divider(height: 1, thickness: kBorderWidth, color: kBorder),
+                _MealRow(
+                  meal: m,
+                  onEdit: () => showEditMealSheet(context, m),
+                  onDelete: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await deleteMealWithUndo(
+                      messenger,
+                      ref.read(logActionsProvider),
+                      m,
+                      onUndone: () => ref.invalidate(mealsYesterdayProvider),
+                    );
+                    ref.invalidate(mealsYesterdayProvider);
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -137,6 +137,19 @@ type MealPatch struct {
 	CarbsG   *float64
 	FatG     *float64
 	FiberG   *float64
+
+	// LoggedAt moves the meal to another moment, and LocalDate is that moment's day for the user.
+	LoggedAt  *time.Time
+	LocalDate *score.Date
+}
+
+// MealLocalDate is the day of the user's live meal, or ErrNotFound.
+func MealLocalDate(ctx context.Context, q Querier, userID, id int64) (score.Date, error) {
+	var d score.Date
+	err := q.QueryRow(ctx, `
+		SELECT local_date::text FROM meal_logs WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+		id, userID).Scan(&d)
+	return d, notFound(err)
 }
 
 // UpdateMealLog changes the user's live meal and returns it. A meal that is deleted, missing or
@@ -150,9 +163,11 @@ func UpdateMealLog(ctx context.Context, q Querier, userID, id int64, p MealPatch
 			carbs_g = COALESCE($6, carbs_g),
 			fat_g = COALESCE($7, fat_g),
 			fiber_g = COALESCE($8, fiber_g),
+			logged_at = COALESCE($9, logged_at),
+			local_date = COALESCE($10::date, local_date),
 			updated_at = now()
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-		RETURNING `+mealColumns, id, userID, p.Name, p.Kcal, p.ProteinG, p.CarbsG, p.FatG, p.FiberG))
+		RETURNING `+mealColumns, id, userID, p.Name, p.Kcal, p.ProteinG, p.CarbsG, p.FatG, p.FiberG, p.LoggedAt, p.LocalDate))
 	return l, notFound(err)
 }
 

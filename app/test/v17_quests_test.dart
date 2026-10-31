@@ -234,7 +234,7 @@ void main() {
     testWidgets('one tap adds a serving at once', (tester) async {
       final app = await _open(tester, LogKind.produce);
       expect(find.text('Log fruit and vegetables'), findsOneWidget);
-      await app.tap(_chunky('Add 1 serving'));
+      await app.tap(_chunky('Add 1 serving (80 g)'));
       final body = app.body('POST /api/logs');
       expect(body['kind'], 'activity');
       expect(body['type'], 'produce');
@@ -250,13 +250,44 @@ void main() {
       expect(find.text('Added 3 servings of fruit and veg'), findsOneWidget);
     });
 
+    testWidgets('chips and the main button show grams beside servings', (tester) async {
+      await _open(tester, LogKind.produce);
+      expect(_chunky('Add 1 serving (80 g)'), findsOneWidget);
+      for (final (n, grams) in [(2, 160), (3, 240), (4, 320)]) {
+        expect(find.text('+$n ($grams g)'), findsOneWidget);
+      }
+    });
+
     testWidgets('it lists what one serving is, from the NHS guide', (tester) async {
       await _open(tester, LogKind.produce);
-      expect(find.text('One serving is about 80 g'), findsOneWidget);
-      for (final line in kServingExamples) {
-        expect(find.text(line), findsOneWidget, reason: line);
+      expect(find.text('One serving is 80 g'), findsOneWidget);
+      for (final (group, lines) in kServingGroups) {
+        expect(find.text(group), findsOneWidget, reason: group);
+        for (final line in lines) {
+          expect(find.text(line), findsOneWidget, reason: line);
+        }
       }
       expect(find.textContaining('NHS 5 A Day'), findsOneWidget);
+    });
+
+    testWidgets('today so far shows servings and grams once Today is loaded', (tester) async {
+      final today = richTodayJson(stepsEverSynced: true);
+      today['quests'] = [
+        ...(today['quests']! as List),
+        quest('produce', 'Fruit and vegetables', {
+          'unit': 'servings',
+          'target': 5,
+          'actual': 3,
+          'points': 50,
+          'basePoints': 30,
+        }),
+      ];
+      final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
+      final app = TestApp(tester, adapter);
+      await app.pump(const _Opener(LogKind.produce));
+      await app.tap(find.text('Open'));
+      await app.settle();
+      expect(find.text('Today so far: 3 servings (240 g)'), findsOneWidget);
     });
   });
 

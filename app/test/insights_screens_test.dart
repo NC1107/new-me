@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/board/board_screen.dart';
 import 'package:newme/features/board/person_card.dart';
+import 'package:newme/features/coach/coach_chat_page.dart';
 import 'package:newme/features/insights/insight_charts.dart';
 import 'package:newme/features/insights/insights_screen.dart';
 import 'package:newme/features/insights/sleep_insight_screen.dart';
@@ -183,6 +184,21 @@ void main() {
       await app.closeSheet();
       await app.tap(find.text('Workouts'));
       expect(find.byType(WorkoutsScreen), findsOneWidget);
+    });
+
+    testWidgets('links to the coach only when the server can answer', (tester) async {
+      Map<String, dynamic> me(bool on) => {
+        ...meJson(),
+        'features': {'mealEstimate': false, 'planPolish': false, 'coachChat': on},
+      };
+      final off = TestApp(tester, _server());
+      await off.pump(const InsightsScreen());
+      expect(find.text('Coach'), findsNothing);
+
+      final on = TestApp(tester, _server()..on('GET /api/me', StubResponse(200, me(true))));
+      await on.pump(const InsightsScreen(), key: UniqueKey());
+      await on.tap(find.text('Coach'));
+      expect(find.byType(CoachChatPage), findsOneWidget);
     });
 
     testWidgets('says there is no data yet instead of showing zeros', (tester) async {

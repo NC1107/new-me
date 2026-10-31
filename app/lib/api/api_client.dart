@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'coach_models.dart';
 import 'habit_models.dart';
 import 'models.dart';
 
@@ -601,6 +602,23 @@ class ApiClient {
       ),
     ),
     (data) => MealBreakdown.fromJson(data as Json),
+  );
+
+  /// One turn of the coach conversation: the whole chat so far, the reply back. Nothing is kept
+  /// on the server. Throws codes `coach_disabled`, `rate_limited`, `invalid_request` and
+  /// `coach_unavailable`.
+  Future<String> coachChat(List<ChatMessage> messages) => _send(
+    () => _dio.post<dynamic>(
+      '/api/coach/chat',
+      data: {
+        'messages': [for (final m in messages) m.toJson()],
+      },
+      options: Options(
+        sendTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 45),
+      ),
+    ),
+    (data) => (data as Json)['reply'] as String,
   );
 
   /// Searches the household food library; [remote] also searches USDA and Open Food Facts.

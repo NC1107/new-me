@@ -713,11 +713,13 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 // mlPerFlOz converts US fluid ounces to millilitres.
 const mlPerFlOz = 29.5735
 
-// volume words an amount of drinks the way the person reads it: litres, with US fluid ounces
+func (d targetData) volume(ml int) string { return volumeText(d.User, ml) }
+
+// volumeText words an amount of drinks the way the person reads it: litres, with US fluid ounces
 // beside them for an imperial person.
-func (d targetData) volume(ml int) string {
+func volumeText(u db.User, ml int) string {
 	litres := fmt.Sprintf("%.1f L", float64(ml)/1000)
-	if d.User.Imperial() {
+	if u.Imperial() {
 		return fmt.Sprintf("%s (%d fl oz)", litres, int(math.Round(float64(ml)/mlPerFlOz)))
 	}
 	return litres

@@ -116,7 +116,7 @@ func (s *Server) loadChatFacts(ctx context.Context, c caller) (coach.ChatFacts, 
 		facts.Sex = *c.user.Sex
 	}
 	for _, quest := range toQuestsJSON(scored) {
-		facts.TodayQuests = append(facts.TodayQuests, questLine(quest.Title, quest.Actual, quest.Target, quest.Unit, quest.Done, quest.Key))
+		facts.TodayQuests = append(facts.TodayQuests, questLine(c.user, quest))
 	}
 
 	series := map[string]map[score.Date]float64{}
@@ -175,7 +175,7 @@ func (s *Server) loadChatFacts(ctx context.Context, c caller) (coach.ChatFacts, 
 		return facts, err
 	}
 	for _, t := range computeTargets(data).Targets {
-		facts.Targets = append(facts.Targets, toChatTarget(t))
+		facts.Targets = append(facts.Targets, toChatTarget(c.user, t))
 	}
 	return facts, nil
 }
@@ -191,6 +191,9 @@ func pointMap(points []db.HealthPoint) map[score.Date]float64 {
 func goalSentence(u db.User) string {
 	switch u.GoalKind {
 	case "lose", "gain":
+		if u.GoalPaceKg > 0 && u.Imperial() {
+			return fmt.Sprintf("%s %s lb a week", u.GoalKind, trim(math.Round(u.GoalPaceKg*lbPerKg*4)/4, 2))
+		}
 		if u.GoalPaceKg > 0 {
 			return fmt.Sprintf("%s %s kg a week", u.GoalKind, trim(u.GoalPaceKg, 2))
 		}
@@ -201,17 +204,23 @@ func goalSentence(u db.User) string {
 	return ""
 }
 
-// questLine is one quest as the coach reads it. Reading keeps no figures because its stored
-// progress is a blended basis of minutes and pages, not either of them.
-func questLine(title string, actual, target int, unit string, done bool, key string) string {
+// questLine is one quest as the coach reads it, in the units the app shows the person, because
+// the coach quotes numbers as given. Reading keeps no figures because its stored progress is a
+// blended basis of minutes and pages, not either of them.
+func questLine(u db.User, q questJSON) string {
 	state := "not yet"
-	if done {
+	if q.Done {
 		state = "done"
 	}
-	if key == db.QuestReading {
-		return title + ": " + state
+	switch q.Key {
+	case db.QuestReading:
+		return q.Title + ": " + state
+	case db.QuestWater:
+		return fmt.Sprintf("%s: %s (%s of %s)", q.Title, state, volumeText(u, q.Actual), volumeText(u, q.Target))
+	case db.QuestSleep:
+		return fmt.Sprintf("%s: %s (%s of %s)", q.Title, state, hours(float64(q.Actual)), hours(float64(q.Target)))
 	}
-	return fmt.Sprintf("%s: %s (%d of %d %s)", title, state, actual, target, unit)
+	return fmt.Sprintf("%s: %s (%d of %d %s)", q.Title, state, q.Actual, q.Target, q.Unit)
 }
 
 func dayLine(d score.Date, row db.DayScoreRow, series map[string]map[score.Date]float64,
@@ -310,7 +319,7 @@ func average(m map[score.Date]float64, from, to score.Date) (mean float64, n int
 
 func (s *Server) weightText(u db.User, kg float64) string {
 	if u.Imperial() {
-		return fmt.Sprintf("%s lb (%s kg)", trim(kg*2.2046226218, 1), trim(kg, 1))
+		return fmt.Sprintf("%s lb (%s kg)", trim(kg*lbPerKg, 1), trim(kg, 1))
 	}
 	return trim(kg, 1) + " kg"
 }
@@ -431,12 +440,19 @@ func maxDate(a, b score.Date) score.Date {
 	return b
 }
 
-func toChatTarget(t targetJSON) coach.ChatTarget {
+func toChatTarget(u db.User, t targetJSON) coach.ChatTarget {
+	amount := func(v int) string { return th(float64(v)) }
+	if t.Unit == "ml" {
+		amount = func(v int) string { return volumeText(u, v) }
+	}
 	value := "no value yet"
 	if t.Value != nil {
-		value = fmt.Sprintf("%s %s", th(float64(*t.Value)), t.Unit)
+		value = amount(*t.Value)
+		if t.Unit != "ml" {
+			value += " " + t.Unit
+		}
 		if t.Current != nil && *t.Current != *t.Value {
-			value += fmt.Sprintf(" (currently set to %s)", th(float64(*t.Current)))
+			value += fmt.Sprintf(" (currently set to %s)", amount(*t.Current))
 		}
 	}
 	return coach.ChatTarget{Key: t.Key, Value: value, Formula: t.Formula, Label: t.Label, Sources: t.Sources}

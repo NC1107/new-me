@@ -12,6 +12,7 @@ import (
 
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
+	"github.com/nc1107/new-me/server/internal/gems"
 	"github.com/nc1107/new-me/server/internal/push"
 	"github.com/nc1107/new-me/server/internal/score"
 )
@@ -53,6 +54,8 @@ const (
 	EventRewardProgress   = "reward_progress"
 	// EventRewardProposal asks the partner to approve a reward or its new price (v13).
 	EventRewardProposal = "reward_proposal"
+	// EventTreat tells the partner a treat was redeemed (v19). It follows the reward switch.
+	EventTreat = "treat"
 )
 
 // AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
@@ -120,7 +123,7 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Cheers
 	case EventChallenge:
 		return n.Challenge
-	case EventReward:
+	case EventReward, EventTreat:
 		return n.Reward
 	case EventBehindPaceAfternoon, EventBehindPaceEvening:
 		return n.BehindPace
@@ -442,12 +445,8 @@ func (s *Service) settleChallenge(ctx context.Context, week score.Date, users []
 
 // Bank reads the pair's spendable gems.
 func (s *Service) Bank(ctx context.Context) (int, error) {
-	total, err := db.TotalPoints(ctx, s.DB.Pool)
-	if err != nil {
-		return 0, err
-	}
-	spent, err := db.SpentGems(ctx, s.DB.Pool)
-	return Bank(total, spent), err
+	people, err := db.ReadPersonGems(ctx, s.DB.Pool)
+	return gems.Bank(people.Gems()), err
 }
 
 // settleReward announces, once each, the approved rewards the bank now covers.
@@ -460,15 +459,11 @@ func (s *Service) settleReward(ctx context.Context, users []db.User) error {
 		if err := db.LockRewards(ctx, tx); err != nil {
 			return err
 		}
-		total, err := db.TotalPoints(ctx, tx)
+		people, err := db.ReadPersonGems(ctx, tx)
 		if err != nil {
 			return err
 		}
-		spent, err := db.SpentGems(ctx, tx)
-		if err != nil {
-			return err
-		}
-		bank = Bank(total, spent)
+		bank = gems.Bank(people.Gems())
 		ready, err = db.MarkRewardsReady(ctx, tx, bank)
 		return err
 	})

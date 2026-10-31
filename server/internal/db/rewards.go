@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/nc1107/new-me/server/internal/gems"
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
@@ -25,6 +26,10 @@ var (
 	ErrRewardNotReady = errors.New("the gem bank does not cover that reward")
 	// ErrRewardState means the reward is not in a state the action applies to.
 	ErrRewardState = errors.New("the reward is not in a state for that")
+	// ErrNotTreatOwner means someone tried to redeem a treat that is not theirs.
+	ErrNotTreatOwner = errors.New("that treat belongs to the other person")
+	// ErrInsufficientGems means the person's own balance does not cover a treat.
+	ErrInsufficientGems = errors.New("your gems do not cover that treat")
 )
 
 // Reward is one wishlist entry, priced in gems.
@@ -40,16 +45,18 @@ type Reward struct {
 	ApprovedPrice *int
 	ApprovedFocus bool
 	ProposedBy    *int64
-	StartedAt     time.Time
-	ReachedAt     *time.Time
-	ClaimedAt     *time.Time
+	// OwnerID is who a treat belongs to; nil for a shared reward.
+	OwnerID   *int64
+	StartedAt time.Time
+	ReachedAt *time.Time
+	ClaimedAt *time.Time
 }
 
-const rewardColumns = `id, name, target, status, is_focus, spent, approved_price, approved_focus, proposed_by, started_at, reached_at, claimed_at`
+const rewardColumns = `id, name, target, status, is_focus, spent, approved_price, approved_focus, proposed_by, owner_id, started_at, reached_at, claimed_at`
 
 func scanReward(row interface{ Scan(...any) error }) (Reward, error) {
 	var r Reward
-	err := row.Scan(&r.ID, &r.Name, &r.Price, &r.Status, &r.Focus, &r.Spent, &r.ApprovedPrice, &r.ApprovedFocus, &r.ProposedBy,
+	err := row.Scan(&r.ID, &r.Name, &r.Price, &r.Status, &r.Focus, &r.Spent, &r.ApprovedPrice, &r.ApprovedFocus, &r.ProposedBy, &r.OwnerID,
 		&r.StartedAt, &r.ReachedAt, &r.ClaimedAt)
 	return r, err
 }
@@ -80,13 +87,13 @@ func LockRewards(ctx context.Context, tx pgx.Tx) error {
 
 // InsertReward adds a reward with the given status. An approved one becomes the focus when
 // there is none.
-func InsertReward(ctx context.Context, tx pgx.Tx, name string, price int, by int64, status string) (Reward, error) {
+func InsertReward(ctx context.Context, tx pgx.Tx, name string, price int, by int64, owner *int64, status string) (Reward, error) {
 	if err := LockRewards(ctx, tx); err != nil {
 		return Reward{}, err
 	}
 	r, err := scanReward(tx.QueryRow(ctx, `
-		INSERT INTO rewards (name, target, created_by, proposed_by, status)
-		VALUES ($1, $2, $3, $3, $4) RETURNING `+rewardColumns, name, price, by, status))
+		INSERT INTO rewards (name, target, created_by, proposed_by, status, owner_id)
+		VALUES ($1, $2, $3, $3, $4, $5) RETURNING `+rewardColumns, name, price, by, status, owner))
 	if err != nil {
 		return Reward{}, err
 	}
@@ -97,12 +104,14 @@ func InsertReward(ctx context.Context, tx pgx.Tx, name string, price int, by int
 }
 
 // PendingRewardByName finds a pending reward the person proposed under the same name, ignoring
-// case, so a repeated create can be answered with it instead of adding a duplicate.
-func PendingRewardByName(ctx context.Context, q Querier, by int64, name string) (Reward, error) {
+// case, so a repeated create can be answered with it instead of adding a duplicate. A treat only
+// matches a treat of the same owner, and a shared reward only a shared one.
+func PendingRewardByName(ctx context.Context, q Querier, by int64, owner *int64, name string) (Reward, error) {
 	r, err := scanReward(q.QueryRow(ctx, `
 		SELECT `+rewardColumns+` FROM rewards
 		WHERE status = 'pending' AND proposed_by = $1 AND lower(name) = lower($2)
-		ORDER BY id LIMIT 1`, by, name))
+		  AND owner_id IS NOT DISTINCT FROM $3::bigint
+		ORDER BY id LIMIT 1`, by, name, owner))
 	return r, notFound(err)
 }
 
@@ -110,7 +119,7 @@ func PendingRewardByName(ctx context.Context, q Querier, by int64, name string) 
 func PromoteFocus(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE rewards SET is_focus = true
-		WHERE id = (SELECT id FROM rewards WHERE status = 'approved' ORDER BY id LIMIT 1)
+		WHERE id = (SELECT id FROM rewards WHERE status = 'approved' AND owner_id IS NULL ORDER BY id LIMIT 1)
 		  AND NOT EXISTS (SELECT 1 FROM rewards WHERE is_focus)`)
 	return err
 }
@@ -127,10 +136,11 @@ func FocusReward(ctx context.Context, q Querier) (Reward, error) {
 	return r, notFound(err)
 }
 
-// ListOpenRewards is the wishlist: pending, declined and approved, focus first.
+// ListOpenRewards is the shared wishlist: pending, declined and approved, focus first.
 func ListOpenRewards(ctx context.Context, q Querier) ([]Reward, error) {
 	return queryRewards(ctx, q, `
-		SELECT `+rewardColumns+` FROM rewards WHERE status IN ('pending', 'declined', 'approved')
+		SELECT `+rewardColumns+` FROM rewards
+		WHERE status IN ('pending', 'declined', 'approved') AND owner_id IS NULL
 		ORDER BY is_focus DESC, id`)
 }
 
@@ -141,10 +151,11 @@ func ListClaimedRewards(ctx context.Context, q Querier) ([]Reward, error) {
 		ORDER BY claimed_at DESC, id DESC LIMIT 100`)
 }
 
-// CountOpenRewards is how many wishlist entries exist.
+// CountOpenRewards is how many shared wishlist entries exist.
 func CountOpenRewards(ctx context.Context, q Querier) (int, error) {
 	var n int
-	err := q.QueryRow(ctx, `SELECT count(*)::int FROM rewards WHERE status IN ('pending', 'declined', 'approved')`).Scan(&n)
+	err := q.QueryRow(ctx, `SELECT count(*)::int FROM rewards
+		WHERE status IN ('pending', 'declined', 'approved') AND owner_id IS NULL`).Scan(&n)
 	return n, err
 }
 
@@ -189,16 +200,10 @@ func SetFocus(ctx context.Context, tx pgx.Tx, id int64) (Reward, error) {
 		return Reward{}, err
 	}
 	r, err := scanReward(tx.QueryRow(ctx, `
-		UPDATE rewards SET is_focus = true, updated_at = now() WHERE id = $1 AND status = 'approved'
+		UPDATE rewards SET is_focus = true, updated_at = now()
+		WHERE id = $1 AND status = 'approved' AND owner_id IS NULL
 		RETURNING `+rewardColumns, id))
 	return r, notFound(err)
-}
-
-// SpentGems is what claimed rewards have cost so far.
-func SpentGems(ctx context.Context, q Querier) (int, error) {
-	var n int
-	err := q.QueryRow(ctx, `SELECT COALESCE(sum(spent), 0)::int FROM rewards WHERE status = 'claimed'`).Scan(&n)
-	return n, err
 }
 
 // MarkRewardsReady stamps every approved reward the bank now covers and returns those this
@@ -206,7 +211,7 @@ func SpentGems(ctx context.Context, q Querier) (int, error) {
 func MarkRewardsReady(ctx context.Context, q Querier, bank int) ([]Reward, error) {
 	return queryRewards(ctx, q, `
 		UPDATE rewards SET reached_at = now()
-		WHERE status = 'approved' AND reached_at IS NULL AND target <= $1
+		WHERE status = 'approved' AND owner_id IS NULL AND reached_at IS NULL AND target <= $1
 		RETURNING `+rewardColumns, bank)
 }
 
@@ -221,18 +226,14 @@ func ClaimReward(ctx context.Context, tx pgx.Tx, id int64) (Reward, error) {
 	if r.Status == RewardClaimed {
 		return r, nil
 	}
-	if r.Status != RewardApproved {
+	if r.Status != RewardApproved || r.OwnerID != nil {
 		return Reward{}, ErrRewardState
 	}
-	total, err := TotalPoints(ctx, tx)
+	people, err := ReadPersonGems(ctx, tx)
 	if err != nil {
 		return Reward{}, err
 	}
-	spent, err := SpentGems(ctx, tx)
-	if err != nil {
-		return Reward{}, err
-	}
-	if total-spent < r.Price {
+	if gems.Bank(people.Gems()) < r.Price {
 		return Reward{}, ErrRewardNotReady
 	}
 	claimed, err := scanReward(tx.QueryRow(ctx, `
@@ -241,6 +242,12 @@ func ClaimReward(ctx context.Context, tx pgx.Tx, id int64) (Reward, error) {
 		WHERE id = $1 RETURNING `+rewardColumns, id))
 	if err != nil {
 		return Reward{}, err
+	}
+	for i, share := range gems.SplitPrice(r.Price, gems.Balances(people.Gems())) {
+		if _, err := tx.Exec(ctx, `INSERT INTO reward_payments (reward_id, user_id, amount) VALUES ($1, $2, $3)`,
+			id, people[i].UserID, share); err != nil {
+			return Reward{}, err
+		}
 	}
 	return claimed, PromoteFocus(ctx, tx)
 }

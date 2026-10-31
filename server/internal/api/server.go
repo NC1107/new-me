@@ -307,6 +307,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/rewards/{id}/cancel", s.handleCancelReward)
 		r.Post("/api/rewards/{id}/focus", s.handleFocusReward)
 		r.With(s.settleAfter).Post("/api/rewards/{id}/claim", s.handleClaimReward)
+		r.Post("/api/rewards/{id}/redeem", s.handleRedeemTreat)
 		r.Put("/api/devices/me/push", s.handlePutPushToken)
 		r.Delete("/api/devices/me/push", s.handleDeletePushToken)
 

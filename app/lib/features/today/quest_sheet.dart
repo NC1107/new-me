@@ -36,6 +36,16 @@ String? targetKeyForQuest(String questKey) => switch (questKey) {
   _ => null,
 };
 
+/// Where a mixed quest's progress comes from when it was not logged in New Me.
+const _otherSource = {
+  'exercise': 'Apple Health',
+  'breathing': 'Apple Health',
+  'water': 'Apple Health',
+  'yoga': 'Apple Health',
+  'reading': 'audiobook listening',
+  'pushups': 'a strength session',
+};
+
 /// Where a quest's number comes from, in one short line.
 String questSourceLine(String key) => switch (key) {
   'steps' => 'Counted by Apple Health',
@@ -44,7 +54,7 @@ String questSourceLine(String key) => switch (key) {
   'exercise' => 'Apple Health workouts, plus any activity you log',
   'breathing' => 'Breathing you log, plus Apple Health mindful minutes',
   'water' => 'Water you log, plus any Apple Health records',
-  'pushups' => 'A strength session, or push-ups you log',
+  'pushups' => 'A strength session, or reps you log',
   'reading' => 'Reading you log, plus linked audiobook listening',
   'yoga' => 'Yoga you log, or a yoga workout from Apple Health',
   'meals_logged' => 'Counted from the meals you log',
@@ -256,7 +266,10 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       date: date,
       shrinkWrap: true,
       matches: (e) => entryFeedsQuest(quest.key, e),
-      emptyText: 'Nothing logged for this yet.',
+      // A Health-fed quest can have progress with no entry of its own to list.
+      emptyText: quest.actual > 0 && _otherSource[quest.key] != null
+          ? 'Nothing logged here yet. What counts so far came from ${_otherSource[quest.key]}.'
+          : 'Nothing logged for this yet.',
     );
   }
 

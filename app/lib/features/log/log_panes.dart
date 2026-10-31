@@ -364,8 +364,9 @@ class _MealPaneState extends State<MealPane> {
     num p,
     num c,
     num f,
-    num fi,
-  ) =>
+    num fi, [
+    MealProduce produce = MealProduce.none,
+  ]) =>
       (id, date) => MealDraft(
         clientOpId: id,
         name: name,
@@ -374,6 +375,7 @@ class _MealPaneState extends State<MealPane> {
         carbs: c,
         fat: f,
         fiber: fi,
+        produce: produce,
         date: date,
       );
 
@@ -382,7 +384,7 @@ class _MealPaneState extends State<MealPane> {
     final t = mealTotals(items);
     final name = joinedMealName(items);
     widget.onLog(
-      _draftFor(name, t.kcal, t.protein, t.carbs, t.fat, t.fiber),
+      _draftFor(name, t.kcal, t.protein, t.carbs, t.fat, t.fiber, mealProduce(items)),
       added: 'Added $name',
       confirm: t.kcal > kConfirmKcal ? _confirmCopy(t.kcal) : null,
       libraryItems: items,
@@ -402,6 +404,7 @@ class _MealPaneState extends State<MealPane> {
             i.carbs,
             i.fat,
             i.fiber,
+            i.produce,
           ),
       ],
       added: 'Added ${items.length} meals',
@@ -436,6 +439,7 @@ class _MealPaneState extends State<MealPane> {
         carbs: _scaleMacro(meal.carbs),
         fat: _scaleMacro(meal.fat),
         fiber: _scaleMacro(meal.fiber),
+        produce: meal.produce.scaled(_portion),
         date: date,
       ),
       added: 'Added ${meal.name}',

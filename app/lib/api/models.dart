@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../util/units.dart';
 
+import 'food_models.dart';
 import 'habit_models.dart';
 
 import 'together_models.dart';
@@ -1360,6 +1361,7 @@ class MealLog extends LogEntry {
     required this.carbs,
     required this.fat,
     required this.fiber,
+    this.produce = MealProduce.none,
   });
 
   factory MealLog.fromJson(Json j) => MealLog(
@@ -1372,6 +1374,7 @@ class MealLog extends LogEntry {
     carbs: _num(j['carbs']),
     fat: _num(j['fat']),
     fiber: _num(j['fiber']),
+    produce: MealProduce.fromJson(j),
   );
 
   final String name;
@@ -1380,6 +1383,9 @@ class MealLog extends LogEntry {
   final num carbs;
   final num fat;
   final num fiber;
+
+  /// The fruit and vegetables, juice and pulses in the meal, which feed the produce quest.
+  final MealProduce produce;
 
   @override
   String get kind => 'meal';
@@ -1396,6 +1402,7 @@ class MealLog extends LogEntry {
     'carbs': carbs,
     'fat': fat,
     'fiber': fiber,
+    ...produce.toJson(),
   };
 }
 
@@ -1514,6 +1521,7 @@ class MealDraft extends LogDraft {
     this.carbs = 0,
     this.fat = 0,
     this.fiber = 0,
+    this.produce = MealProduce.none,
     super.date,
   });
 
@@ -1523,6 +1531,7 @@ class MealDraft extends LogDraft {
   final num carbs;
   final num fat;
   final num fiber;
+  final MealProduce produce;
 
   @override
   String get kind => 'meal';
@@ -1536,6 +1545,7 @@ class MealDraft extends LogDraft {
     'carbs': carbs,
     'fat': fat,
     'fiber': fiber,
+    ...produce.toJson(),
   };
 }
 
@@ -1559,6 +1569,7 @@ extension LogEntryDraft on LogEntry {
       carbs: m.carbs,
       fat: m.fat,
       fiber: m.fiber,
+      produce: m.produce,
       date: date,
     ),
   };
@@ -1599,6 +1610,7 @@ class RecentMeal {
     required this.carbs,
     required this.fat,
     required this.fiber,
+    this.produce = MealProduce.none,
   });
 
   factory RecentMeal.fromJson(Json j) => RecentMeal(
@@ -1608,6 +1620,7 @@ class RecentMeal {
     carbs: _num(j['carbs']),
     fat: _num(j['fat']),
     fiber: _num(j['fiber']),
+    produce: MealProduce.fromJson(j),
   );
 
   final String name;
@@ -1616,6 +1629,7 @@ class RecentMeal {
   final num carbs;
   final num fat;
   final num fiber;
+  final MealProduce produce;
 
   Json toJson() => {
     'name': name,
@@ -1624,6 +1638,7 @@ class RecentMeal {
     'carbs': carbs,
     'fat': fat,
     'fiber': fiber,
+    ...produce.toJson(),
   };
 }
 

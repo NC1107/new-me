@@ -353,14 +353,19 @@ class EntryRow extends StatelessWidget {
         'breathing' => 'Breathing',
         _ => 'Yoga',
       },
-      a.type == 'water' ? units.volume(a.quantity) : '${a.quantity.formatted} ${shortUnit(a.unit)}',
+      switch (a.type) {
+        'water' => units.volume(a.quantity),
+        'produce' => '${a.quantity.formatted} ${a.quantity == 1 ? 'serving' : 'servings'}',
+        _ => '${a.quantity.formatted} ${shortUnit(a.unit)}',
+      },
       a.type == 'other' && a.intensity != null ? '${a.intensity} effort' : null,
     ),
     final MealLog m => (
       'meals_logged',
       m.name,
       '${m.kcal.formatted} kcal',
-      'P ${m.protein.formatted} C ${m.carbs.formatted} F ${m.fat.formatted}',
+      'P ${m.protein.formatted} C ${m.carbs.formatted} F ${m.fat.formatted}'
+          '${m.produce.isEmpty ? '' : ' \u00b7 ${m.produce.totalG.round()} g fruit and veg'}',
     ),
   };
 }

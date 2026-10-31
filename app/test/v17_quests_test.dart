@@ -114,8 +114,8 @@ void main() {
   group('quest copy', () {
     test('fruit and vegetables reads servings', () {
       final q = _produce();
-      expect(questTitle(q), 'Eat 5 a day');
-      expect(questProgress(q), '3 of 5 servings of fruit and veg');
+      expect(questTitle(q), 'Eat fruit and veg');
+      expect(questProgress(q), '3 of 5 servings');
       expect(titleStatesTarget(q), isFalse);
       expect(isAutomaticQuest('produce'), isFalse);
       expect(LogKind.forQuest('produce'), LogKind.produce);
@@ -472,12 +472,12 @@ void main() {
         ..on('GET /api/today', StubResponse(200, todayWith([_produce(), _breathing()])));
       final app = TestApp(tester, adapter, surfaceHeight: 3000);
       await app.pump(const TodayScreen());
-      expect(find.text('Eat 5 a day'), findsOneWidget);
-      expect(find.text('3 of 5 servings of fruit and veg'), findsOneWidget);
+      expect(find.text('Eat fruit and veg'), findsOneWidget);
+      expect(find.text('3 of 5 servings'), findsOneWidget);
       expect(find.text('Breathe 5 min'), findsOneWidget);
       expect(find.text('2 min'), findsOneWidget);
 
-      await app.tap(find.bySemanticsLabel('Add entry for Eat 5 a day'));
+      await app.tap(find.bySemanticsLabel('Add entry for Eat fruit and veg'));
       expect(find.text('Log fruit and vegetables'), findsOneWidget);
       await app.closeSheet();
       await app.tap(find.bySemanticsLabel('Add entry for Breathe 5 min'));

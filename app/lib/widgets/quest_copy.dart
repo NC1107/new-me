@@ -47,7 +47,7 @@ String questTitle(Quest q, {Units units = Units.metric}) {
     'yoga' => 'Yoga or stretch ${t.formatted} ${shortUnit(q.unit)}',
     'water' => 'Drink ${units.volume(t)}',
     'sleep_regularity' => 'Keep a steady bedtime',
-    'produce' => 'Eat ${t.formatted} a day',
+    'produce' => 'Eat fruit and veg',
     'breathing' => 'Breathe ${t.formatted} min',
     _ => q.title,
   };
@@ -80,7 +80,7 @@ String questProgress(Quest q, {Units units = Units.metric}) {
   }
   if (q.key == 'produce') {
     return '${q.actual.formatted} of ${q.target.formatted} '
-        '${q.target == 1 ? 'serving' : 'servings'} of fruit and veg';
+        '${q.target == 1 ? 'serving' : 'servings'}';
   }
   if (q.key == 'sleep_regularity') return steadyBedtimeProgress(q);
   if (q.key == 'sleep') {
@@ -169,6 +169,21 @@ String steadyBedtimeProgress(Quest q) {
     _ => 'Neither within $window min of usual',
   };
 }
+
+/// How the servings so far split between meals and what the person logged, "2 from meals, 1 you
+/// logged"; null when there is nothing yet or the server sent no split.
+String? produceSplitLine(Quest q) {
+  final d = q.detail;
+  final meals = (d?['fromMeals'] as num? ?? 0).round();
+  final logged = (d?['logged'] as num? ?? 0).round();
+  final parts = [if (meals > 0) '$meals from meals', if (logged > 0) '$logged you logged'];
+  return parts.isEmpty ? null : parts.join(', ');
+}
+
+/// How fruit and veg in meals are counted, shown under the split.
+const kProduceMealsNote =
+    'Meals count by weight, 80 g to a serving. Potatoes do not count, juice and beans count '
+    'once a day, and an estimated weight is only approximate.';
 
 /// How much of the quest's bar is filled.
 double questFraction(Quest q) {

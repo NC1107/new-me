@@ -67,7 +67,7 @@ void main() {
       expect(report.input('heightCm')!.source, 'health');
 
       final water = report.target('water')!;
-      expect(water.why, contains('adequate intake of drinks for men'));
+      expect(water.why, contains('enough drinks a day for men'));
       expect(water.cite, 'National Academies 2005');
       expect(water.alternatives.single.value, 2000);
       expect(water.alternatives.single.label, startsWith('EFSA'));

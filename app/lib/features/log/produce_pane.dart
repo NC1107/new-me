@@ -40,8 +40,8 @@ const kServingFootnote =
     'Beans and pulses count once a day. Juice and smoothies count once however much you have. '
     'Potatoes do not count.';
 
-/// Log fruit and vegetables: tap to add one serving at once, or a few at a time. The pane never
-/// guesses servings from meals.
+/// Log fruit and vegetables: tap to add one serving at once, or a few at a time. Meals that carry
+/// fruit and vegetables count on their own, so the pane is for what no meal recorded.
 class ProducePane extends StatelessWidget {
   const ProducePane({
     super.key,

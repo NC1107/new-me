@@ -355,7 +355,7 @@
           "incrementSteps": 1000,
           "median14": 8300
         },
-        "why": "Around where the benefit of walking starts to level off, 5,000 to 7,000 steps.",
+        "why": "The health benefit of walking starts to level off between 5,000 and 7,000 steps a day, so 7,000 is a solid daily aim.",
         "cite": "Paluch 2022, Ding 2025",
         "alternatives": [
           {
@@ -373,7 +373,7 @@
         "value": 54,
         "unit": "reps",
         "current": 30,
-        "formula": "3 sets x 18 reps, 75% (the middle of 70 to 80%) of your latest max of 24, a derivation from reps-in-reserve guidance rather than a published constant.",
+        "formula": "3 sets × 18 reps. Each set is 75% (the middle of 70 to 80%) of your latest max of 24 push-ups. This is worked out from research on stopping a set with reps left in reserve; the research does not publish the number itself.",
         "sources": [
           "zourdos2016",
           "schoenfeld2017",
@@ -395,7 +395,9 @@
           "daysCompleted7": 2,
           "progressionDays": 5,
           "suggestRetestEveryWeeks": "2 to 4"
-        }
+        },
+        "why": "About three quarters of your best set of 24, so each set ends with some reps left in the tank.",
+        "cite": "Zourdos 2016"
       },
       {
         "key": "water",
@@ -416,7 +418,7 @@
           "totalWaterL": 3.7,
           "note": "The Academies report that needs rise with activity and in heat; this is an adequate intake, not a requirement."
         },
-        "why": "The adequate intake of drinks for men, about 81% of total water. Needs rise with activity and heat.",
+        "why": "About what health bodies say is enough drinks a day for men: 81% of the water you need, the rest comes from food. You need more with activity and heat.",
         "cite": "National Academies 2005",
         "alternatives": [
           {
@@ -451,7 +453,7 @@
           ],
           "note": "Potatoes do not count, beans and pulses count once a day, and juice and smoothies count once however much you drink."
         },
-        "why": "WHO advises at least 400 g a day. One serving is 80 g, so 5 servings.",
+        "why": "WHO advises at least 400 g of fruit and vegetables a day. One serving is 80 g, so that is 5 servings.",
         "cite": "WHO, NHS 5 A Day",
         "alternatives": [
           {

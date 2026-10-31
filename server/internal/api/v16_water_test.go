@@ -59,13 +59,13 @@ func TestWaterQuestIsOnByDefaultAndJoinsTheDayOnceItHasData(t *testing.T) {
 
 	empty := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, empty, "water")
-	if empty.num(q+".target") != 2200 || empty.num(q+".actual") != 0 || empty.num("day.maxBase") != 80 {
+	if empty.num(q+".target") != 2200 || empty.num(q+".actual") != 0 || empty.num("day.maxBase") != 135 {
 		t.Fatalf("water stays out of the day's maximum until it has data: %s", empty.Body)
 	}
 
 	logged := h.logActivity(nick, "water", "ml", 1100).expect(http.StatusCreated)
 	q = questAt(t, logged, "day.quests", "water")
-	if logged.num(q+".actual") != 1100 || logged.num("day.maxBase") != 100 {
+	if logged.num(q+".actual") != 1100 || logged.num("day.maxBase") != 155 {
 		t.Fatalf("logged water joins the day: %s", logged.Body)
 	}
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
@@ -82,7 +82,7 @@ func TestHealthWaterCountsAndTheLargerSourceWinsNeverTheSum(t *testing.T) {
 	h.putHealth(nick, "2026-11-02", "water_ml", 1800).expect(http.StatusOK)
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, today, "water")
-	if today.num(q+".actual") != 1800 || today.num("day.maxBase") != 100 {
+	if today.num(q+".actual") != 1800 || today.num("day.maxBase") != 155 {
 		t.Fatalf("Health water = %s", today.Body)
 	}
 

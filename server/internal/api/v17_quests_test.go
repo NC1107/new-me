@@ -75,7 +75,7 @@ func TestV17QuestsShipDisabledAndLeaveTodayAlone(t *testing.T) {
 			}
 		}
 	}
-	if today.num("day.maxBase") != 80 {
+	if today.num("day.maxBase") != 135 {
 		t.Fatalf("the day's maximum changed: %s", today.Body)
 	}
 }
@@ -116,7 +116,7 @@ func TestProduceQuestCountsServingsFromTheLogOnceEnabled(t *testing.T) {
 
 	empty := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, empty, "produce")
-	if empty.num(q+".target") != 5 || empty.num(q+".actual") != 0 || empty.num("day.maxBase") != 100 {
+	if empty.num(q+".target") != 5 || empty.num(q+".actual") != 0 || empty.num("day.maxBase") != 155 {
 		t.Fatalf("a hand-logged quest is part of the day at once: %s", empty.Body)
 	}
 
@@ -142,14 +142,14 @@ func TestBreathingTakesTheLargerOfHealthAndLoggedMinutes(t *testing.T) {
 
 	empty := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, empty, "breathing")
-	if empty.num(q+".target") != 5 || empty.num("day.maxBase") != 80 {
+	if empty.num(q+".target") != 5 || empty.num("day.maxBase") != 135 {
 		t.Fatalf("breathing stays out of the maximum until it has data: %s", empty.Body)
 	}
 
 	h.putHealth(nick, "2026-11-02", "mindful_minutes", 3).expect(http.StatusOK)
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q = questIndex(t, today, "breathing")
-	if today.num(q+".actual") != 3 || today.num("day.maxBase") != 100 {
+	if today.num(q+".actual") != 3 || today.num("day.maxBase") != 155 {
 		t.Fatalf("Health mindful minutes join the day: %s", today.Body)
 	}
 
@@ -179,7 +179,7 @@ func TestBreathingLoggedByHandJoinsTheDayWithoutHealth(t *testing.T) {
 	enableV17(t, h, nick, "breathing")
 	logged := h.logActivity(nick, "breathing", "minutes", 5).expect(http.StatusCreated)
 	q := questAt(t, logged, "day.quests", "breathing")
-	if !logged.flag(q+".done") || logged.num("day.maxBase") != 100 {
+	if !logged.flag(q+".done") || logged.num("day.maxBase") != 155 {
 		t.Fatalf("breathing = %s", logged.Body)
 	}
 }
@@ -192,14 +192,14 @@ func TestSteadyBedtimeIsJudgedFromStoredNights(t *testing.T) {
 	none := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, none, "sleep_regularity")
 	if none.num(q+".target") != 45 || none.num(q+".actual") != 0 || none.flag(q+".detail.measurable") ||
-		none.num("day.maxBase") != 80 {
+		none.num("day.maxBase") != 135 {
 		t.Fatalf("without sleep the quest is out of the day: %s", none.Body)
 	}
 
 	putSleep(h, nick, routineNights()...).expect(http.StatusOK)
 	baselineOnly := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q = questIndex(t, baselineOnly, "sleep_regularity")
-	if baselineOnly.flag(q+".detail.measurable") || baselineOnly.num("day.maxBase") != 80 {
+	if baselineOnly.flag(q+".detail.measurable") || baselineOnly.num("day.maxBase") != 135 {
 		t.Fatalf("no night for today yet: %s", baselineOnly.Body)
 	}
 
@@ -208,7 +208,7 @@ func TestSteadyBedtimeIsJudgedFromStoredNights(t *testing.T) {
 	both := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q = questIndex(t, both, "sleep_regularity")
 	if !both.flag(q+".detail.measurable") || both.num(q+".actual") != 2 || !both.flag(q+".done") ||
-		both.num(q+".basePoints") != 20 || both.num("day.maxBase") != 120 ||
+		both.num(q+".basePoints") != 20 || both.num("day.maxBase") != 175 ||
 		both.num(q+".detail.bedMedian") != 22*60+30 || both.num(q+".detail.wakeMedian") != 6*60+30 ||
 		both.num(q+".detail.bedOffset") != 30 || both.num(q+".detail.wakeOffset") != -15 ||
 		!both.flag(q+".detail.bedOk") || !both.flag(q+".detail.wakeOk") || both.num(q+".detail.windowMin") != 45 {
@@ -242,13 +242,13 @@ func TestSteadyBedtimeNeedsThreeEarlierNights(t *testing.T) {
 		v17Night(time.November, 2, 22*60+30, 6*60+30)).expect(http.StatusOK)
 	two := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q := questIndex(t, two, "sleep_regularity")
-	if two.flag(q+".detail.measurable") || two.num(q+".detail.baselineNights") != 2 || two.num("day.maxBase") != 100 {
+	if two.flag(q+".detail.measurable") || two.num(q+".detail.baselineNights") != 2 || two.num("day.maxBase") != 155 {
 		t.Fatalf("two earlier nights are not a routine: %s", two.Body)
 	}
 	putSleep(h, nick, v17Night(time.October, 30, 22*60+30, 6*60+30)).expect(http.StatusOK)
 	three := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	q = questIndex(t, three, "sleep_regularity")
-	if !three.flag(q+".detail.measurable") || three.num(q+".actual") != 2 || three.num("day.maxBase") != 120 {
+	if !three.flag(q+".detail.measurable") || three.num(q+".actual") != 2 || three.num("day.maxBase") != 175 {
 		t.Fatalf("three earlier nights are: %s", three.Body)
 	}
 }

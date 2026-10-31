@@ -346,7 +346,8 @@ func TestMorningPlanOnlyAsTheFirstPushAndCloseToDoneBeatsBehindPace(t *testing.T
 	nick := h.joinAdmin("Nick", "green")
 	h.enableAllNudges(nick)
 	h.seedSteps(nick, 1, steady(8000, 14)...)
-	// Close to done (reading, meals and protein done leaves steps and push-ups) and behind on steps.
+	// Close to done (everything but steps is done) and behind on steps.
+	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 	h.logActivity(nick, "reading", "minutes", 20).expect(http.StatusCreated)
 	h.logMeal(nick, "Eggs", 300, 100).expect(http.StatusCreated)
 	h.logMeal(nick, "Rice", 400, 10).expect(http.StatusCreated)

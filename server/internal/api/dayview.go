@@ -91,7 +91,7 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		if q.Key == db.QuestPushups {
 			item.Exercise = q.Exercise
 		}
-		if e := score.EffortPoints(q.Key, q.Target, q.Exercise); e.Points == q.Points {
+		if e := score.EffortPoints(q.Key, q.Target, s.StrengthMinutes); e.Points == q.Points {
 			item.PointsWhy = e.Reason()
 		}
 		if earned.Complete {

@@ -136,7 +136,7 @@ func TestTemplateEditsApplyToTodayAndAfter(t *testing.T) {
 	}
 
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if today.num("day.maxBase") != 90 {
+	if today.num("day.maxBase") != 145 {
 		t.Fatalf("today's maximum after the edit: %s", today.Body)
 	}
 	byKey := questsByKey(today)

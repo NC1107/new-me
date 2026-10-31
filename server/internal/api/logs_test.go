@@ -17,8 +17,8 @@ func TestCreateLogReturnsTheLogAndTheUpdatedDay(t *testing.T) {
 		got.str("log.unit") != "reps" || got.str("log.localDate") != "2026-11-02" || got.str("log.loggedAt") == "" {
 		t.Fatalf("log = %s", got.Body)
 	}
-	if got.str("day.date") != "2026-11-02" || got.num("day.basePoints") != 10 || got.num("day.bonusPoints") != 0 ||
-		got.num("day.maxBase") != 80 {
+	if got.str("day.date") != "2026-11-02" || got.num("day.basePoints") != 38 || got.num("day.bonusPoints") != 0 ||
+		got.num("day.maxBase") != 135 {
 		t.Fatalf("day = %s", got.Body)
 	}
 	if got.str("day.quests.1.key") != "pushups" || got.num("day.quests.1.actual") != 15 {

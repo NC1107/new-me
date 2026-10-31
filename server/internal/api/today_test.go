@@ -24,15 +24,15 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 	fixtureDay(h, nick)
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("day.basePoints") != 188 || got.num("day.bonusPoints") != 8 || got.num("day.points") != 196 ||
-		got.num("day.maxBase") != 230 || got.num("day.percent") != 81 || got.num("day.goalPercent") != 116 || !got.flag("day.counted") ||
+	if got.num("day.basePoints") != 200 || got.num("day.bonusPoints") != 19 || got.num("day.points") != 219 ||
+		got.num("day.maxBase") != 235 || got.num("day.percent") != 85 || got.num("day.goalPercent") != 121 || !got.flag("day.counted") ||
 		got.num("day.streakLine") != 70 {
 		t.Fatalf("day = %s", got.Body)
 	}
 
 	want := map[string]questView{
-		"steps":        {target: 8000, actual: 7000, points: 150, base: 131},
-		"pushups":      {target: 30, actual: 30, points: 20, base: 20, bonus: 4, done: true},
+		"steps":        {target: 8000, actual: 7000, points: 100, base: 88},
+		"pushups":      {target: 30, actual: 30, points: 75, base: 75, bonus: 15, done: true},
 		"reading":      {target: 20, actual: 12, points: 20, base: 17},
 		"meals_logged": {target: 2, actual: 2, points: 20, base: 20, bonus: 4, done: true},
 		"protein":      {target: 100, actual: 0, points: 20},
@@ -71,7 +71,7 @@ func TestStepsStayOutOfTheMaximumUntilHealthIsConnected(t *testing.T) {
 	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.num("day.maxBase") != 80 || before.flag("health.stepsEverSynced") || before.num("day.percent") != 25 {
+	if before.num("day.maxBase") != 135 || before.flag("health.stepsEverSynced") || before.num("day.percent") != 55 {
 		t.Fatalf("before connecting = %s", before.Body)
 	}
 	if q := questsByKey(before)["steps"]; q.target != 8000 || q.base != 0 {
@@ -80,7 +80,7 @@ func TestStepsStayOutOfTheMaximumUntilHealthIsConnected(t *testing.T) {
 
 	h.putHealth(nick, "2026-11-02", "steps", 0).expect(http.StatusOK)
 	after := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if after.num("day.maxBase") != 230 || !after.flag("health.stepsEverSynced") || after.num("day.percent") != 8 {
+	if after.num("day.maxBase") != 235 || !after.flag("health.stepsEverSynced") || after.num("day.percent") != 31 {
 		t.Fatalf("after connecting = %s", after.Body)
 	}
 }

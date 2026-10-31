@@ -183,6 +183,9 @@ type Scored struct {
 	Quests []db.DayQuest
 	Inputs db.DayInputs
 	Score  score.DayScore
+	// StrengthMinutes is the person's planned strength session length, or zero. It prices the
+	// strength quest.
+	StrengthMinutes int
 }
 
 // Counts reports whether a snapshotted quest is part of the day's score. A Health-fed quest
@@ -266,7 +269,11 @@ func ScoreAt(ctx context.Context, tx pgx.Tx, userID int64, date score.Date, loc 
 			return Scored{}, err
 		}
 	}
-	return Scored{Row: row, Quests: quests, Inputs: inputs, Score: day}, nil
+	strength, err := db.StrengthMinutes(ctx, tx, userID)
+	if err != nil {
+		return Scored{}, err
+	}
+	return Scored{Row: row, Quests: quests, Inputs: inputs, Score: day, StrengthMinutes: strength}, nil
 }
 
 // withHabitsAndBonus adds what does not come from quests: the due habits' worth (which counts

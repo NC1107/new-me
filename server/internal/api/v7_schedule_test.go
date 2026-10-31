@@ -138,13 +138,13 @@ func TestManualActivityStartsTheExerciseQuestBeforeHealthDoes(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.num("day.maxBase") != 80 {
+	if before.num("day.maxBase") != 135 {
 		t.Fatalf("exercise waits for data: %s", before.Body)
 	}
 	h.post("/api/logs", nick.Token, obj{"clientOpId": h.nextOp(), "kind": "activity", "type": "other",
 		"name": "Run", "minutes": 30, "intensity": "hard"}).expect(http.StatusCreated)
 	after := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if after.num("day.maxBase") != 165 || after.num("day.basePoints") != 85 {
+	if after.num("day.maxBase") != 220 || after.num("day.basePoints") != 85 {
 		t.Fatalf("a logged run connects the exercise quest: %s", after.Body)
 	}
 }

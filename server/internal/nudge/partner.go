@@ -13,7 +13,7 @@ import (
 //
 //	cover chance       the partner missed yesterday, can still be covered, has no freeze of their
 //	                   own, and you hold one
-//	cheer prompt       the partner finished a hard quest (worth 100 points) today and you have
+//	cheer prompt       the partner finished a hard quest (worth 80 points or more) today and you have
 //	                   not cheered them yet
 //	challenge check-in on Thursday from 17:00, your share of the weekly challenge is behind the
 //	                   even pace of four days out of seven
@@ -21,8 +21,9 @@ import (
 // Reward progress is sent through together.Service.NotifyRewardProgress.
 
 const (
-	// HardQuestPoints is what a quest is worth for a finish to count as hard.
-	HardQuestPoints = 100
+	// HardQuestPoints is what a quest is worth for a finish to count as hard: the points of about
+	// half an hour of moderate effort, a figure picked for the game rather than measured.
+	HardQuestPoints = 80
 
 	checkInWeekday = time.Thursday
 	checkInFrom    = 17 * 60

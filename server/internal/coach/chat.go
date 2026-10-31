@@ -171,6 +171,8 @@ func RenderFacts(f ChatFacts) string {
 		sb.WriteString("Profile: " + strings.Join(profile, ", ") + "\n")
 	}
 	fmt.Fprintf(&sb, "Today: %s. A day counts toward the streak at %d%% of its base points.\n", f.Today, score.CountedPercent)
+	sb.WriteString("A quest is worth points by the effort its target asks: minutes x (MET - 1) from the 2024 Compendium of Physical Activities, " +
+		"rounded to 5. The strength quest is priced as the person's planned strength session (30 minutes until they plan one, a game default). The floor of 20 and the cap of 100 are game design choices, not research. Quests with no measured effort (water, meals, protein, sleep) are worth the floor.\n")
 	fmt.Fprintf(&sb, "Streak: %d days now, best %d.\n", f.Streak, f.BestStreak)
 	writeLines(&sb, "TODAY SO FAR (the day is not over)", f.TodayQuests, "no quests are on today")
 	writeLines(&sb, "LAST 28 DAYS, oldest first (points, percent of base points, and what was recorded)", f.Days, "no days recorded yet")

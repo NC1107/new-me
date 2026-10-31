@@ -19,12 +19,12 @@ func TestStrengthWorkoutCompletesThePushupsQuestWithoutLoggedReps(t *testing.T) 
 	putWorkouts(h, nick, workout("w1", "strength", ny(2026, time.November, 2, 8, 0), 42)).expect(http.StatusOK)
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	if got.str("quests.1.key") != "pushups" || !got.flag("quests.1.done") || got.num("quests.1.actual") != 0 ||
-		got.num("quests.1.basePoints") != 100 || got.num("quests.1.bonusPoints") != 20 ||
+		got.num("quests.1.basePoints") != 75 || got.num("quests.1.bonusPoints") != 15 ||
 		got.str("quests.1.doneBy.kind") != "workout" || got.str("quests.1.doneBy.type") != "strength" ||
 		got.num("quests.1.doneBy.minutes") != 42 {
 		t.Fatalf("push-ups after a strength workout = %s", got.Body)
 	}
-	if got.num("day.basePoints") != 100 {
+	if got.num("day.basePoints") != 75 {
 		t.Fatalf("day = %s", got.Body)
 	}
 }
@@ -38,7 +38,7 @@ func TestWorkoutPutRescoresTheStoredDayWithoutAnyRead(t *testing.T) {
 	var base int
 	err := h.db.Pool.QueryRow(context.Background(),
 		`SELECT base_points FROM day_scores WHERE user_id = $1 AND local_date = '2026-11-02'`, nick.ID).Scan(&base)
-	if err != nil || base != 100 {
+	if err != nil || base != 75 {
 		t.Fatalf("stored base points = %d, %v; the PUT must rescore", base, err)
 	}
 }

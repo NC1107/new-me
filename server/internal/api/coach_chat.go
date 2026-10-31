@@ -208,6 +208,14 @@ func goalSentence(u db.User) string {
 // the coach quotes numbers as given. Reading keeps no figures because its stored progress is a
 // blended basis of minutes and pages, not either of them.
 func questLine(u db.User, q questJSON) string {
+	line := questProgress(u, q)
+	if q.PointsWhy != "" {
+		return line + ". " + q.PointsWhy
+	}
+	return fmt.Sprintf("%s. Worth %d points.", line, q.Points)
+}
+
+func questProgress(u db.User, q questJSON) string {
 	state := "not yet"
 	if q.Done {
 		state = "done"

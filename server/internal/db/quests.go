@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 
 	"github.com/nc1107/new-me/server/internal/score"
 )
@@ -109,25 +110,57 @@ func intPtr(n int) *int { return &n }
 
 func strPtr(s string) *string { return &s }
 
+// EffortPoints is what the template's quest is worth for its own target. strengthMinutes is the
+// person's planned strength session length, or zero when they have none.
+func EffortPoints(t QuestTemplate, strengthMinutes int) score.Effort {
+	return score.EffortPoints(t.Key, t.Target, strengthMinutes)
+}
+
+// StrengthMinutes is the strength session length in the person's training profile, or zero
+// before they have one.
+func StrengthMinutes(ctx context.Context, q Querier, userID int64) (int, error) {
+	p, err := GetTrainingProfile(ctx, q, userID)
+	if errors.Is(err, ErrNotFound) {
+		return 0, nil
+	}
+	return p.SessionMinutes, err
+}
+
+// RepriceStrength sets the strength quest's points from the person's training profile and
+// reports whether they changed, so the caller can re-snapshot today.
+func RepriceStrength(ctx context.Context, q Querier, userID int64) (bool, error) {
+	minutes, err := StrengthMinutes(ctx, q, userID)
+	if err != nil {
+		return false, err
+	}
+	tag, err := q.Exec(ctx, `UPDATE quest_templates SET points = $2
+		WHERE user_id = $1 AND key = 'pushups' AND points <> $2`,
+		userID, score.EffortPoints(QuestPushups, 0, minutes).Points)
+	return tag.RowsAffected() > 0, err
+}
+
 // DefaultTemplates are the quests every new user starts with. Yoga and the three v17 quests
 // (steady bedtime, fruit and vegetables, breathing) ship disabled and are opt-in; exercise and
 // sleep are on because Health-fed quests stay out of the day until their data arrives.
 func DefaultTemplates() []QuestTemplate {
-	return []QuestTemplate{
-		{Key: QuestSteps, Target: 8000, Unit: "steps", Points: 100, Enabled: true, Position: 0},
-		{Key: QuestPushups, Target: 30, Unit: "reps", Points: 100, Enabled: true, Position: 1},
-		{Key: QuestReading, Target: DefaultReadingMinutes, Unit: "minutes", TargetAlt: intPtr(score.PagesForMinutes(DefaultReadingMinutes)), UnitAlt: strPtr("pages"),
-			Points: 100, Enabled: true, Position: 2},
-		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Points: 50, Enabled: true, Position: 3},
-		{Key: QuestProtein, Target: DefaultProteinTarget, Unit: "g", Points: 50, Enabled: true, Position: 4},
-		{Key: QuestYoga, Target: 20, Unit: "minutes", Points: 50, Enabled: false, Position: 5},
-		{Key: QuestExercise, Target: 30, Unit: "min", Points: 100, Enabled: true, Position: 6},
-		{Key: QuestSleep, Target: 420, Unit: "min", Points: 50, Enabled: true, Position: 7},
-		{Key: QuestWater, Target: DefaultWaterTarget, Unit: "ml", Points: 50, Enabled: true, Position: 8},
-		{Key: QuestSleepRegularity, Target: DefaultRegularityWindowMin, Unit: "min", Points: 50, Enabled: false, Position: 9},
-		{Key: QuestProduce, Target: DefaultProduceServings, Unit: "servings", Points: 50, Enabled: false, Position: 10},
-		{Key: QuestBreathing, Target: DefaultBreathingMin, Unit: "min", Points: 50, Enabled: false, Position: 11},
+	templates := []QuestTemplate{
+		{Key: QuestSteps, Target: 8000, Unit: "steps", Enabled: true, Position: 0},
+		{Key: QuestPushups, Target: 30, Unit: "reps", Enabled: true, Position: 1},
+		{Key: QuestReading, Target: DefaultReadingMinutes, Unit: "minutes", TargetAlt: intPtr(score.PagesForMinutes(DefaultReadingMinutes)), UnitAlt: strPtr("pages"), Enabled: true, Position: 2},
+		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Enabled: true, Position: 3},
+		{Key: QuestProtein, Target: DefaultProteinTarget, Unit: "g", Enabled: true, Position: 4},
+		{Key: QuestYoga, Target: 20, Unit: "minutes", Enabled: false, Position: 5},
+		{Key: QuestExercise, Target: 30, Unit: "min", Enabled: true, Position: 6},
+		{Key: QuestSleep, Target: 420, Unit: "min", Enabled: true, Position: 7},
+		{Key: QuestWater, Target: DefaultWaterTarget, Unit: "ml", Enabled: true, Position: 8},
+		{Key: QuestSleepRegularity, Target: DefaultRegularityWindowMin, Unit: "min", Enabled: false, Position: 9},
+		{Key: QuestProduce, Target: DefaultProduceServings, Unit: "servings", Enabled: false, Position: 10},
+		{Key: QuestBreathing, Target: DefaultBreathingMin, Unit: "min", Enabled: false, Position: 11},
 	}
+	for i := range templates {
+		templates[i].Points = EffortPoints(templates[i], 0).Points
+	}
+	return templates
 }
 
 // SeedDefaultTemplates gives a new user the default quests, leaving existing rows alone.
@@ -166,14 +199,20 @@ func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTem
 }
 
 // UpsertQuestTemplate changes the editable parts of a template (enabled, the targets and the
-// daily-reps exercise), creating it if missing. Points and units never change after creation.
+// daily-reps exercise), creating it if missing. The points follow the target and the person's
+// strength session (see score.EffortPoints); units never change after creation.
 func UpsertQuestTemplate(ctx context.Context, q Querier, userID int64, t QuestTemplate) error {
-	_, err := q.Exec(ctx, `
+	minutes, err := StrengthMinutes(ctx, q, userID)
+	if err != nil {
+		return err
+	}
+	t.Points = EffortPoints(t, minutes).Points
+	_, err = q.Exec(ctx, `
 		INSERT INTO quest_templates (user_id, key, target, unit, target_alt, unit_alt, points, enabled, position, exercise, target_alt_custom)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE(NULLIF($10, ''), $11), $12)
 		ON CONFLICT (user_id, key) DO UPDATE
 		SET target = EXCLUDED.target, target_alt = EXCLUDED.target_alt, enabled = EXCLUDED.enabled,
-		    exercise = EXCLUDED.exercise, target_alt_custom = EXCLUDED.target_alt_custom`,
+		    points = EXCLUDED.points, exercise = EXCLUDED.exercise, target_alt_custom = EXCLUDED.target_alt_custom`,
 		userID, t.Key, t.Target, t.Unit, t.TargetAlt, t.UnitAlt, t.Points, t.Enabled, t.Position,
 		t.Exercise, DefaultRepsExercise, t.AltCustom)
 	return err

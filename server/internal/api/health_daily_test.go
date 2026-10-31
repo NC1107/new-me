@@ -23,7 +23,7 @@ func TestHealthPutRecomputesAndReturnsTheDays(t *testing.T) {
 	if got.length("days") != 1 || got.str("days.0.date") != "2026-11-02" {
 		t.Fatalf("days = %s", got.Body)
 	}
-	if got.num("days.0.basePoints") != 50 || got.num("days.0.maxBase") != 400 || got.num("days.0.quests.0.actual") != 4000 {
+	if got.num("days.0.basePoints") != 50 || got.num("days.0.maxBase") != 235 || got.num("days.0.quests.0.actual") != 4000 {
 		t.Fatalf("rescored day = %s", got.Body)
 	}
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)

@@ -68,7 +68,7 @@ func TestExerciseAndSleepQuestsAreOptInAndAutomatic(t *testing.T) {
 	// Edits apply from the next day, so move there.
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.length("quests") != 8 || before.num("day.maxBase") != 300 {
+	if before.length("quests") != 8 || before.num("day.maxBase") != 135 {
 		t.Fatalf("exercise and sleep stay out of maxBase until their first reading: %s", before.Body)
 	}
 
@@ -77,12 +77,12 @@ func TestExerciseAndSleepQuestsAreOptInAndAutomatic(t *testing.T) {
 		healthReading("2026-11-03", "sleep_minutes", 420, h.clock.Now()),
 	}}).expect(http.StatusOK)
 	after := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if after.length("quests") != 8 || after.num("day.maxBase") != 450 {
+	if after.length("quests") != 8 || after.num("day.maxBase") != 255 {
 		t.Fatalf("quests = %s", after.Body)
 	}
 	if after.str("quests.5.key") != "exercise" || after.num("quests.5.actual") != 20 || after.num("quests.5.basePoints") != 50 ||
 		after.flag("quests.5.done") || after.str("quests.6.key") != "sleep" || !after.flag("quests.6.done") ||
-		after.num("quests.6.bonusPoints") != 10 {
+		after.num("quests.6.bonusPoints") != 4 {
 		t.Fatalf("quests = %s", after.Body)
 	}
 }
@@ -209,7 +209,7 @@ func TestJoinDayPatchResnapshotsToday(t *testing.T) {
 	nick := h.joinAdmin("Nick", "green")
 	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.length("quests") != 8 || before.num("day.basePoints") != 100 {
+	if before.length("quests") != 8 || before.num("day.basePoints") != 75 {
 		t.Fatalf("defaults = %s", before.Body)
 	}
 

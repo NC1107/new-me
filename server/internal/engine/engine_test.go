@@ -209,22 +209,22 @@ func TestRecomputeDayScoresAndStores(t *testing.T) {
 	noon := time.Date(2026, 10, 27, 12, 0, 0, 0, ny)
 
 	empty := recompute(t, database, u, day, noon)
-	if empty.BasePoints != 0 || empty.MaxBase != 300 || empty.Counted || empty.FinalizedAt != nil {
-		t.Fatalf("empty day = %+v; steps are excluded so max is 300", empty)
+	if empty.BasePoints != 0 || empty.MaxBase != 135 || empty.Counted || empty.FinalizedAt != nil {
+		t.Fatalf("empty day = %+v; steps are excluded so max is 135", empty)
 	}
 
 	logPushups(t, database, u, day, 30)
 	putSteps(t, database, u, day, 8000)
 	full := recompute(t, database, u, day, noon)
-	if full.BasePoints != 200 || full.BonusPoints != 40 || full.MaxBase != 400 || full.Percent != 50 || full.Counted {
+	if full.BasePoints != 175 || full.BonusPoints != 35 || full.MaxBase != 235 || full.Percent != 74 || !full.Counted {
 		t.Fatalf("pushups and steps = %+v", full)
 	}
-	if full.Points() != 240 {
-		t.Fatalf("points = %d, want 240", full.Points())
+	if full.Points() != 210 {
+		t.Fatalf("points = %d, want 210", full.Points())
 	}
 
 	stored, err := db.GetDayScore(ctx, database.Pool, u.ID, day)
-	if err != nil || stored.BasePoints != 200 || len(stored.Detail) == 0 {
+	if err != nil || stored.BasePoints != 175 || len(stored.Detail) == 0 {
 		t.Fatalf("stored = %+v %v", stored, err)
 	}
 	quests, err := db.GetDayQuests(ctx, database.Pool, u.ID, day)
@@ -239,6 +239,10 @@ func TestRecomputeDayCountsAtSeventyPercent(t *testing.T) {
 	noon := time.Date(2026, 10, 27, 12, 0, 0, 0, ny)
 
 	putSteps(t, database, u, day, 8000)
+	stepsOnly := recompute(t, database, u, day, noon)
+	if stepsOnly.BasePoints != 100 || stepsOnly.MaxBase != 235 || stepsOnly.Percent != 42 || stepsOnly.Counted {
+		t.Fatalf("steps alone = %+v; 100 of 235 is under the line", stepsOnly)
+	}
 	logPushups(t, database, u, day, 30)
 	if _, _, err := db.InsertActivityLog(ctx, database.Pool, db.NewActivityLog{
 		UserID: u.ID, LocalDate: day, Type: db.ActivityReadingMinutes, Quantity: 20,
@@ -246,7 +250,7 @@ func TestRecomputeDayCountsAtSeventyPercent(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := recompute(t, database, u, day, noon)
-	if row.BasePoints != 300 || row.MaxBase != 400 || row.Percent != 75 || !row.Counted {
+	if row.BasePoints != 195 || row.MaxBase != 235 || row.Percent != 82 || !row.Counted {
 		t.Fatalf("75%% day = %+v", row)
 	}
 }
@@ -276,12 +280,12 @@ func TestRecomputeDayKeepsTheSnapshotWhenTemplatesChange(t *testing.T) {
 	recompute(t, database, u, day, noon)
 
 	if err := db.UpsertQuestTemplate(ctx, database.Pool, u.ID, db.QuestTemplate{
-		Key: db.QuestPushups, Target: 5, Unit: "reps", Points: 100, Enabled: true}); err != nil {
+		Key: db.QuestPushups, Target: 5, Unit: "reps", Enabled: true}); err != nil {
 		t.Fatal(err)
 	}
 	logPushups(t, database, u, day, 15)
 	row := recompute(t, database, u, day, noon)
-	if row.BasePoints != 50 {
+	if row.BasePoints != 38 {
 		t.Fatalf("base = %d; 15 of the snapshotted 30 is half credit, not the lowered target", row.BasePoints)
 	}
 }

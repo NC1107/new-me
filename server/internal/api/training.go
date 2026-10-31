@@ -102,9 +102,29 @@ func (s *Server) handlePutTrainingProfile(w http.ResponseWriter, r *http.Request
 		fail(w, r, invalid("focus must be at most 300 characters without control characters"))
 		return
 	}
-	p, err := db.PutTrainingProfile(r.Context(), s.db.Pool, callerFrom(r).user.ID, db.TrainingProfile{
-		Equipment: nonNil(req.Equipment), DumbbellMaxKg: req.DumbbellMaxKg, DaysPerWeek: req.DaysPerWeek,
-		SessionMinutes: req.SessionMinutes, Experience: req.Experience, Focus: focus})
+	c := callerFrom(r)
+	var p db.TrainingProfile
+	// The session length prices the strength quest, so a change reprices it and applies today
+	// like any other goal edit; still-open days are scored first so they keep their points.
+	err := s.db.WithTx(r.Context(), func(tx pgx.Tx) error {
+		for _, date := range s.openDates(c.user, c.loc) {
+			if _, err := engine.RecomputeDayAt(r.Context(), tx, c.user.ID, date, c.loc, s.now()); err != nil {
+				return err
+			}
+		}
+		var err error
+		p, err = db.PutTrainingProfile(r.Context(), tx, c.user.ID, db.TrainingProfile{
+			Equipment: nonNil(req.Equipment), DumbbellMaxKg: req.DumbbellMaxKg, DaysPerWeek: req.DaysPerWeek,
+			SessionMinutes: req.SessionMinutes, Experience: req.Experience, Focus: focus})
+		if err != nil {
+			return err
+		}
+		changed, err := db.RepriceStrength(r.Context(), tx, c.user.ID)
+		if err != nil || !changed {
+			return err
+		}
+		return s.resnapshotToday(r.Context(), tx, c, c.user, patchMeRequest{Targets: &targetsPatch{}})
+	})
 	if err != nil {
 		fail(w, r, err)
 		return

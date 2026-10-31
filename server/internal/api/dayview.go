@@ -27,6 +27,9 @@ type questJSON struct {
 	BasePoints  int     `json:"basePoints"`
 	BonusPoints int     `json:"bonusPoints"`
 	Done        bool    `json:"done"`
+	// PointsWhy is the one line on what the points are based on. It is empty for a day frozen
+	// before points followed effort, because its points no longer match the rule.
+	PointsWhy string `json:"pointsWhy,omitempty"`
 	// Exercise is the daily-reps exercise of the pushups quest, absent for every other quest.
 	Exercise string `json:"exercise,omitempty"`
 	// DoneBy says which Health workout or planned session completed the quest; null when logged
@@ -87,6 +90,9 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		}
 		if q.Key == db.QuestPushups {
 			item.Exercise = q.Exercise
+		}
+		if e := score.EffortPoints(q.Key, q.Target, s.StrengthMinutes); e.Points == q.Points {
+			item.PointsWhy = e.Reason()
 		}
 		if earned.Complete {
 			item.DoneBy = engine.DoneBy(q, s.Inputs)

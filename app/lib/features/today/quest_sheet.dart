@@ -404,9 +404,18 @@ class _ProgressBlock extends StatelessWidget {
             ),
           ],
         ),
+        if (quest.pointsWhy != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 24),
+            child: Text(
+              quest.pointsWhy!,
+              key: const Key('quest-points-why'),
+              style: AppText.caption.copyWith(color: kInkSecondary),
+            ),
+          ),
         if (quest.bonusPoints > 0)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 4, left: 24),
             child: Text(
               '+${quest.bonusPoints} bonus for finishing it',
               style: AppText.caption.copyWith(color: kInkSecondary),

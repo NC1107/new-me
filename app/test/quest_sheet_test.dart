@@ -162,6 +162,7 @@ void main() {
       expect(find.text('Counted by Apple Health'), findsWidgets);
       // maxBase is 400 in the fixture.
       expect(find.text('+100 points, 25% of today'), findsOneWidget);
+      expect(find.text('Worth 100: about 80 min of walking at a moderate pace.'), findsOneWidget);
       expect(find.textContaining('Nothing to log here'), findsOneWidget);
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);
       expect(find.text('Recommended: 7,000 steps a day'), findsOneWidget);
@@ -175,6 +176,8 @@ void main() {
       await _open(tester, _server(), 'reading');
 
       expect(find.text('Recommended: 20 pages for your 20 minutes'), findsOneWidget);
+      // A day frozen before points followed effort sends no reason.
+      expect(find.byKey(const Key('quest-points-why')), findsNothing);
       expect(find.textContaining('An audiobook minute counts as half'), findsOneWidget);
       expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsOneWidget);
       // The fixture's pages goal is the old 15.

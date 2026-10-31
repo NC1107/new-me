@@ -8,6 +8,7 @@ import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
 import '../../state/habit_proposals.dart';
+import '../../state/shared_habits.dart';
 import '../../state/together.dart';
 import '../../state/me.dart';
 import '../../theme/accent.dart';
@@ -25,6 +26,7 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../habits/habit_proposals_card.dart';
+import '../shared_habits/shared_habits_card.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
 import '../progress/progress_screen.dart';
@@ -57,6 +59,7 @@ class BoardScreen extends ConsumerWidget {
           backgroundColor: kSurface,
           onRefresh: () async {
             unawaited(ref.read(habitProposalsProvider.notifier).refresh());
+            unawaited(ref.read(sharedHabitsProvider.notifier).refresh());
             unawaited(ref.read(rewardsProvider.notifier).refresh());
             await notifier.refresh();
           },
@@ -141,6 +144,7 @@ class _UsBody extends ConsumerWidget {
             onRecap: () => pushPage(context, const RecapScreen()),
             onProgress: () => openProgress(context),
           ),
+          const SharedHabitsCard(),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),

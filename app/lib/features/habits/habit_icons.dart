@@ -28,6 +28,11 @@ const kHabitIcons = <String, IconData>{
   'eco': Icons.eco_rounded,
   'star': Icons.star_rounded,
   'pets': Icons.pets_rounded,
+  'local_laundry_service': Icons.local_laundry_service_rounded,
+  'cleaning_services': Icons.cleaning_services_rounded,
+  'delete': Icons.delete_rounded,
+  'shopping_cart': Icons.shopping_cart_rounded,
+  'home': Icons.home_rounded,
 };
 
 const kDefaultHabitIcon = 'check_circle';
@@ -63,6 +68,11 @@ const _kIconLabels = <String, String>{
   'eco': 'Leaf',
   'star': 'Star',
   'pets': 'Paw print',
+  'local_laundry_service': 'Washing machine',
+  'cleaning_services': 'Broom',
+  'delete': 'Trash can',
+  'shopping_cart': 'Shopping cart',
+  'home': 'House',
 };
 
 String habitIconLabel(String key) => _kIconLabels[key] ?? key.replaceAll('_', ' ');

@@ -4,14 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
+import '../../api/shared_habit_models.dart';
 import '../../state/clock.dart';
 import '../../state/habit_marks.dart';
 import '../../state/habits.dart';
+import '../../state/shared_habits.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
+import '../shared_habits/shared_habit_chip.dart';
+import '../shared_habits/shared_habits_card.dart';
 import 'count_sheet.dart';
 import 'day_habits_sheet.dart';
 import 'habit_chip.dart';
@@ -82,7 +86,12 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
   @override
   Widget build(BuildContext context) {
     final today = widget.today;
-    if (today.habits.isEmpty) {
+    // A shared chore shows while it is due, and stays for the day once done so it can be undone.
+    final shared = [
+      for (final h in ref.watch(sharedHabitsProvider).value ?? const <SharedHabit>[])
+        if (h.isDue || h.doneToday) h,
+    ];
+    if (today.habits.isEmpty && shared.isEmpty) {
       final all = ref.watch(habitsProvider).value?.data.habits;
       if (all == null || all.isNotEmpty) return const SizedBox.shrink();
       return Padding(
@@ -110,7 +119,8 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
                       header: true,
                       child: Text('Habits', style: AppText.headline.copyWith(fontSize: 18)),
                     ),
-                    Text('$done of ${items.length}', style: AppText.tabular(AppText.caption)),
+                    if (items.isNotEmpty)
+                      Text('$done of ${items.length}', style: AppText.tabular(AppText.caption)),
                   ],
                 ),
               ),
@@ -143,6 +153,15 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
                         item: item,
                         onTap: () => _tap(item),
                         onLongPress: item.isCount ? () => _setCount(item) : null,
+                      ),
+                    ),
+                  for (final h in shared)
+                    SizedBox(
+                      key: ValueKey('shared${h.id}'),
+                      width: width,
+                      child: SharedHabitChip(
+                        habit: h,
+                        onTap: () => toggleSharedHabit(context, ref, h),
                       ),
                     ),
                 ],

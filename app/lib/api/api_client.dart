@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'habit_models.dart';
 import 'models.dart';
+import 'shared_habit_models.dart';
 
 /// Sent on every request as X-Client-Version and shown in Me. Release builds pass the tagged
 /// version; the default mirrors pubspec for local and web builds, which a test enforces.
@@ -336,6 +337,36 @@ class ApiClient {
   /// Approves or declines the partner's pending change to their habit [id].
   Future<void> answerHabitProposal(int id, {required bool approve}) =>
       _send(() => _dio.post<dynamic>('/api/habits/$id/${approve ? 'approve' : 'decline'}'), (_) {});
+
+  Future<List<SharedHabit>> sharedHabits() => _send(
+    () => _dio.get<dynamic>('/api/shared-habits'),
+    (data) => [for (final h in (data as Json)['habits'] as List) SharedHabit.fromJson(h as Json)],
+  );
+
+  Future<SharedHabit> createSharedHabit(Json body) => _send(
+    () => _dio.post<dynamic>('/api/shared-habits', data: body),
+    (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  Future<SharedHabit> patchSharedHabit(int id, Json body) => _send(
+    () => _dio.patch<dynamic>('/api/shared-habits/$id', data: body),
+    (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  Future<void> deleteSharedHabit(int id) =>
+      _send(() => _dio.delete<dynamic>('/api/shared-habits/$id'), (_) {});
+
+  /// Marks the chore done by me. The answer is the habit as it stands, so a chore the partner
+  /// had just done comes back unchanged.
+  Future<SharedHabit> doneSharedHabit(int id) => _send(
+    () => _dio.post<dynamic>('/api/shared-habits/$id/done'),
+    (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  Future<SharedHabit> undoSharedHabit(int id) => _send(
+    () => _dio.delete<dynamic>('/api/shared-habits/$id/done'),
+    (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
+  );
 
   Future<void> deleteHabit(int id) => _send(() => _dio.delete<dynamic>('/api/habits/$id'), (_) {});
 

@@ -38,8 +38,8 @@ class _SlotForm {
   bool reminder;
 }
 
-const _kDayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const _kDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const kDayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const kDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /// Creates a habit, or edits [habit]. A new one starts from a template so the usual habits are
 /// a pick and a save.
@@ -274,7 +274,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
             runSpacing: 8,
             children: [
               for (final t in kHabitTemplates)
-                _Pill(
+                HabitPill(
                   label: t.custom ? 'Custom' : t.name,
                   selected: identical(_template, t),
                   onTap: () => _applyTemplate(t),
@@ -298,7 +298,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           runSpacing: 8,
           children: [
             for (final key in kHabitIcons.keys)
-              _IconChoice(
+              HabitIconChoice(
                 iconKey: key,
                 selected: key == _icon,
                 onTap: () {
@@ -314,12 +314,12 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _Pill(
+            HabitPill(
               label: 'Every day',
               selected: _days.length == 7,
               onTap: () => _setDays(kEveryDay),
             ),
-            _Pill(
+            HabitPill(
               label: 'Weekdays',
               selected: _days.length == 5 && kWeekdays.every(_days.contains),
               onTap: () => _setDays(kWeekdays),
@@ -331,9 +331,9 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (var d = 1; d <= 7; d++)
-              _DayChip(
-                letter: _kDayLetters[d - 1],
-                name: _kDayNames[d - 1],
+              HabitDayChip(
+                letter: kDayLetters[d - 1],
+                name: kDayNames[d - 1],
                 on: _days.contains(d),
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -451,8 +451,8 @@ class _GemsNote extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.selected, required this.onTap});
+class HabitPill extends StatelessWidget {
+  const HabitPill({super.key, required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;
@@ -492,8 +492,13 @@ class _Pill extends StatelessWidget {
   }
 }
 
-class _IconChoice extends StatelessWidget {
-  const _IconChoice({required this.iconKey, required this.selected, required this.onTap});
+class HabitIconChoice extends StatelessWidget {
+  const HabitIconChoice({
+    super.key,
+    required this.iconKey,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String iconKey;
   final bool selected;
@@ -525,8 +530,14 @@ class _IconChoice extends StatelessWidget {
   }
 }
 
-class _DayChip extends StatelessWidget {
-  const _DayChip({required this.letter, required this.name, required this.on, required this.onTap});
+class HabitDayChip extends StatelessWidget {
+  const HabitDayChip({
+    super.key,
+    required this.letter,
+    required this.name,
+    required this.on,
+    required this.onTap,
+  });
 
   final String letter;
   final String name;

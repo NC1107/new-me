@@ -55,7 +55,9 @@ They are worth the floor of 20.
 - The chip on a card shows the same number as before, `+N`.
 - The coach reads each quest as "Worth N points: ..." and is told the rule, including that the floor, the cap and the default session are game choices.
 - The partner cheer prompt counted a "hard" quest as one worth 100 points.
-  It now counts quests worth 80 or more, which is steps and exercise.
+  It now counts quests worth 60 or more, the points of 30 minutes at 3 MET, which is the bottom of moderate intensity and the daily amount Garber et al. 2011 recommend.
+  That is steps, exercise and a strength session of 30 minutes or more; yoga, reading and the rest stay below it.
+  (v0.24 used 80, which left out a 30 minute strength session worth 75.)
 
 ## What did not change
 

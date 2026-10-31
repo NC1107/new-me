@@ -13,7 +13,7 @@ import (
 //
 //	cover chance       the partner missed yesterday, can still be covered, has no freeze of their
 //	                   own, and you hold one
-//	cheer prompt       the partner finished a hard quest (worth 80 points or more) today and you have
+//	cheer prompt       the partner finished a hard quest (worth 60 points or more) today and you have
 //	                   not cheered them yet
 //	challenge check-in on Thursday from 17:00, your share of the weekly challenge is behind the
 //	                   even pace of four days out of seven
@@ -21,9 +21,13 @@ import (
 // Reward progress is sent through together.Service.NotifyRewardProgress.
 
 const (
-	// HardQuestPoints is what a quest is worth for a finish to count as hard: the points of about
-	// half an hour of moderate effort, a figure picked for the game rather than measured.
-	HardQuestPoints = 80
+	// HardQuestPoints is what a quest is worth for a finish to count as hard: the effort points
+	// (MET-minutes above rest) of 30 minutes at 3 MET, the bottom of moderate intensity, which is
+	// the daily amount Garber et al. 2011 (ACSM position stand) recommend on most days.
+	HardQuestPoints = hardMinutes * (moderateMETx10 - 10) / 10
+
+	hardMinutes    = 30
+	moderateMETx10 = 30
 
 	checkInWeekday = time.Thursday
 	checkInFrom    = 17 * 60

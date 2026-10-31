@@ -52,6 +52,14 @@ Map<String, dynamic> _me({
   };
 }
 
+Map<String, dynamic> _imperialMe() {
+  final me = _me();
+  return {
+    ...me,
+    'user': {...(me['user'] as Map<String, dynamic>), 'units': 'imperial'},
+  };
+}
+
 Map<String, dynamic> _targets() =>
     (jsonDecode(File('test/contract_v8/targets.json').readAsStringSync()) as Map)['body']!
         as Map<String, dynamic>;
@@ -429,6 +437,74 @@ void main() {
 
       expect(adapter.to('PATCH /api/me'), hasLength(1));
       expect(adapter.to('GET /api/me'), hasLength(loads));
+    });
+
+    testWidgets('units are a plain Imperial or Metric choice, with the weight following', (
+      tester,
+    ) async {
+      final adapter = _server()..on('GET /api/me', StubResponse(200, _imperialMe()));
+      final app = _app(tester, adapter);
+      await app.pump(const MeScreen());
+      await app.tap(find.text('About you'));
+
+      expect(find.text('Imperial'), findsOneWidget);
+      expect(find.text('Metric'), findsOneWidget);
+      expect(find.text('lb, ft, fl oz'), findsOneWidget);
+      expect(find.text('Weight in lb (optional)'), findsOneWidget);
+      expect(fieldWith('181.7'), findsOneWidget);
+
+      await app.tap(find.text('Metric'));
+      expect(find.text('kg, cm, L'), findsOneWidget);
+      expect(find.text('Weight in kg (optional)'), findsOneWidget);
+      expect(fieldWith('82.4'), findsOneWidget);
+    });
+
+    testWidgets('a new weight is saved as today\'s manual reading and refreshes the targets', (
+      tester,
+    ) async {
+      final adapter = _server()
+        ..on('GET /api/me', StubResponse(200, _imperialMe()))
+        ..on('PUT /api/health/daily', const StubResponse(200, {'days': <Object>[]}));
+      final app = _app(tester, adapter);
+      await app.pump(const MeScreen());
+      await app.tap(find.text('About you'));
+      expect(find.textContaining('The trend of your recent weigh-ins'), findsOneWidget);
+      final loads = adapter.to('GET /api/targets').length;
+
+      await app.enter(fieldWith('181.7'), '170');
+      await app.tap(find.text('SAVE'));
+
+      final item = (app.body('PUT /api/health/daily')['items'] as List).single as Map;
+      expect(item['metric'], 'weight_kg');
+      expect(item['source'], 'manual');
+      expect(item['value'], 77.1);
+      expect(adapter.to('PATCH /api/me'), isEmpty);
+      expect(adapter.to('GET /api/targets').length, greaterThan(loads));
+    });
+
+    testWidgets('an untouched weight sends no reading, and an impossible one is flagged', (
+      tester,
+    ) async {
+      final adapter = _server();
+      final app = _app(tester, adapter);
+      await app.pump(const MeScreen());
+      await app.tap(find.text('About you'));
+
+      await app.tap(find.text('Honey'));
+      await app.tap(find.text('SAVE'));
+      expect(adapter.to('PUT /api/health/daily'), isEmpty);
+    });
+
+    testWidgets('an impossible weight is flagged and blocks saving', (tester) async {
+      final adapter = _server();
+      final app = _app(tester, adapter);
+      await app.pump(const MeScreen());
+      await app.tap(find.text('About you'));
+
+      await app.enter(fieldWith('82.4'), '5');
+      expect(find.text('Between 20 and 400 kg'), findsOneWidget);
+      await app.tap(find.text('SAVE'));
+      expect(adapter.to('PUT /api/health/daily'), isEmpty);
     });
 
     testWidgets('a typed name survives another save', (tester) async {

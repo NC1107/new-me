@@ -134,7 +134,7 @@ class _HeightInputState extends State<HeightInput> {
                   ],
                 ),
               ),
-              const _Unit('ft'),
+              const FieldUnit('ft'),
               const SizedBox(width: 12),
               Expanded(
                 child: AppTextField(
@@ -146,7 +146,7 @@ class _HeightInputState extends State<HeightInput> {
                   inputFormatters: [LengthLimitingTextInputFormatter(4)],
                 ),
               ),
-              const _Unit('in'),
+              const FieldUnit('in'),
             ],
           ),
           if (error != null) ...[
@@ -163,8 +163,8 @@ class _HeightInputState extends State<HeightInput> {
 }
 
 /// The unit beside a box, so a filled-in "5" still reads as feet.
-class _Unit extends StatelessWidget {
-  const _Unit(this.text);
+class FieldUnit extends StatelessWidget {
+  const FieldUnit(this.text, {super.key});
 
   final String text;
 

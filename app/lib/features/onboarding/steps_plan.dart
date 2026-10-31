@@ -350,7 +350,7 @@ class _GoalRow extends StatelessWidget {
   );
 }
 
-/// Pounds and feet, or kilograms and centimetres, chosen before anything is measured.
+/// Imperial or metric, chosen before anything is measured.
 class UnitsStep extends ConsumerWidget {
   const UnitsStep({super.key});
 
@@ -367,15 +367,12 @@ class UnitsStep extends ConsumerWidget {
           'Which units do you use?',
           subtitle: 'You can change this later in Me > Profile.',
         ),
-        for (final (i, (u, title, sub)) in const [
-          (Units.imperial, 'Pounds and feet', 'lb, ft and in, miles'),
-          (Units.metric, 'Kilograms and centimetres', 'kg, cm, kilometres'),
-        ].indexed) ...[
+        for (final (i, u) in const [Units.imperial, Units.metric].indexed) ...[
           if (i > 0) const SizedBox(height: 10),
           ChoiceCard(
             icon: u.isImperial ? Icons.straighten_rounded : Icons.square_foot_rounded,
-            title: title,
-            subtitle: sub,
+            title: u.systemName,
+            subtitle: u.systemHint,
             selected: selected == u,
             onTap: () => c.chooseUnits(u),
           ),

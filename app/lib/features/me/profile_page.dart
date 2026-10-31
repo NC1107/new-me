@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,13 @@ import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
 import '../../state/me.dart';
+import '../../state/targets.dart';
+import '../../api/api_client.dart' show ApiException;
+import '../../state/session.dart';
+import '../setup/about_you.dart' show kWeightRange, parseDecimal, putManualWeight;
+import '../setup/about_you_steps.dart' show weightRangeError;
+import '../../util/errors.dart';
+import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/accent_picker.dart';
 import '../../theme/tokens.dart';
@@ -33,6 +42,8 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
   final _name = TextEditingController();
+  final _weight = TextEditingController();
+  bool _weightEdited = false;
   String _color = 'green';
   double? _heightCm;
   bool _heightValid = true;
@@ -64,10 +75,67 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
       }
       setState(() {});
     }, fireImmediately: true);
+    ref.listenManual(targetsProvider, (_, _) => _seedWeight(), fireImmediately: true);
+  }
+
+  TargetInput? get _weightInput => ref.read(targetsProvider).value?.data.input('weightKg');
+
+  /// The trend weight the targets use, in the shown units; a typed weight is never replaced.
+  void _seedWeight() {
+    if (_weightEdited) return;
+    final input = _weightInput;
+    final kg = input != null && !input.isMissing && input.value is num
+        ? (input.value! as num).toDouble()
+        : null;
+    final text = kg == null ? '' : _plainNumber(_shownUnits.weightIn(kg));
+    if (text != _weight.text) setState(() => _weight.text = text);
+  }
+
+  static String _plainNumber(double v) {
+    final r = (v * 10).round() / 10;
+    return r == r.roundToDouble() ? r.round().toString() : r.toStringAsFixed(1);
+  }
+
+  /// The typed weight in kg, or null while empty or not a number.
+  double? _weightKgFor(Units units) {
+    final v = parseDecimal(_weight.text);
+    return v == null ? null : (units.weightToKg(v) * 10).round() / 10;
+  }
+
+  bool get _weightBlank => _weight.text.trim().isEmpty;
+  bool get _weightValid {
+    if (_weightBlank) return true;
+    final kg = _weightKgFor(_shownUnits);
+    return kg != null && kg >= kWeightRange.min && kg <= kWeightRange.max;
+  }
+
+  bool get _weightChanged => _weightEdited && !_weightBlank && _weightValid;
+
+  void _pickUnits(Units u) {
+    if (u == _shownUnits) return;
+    final typedKg = _weightEdited ? _weightKgFor(_shownUnits) : null;
+    setState(() {
+      _units = u;
+      if (_goalKind != GoalKind.maintain) _pickGoalPaceFor(u);
+      if (typedKg != null) {
+        _weight.text = _plainNumber(u.weightIn(typedKg));
+      } else if (!_weightEdited) {
+        _seedWeight();
+      }
+    });
+  }
+
+  String get _weightCaption {
+    if (_weightChanged) return 'Saved as today\'s weigh-in, and your targets follow it.';
+    const tail = 'A new weight is saved for today.';
+    final input = _weightInput;
+    if (input == null || input.isMissing) return tail;
+    return 'The trend of your recent weigh-ins, from Apple Health or typed here. $tail';
   }
 
   @override
   void dispose() {
+    _weight.dispose();
     _name.dispose();
     super.dispose();
   }
@@ -88,8 +156,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
       _heightChanged ||
       _sexChanged ||
       _goalChanged ||
-      _unitsChanged;
-  bool get _valid => _trimmed.isNotEmpty && _trimmed.length <= _kMaxName && _heightValid;
+      _unitsChanged ||
+      _weightChanged;
+  bool get _valid =>
+      _trimmed.isNotEmpty && _trimmed.length <= _kMaxName && _heightValid && _weightValid;
 
   void _pickGoal(GoalKind kind) {
     if (kind == _goalKind) return;
@@ -120,23 +190,63 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
   }
 
   Future<void> _save() async {
-    final ok = await saveMe(
-      MePatch(
-        name: _nameChanged ? _trimmed : null,
-        color: _color != _server?.color ? _color : null,
-        birthYear: _birthChanged ? _birthYear : null,
-        clearBirthYear: _birthChanged && _birthYear == null,
-        heightCm: _heightChanged ? _heightCm : null,
-        clearHeight: _heightChanged && _heightCm == null,
-        sex: _sexChanged ? _sex : null,
-        clearSex: _sexChanged && _sex == null,
-        goal: _goalChanged ? _goal : null,
-        units: _unitsChanged ? _units : null,
-      ),
+    final kg = _weightChanged ? _weightKgFor(_shownUnits) : null;
+    final patch = MePatch(
+      name: _nameChanged ? _trimmed : null,
+      color: _color != _server?.color ? _color : null,
+      birthYear: _birthChanged ? _birthYear : null,
+      clearBirthYear: _birthChanged && _birthYear == null,
+      heightCm: _heightChanged ? _heightCm : null,
+      clearHeight: _heightChanged && _heightCm == null,
+      sex: _sexChanged ? _sex : null,
+      clearSex: _sexChanged && _sex == null,
+      goal: _goalChanged ? _goal : null,
+      units: _unitsChanged ? _units : null,
     );
+    final hasPatch =
+        _nameChanged ||
+        _color != _server?.color ||
+        _birthChanged ||
+        _heightChanged ||
+        _sexChanged ||
+        _goalChanged ||
+        _unitsChanged;
+    var ok = !hasPatch || await saveMe(patch);
+    if (ok && kg != null) ok = await _saveWeight(kg);
     if (ok && mounted) {
       toast('Saved');
       Navigator.of(context).maybePop();
+    }
+  }
+
+  /// A typed weight is today's manual reading; the targets and Today are refreshed after it.
+  Future<bool> _saveWeight(double kg) async {
+    final client = ref.read(apiClientProvider);
+    if (client == null) return false;
+    setState(() {
+      saving = true;
+      saveError = null;
+    });
+    try {
+      await putManualWeight(
+        client,
+        kg,
+        ref.read(meProvider).value?.data,
+        ref.read(clockProvider)(),
+      );
+      HapticFeedback.lightImpact();
+      await ref.read(targetsProvider.notifier).refresh();
+      if (ref.exists(todayProvider)) unawaited(ref.read(todayProvider.notifier).refresh());
+      if (mounted) setState(() => saving = false);
+      return true;
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          saving = false;
+          saveError = errorCopy(e);
+        });
+      }
+      return false;
     }
   }
 
@@ -214,25 +324,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           ignoring: !editable,
           child: Row(
             children: [
-              for (final (i, (u, label)) in const [
-                (Units.imperial, 'Pounds and feet'),
-                (Units.metric, 'Kilograms and cm'),
-              ].indexed) ...[
+              for (final (i, u) in const [Units.imperial, Units.metric].indexed) ...[
                 if (i > 0) const SizedBox(width: 8),
                 Expanded(
                   child: LogChip(
-                    label: label,
+                    label: u.systemName,
                     selected: _shownUnits == u,
-                    onTap: () => setState(() {
-                      _units = u;
-                      if (_goalKind != GoalKind.maintain) _pickGoalPaceFor(u);
-                    }),
+                    onTap: () => _pickUnits(u),
                   ),
                 ),
               ],
             ],
           ),
         ),
+        const SizedBox(height: 6),
+        Text(_shownUnits.systemHint, style: AppText.caption),
         const SizedBox(height: 24),
         FieldLabel(_shownUnits.isImperial ? 'Height (optional)' : 'Height in cm (optional)'),
         HeightInput(
@@ -249,6 +355,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           'Used for your targets. Left empty, the height in Apple Health is used.',
           style: AppText.caption,
         ),
+        const SizedBox(height: 24),
+        FieldLabel('Weight in ${_shownUnits.weightUnit} (optional)'),
+        IgnorePointer(
+          ignoring: !editable,
+          child: Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: _weight,
+                  hint: _shownUnits.isImperial ? 'For example 160' : 'For example 72.5',
+                  semanticLabel: _shownUnits.isImperial
+                      ? 'Weight in pounds'
+                      : 'Weight in kilograms',
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  errorText: _weightValid ? null : weightRangeError(_shownUnits),
+                  onChanged: (_) => setState(() => _weightEdited = true),
+                  inputFormatters: [LengthLimitingTextInputFormatter(6)],
+                ),
+              ),
+              FieldUnit(_shownUnits.weightUnit),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(_weightCaption, style: AppText.caption),
         const SizedBox(height: 24),
         const FieldLabel('Sex (optional)'),
         IgnorePointer(

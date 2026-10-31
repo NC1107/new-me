@@ -355,16 +355,7 @@ class AboutYouController extends Notifier<AboutYouState> {
   Future<void> _saveWeight(double kg, Me? me) async {
     final client = ref.read(apiClientProvider);
     if (client == null) throw StateError('Not signed in');
-    final now = ref.read(clockProvider)();
-    await client.putHealthDaily([
-      HealthItem(
-        date: (me?.localToday.isNotEmpty ?? false) ? me!.localToday : _dateKey(now),
-        metric: HealthMetric.weightKg,
-        value: double.parse(kg.toStringAsFixed(1)),
-        source: 'manual',
-        measuredAt: now.toUtc(),
-      ),
-    ]);
+    await putManualWeight(client, kg, me, ref.read(clockProvider)());
     if (ref.exists(targetsProvider)) unawaited(ref.read(targetsProvider.notifier).refresh());
     if (ref.exists(todayProvider)) unawaited(ref.read(todayProvider.notifier).refresh());
   }
@@ -383,6 +374,18 @@ class AboutYouController extends Notifier<AboutYouState> {
     }
   }
 }
+
+/// Records a typed weight as today's manual reading, which is what the targets read.
+Future<void> putManualWeight(ApiClient client, double kg, Me? me, DateTime now) =>
+    client.putHealthDaily([
+      HealthItem(
+        date: (me?.localToday.isNotEmpty ?? false) ? me!.localToday : _dateKey(now),
+        metric: HealthMetric.weightKg,
+        value: double.parse(kg.toStringAsFixed(1)),
+        source: 'manual',
+        measuredAt: now.toUtc(),
+      ),
+    ]);
 
 String _dateKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'

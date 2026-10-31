@@ -202,7 +202,7 @@ void main() {
     expect(app.storage.values[kSessionKey], contains('new-token'));
 
     expect(find.text('Which units do you use?'), findsOneWidget);
-    await app.tapText('Pounds and feet');
+    await app.tapText('Imperial');
     await app.tapButton('Continue');
     expect(app.lastBody('PATCH /api/me'), {'units': 'imperial'});
 
@@ -575,7 +575,7 @@ void main() {
     Future<_App> toAbout(
       WidgetTester tester,
       StubAdapter adapter, {
-      String units = 'Pounds and feet',
+      String units = 'Imperial',
       bool connect = false,
     }) async {
       final app = _App(tester, adapter);
@@ -617,7 +617,7 @@ void main() {
 
     testWidgets('metric answers save in one PATCH and one weigh-in', (tester) async {
       final adapter = aboutServer();
-      final app = await toAbout(tester, adapter, units: 'Kilograms and centimetres');
+      final app = await toAbout(tester, adapter, units: 'Metric');
       await enterField(tester, 'For example 1990', '1990');
       await app.tapText('Female');
       await enterField(tester, 'For example 178', '165');
@@ -688,7 +688,7 @@ void main() {
       final app = _App(tester, adapter);
       app.health.latency = const Duration(seconds: 2);
       await app.joinFirst();
-      await app.tapText('Pounds and feet');
+      await app.tapText('Imperial');
       await app.tapButton('Continue');
       await app.tapButton('Connect Apple Health');
       expect(find.text('About you'), findsOneWidget, reason: 'Health no longer holds the screen');

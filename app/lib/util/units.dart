@@ -19,6 +19,12 @@ enum Units {
 
   bool get isImperial => this == Units.imperial;
 
+  /// "Imperial" or "Metric", the name of the choice wherever units are picked.
+  String get systemName => isImperial ? 'Imperial' : 'Metric';
+
+  /// The units the choice covers, shown under its name.
+  String get systemHint => isImperial ? 'lb, ft, fl oz' : 'kg, cm, L';
+
   /// "lb" or "kg".
   String get weightUnit => isImperial ? 'lb' : 'kg';
 

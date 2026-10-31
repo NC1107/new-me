@@ -43,5 +43,8 @@ var Sources = map[string]string{
 	"zaccaro2018":      "Zaccaro et al., Front Hum Neurosci 2018;12:353",
 	"nasem2005":        "National Academies (IOM), Dietary Reference Intakes for Water, Potassium, Sodium, Chloride, and Sulfate, 2005",
 	"efsa2010":         "EFSA Panel on Dietetic Products, Nutrition and Allergies, EFSA Journal 2010;8(3):1459",
+	"brysbaert2019":    "Brysbaert, J Mem Lang 2019;109:104047 (238 words a minute for adults reading non-fiction silently, 260 for fiction)",
+	"acx":              "ACX (Audible) narration guidance of about 9,300 words per finished hour, 155 a minute (an industry rule of thumb, not a study)",
+	"pagewords":        "250 words a printed page is a typesetting convention; no measured average of printed books was found",
 	"impellizzeri2020": "Impellizzeri et al., Int J Sports Physiol Perform 2020;15:907",
 }

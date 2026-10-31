@@ -38,6 +38,7 @@ const (
 	tgtWater       = "water"
 	tgtProduce     = "produce"
 	tgtBreathing   = "breathing"
+	tgtReading     = "reading"
 )
 
 // Input keys.
@@ -519,6 +520,7 @@ func computeTargets(d targetData) targetsResponse {
 	add(d.waterTarget(tpl(db.QuestWater)))
 	add(produceTarget(tpl(db.QuestProduce)))
 	add(breathingTarget(tpl(db.QuestBreathing)))
+	add(d.readingTarget())
 
 	for i := range out {
 		d.addAdvice(&out[i])
@@ -768,6 +770,30 @@ func breathingTarget(current *int) targetJSON {
 			"note": "Apple Health mindful minutes also count, and the larger of Health and the minutes you log is used, never the sum."}}
 }
 
+// readingTarget is the pages that take as long to read as the reading minutes goal, at the
+// average adult silent reading rate. The minutes themselves are the person's call.
+func (d targetData) readingTarget() targetJSON {
+	minutes := db.DefaultReadingMinutes
+	var current *int
+	if tpl, ok := d.Templates[db.QuestReading]; ok {
+		minutes, current = tpl.Target, tpl.TargetAlt
+	}
+	pages := score.PagesForMinutes(minutes)
+	t := targetJSON{Key: tgtReading, Unit: "pages", Label: labelGuideline, Applicable: true, Current: current,
+		Value: intp(pages), Missing: []string{}, Sources: []string{"brysbaert2019", "acx", "pagewords"}}
+	t.Formula = fmt.Sprintf("%d minutes, or about %d pages: adults read non-fiction at about %d words a minute, and a page is taken as about %d words (%d x %d / %d).",
+		minutes, pages, score.ReadingWPM, score.WordsPerPage, minutes, score.ReadingWPM, score.WordsPerPage)
+	t.Why = fmt.Sprintf("Adults read about %d words a minute and a page holds about %d words, so %d minutes is about %d pages.",
+		score.ReadingWPM, score.WordsPerPage, minutes, pages)
+	t.Details = map[string]any{
+		"minutes": minutes, "readingWpm": score.ReadingWPM, "wordsPerPage": score.WordsPerPage,
+		"narrationWpm": score.NarrationWPM,
+		"note": fmt.Sprintf("An audiobook minute counts as %d%% of a reading minute, because a narrator speaks about %d words a minute against the %d an adult reads. The %d words a page is a convention, not a measured average: no study of printed books was found, and real pages run from about 230 to 300 words.",
+			score.NarrationWPM*100/score.ReadingWPM, score.NarrationWPM, score.ReadingWPM, score.WordsPerPage),
+	}
+	return t
+}
+
 // find returns the target with the key.
 func (r targetsResponse) find(key string) (targetJSON, bool) {
 	for _, t := range r.Targets {
@@ -884,6 +910,8 @@ func (s *Server) handleApplyTargets(w http.ResponseWriter, r *http.Request) {
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestProduce, Target: &v})
 		case tgtBreathing:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestBreathing, Target: &v})
+		case tgtReading:
+			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestReading, TargetAlt: &v})
 		case tgtPushups:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestPushups, Target: &v})
 		}

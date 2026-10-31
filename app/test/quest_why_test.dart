@@ -168,7 +168,7 @@ void main() {
       expect(yoga.note, contains('your goal of 15 min is your own pick'));
     });
 
-    test('reading has two numbers, so the note does not pick one', () {
+    test('reading waits for the targets report, which derives its pages', () {
       final reading = Quest.fromJson(
         quest('reading', 'Reading', {
           'unit': 'minutes',
@@ -177,7 +177,7 @@ void main() {
           'targetAlt': 10,
         }),
       );
-      expect(questWhy(reading, null, Units.metric)!.note, contains('the goal is your own pick'));
+      expect(questWhy(reading, null, Units.metric), isNull);
     });
 
     test('a steady bedtime cites the sleep regularity paper and gives no cut-off', () {

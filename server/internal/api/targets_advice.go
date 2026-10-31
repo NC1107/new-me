@@ -6,6 +6,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/insights"
 	"github.com/nc1107/new-me/server/internal/plan"
 	"github.com/nc1107/new-me/server/internal/readiness"
+	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/targets"
 )
 
@@ -61,6 +62,10 @@ func (d targetData) addAdvice(t *targetJSON) {
 	case tgtBreathing:
 		t.Cite = "Balban 2023"
 		t.Why = "Five minutes a day of cyclic sighing lifted mood in a month-long trial."
+	case tgtReading:
+		t.Cite = "Brysbaert 2019"
+		t.Why = fmt.Sprintf("About %d pages: the time you chose, at the %d words a minute an adult reads and about %d words a page. No study sets how long to read, so the minutes are your call.",
+			v, score.ReadingWPM, score.WordsPerPage)
 	case tgtExercise:
 		t.Cite = "WHO 2020"
 		t.Why = fmt.Sprintf("WHO advises 150 to 300 minutes of moderate activity a week. Spread over the week that is about %d minutes a day.", v)

@@ -18,6 +18,7 @@ import '../../widgets/skeletons.dart';
 import '../onboarding/goal_catalog.dart';
 import 'goal_advice.dart';
 import 'number_field.dart';
+import 'reading_pages.dart';
 
 /// What the picker hands back.
 class GoalChoice {
@@ -65,6 +66,14 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
     text: widget.targetAlt?.toString() ?? '',
   );
   bool _prefilled = false;
+
+  /// Whether the person typed a pages figure of their own; until they do, it follows the minutes.
+  late bool _altOwn =
+      widget.quest.key == 'reading' &&
+      widget.targetAlt != null &&
+      widget.targetAlt != pagesForMinutes(widget.target);
+
+  bool get _altFollows => widget.quest.key == 'reading' && widget.quest.targetAlt != null;
 
   GoalSpec? get _spec => kGoalSpecs[widget.quest.key];
 
@@ -118,8 +127,19 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
     setState(() {
       _value = v;
       _custom.clear();
+      _followMinutes();
     });
   }
+
+  void _followMinutes() {
+    final minutes = _value ?? 0;
+    if (_altFollows && !_altOwn && minutes > 0) _alt.text = pagesForMinutes(minutes).toString();
+  }
+
+  void _altTyped() => setState(() {
+    final minutes = _value ?? 0;
+    _altOwn = minutes <= 0 || _altValue != pagesForMinutes(minutes);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +226,10 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
           label: spec == null ? 'Your goal' : 'Or type your own',
           hint: spec == null ? widget.target.toString() : 'Your number',
           unit: _isWater && units.isImperial ? 'fl oz' : shortUnit(q.unit),
-          onChanged: () => setState(() => _value = _valueFrom(_custom.text) ?? _value),
+          onChanged: () => setState(() {
+            _value = _valueFrom(_custom.text) ?? _value;
+            _followMinutes();
+          }),
         ),
         if (q.targetAlt != null) ...[
           const SizedBox(height: 16),
@@ -215,8 +238,20 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
             label: 'Or, counting ${shortUnit(q.unitAlt ?? '')}',
             hint: '0',
             unit: shortUnit(q.unitAlt ?? ''),
-            onChanged: () => setState(() {}),
+            onChanged: _altTyped,
           ),
+          if (_altFollows && (_value ?? 0) > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              _altOwn
+                  ? 'Your own figure. ${_value!} minutes of reading is about '
+                        '${pagesForMinutes(_value!)} pages; type that to follow the minutes again.'
+                  : 'About ${pagesForMinutes(_value!)} pages: reading at about $kReadingWpm words a '
+                        'minute, about $kWordsPerPage words a page. It follows the minutes unless '
+                        'you type your own.',
+              style: AppText.caption,
+            ),
+          ],
         ],
       ],
     );

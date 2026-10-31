@@ -19,7 +19,10 @@ String? targetKeyForQuest(String questKey) => switch (questKey) {
   'produce' ||
   'breathing' ||
   'pushups' ||
-  'exercise' => questKey,
+  'exercise' ||
+  // The pages way to finish it follows from the minutes; the minutes themselves are the
+  // person's pick.
+  'reading' => questKey,
   _ => null,
 };
 
@@ -63,6 +66,7 @@ String _amount(Quest quest, String key, int value, Units units) => switch (key) 
   'water' => units.volume(value),
   'protein' => '${value.formatted} g',
   'produce' => '${value.formatted} ${value == 1 ? 'serving' : 'servings'}',
+  'reading' => '${value.formatted} ${value == 1 ? 'page' : 'pages'}',
   _ => formatTargetValue(value, quest.unit, units: units),
 };
 
@@ -77,6 +81,7 @@ String _recommendedLine(Quest quest, Target target, Units units) {
     'protein' => '$amount of protein a day',
     'produce' => '$amount of fruit and veg a day (${v * kProduceServingGrams} g)',
     'breathing' => '$amount of breathing a day',
+    'reading' => 'about $amount for your ${quest.target.round()} minutes',
     _ => '$amount a day',
   };
   return 'Recommended: $line';
@@ -130,10 +135,20 @@ QuestWhy? questWhy(Quest quest, TargetsReport? report, Units units) {
     return QuestWhy(note: target.formula, citation: citation);
   }
   final sameUnit = target.unit == quest.unit;
+  final note = target.details['note'];
+  final why = [
+    if (target.why.isNotEmpty) target.why,
+    if (quest.key == 'reading' && note is String) note,
+  ].join(' ');
+  final pagesGoal = quest.key == 'reading' ? quest.targetAlt?.round() : null;
   return QuestWhy(
     recommended: _recommendedLine(quest, target, units),
-    reason: target.why.isEmpty ? null : target.why,
-    comparison: sameUnit ? _compare(quest, quest.target.round(), target.value!, units) : null,
+    reason: why.isEmpty ? null : why,
+    comparison: pagesGoal != null
+        ? _compare(quest, pagesGoal, target.value!, units)
+        : sameUnit
+        ? _compare(quest, quest.target.round(), target.value!, units)
+        : null,
     citation: citation,
     formula: target.formula,
   );

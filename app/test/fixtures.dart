@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newme/audio/voice_line.dart';
 import 'package:newme/audio/session_audio.dart';
 import 'package:newme/health/fake_health_source.dart';
 import 'package:newme/health/health_source_factory.dart';
@@ -300,7 +301,12 @@ class FakeSessionAudio implements SessionAudio {
   void chime() => cues.add('chime');
 
   @override
-  void speak(String text) => cues.add('say: $text');
+  void playLines(List<VoiceLine> lines) => cues.add('play: ${lines.join(' ')}');
+
+  final prefetched = <VoiceLine>[];
+
+  @override
+  void prefetch(List<VoiceLine> lines) => prefetched.addAll(lines);
 
   @override
   void stopSpeaking() => cues.add('stop');

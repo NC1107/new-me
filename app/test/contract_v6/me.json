@@ -131,7 +131,8 @@
     "features": {
       "mealEstimate": false,
       "planPolish": false,
-      "coachChat": false
+      "coachChat": false,
+      "voice": false
     }
   }
 }

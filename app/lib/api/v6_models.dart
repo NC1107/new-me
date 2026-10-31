@@ -166,7 +166,12 @@ class Plan {
 
 /// Optional server features, so the app hides what is switched off.
 class Features {
-  const Features({this.mealEstimate = false, this.planPolish = false, this.coachChat = false});
+  const Features({
+    this.mealEstimate = false,
+    this.planPolish = false,
+    this.coachChat = false,
+    this.voice = false,
+  });
 
   factory Features.fromJson(Object? v) {
     final j = _map(v);
@@ -174,6 +179,7 @@ class Features {
       mealEstimate: j?['mealEstimate'] as bool? ?? false,
       planPolish: j?['planPolish'] as bool? ?? false,
       coachChat: j?['coachChat'] as bool? ?? false,
+      voice: j?['voice'] as bool? ?? false,
     );
   }
 
@@ -183,10 +189,14 @@ class Features {
   /// The coach chat, which needs the server's Claude key.
   final bool coachChat;
 
+  /// The server can speak a line in the class voice (`POST /api/voice`).
+  final bool voice;
+
   Map<String, dynamic> toJson() => {
     'mealEstimate': mealEstimate,
     'planPolish': planPolish,
     'coachChat': coachChat,
+    'voice': voice,
   };
 }
 

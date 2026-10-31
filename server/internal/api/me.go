@@ -157,6 +157,7 @@ type featuresJSON struct {
 	MealEstimate bool `json:"mealEstimate"`
 	PlanPolish   bool `json:"planPolish"`
 	CoachChat    bool `json:"coachChat"`
+	Voice        bool `json:"voice"`
 }
 
 type notificationsJSON struct {
@@ -263,7 +264,7 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 			WeeklyRecap: u.Notify.WeeklyRecap, Milestones: u.Notify.Milestones, Lookback: u.Notify.Lookback,
 			PartnerNudges: u.Notify.PartnerNudges, Cover: u.Notify.Cover, Approvals: u.Notify.Approvals},
 		Features: featuresJSON{MealEstimate: s.estimator != nil, PlanPolish: s.cfg.Anthropic.Enabled(),
-			CoachChat: s.chatter != nil},
+			CoachChat: s.chatter != nil, Voice: s.voice != nil},
 		Schedule: toScheduleJSON(u.Schedule),
 		Protein:  protein,
 	}, nil

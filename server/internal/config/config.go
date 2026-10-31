@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -46,7 +47,23 @@ type Config struct {
 	// USDAKey is the FoodData Central API key for meal lookups. Empty uses the shared,
 	// rate-limited DEMO_KEY.
 	USDAKey string
+	// TTS configures live voice synthesis through a Kokoro sidecar; the zero value turns it off.
+	TTS TTS
 }
+
+// TTS is the self-hosted text-to-speech sidecar (Kokoro-FastAPI, OpenAI-compatible).
+type TTS struct {
+	// URL is the sidecar base URL. Empty turns server voice off.
+	URL string
+	// Voice and Speed match the bundled clips, so live and bundled lines sound the same.
+	Voice string
+	Speed float64
+	// CacheDir holds each synthesised line, keyed by voice, speed and text.
+	CacheDir string
+}
+
+// Enabled is true when a sidecar URL is set.
+func (t TTS) Enabled() bool { return t.URL != "" }
 
 // Anthropic is the Claude API access.
 type Anthropic struct {
@@ -105,6 +122,9 @@ func Load() (Config, error) {
 		return cfg, err
 	}
 	cfg.USDAKey = strings.TrimSpace(os.Getenv("NEWME_USDA_API_KEY"))
+	if cfg.TTS, err = loadTTS(); err != nil {
+		return cfg, err
+	}
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf(
 			"NEWME_DATABASE_URL is required, e.g. postgres://user:password@host:5432/newme?sslmode=disable")
@@ -188,4 +208,27 @@ func loadAPNS() (APNS, error) {
 		return a, fmt.Errorf("NEWME_APNS_KEY, NEWME_APNS_KEY_ID, NEWME_APNS_TEAM_ID and NEWME_APNS_TOPIC must all be set to enable push")
 	}
 	return a, nil
+}
+
+// loadTTS reads the voice sidecar settings. The defaults are the voice and pace of the bundled
+// clips in tools/voice/manifest.json.
+func loadTTS() (TTS, error) {
+	url, err := getBaseURL("NEWME_TTS_URL")
+	if err != nil {
+		return TTS{}, err
+	}
+	t := TTS{
+		URL:      url,
+		Voice:    getenv("NEWME_TTS_VOICE", "af_heart"),
+		Speed:    0.8,
+		CacheDir: getenv("NEWME_TTS_CACHE_DIR", filepath.Join(os.TempDir(), "newme-voice")),
+	}
+	if v := os.Getenv("NEWME_TTS_SPEED"); v != "" {
+		speed, err := strconv.ParseFloat(v, 64)
+		if err != nil || speed < 0.5 || speed > 1.5 {
+			return t, fmt.Errorf("NEWME_TTS_SPEED must be a number from 0.5 to 1.5, got %q", v)
+		}
+		t.Speed = speed
+	}
+	return t, nil
 }

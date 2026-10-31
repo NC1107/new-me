@@ -445,6 +445,25 @@ class ApiClient {
     }
   }
 
+  /// [text] spoken in the class voice as MP3 bytes. Throws codes `voice_disabled`, `rate_limited`
+  /// and `voice_unavailable`.
+  Future<Uint8List> voice(String text) async {
+    try {
+      final response = await _dio.post<List<int>>(
+        '/api/voice',
+        data: {'text': text},
+        options: Options(
+          responseType: ResponseType.bytes,
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 50),
+        ),
+      );
+      return Uint8List.fromList(response.data ?? const []);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// Adds a custom exercise for the caller only.
   Future<Exercise> createExercise({
     required String name,

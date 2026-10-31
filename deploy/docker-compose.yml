@@ -10,6 +10,7 @@ networks:
 
 volumes:
   db_data:
+  voice_cache:
 
 services:
   db:
@@ -69,6 +70,24 @@ services:
           cpus: '0.05'
           memory: 32M
 
+  # Self-hosted Kokoro text-to-speech (Apache-2.0) for the yoga class voice. CPU only, on the
+  # internal network, so it is never exposed. The first start downloads nothing: the model ships
+  # in the image. Pinned to a release tag so watchtower never moves it.
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.9.2
+    container_name: new-me-kokoro
+    restart: unless-stopped
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 3G
+        reservations:
+          cpus: '0.1'
+          memory: 512M
+
   server:
     image: ghcr.io/nc1107/new-me:${NEWME_TAG:-latest}
     container_name: new-me-server
@@ -91,7 +110,14 @@ services:
       NEWME_ANTHROPIC_API_KEY: ${NEWME_ANTHROPIC_API_KEY:-}
       NEWME_ANTHROPIC_BASE_URL: ${NEWME_ANTHROPIC_BASE_URL:-}
       NEWME_USDA_API_KEY: ${NEWME_USDA_API_KEY:-}
+      # Server voice is off while NEWME_TTS_URL is empty. Set it to http://kokoro:8880 to switch it on.
+      NEWME_TTS_URL: ${NEWME_TTS_URL:-}
+      NEWME_TTS_VOICE: ${NEWME_TTS_VOICE:-af_heart}
+      NEWME_TTS_SPEED: ${NEWME_TTS_SPEED:-0.8}
+      NEWME_TTS_CACHE_DIR: /data/voice
       TZ: ${TZ:-America/New_York}
+    volumes:
+      - voice_cache:/data/voice
     healthcheck:
       test: ["CMD", "/app/server", "-healthcheck"]
       interval: 30s

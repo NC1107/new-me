@@ -15,9 +15,30 @@ func QuestPoints(points, actual, target int) int {
 // Bonus is the extra credit for completing a quest.
 func Bonus(points int) int { return points / 5 }
 
-// ReadingMinutes is the minutes the reading quest sees: minutes typed in plus audiobook
-// listening, which is time spent reading by ear. Pages are not touched.
-func ReadingMinutes(manual, listening int) int { return manual + max(listening, 0) }
+// Reading rates behind the pages target and the audiobook credit. Silent reading is the 238
+// words a minute Brysbaert (2019) found for adult non-fiction; narration is the roughly 9,300
+// words per finished hour (155 a minute) that ACX production guidance uses; a printed page is
+// the 250-word convention, because no measured sample of books was found.
+const (
+	ReadingWPM   = 238
+	NarrationWPM = 155
+	WordsPerPage = 250
+)
+
+// PagesForMinutes is the pages a reader gets through in the minutes of silent reading, never
+// below one so a short target still has a pages way to finish it.
+func PagesForMinutes(minutes int) int {
+	return max(1, (minutes*ReadingWPM+WordsPerPage/2)/WordsPerPage)
+}
+
+// ListeningCredit is the reading minutes that minutes of audiobook listening are worth: a
+// narrator speaks fewer words a minute than a person reads, so only the words that were
+// heard count. It rounds down so a fraction of a minute never earns a minute.
+func ListeningCredit(listening int) int { return max(listening, 0) * NarrationWPM / ReadingWPM }
+
+// ReadingMinutes is the minutes the reading quest sees: minutes typed in plus the listening
+// credit. Pages are not touched.
+func ReadingMinutes(manual, listening int) int { return manual + ListeningCredit(listening) }
 
 // ReadingProgressBasis expresses p = min(1, minutes/targetMinutes + pages/targetPages) as an
 // integer pair for QuestPoints: multiplying through by targetMinutes*targetPages makes the

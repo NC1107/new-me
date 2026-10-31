@@ -95,13 +95,13 @@ func TestListeningCountsTowardTheReadingQuest(t *testing.T) {
 	h.logActivity(nick, "reading", "pages", 5).expect(http.StatusCreated)
 
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.num("quests.2.basePoints") != 93 {
+	if before.num("quests.2.basePoints") != 86 {
 		t.Fatalf("reading before linking = %s", before.Body)
 	}
 
 	h.put("/api/me/audiobookshelf", nick.Token, obj{"username": "nick", "password": "pw"}).expect(http.StatusOK)
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("listening.minutes") != 6 || got.num("quests.2.actual") != 18 || got.num("quests.2.actualAlt") != 5 ||
+	if got.num("listening.minutes") != 6 || got.num("quests.2.actual") != 15 || got.num("quests.2.actualAlt") != 5 ||
 		got.num("quests.2.basePoints") != 100 || !got.flag("quests.2.done") {
 		t.Fatalf("today = %s", got.Body)
 	}
@@ -151,11 +151,11 @@ func TestUnlinkRemovesTheLinkAndTheOpenDaysMinutes(t *testing.T) {
 	h := newHarness(t, opt)
 	fake := fakeOf()
 	fake.AddUser("nick", "pw")
-	fake.SetListening("nick", "2026-11-02", 30*60)
+	fake.SetListening("nick", "2026-11-02", 40*60)
 	nick := h.joinAdmin("Nick", "green")
 	h.put("/api/me/audiobookshelf", nick.Token, obj{"username": "nick", "password": "pw"}).expect(http.StatusOK)
 	if !h.get("/api/today", nick.Token).flag("quests.2.done") {
-		t.Fatal("30 listened minutes must complete reading")
+		t.Fatal("40 listened minutes must complete reading")
 	}
 
 	h.delete("/api/me/audiobookshelf", nick.Token).expect(http.StatusNoContent)

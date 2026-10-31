@@ -96,7 +96,7 @@ func TestTodayPlanNamesWhatIsDoneAndWhatIsLeft(t *testing.T) {
 	want := []string{
 		"done|Push-ups done by your Strength workout, 42 min",
 		"todo|Steps: 3,200 to go. A 30-minute walk this afternoon covers it.",
-		"todo|Reading: 14 more minutes. An audiobook counts.",
+		"todo|Reading: 14 more minutes. An audiobook counts for about two thirds of its length.",
 		"todo|Meals: log 2 more meals.",
 		"todo|Protein: 100 g to go.",
 		"habit|Vitamins at 18:00",
@@ -155,7 +155,7 @@ func TestPlanSummaryIsPolishedOnceADayFromTheSameFacts(t *testing.T) {
 		t.Fatalf("the instructions must forbid new facts: %q", system)
 	}
 	facts := req["messages"].([]any)[0].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string)
-	if !strings.Contains(facts, "Reading: 20 more minutes. An audiobook counts.") {
+	if !strings.Contains(facts, "Reading: 20 more minutes. An audiobook counts for about two thirds of its length.") {
 		t.Fatalf("facts = %q", facts)
 	}
 

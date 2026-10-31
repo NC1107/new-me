@@ -68,6 +68,9 @@ var QuestTitles = map[string]string{
 	QuestBreathing:       "Breathing",
 }
 
+// DefaultReadingMinutes is the reading goal a new user starts with.
+const DefaultReadingMinutes = 20
+
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
 const DefaultProteinTarget = 100
 
@@ -79,6 +82,9 @@ type QuestTemplate struct {
 	Unit      string
 	TargetAlt *int
 	UnitAlt   *string
+	// AltCustom is true once the person typed their own second target; until then it follows the
+	// first (pages from minutes for reading).
+	AltCustom bool
 	Points    int
 	Enabled   bool
 	Position  int
@@ -110,7 +116,7 @@ func DefaultTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{Key: QuestSteps, Target: 8000, Unit: "steps", Points: 100, Enabled: true, Position: 0},
 		{Key: QuestPushups, Target: 30, Unit: "reps", Points: 100, Enabled: true, Position: 1},
-		{Key: QuestReading, Target: 20, Unit: "minutes", TargetAlt: intPtr(15), UnitAlt: strPtr("pages"),
+		{Key: QuestReading, Target: DefaultReadingMinutes, Unit: "minutes", TargetAlt: intPtr(score.PagesForMinutes(DefaultReadingMinutes)), UnitAlt: strPtr("pages"),
 			Points: 100, Enabled: true, Position: 2},
 		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Points: 50, Enabled: true, Position: 3},
 		{Key: QuestProtein, Target: DefaultProteinTarget, Unit: "g", Points: 50, Enabled: true, Position: 4},
@@ -141,7 +147,7 @@ func SeedDefaultTemplates(ctx context.Context, q Querier, userID int64) error {
 // GetQuestTemplates lists a user's templates in display order.
 func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTemplate, error) {
 	rows, err := q.Query(ctx, `
-		SELECT key, target, unit, target_alt, unit_alt, points, enabled, position, exercise
+		SELECT key, target, unit, target_alt, unit_alt, points, enabled, position, exercise, target_alt_custom
 		FROM quest_templates WHERE user_id = $1 ORDER BY position, id`, userID)
 	if err != nil {
 		return nil, err
@@ -151,7 +157,7 @@ func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTem
 	for rows.Next() {
 		var t QuestTemplate
 		if err := rows.Scan(&t.Key, &t.Target, &t.Unit, &t.TargetAlt, &t.UnitAlt, &t.Points,
-			&t.Enabled, &t.Position, &t.Exercise); err != nil {
+			&t.Enabled, &t.Position, &t.Exercise, &t.AltCustom); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -163,13 +169,13 @@ func GetQuestTemplates(ctx context.Context, q Querier, userID int64) ([]QuestTem
 // daily-reps exercise), creating it if missing. Points and units never change after creation.
 func UpsertQuestTemplate(ctx context.Context, q Querier, userID int64, t QuestTemplate) error {
 	_, err := q.Exec(ctx, `
-		INSERT INTO quest_templates (user_id, key, target, unit, target_alt, unit_alt, points, enabled, position, exercise)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE(NULLIF($10, ''), $11))
+		INSERT INTO quest_templates (user_id, key, target, unit, target_alt, unit_alt, points, enabled, position, exercise, target_alt_custom)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE(NULLIF($10, ''), $11), $12)
 		ON CONFLICT (user_id, key) DO UPDATE
 		SET target = EXCLUDED.target, target_alt = EXCLUDED.target_alt, enabled = EXCLUDED.enabled,
-		    exercise = EXCLUDED.exercise`,
+		    exercise = EXCLUDED.exercise, target_alt_custom = EXCLUDED.target_alt_custom`,
 		userID, t.Key, t.Target, t.Unit, t.TargetAlt, t.UnitAlt, t.Points, t.Enabled, t.Position,
-		t.Exercise, DefaultRepsExercise)
+		t.Exercise, DefaultRepsExercise, t.AltCustom)
 	return err
 }
 

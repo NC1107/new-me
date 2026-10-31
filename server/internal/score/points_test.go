@@ -131,9 +131,9 @@ func TestScoreDayReportsPerQuestCredit(t *testing.T) {
 	}
 }
 
-func TestReadingMinutesAddsListeningToManualMinutes(t *testing.T) {
+func TestReadingMinutesAddsListeningCreditToManualMinutes(t *testing.T) {
 	for _, c := range []struct{ manual, listening, want int }{
-		{0, 0, 0}, {10, 0, 10}, {0, 25, 25}, {10, 25, 35}, {10, -5, 10},
+		{0, 0, 0}, {10, 0, 10}, {0, 25, 16}, {10, 25, 26}, {10, -5, 10}, {0, 238, 155}, {0, 1, 0},
 	} {
 		if got := ReadingMinutes(c.manual, c.listening); got != c.want {
 			t.Fatalf("ReadingMinutes(%d, %d) = %d, want %d", c.manual, c.listening, got, c.want)
@@ -141,16 +141,49 @@ func TestReadingMinutesAddsListeningToManualMinutes(t *testing.T) {
 	}
 }
 
-func TestListeningFillsTheReadingQuestWithoutTouchingPages(t *testing.T) {
-	// 10 manual + 5 listened minutes of a 20 minute target, plus 3 of 15 pages.
-	actual, target := ReadingProgressBasis(ReadingMinutes(10, 5), 3, 20, 15)
-	if want := (15*15 + 3*20); actual != want || target != 20*15 {
-		t.Fatalf("basis = %d/%d, want %d/300", actual, target, want)
+func TestListeningCreditIsTheWordsHeardOverTheWordsReadInAMinute(t *testing.T) {
+	// 60 minutes of narration is 9,300 words, which a silent reader gets through in 39 minutes.
+	if got := ListeningCredit(60); got != 39 {
+		t.Fatalf("ListeningCredit(60) = %d, want 39", got)
 	}
-	// Listening alone can complete the quest.
-	actual, target = ReadingProgressBasis(ReadingMinutes(0, 20), 0, 20, 15)
-	if actual != target {
-		t.Fatalf("20 listened minutes = %d/%d, want complete", actual, target)
+	for m := 0; m <= 1440; m++ {
+		if credit := ListeningCredit(m); credit > m {
+			t.Fatalf("ListeningCredit(%d) = %d, more than the time listened", m, credit)
+		}
+	}
+}
+
+func TestPagesForMinutesIsMinutesTimesWordsPerMinuteOverWordsPerPage(t *testing.T) {
+	for _, c := range []struct{ minutes, want int }{
+		{1, 1}, {5, 5}, {10, 10}, {20, 19}, {30, 29}, {45, 43}, {60, 57}, {120, 114}, {1440, 1371},
+	} {
+		if got := PagesForMinutes(c.minutes); got != c.want {
+			t.Fatalf("PagesForMinutes(%d) = %d, want %d", c.minutes, got, c.want)
+		}
+	}
+}
+
+func TestPagesForMinutesNeverDecreasesAndStaysInsideTheStoredRange(t *testing.T) {
+	prev := 0
+	for m := 1; m <= 1440; m++ {
+		got := PagesForMinutes(m)
+		if got < prev || got < 1 || got > 2000 {
+			t.Fatalf("PagesForMinutes(%d) = %d after %d", m, got, prev)
+		}
+		prev = got
+	}
+}
+
+func TestListeningFillsTheReadingQuestWithoutTouchingPages(t *testing.T) {
+	// 10 manual + 15 listened minutes (worth 9) of a 20 minute target, plus 3 of 19 pages.
+	actual, target := ReadingProgressBasis(ReadingMinutes(10, 15), 3, 20, 19)
+	if want := 19*19 + 3*20; actual != want || target != 20*19 {
+		t.Fatalf("basis = %d/%d, want %d/380", actual, target, want)
+	}
+	// Listening for the whole target and a third more completes the quest.
+	actual, target = ReadingProgressBasis(ReadingMinutes(0, 31), 0, 20, 19)
+	if actual < target {
+		t.Fatalf("31 listened minutes = %d/%d, want complete", actual, target)
 	}
 }
 

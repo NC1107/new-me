@@ -618,6 +618,9 @@ func applyTemplatePatches(ctx context.Context, tx pgx.Tx, userID int64, patches 
 		}
 		if p.Target != nil {
 			t.Target = *p.Target
+			if t.Key == db.QuestReading && !t.AltCustom {
+				t.TargetAlt = intp(score.PagesForMinutes(t.Target))
+			}
 		}
 		if p.Exercise != nil {
 			if herr := validRepsExercise(ctx, tx, userID, p.Key, *p.Exercise); herr != nil {
@@ -630,6 +633,7 @@ func applyTemplatePatches(ctx context.Context, tx pgx.Tx, userID int64, patches 
 				return invalid(p.Key + " has no second target")
 			}
 			t.TargetAlt = p.TargetAlt
+			t.AltCustom = t.Key != db.QuestReading || *p.TargetAlt != score.PagesForMinutes(t.Target)
 		}
 		if err := db.UpsertQuestTemplate(ctx, tx, userID, t); err != nil {
 			var pgErr *pgconn.PgError

@@ -500,14 +500,46 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await _seconds(tester, 5);
-      await tester.tap(find.widgetWithText(TextButton, 'Skip'));
+      await tester.tap(find.byTooltip('Next pose'));
       await tester.pump();
       expect(find.text('Pose 2 of 14'), findsOneWidget);
       expect(find.text('Cat-cow'), findsOneWidget);
       expect(find.text('Move with your breath'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Previous'));
+      await tester.tap(find.byTooltip('Previous pose'));
       await tester.pump();
       expect(find.text('Pose 1 of 14'), findsOneWidget);
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the transport is icon only, pause toggles', (tester) async {
+      final app = TestApp(tester, _server(), surfaceHeight: 3000);
+      await app.pump(const YogaPage());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Yoga 10'));
+      await tester.pumpAndSettle();
+      await tester.tap(_button('Start'));
+      await tester.pump();
+      IconButton first() =>
+          tester.widget(find.widgetWithIcon(IconButton, Icons.skip_previous_rounded));
+      expect(first().onPressed, isNull);
+      await _seconds(tester, 5);
+      IconButton button(IconData icon) => tester.widget(find.widgetWithIcon(IconButton, icon));
+      expect(find.text('Skip'), findsNothing);
+      expect(find.text('Previous'), findsNothing);
+      expect(button(Icons.skip_next_rounded).onPressed, isNotNull);
+      expect(find.byTooltip('Voice on'), findsOneWidget);
+      final play = find.widgetWithIcon(IconButton, Icons.pause_rounded);
+      final next = find.byTooltip('Next pose');
+      expect(tester.getCenter(play).dx, closeTo(tester.getCenter(find.byType(Scaffold)).dx, 0.5));
+      expect(tester.getSize(play).width, greaterThan(tester.getSize(next).width));
+      await tester.tap(find.byTooltip('Pause'));
+      await tester.pump();
+      expect(find.byTooltip('Resume'), findsOneWidget);
+      expect(find.widgetWithIcon(IconButton, Icons.play_arrow_rounded), findsOneWidget);
+      await tester.tap(next);
+      await tester.pump();
+      expect(button(Icons.skip_previous_rounded).onPressed, isNotNull);
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       await tester.pumpWidget(const SizedBox());
     });
@@ -541,8 +573,8 @@ void main() {
       await tester.tap(_button('Start'));
       await _seconds(tester, 5);
       _noOverflow(tester);
-      for (final label in ['Previous', 'Skip']) {
-        final size = tester.getSize(find.widgetWithText(TextButton, label));
+      for (final label in ['Previous pose', 'Next pose']) {
+        final size = tester.getSize(find.byTooltip(label));
         expect(size.width, greaterThanOrEqualTo(44), reason: label);
         expect(size.height, greaterThanOrEqualTo(44), reason: label);
       }

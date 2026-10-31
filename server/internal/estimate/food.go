@@ -113,6 +113,10 @@ var unitAliases = map[string]string{
 	"grams": "gram", "ounces": "ounce", "pounds": "pound", "lbs": "lb", "onz": "ounce", "grm": "gram",
 }
 
+// spreadUnit is "slice of bread" as normUnit joins it, the unit the split step gives a spread
+// or topping on bread with no amount.
+const spreadUnit = "slicebread"
+
 var countUnits = map[string]bool{
 	"serving": true, "piece": true, "each": true, "item": true, "unit": true, "whole": true,
 	"bar": true, "stick": true, "pouch": true, "packet": true, "pack": true, "can": true,
@@ -182,7 +186,9 @@ func resolve(f Food, it Item) (resolved, bool) {
 		if f.ServingGrams > 0 && servingWord {
 			return byGrams(it.Quantity*f.ServingGrams, basisExact)
 		}
-		if f.UnspecifiedGrams > 0 && (unit == "serving" || unit == "") {
+		// A spread "per slice of bread" on a food USDA gives no per-slice amount for takes the
+		// survey's own amount for an unreported quantity, as a plain "serving" does.
+		if f.UnspecifiedGrams > 0 && (unit == "serving" || unit == "" || unit == spreadUnit) {
 			return byGrams(it.Quantity*f.UnspecifiedGrams, basisStandard)
 		}
 		if p, ok := wholePortion(f); ok && servingWord {
@@ -234,29 +240,38 @@ func gramsPerML(portions []Portion) (float64, bool) {
 	return 0, false
 }
 
+// typicalSize are the words FNDDS uses for the usual size of a measure ("1 medium or regular
+// slice"), which stands in when the person named no size, ahead of a snack-size or thin slice.
+var typicalSize = map[string]bool{"medium": true, "regular": true}
+
 // bestPortion is the measure for the item's unit. Several can share a unit ("cup, diced", "cup,
 // shredded", "cup, melted" for cheddar), and they weigh very differently, so the one whose other
-// words the person used wins, then the plainest, then USDA's own order.
+// words the person used wins, then the usual size, then the plainest, then USDA's own order.
 func bestPortion(portions []Portion, units, words []string) (Portion, bool) {
 	if len(units) == 0 {
 		return Portion{}, false
 	}
 	said := toSet(words)
-	best, bestNamed, bestExtra, found := Portion{}, 0, 0, false
+	best, bestNamed, bestExtra, bestTypical, found := Portion{}, 0, 0, false, false
 	for _, p := range portions {
 		label := portionUnit(p.Label)
 		if !containsAll(label, units) {
 			continue
 		}
 		extra := without(label, toSet(units))
-		named := 0
+		named, typical := 0, false
 		for _, t := range extra {
 			if said[t] {
 				named++
 			}
+			typical = typical || typicalSize[t]
 		}
-		if !found || named > bestNamed || (named == bestNamed && len(extra) < bestExtra) {
-			best, bestNamed, bestExtra, found = p, named, len(extra), true
+		better := !found || named > bestNamed
+		if found && named == bestNamed {
+			better = (typical && !bestTypical) || (typical == bestTypical && len(extra) < bestExtra)
+		}
+		if better {
+			best, bestNamed, bestExtra, bestTypical, found = p, named, len(extra), typical, true
 		}
 	}
 	return best, found

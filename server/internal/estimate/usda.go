@@ -257,7 +257,7 @@ func (f usdaFood) portions() []Portion {
 		if amount <= 0 {
 			amount = 1
 		}
-		if label != "" && p.GramWeight > 0 && !surveyOnlyMeasure.MatchString(label) {
+		if label != "" && p.GramWeight > 0 && !surveyOnly(label) {
 			out = append(out, Portion{Label: label, Grams: p.GramWeight / amount})
 		}
 	}
@@ -269,7 +269,7 @@ func (f usdaFood) portions() []Portion {
 		if label == "" || measureCode.MatchString(label) {
 			label = strings.TrimSpace(m.Text)
 		}
-		if surveyOnlyMeasure.MatchString(label) {
+		if surveyOnly(label) {
 			continue
 		}
 		if p, ok := portionFromLabel(label, m.GramWeight); ok {
@@ -295,6 +295,15 @@ var measureCode = regexp.MustCompile(`^\d+$`)
 // surveyOnlyMeasure matches FNDDS measures that are coding aids rather than portions a person
 // would pick: per-ounce guideline amounts and the weight used when no quantity was reported.
 var surveyOnlyMeasure = regexp.MustCompile(`(?i)^(guideline amount|quantity not specified)`)
+
+// perSliceGuideline is the exception: the amount of a spread FNDDS codes for each slice of bread
+// or roll ("Guideline amount per slice of bread/roll", 7 g of butter) is what "buttered toast"
+// means when the person gives no amount.
+var perSliceGuideline = regexp.MustCompile(`(?i)^guideline amount per slice\b`)
+
+func surveyOnly(label string) bool {
+	return surveyOnlyMeasure.MatchString(label) && !perSliceGuideline.MatchString(label)
+}
 
 func (f usdaFood) toFood() (Food, bool) {
 	per100, ok := f.per100()

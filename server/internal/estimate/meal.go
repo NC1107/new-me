@@ -77,7 +77,13 @@ food is the plain database-style name of the food without the brand and without 
 brand is the manufacturer or restaurant when the person named a product (for example "a chomp meat stick" is brand "Chomps", food "original beef stick"), otherwise null. Correct obvious misspellings of brands.
 kind is "branded" when a specific product or brand is meant, otherwise "generic".
 quantity is a number of units (1 when the person says "a" or "an", 0.5 for half). unit is the unit as the person gave it ("medium", "stick", "cup", "g", "slice", "serving"); use "serving" when none is given. For a drink, ounces mean fluid ounces, so write the unit as "fl oz".
-grams is the weight only when the person stated it explicitly, otherwise null. Never estimate a weight.`
+A spread or topping on bread with no amount given ("buttered toast", "toast with peanut butter", "a bagel with cream cheese") is its own item with unit "slice of bread" and quantity the number of slices or pieces it is on, because food databases list a spread's usual amount per slice.
+grams is the weight only when the person stated it explicitly, otherwise null. Never estimate a weight.
+savedFoodId is the id of one of the household's saved foods, listed after the description, when the person's words name that product or plainly mean it ("dave's bread" for a saved Dave's Killer Bread); otherwise null. A food of the same kind is not enough: "toast" is not a saved bread unless the words point to it.`
+
+// maxSavedInPrompt bounds how many saved foods the split step sees; the library is ordered most
+// used first, so the foods a person actually eats come first.
+const maxSavedInPrompt = 80
 
 func splitSchema() map[string]any {
 	str := func(desc string) map[string]any { return map[string]any{"type": "string", "description": desc} }
@@ -92,16 +98,17 @@ func splitSchema() map[string]any {
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"text":     str("The person's own words for this item"),
-						"label":    str("Short log name, at most three words"),
-						"food":     str("Plain database-style food name without brand or amount"),
-						"brand":    nullable("string", "Brand or restaurant, or null"),
-						"quantity": map[string]any{"type": "number", "description": "Number of units"},
-						"unit":     str("Unit of the quantity, such as medium, stick, cup, g, slice, serving"),
-						"grams":    nullable("number", "Total weight in grams only if the person stated it, else null"),
-						"kind":     map[string]any{"type": "string", "enum": []string{KindGeneric, KindBranded}},
+						"text":        str("The person's own words for this item"),
+						"label":       str("Short log name, at most three words"),
+						"food":        str("Plain database-style food name without brand or amount"),
+						"brand":       nullable("string", "Brand or restaurant, or null"),
+						"quantity":    map[string]any{"type": "number", "description": "Number of units"},
+						"unit":        str("Unit of the quantity, such as medium, stick, cup, g, slice, serving"),
+						"grams":       nullable("number", "Total weight in grams only if the person stated it, else null"),
+						"kind":        map[string]any{"type": "string", "enum": []string{KindGeneric, KindBranded}},
+						"savedFoodId": nullable("integer", "Id of the saved food this item is, or null"),
 					},
-					"required":             []string{"text", "label", "food", "brand", "quantity", "unit", "grams", "kind"},
+					"required":             []string{"text", "label", "food", "brand", "quantity", "unit", "grams", "kind", "savedFoodId"},
 					"additionalProperties": false,
 				},
 			},
@@ -123,6 +130,7 @@ func parseItems(raw json.RawMessage) ([]Item, error) {
 			Unit     string   `json:"unit"`
 			Grams    *float64 `json:"grams"`
 			Kind     string   `json:"kind"`
+			SavedID  *int64   `json:"savedFoodId"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(raw, &in); err != nil {
@@ -137,6 +145,9 @@ func parseItems(raw json.RawMessage) ([]Item, error) {
 		}
 		if r.Brand != nil {
 			it.Brand = cleanText(*r.Brand, 40)
+		}
+		if r.SavedID != nil && *r.SavedID > 0 {
+			it.SavedID = *r.SavedID
 		}
 		if strings.EqualFold(r.Kind, KindBranded) {
 			it.Kind = KindBranded
@@ -174,9 +185,31 @@ func parseItems(raw json.RawMessage) ([]Item, error) {
 	return out, nil
 }
 
-func (e *Estimator) split(ctx context.Context, text string) ([]Item, error) {
+// savedList is the saved foods as the split step reads them, one per line with its id.
+func savedList(library []LibraryFood) string {
+	if len(library) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("\n\nThe household's saved foods (id: name, brand, serving):")
+	for i, l := range library {
+		if i == maxSavedInPrompt {
+			break
+		}
+		fmt.Fprintf(&sb, "\n%d: %s", l.ID, l.Name)
+		if l.Brand != "" {
+			sb.WriteString(", " + l.Brand)
+		}
+		if l.ServingText != "" {
+			sb.WriteString(", " + l.ServingText)
+		}
+	}
+	return sb.String()
+}
+
+func (e *Estimator) split(ctx context.Context, text string, library []LibraryFood) ([]Item, error) {
 	raw, err := e.Client.ToolInput(ctx, anthropic.Request{
-		System: splitPrompt, User: []anthropic.Block{{Text: "What the person ate: " + text}}, MaxTokens: 1500,
+		System: splitPrompt, User: []anthropic.Block{{Text: "What the person ate: " + text + savedList(library)}}, MaxTokens: 1500,
 		Tool: &anthropic.Tool{
 			Name: "split_meal", Description: "Report the separate foods in the description.", Schema: splitSchema()},
 	})
@@ -273,6 +306,15 @@ func clampGrams(v float64) float64 {
 }
 
 func (e *Estimator) item(ctx context.Context, it Item, library []LibraryFood) (res ItemResult, failed bool) {
+	// The split step may only name a food from the list it was given, so an unknown id is ignored.
+	for _, l := range library {
+		if it.SavedID != 0 && l.ID == it.SavedID {
+			if h, ok := libraryHit(it, l); ok {
+				return e.hitResult(it, h), false
+			}
+			break
+		}
+	}
 	if l, ok := bestLibrary(it, library); ok {
 		if h, ok := libraryHit(it, l); ok {
 			return e.hitResult(it, h), false
@@ -336,7 +378,7 @@ func (e *Estimator) Meal(ctx context.Context, text string) (Meal, error) {
 			return assemble([]ItemResult{e.hitResult(it, h)}), nil
 		}
 	}
-	items, err := e.split(ctx, text)
+	items, err := e.split(ctx, text, library)
 	if err != nil {
 		return Meal{}, err
 	}

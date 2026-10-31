@@ -78,7 +78,9 @@ func libraryMatch(it Item, l LibraryFood) (diff int, ok bool) {
 	a := toSet(without(nameTok, strip))
 	b := toSet(without(tokens(it.Food), strip))
 	if len(a) == 0 && len(b) == 0 {
-		return 0, false
+		// A food saved under its brand ("Dave's Killer Bread") has nothing left once the brand is
+		// stripped, and the brand was already found in the item above.
+		return 0, len(libBrand) > 0
 	}
 	common := 0
 	for t := range a {

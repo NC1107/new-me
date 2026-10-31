@@ -369,15 +369,16 @@ func TestLookupsAreCachedForAnHour(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// A generic food searches the reference data and the survey data once each.
-	if ff.usdaSearch.Load() != 2 || ff.usdaDetail.Load() != 1 {
-		t.Fatalf("search %d, detail %d, want 2 and 1", ff.usdaSearch.Load(), ff.usdaDetail.Load())
+	// A generic food searches the reference data, the survey data and the survey's
+	// not-specified rows once each.
+	if ff.usdaSearch.Load() != 3 || ff.usdaDetail.Load() != 1 {
+		t.Fatalf("search %d, detail %d, want 3 and 1", ff.usdaSearch.Load(), ff.usdaDetail.Load())
 	}
 	now.advance(61 * 60)
 	if _, err := e.Meal(context.Background(), "an apple"); err != nil {
 		t.Fatal(err)
 	}
-	if ff.usdaSearch.Load() != 4 {
+	if ff.usdaSearch.Load() != 6 {
 		t.Fatalf("search after expiry = %d", ff.usdaSearch.Load())
 	}
 }

@@ -24,6 +24,8 @@ type Item struct {
 	Unit     string
 	Grams    *float64
 	Kind     string
+	// SavedID is the household's saved food the split step said this item is, 0 for none.
+	SavedID int64
 }
 
 // Foods looks items up in Open Food Facts and USDA FoodData Central. A nil source is skipped.
@@ -137,7 +139,12 @@ func (f *Foods) Lookup(ctx context.Context, it Item) (hit, bool, error) {
 		survey, surveyErr := cached(c, "usda|survey|"+strings.ToLower(query), func() ([]Food, error) {
 			return f.USDA.Search(ctx, query, typeSurvey)
 		})
-		if h, ok := f.pick(ctx, it, append(append([]Food{}, reference...), survey...)); ok {
+		// The survey's "not specified" rows ("Bread, NS as to major flour, toasted") are what a
+		// dietary recall codes when the person did not say which kind, so they compete with the
+		// named kinds instead of waiting until none matches: plain "toast" is not egg bread.
+		unspecifiedRows, _ := f.unspecifiedRows(ctx, it)
+		pool := append(append(append([]Food{}, reference...), survey...), unspecifiedRows...)
+		if h, ok := f.pick(ctx, it, pool); ok {
 			return h, true, nil
 		}
 		if h, ok := f.unspecified(ctx, it); ok {
@@ -193,6 +200,19 @@ func (f *Foods) pick(ctx context.Context, it Item, foods []Food) (hit, bool) {
 	return hit{}, false
 }
 
+// unspecifiedRows are the FNDDS "NFS" and "NS" rows for the lead word of the item's food.
+func (f *Foods) unspecifiedRows(ctx context.Context, it Item) ([]Food, error) {
+	name := strings.TrimSpace(strings.Split(it.Food, ",")[0])
+	words := strings.Fields(nonAlnum.ReplaceAllString(strings.ToLower(name), " "))
+	if len(words) == 0 {
+		return nil, nil
+	}
+	key := strings.Join(words, " ")
+	return cached(f.memo(), "usda|default|"+key, func() ([]Food, error) {
+		return f.USDA.Search(ctx, key+" AND (NFS OR NS)", typeSurvey)
+	})
+}
+
 // unspecified falls back to the FNDDS food a dietary survey records when the detail is unknown,
 // such as "Coffee, NFS" for "coffee, black" or "Oatmeal, NFS" for "oatmeal, cooked", when no row
 // names the food with the person's own descriptors. Confidence follows how many of their words
@@ -200,15 +220,8 @@ func (f *Foods) pick(ctx context.Context, it Item, foods []Food) (hit, bool) {
 // "NFS and NS food codes").
 func (f *Foods) unspecified(ctx context.Context, it Item) (hit, bool) {
 	name := strings.TrimSpace(strings.Split(it.Food, ",")[0])
-	words := strings.Fields(nonAlnum.ReplaceAllString(strings.ToLower(name), " "))
-	if len(words) == 0 {
-		return hit{}, false
-	}
-	key := strings.Join(words, " ")
-	survey, err := cached(f.memo(), "usda|default|"+key, func() ([]Food, error) {
-		return f.USDA.Search(ctx, key+" AND (NFS OR NS)", typeSurvey)
-	})
-	if err != nil {
+	survey, err := f.unspecifiedRows(ctx, it)
+	if err != nil || len(survey) == 0 {
 		return hit{}, false
 	}
 	food, ok := unspecifiedDefault(name, survey)

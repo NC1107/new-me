@@ -123,8 +123,13 @@ class RewardsNotifier extends AsyncNotifier<RewardList> {
   }
 
   /// Proposes a reward; the partner approves it first unless I am alone on the server.
-  Future<void> propose({required String name, required int price}) =>
-      _change((c) => c.createReward(name: name, price: price));
+  Future<void> propose({required String name, required int price, bool treat = false}) =>
+      _change((c) => c.createReward(name: name, price: price, treat: treat));
+
+  /// Redeems one of my treats from my own gems. Callers keep [requestId] until the call is
+  /// answered, so retrying after a lost response cannot redeem twice.
+  Future<void> redeem(int id, {required String requestId}) =>
+      _change((c) => c.redeemTreat(id, requestId: requestId));
 
   /// Renames a reward or changes its price. A new price on an approved reward is proposed again.
   Future<void> edit(int id, {String? name, int? price}) =>

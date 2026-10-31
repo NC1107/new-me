@@ -854,10 +854,14 @@ class ApiClient {
       Reward.tryParse((data as Json)['reward']) ?? (throw const FormatException('reward'));
 
   /// Proposes a reward priced in gems. The partner approves it; alone it is approved at once.
-  Future<Reward> createReward({required String name, required int price}) => _send(
-    () => _dio.post<dynamic>('/api/rewards', data: {'name': name, 'price': price}),
-    _reward,
-  );
+  Future<Reward> createReward({required String name, required int price, bool treat = false}) =>
+      _send(
+        () => _dio.post<dynamic>(
+          '/api/rewards',
+          data: {'name': name, 'price': price, if (treat) 'treat': true},
+        ),
+        _reward,
+      );
 
   /// Edits a reward. A new price on an approved reward is proposed again.
   Future<Reward> patchReward(int id, {String? name, int? price}) => _send(
@@ -884,6 +888,15 @@ class ApiClient {
   /// does not cover it; a repeat answers the claimed reward without spending again.
   Future<Reward> claimReward(int id) =>
       _send(() => _dio.post<dynamic>('/api/rewards/$id/claim'), _reward);
+
+  /// Spends a treat's price from my own gems. [requestId] makes a retry or a double tap redeem
+  /// once. Throws code `insufficient_gems` (409) while my balance does not cover it.
+  Future<TreatRedemption> redeemTreat(int id, {required String requestId}) => _send(
+    () => _dio.post<dynamic>('/api/rewards/$id/redeem', data: {'requestId': requestId}),
+    (data) =>
+        TreatRedemption.tryParse((data as Json)['redemption']) ??
+        (throw const FormatException('redemption')),
+  );
 
   Future<void> putPushToken(String token) =>
       _send(() => _dio.put<dynamic>('/api/devices/me/push', data: {'token': token}), (_) {});

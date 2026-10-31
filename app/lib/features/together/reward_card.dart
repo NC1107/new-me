@@ -59,7 +59,7 @@ class RewardCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Pick a treat and a price in gems. Every gem either of you earns goes into the shared bank.',
+              'Pick a reward and a price in gems. Every gem either of you earns goes into the shared bank.',
               style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),

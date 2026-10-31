@@ -75,6 +75,10 @@ type Server struct {
 	estimates *ratelimit.Window
 	// planner is nil while NEWME_ANTHROPIC_API_KEY is unset, which turns plan design off.
 	planner *planner.Planner
+	// chatter is nil while NEWME_ANTHROPIC_API_KEY is unset, which turns the coach chat off.
+	chatter *coach.Chatter
+	// coachChats caps coach messages per person.
+	coachChats *ratelimit.Window
 	// plans caps plan designs and changes per person.
 	plans *ratelimit.Window
 	recap *recap.Service
@@ -115,10 +119,12 @@ func New(cfg config.Config, database *db.DB) *Server {
 		claude = anthropic.New(cfg.Anthropic.Key, cfg.Anthropic.BaseURL)
 		srv.estimator = &estimate.Estimator{Client: claude, Foods: srv.foods, Library: libraryStore{database}}
 		srv.planner = &planner.Planner{Client: claude}
+		srv.chatter = &coach.Chatter{Client: claude}
 	}
 	srv.polisher = &coach.Polisher{DB: database, Client: claude, Now: func() time.Time { return srv.now() }}
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.plans = ratelimit.NewWindow(plansPerDay, 24*time.Hour)
+	srv.coachChats = ratelimit.NewWindow(coachChatPerHour, time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
 	srv.milestones = &milestone.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
 	srv.lookback = &lookback.Service{DB: database, Together: srv.together, Now: func() time.Time { return srv.now() }}
@@ -238,6 +244,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
+		r.Post("/api/coach/chat", s.handleCoachChat)
 		r.Get("/api/foods", s.handleListFoods)
 		r.Get("/api/foods/barcode/{code}", s.handleFoodByBarcode)
 		r.Post("/api/foods", s.handleCreateFood)

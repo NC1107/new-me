@@ -132,7 +132,8 @@
     },
     "features": {
       "mealEstimate": false,
-      "planPolish": false
+      "planPolish": false,
+      "coachChat": false
     },
     "schedule": {
       "workdays": [

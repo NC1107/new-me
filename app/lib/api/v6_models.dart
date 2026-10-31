@@ -166,20 +166,28 @@ class Plan {
 
 /// Optional server features, so the app hides what is switched off.
 class Features {
-  const Features({this.mealEstimate = false, this.planPolish = false});
+  const Features({this.mealEstimate = false, this.planPolish = false, this.coachChat = false});
 
   factory Features.fromJson(Object? v) {
     final j = _map(v);
     return Features(
       mealEstimate: j?['mealEstimate'] as bool? ?? false,
       planPolish: j?['planPolish'] as bool? ?? false,
+      coachChat: j?['coachChat'] as bool? ?? false,
     );
   }
 
   final bool mealEstimate;
   final bool planPolish;
 
-  Map<String, dynamic> toJson() => {'mealEstimate': mealEstimate, 'planPolish': planPolish};
+  /// The coach chat, which needs the server's Claude key.
+  final bool coachChat;
+
+  Map<String, dynamic> toJson() => {
+    'mealEstimate': mealEstimate,
+    'planPolish': planPolish,
+    'coachChat': coachChat,
+  };
 }
 
 /// What POST /me/audiobookshelf/sync answers.

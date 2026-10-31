@@ -130,7 +130,8 @@
     },
     "features": {
       "mealEstimate": true,
-      "planPolish": true
+      "planPolish": true,
+      "coachChat": true
     }
   }
 }

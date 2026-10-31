@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../api/models.dart';
+import '../../theme/accent.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/accent_text.dart';
@@ -45,6 +46,7 @@ class TodayHeader extends StatelessWidget {
     required this.name,
     required this.now,
     this.onPlan,
+    this.onCoach,
   });
 
   final Today today;
@@ -54,18 +56,35 @@ class TodayHeader extends StatelessWidget {
   /// Opens the plan; null leaves the bubble as plain text.
   final VoidCallback? onPlan;
 
+  /// Opens the coach chat; null hides the button, as when the server has no Claude key.
+  final VoidCallback? onCoach;
+
   @override
   Widget build(BuildContext context) {
+    final coach = onCoach;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          header: true,
-          container: true,
-          child: Text(greetingFor(now, name), style: AppText.title),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    container: true,
+                    child: Text(greetingFor(now, name), style: AppText.title),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(dayLong(today.localToday), style: AppText.caption),
+                ],
+              ),
+            ),
+            if (coach != null) _CoachButton(onTap: coach),
+          ],
         ),
-        const SizedBox(height: 2),
-        Text(dayLong(today.localToday), style: AppText.caption),
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -109,6 +128,40 @@ class TodayHeader extends StatelessWidget {
       excludeSemantics: true,
       onTap: open,
       child: Pressable(onTap: open, scale: 0.99, child: bubble),
+    );
+  }
+}
+
+/// A round button beside the greeting that opens the coach chat.
+class _CoachButton extends StatelessWidget {
+  const _CoachButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.accentPalette;
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Ask your coach',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Pressable(
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_rounded, size: 20, color: palette.lip),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

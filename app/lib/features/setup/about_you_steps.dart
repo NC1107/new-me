@@ -566,7 +566,7 @@ class _ReviewStep extends ConsumerWidget {
             children: [
               for (final (i, t) in targets.indexed) ...[
                 if (i > 0) const Divider(height: 1, thickness: 2, color: kSunken),
-                _TargetRow(target: t),
+                _TargetRow(target: t, units: s.units),
               ],
             ],
           ),
@@ -586,15 +586,16 @@ class _ReviewStep extends ConsumerWidget {
 }
 
 class _TargetRow extends StatelessWidget {
-  const _TargetRow({required this.target});
+  const _TargetRow({required this.target, required this.units});
 
   final Target target;
+  final Units units;
 
   @override
   Widget build(BuildContext context) {
     final value = target.value;
     final name = targetName(target.key);
-    final text = value == null ? 'Not yet' : formatTargetValue(value, target.unit);
+    final text = value == null ? 'Not yet' : formatTargetValue(value, target.unit, units: units);
     return Semantics(
       container: true,
       excludeSemantics: true,

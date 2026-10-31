@@ -86,7 +86,7 @@ void main() {
     });
 
     test('a water target reads in the person units on the Targets page', () {
-      expect(formatTargetValue(2200, 'ml'), '2.2 L');
+      expect(formatTargetValue(2200, 'ml', units: Units.metric), '2.2 L');
       expect(formatTargetValue(2200, 'ml', units: Units.imperial), '74 fl oz');
     });
   });

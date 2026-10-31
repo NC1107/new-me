@@ -228,10 +228,10 @@ void main() {
     final missing = TargetsReport.parse(_load('targets_missing')['body']);
 
     test('values read with their unit, and sleep reads as hours', () {
-      expect(formatTargetValue(2350, 'kcal'), '2,350 kcal');
-      expect(formatTargetValue(450, 'min'), '7 h 30 min');
-      expect(formatTargetValue(150, 'min a week'), '150 min a week');
-      expect(formatTargetValue(7000, ''), '7,000');
+      expect(formatTargetValue(2350, 'kcal', units: Units.metric), '2,350 kcal');
+      expect(formatTargetValue(450, 'min', units: Units.metric), '7 h 30 min');
+      expect(formatTargetValue(150, 'min a week', units: Units.metric), '150 min a week');
+      expect(formatTargetValue(7000, '', units: Units.metric), '7,000');
     });
 
     test('missing inputs list once each, in the order they are needed', () {

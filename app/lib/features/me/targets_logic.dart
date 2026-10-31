@@ -54,7 +54,7 @@ String targetName(String key, {String? exercise}) =>
 String nameOf(Target t) => targetName(t.key, exercise: t.details['exercise'] as String?);
 
 /// "2,300 kcal", "7 h 30 min" for minutes, "150 min a week", "2.2 L" or "74 fl oz" for water.
-String formatTargetValue(int value, String unit, {Units units = Units.metric}) {
+String formatTargetValue(int value, String unit, {required Units units}) {
   if (unit == 'min') return formatDuration(value);
   if (unit == 'ml') return units.volume(value);
   if (unit == 'servings') return '${value.formatted} servings (${value * kProduceServingGrams} g)';

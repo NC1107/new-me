@@ -289,6 +289,14 @@ void main() {
       expect(find.byType(AboutYouPage), findsOneWidget);
     });
 
+    testWidgets('the review shows water in fl oz for an imperial person', (tester) async {
+      final me = meJson();
+      (me['user'] as Map<String, dynamic>)['units'] = 'imperial';
+      await _open(tester, _server(me: me), start: AboutQuestion.review);
+      expect(find.text('101 fl oz'), findsOneWidget);
+      expect(find.text('3.0 L'), findsNothing);
+    });
+
     testWidgets('missing inputs show as not yet, named at the bottom', (tester) async {
       final app = await _open(
         tester,

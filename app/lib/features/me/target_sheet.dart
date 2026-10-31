@@ -20,7 +20,7 @@ Future<void> showTargetSheet(
   required VoidCallback onUse,
   required VoidCallback onMaxTest,
   Target? estimate,
-  Units units = Units.metric,
+  required Units units,
 }) => showAppSheet<void>(
   context,
   builder: (sheet) => _TargetSheet(
@@ -146,7 +146,7 @@ class _TargetSheet extends StatelessWidget {
           if (estimate case final e?) ...[
             const SizedBox(height: 16),
             Text(
-              '${targetName(e.key)}: ${formatTargetValue(e.value!, e.unit)}',
+              '${targetName(e.key)}: ${formatTargetValue(e.value!, e.unit, units: units)}',
               style: AppText.tabular(AppText.headline.copyWith(fontSize: 17)),
             ),
             const SizedBox(height: 4),

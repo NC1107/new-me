@@ -180,8 +180,8 @@ void main() {
     test('Targets lists the two guideline targets and their notes', () {
       expect(targetName('produce'), 'Fruit and vegetables');
       expect(targetName('breathing'), 'Breathing');
-      expect(formatTargetValue(5, 'servings'), '5 servings (400 g)');
-      expect(formatTargetValue(5, 'min'), '5 min');
+      expect(formatTargetValue(5, 'servings', units: Units.metric), '5 servings (400 g)');
+      expect(formatTargetValue(5, 'min', units: Units.metric), '5 min');
       expect(
         kTargetGroups.expand((g) => g.keys),
         containsAll(['produce', 'breathing', 'exercise']),

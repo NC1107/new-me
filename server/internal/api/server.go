@@ -23,6 +23,7 @@ import (
 	"github.com/nc1107/new-me/server/internal/recap"
 	"github.com/nc1107/new-me/server/internal/semver"
 	"github.com/nc1107/new-me/server/internal/together"
+	"github.com/nc1107/new-me/server/internal/voice"
 )
 
 // defaultMaxUsers applies to a hand-built Config, which leaves the cap at zero.
@@ -71,6 +72,10 @@ type Server struct {
 	foods *estimate.Foods
 	// polisher is always usable; without a key it returns the deterministic summary.
 	polisher *coach.Polisher
+	// voice is nil while NEWME_TTS_URL is unset, which is how server voice is off.
+	voice *voice.Synth
+	// voices caps fresh syntheses per person; lines already cached cost nothing.
+	voices *ratelimit.Window
 	// estimates caps meal estimates per person, since each one costs a Claude call.
 	estimates *ratelimit.Window
 	// planner is nil while NEWME_ANTHROPIC_API_KEY is unset, which turns plan design off.
@@ -85,6 +90,10 @@ type Server struct {
 
 // estimatesPerHour is how many meal estimates one person may request an hour.
 const estimatesPerHour = 20
+
+// voiceLinesPerHour is how many new lines one person may have synthesised an hour. A generated
+// lesson is a few dozen lines, so this allows several a day.
+const voiceLinesPerHour = 300
 
 // New builds a Server on the wall clock.
 func New(cfg config.Config, database *db.DB) *Server {
@@ -117,6 +126,10 @@ func New(cfg config.Config, database *db.DB) *Server {
 		srv.planner = &planner.Planner{Client: claude}
 	}
 	srv.polisher = &coach.Polisher{DB: database, Client: claude, Now: func() time.Time { return srv.now() }}
+	if cfg.TTS.Enabled() {
+		srv.voice = voice.New(cfg.TTS.URL, cfg.TTS.Voice, cfg.TTS.Speed, cfg.TTS.CacheDir)
+	}
+	srv.voices = ratelimit.NewWindow(voiceLinesPerHour, time.Hour)
 	srv.estimates = ratelimit.NewWindow(estimatesPerHour, time.Hour)
 	srv.plans = ratelimit.NewWindow(plansPerDay, 24*time.Hour)
 	srv.together = &together.Service{DB: database, Now: func() time.Time { return srv.now() }}
@@ -237,6 +250,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/me/audiobookshelf", s.handleUnlinkAudiobookshelf)
 		r.Post("/api/me/audiobookshelf/sync", s.handleSyncAudiobookshelf)
 		r.Post("/api/meals/estimate", s.handleEstimateMeal)
+		r.Post("/api/voice", s.handleVoice)
 		r.Get("/api/foods", s.handleListFoods)
 		r.Get("/api/foods/barcode/{code}", s.handleFoodByBarcode)
 		r.Post("/api/foods", s.handleCreateFood)

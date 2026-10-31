@@ -280,8 +280,8 @@ class MealPane extends StatefulWidget {
     this.autofocusSearch = false,
   });
 
-  /// Shows "Describe it"; the server switches it on with its Claude key. Searching the food
-  /// library needs no key, so it is always there.
+  /// Lets the search field take a description too; the server switches it on with its Claude
+  /// key. Searching the food library needs no key, so it is always there.
   final bool canEstimate;
 
   /// Opens with the food search focused, for the Food tab's "Log a meal".
@@ -473,17 +473,15 @@ class _MealPaneState extends State<MealPane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.canEstimate) ...[
-          MealEstimateBar(
-            onEstimate: _applyBreakdown,
-            onBusyChanged: (busy) => setState(() => _estimating = busy),
-          ),
-          const SizedBox(height: 12),
-        ],
+        const FieldLabel('What did you eat?'),
         FoodSearchBox(
           onPick: _addFood,
           enabled: !widget.busy,
           autofocus: widget.autofocusSearch,
+          hint: widget.canEstimate ? 'Search, or describe it: 2 eggs and toast' : 'Search foods',
+          collapsed: _entries.isNotEmpty,
+          onEstimate: widget.canEstimate ? _applyBreakdown : null,
+          onBusyChanged: (busy) => setState(() => _estimating = busy),
           onEnterByHand: _entries.isEmpty ? _nameFocus.requestFocus : null,
         ),
         const SizedBox(height: 16),

@@ -36,43 +36,55 @@ Future<TestApp> _open(WidgetTester tester, StubAdapter server) async {
   return app;
 }
 
+final _searchField = find.byWidgetPredicate(
+  (w) => w is TextField && (w.decoration?.hintText ?? '').startsWith('Search'),
+);
+
 void main() {
   setUp(() {
     FakeStorage().install();
     Mascot.idleMotion = false;
   });
 
-  testWidgets('Describe it shows only when the server can estimate, and there is no photo option', (
+  testWidgets('one field searches and describes, and there is no separate describe box', (
     tester,
   ) async {
     await _open(tester, _server());
-    expect(find.text('DESCRIBE IT'), findsOneWidget);
-    expect(find.bySemanticsLabel('Search foods'), findsOneWidget);
+    expect(find.text('DESCRIBE IT'), findsNothing);
+    expect(find.text('What did you eat?'), findsOneWidget);
+    expect(_searchField, findsOneWidget);
+    expect(find.bySemanticsLabel('Search, or describe it: 2 eggs and toast'), findsOneWidget);
     expect(find.textContaining('SNAP'), findsNothing);
   });
 
-  testWidgets('without the feature the form is just the form', (tester) async {
-    await _open(tester, _server(enabled: false));
-    expect(find.text('DESCRIBE IT'), findsNothing);
-    // Searching the library needs no Claude key.
+  testWidgets('without the feature the field only searches and offers no Work it out row', (
+    tester,
+  ) async {
+    final server = _server(enabled: false);
+    final app = await _open(tester, server);
     expect(find.bySemanticsLabel('Search foods'), findsOneWidget);
+    await app.enter(_searchField, 'oats');
+    expect(find.textContaining('Work it out'), findsNothing);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await app.settle();
+    expect(server.to('POST /api/meals/estimate'), isEmpty);
   });
 
-  testWidgets('a sentence pre-fills the form with the estimate and logs nothing until Save', (
+  testWidgets('typing offers Work it out, which pre-fills the form and logs nothing until Save', (
     tester,
   ) async {
     final reply = Completer<StubResponse>();
     final server = _server()..routes['POST /api/meals/estimate'] = (_) => reply.future;
     final app = await _open(tester, server);
 
-    await app.tap(find.text('DESCRIBE IT'));
-    expect(find.byType(TextField), findsWidgets);
-    expect(find.text('ESTIMATE'), findsOneWidget);
-    await app.enter(find.widgetWithText(TextField, '').first, 'chicken burrito bowl, no rice');
-    await app.tap(find.text('ESTIMATE'));
+    expect(find.textContaining('Work it out'), findsNothing);
+    await app.enter(_searchField, 'chicken burrito bowl, no rice');
+    expect(find.text('Work it out: \u201cchicken burrito bowl, no rice\u201d'), findsOneWidget);
+    await app.tap(find.textContaining('Work it out'));
 
     expect(find.text('Estimating...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.textContaining('Work it out'), findsNothing);
     expect(app.body('POST /api/meals/estimate'), {'text': 'chicken burrito bowl, no rice'});
 
     reply.complete(const StubResponse(200, _estimate));
@@ -91,18 +103,25 @@ void main() {
     expect((saved['name'], saved['kcal'], saved['protein']), ('Chicken burrito bowl', 640, 42));
   });
 
-  testWidgets('a rate limit and an upstream failure leave the form to fill by hand', (
-    tester,
-  ) async {
+  testWidgets('the keyboard return key works the meal out too', (tester) async {
+    final server = _server()..on('POST /api/meals/estimate', const StubResponse(200, _estimate));
+    final app = await _open(tester, server);
+    await app.enter(_searchField, 'burrito bowl');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await app.settle();
+    expect(app.body('POST /api/meals/estimate'), {'text': 'burrito bowl'});
+    expect(find.text('Estimate, medium confidence'), findsOneWidget);
+  });
+
+  testWidgets('a rate limit and an upstream failure show inline and keep the text', (tester) async {
     final server = _server()
       ..on(
         'POST /api/meals/estimate',
         const StubResponse(429, {'code': 'rate_limited', 'error': 'slow down'}),
       );
     final app = await _open(tester, server);
-    await app.tap(find.text('DESCRIBE IT'));
-    await app.enter(find.widgetWithText(TextField, '').first, 'oats');
-    await app.tap(find.text('ESTIMATE'));
+    await app.enter(_searchField, 'oats');
+    await app.tap(find.textContaining('Work it out'));
     expect(find.textContaining('Enter this one by hand'), findsOneWidget);
     expect(find.text('Estimate, medium confidence'), findsNothing);
 
@@ -110,7 +129,7 @@ void main() {
       'POST /api/meals/estimate',
       const StubResponse(502, {'code': 'estimate_unavailable', 'error': 'x'}),
     );
-    await app.tap(find.text('ESTIMATE'));
+    await app.tap(find.textContaining('Work it out'));
     expect(find.textContaining('Claude could not estimate that'), findsOneWidget);
   });
 }

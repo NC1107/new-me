@@ -98,12 +98,8 @@ StubAdapter _server() => fullServer()
 Future<TestApp> _described(WidgetTester tester, StubAdapter server) async {
   final app = TestApp(tester, server, surfaceHeight: 2400);
   await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
-  await app.tap(find.text('DESCRIBE IT'));
-  await app.enter(
-    find.widgetWithText(TextField, '').first,
-    'an apple, a chomp meat stick, and a hotpocket',
-  );
-  await app.tap(find.text('ESTIMATE'));
+  await app.enter(_searchField, 'an apple, a chomp meat stick, and a hotpocket');
+  await app.tap(find.textContaining('Work it out'));
   return app;
 }
 
@@ -322,15 +318,15 @@ void main() {
     await app.settle(4);
     await app.tap(find.textContaining('1 medium (182 g) · 95 kcal'));
 
-    await app.tap(find.text('DESCRIBE IT'));
-    await app.enter(
-      find.widgetWithText(TextField, '').first,
-      'an apple, a chomp meat stick, and a hotpocket',
-    );
-    await app.tap(find.text('ESTIMATE'));
+    await app.enter(_searchField, 'an apple, a chomp meat stick, and a hotpocket');
+    await app.tap(find.textContaining('Work it out'));
 
     expect(fieldWith('Gala Apple'), findsOneWidget);
     expect(fieldWith('Chomps stick'), findsOneWidget);
+    // The worked-out text is cleared and the suggestions are gone, so the card sits under the field.
+    expect(tester.widget<TextField>(_searchField).controller?.text, isEmpty);
+    expect(find.textContaining('Work it out'), findsNothing);
+    expect(find.textContaining('1 medium (182 g) · 95 kcal'), findsNothing);
     await app.tap(find.text('LOG AS ONE MEAL'));
     expect(app.body('POST /api/logs')['kcal'], 95 + 485);
   });
@@ -452,9 +448,8 @@ void main() {
       await app.settle(14);
       expect(tester.takeException(), isNull);
       await app.enter(_searchField, '');
-      await app.tap(find.text('DESCRIBE IT'));
-      await app.enter(find.widgetWithText(TextField, '').first, 'x');
-      await app.tap(find.text('ESTIMATE'));
+      await app.enter(_searchField, 'x');
+      await app.tap(find.textContaining('Work it out'));
 
       expect(tester.takeException(), isNull);
       for (final label in [
@@ -474,6 +469,53 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('once the meal has items the field lists nothing until you type again', (
+    tester,
+  ) async {
+    final server = _server()
+      ..on(
+        'GET /api/foods',
+        const StubResponse(200, {
+          'foods': [
+            {
+              'id': 4,
+              'name': 'Gala Apple',
+              'servingText': '1 medium (182 g)',
+              'servingGrams': 182,
+              'kcal': 95,
+              'protein': 0.5,
+              'source': 'usda',
+              'servings': [],
+              'useCount': 6,
+            },
+          ],
+          'candidates': [],
+        }),
+      );
+    final app = TestApp(tester, server, surfaceHeight: 2400);
+    await app.pump(const Scaffold(body: LogSheet(kind: LogKind.meal)));
+
+    await app.tap(_searchField);
+    await app.settle(4);
+    expect(find.textContaining('1 medium (182 g) · 95 kcal'), findsOneWidget);
+    await app.tap(find.textContaining('1 medium (182 g) · 95 kcal'));
+    expect(fieldWith('Gala Apple'), findsOneWidget);
+
+    await app.tap(_searchField);
+    await app.settle(4);
+    expect(find.textContaining('1 medium (182 g) · 95 kcal'), findsNothing);
+    expect(find.text('LOG AS ONE MEAL'), findsOneWidget);
+
+    await app.enter(_searchField, 'gal');
+    await app.settle(4);
+    expect(find.textContaining('1 medium (182 g) · 95 kcal'), findsOneWidget);
+    await app.tap(find.textContaining('1 medium (182 g) · 95 kcal'));
+    expect(fieldWith('Gala Apple'), findsNWidgets(2));
+    expect(tester.widget<TextField>(_searchField).controller?.text, isEmpty);
+  });
 }
 
-final _searchField = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));
+final _searchField = find.byWidgetPredicate(
+  (w) => w is TextField && (w.decoration?.hintText ?? '').startsWith('Search'),
+);

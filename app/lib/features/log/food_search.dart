@@ -1,19 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../api/models.dart';
 import '../../state/log_actions.dart';
+import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
+import '../../widgets/accent_text.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/pressable.dart';
 import '../scan/barcode_scan_page.dart';
 import '../scan/barcode_scanner.dart';
 import 'food_category_icon.dart';
+import 'meal_estimate.dart';
 
 /// Saved foods are searched on every keystroke; the databases wait for a pause in typing.
 const _remoteDelay = Duration(milliseconds: 500);
@@ -21,6 +25,9 @@ const _remoteMinChars = 3;
 
 /// "Search foods": the household library first, most used first, then USDA and Open Food Facts
 /// results under their own heading once typing pauses. Tapping a food hands it to [onPick].
+///
+/// With [onEstimate] the same field also takes a description: a "Work it out" row (and the
+/// keyboard's return key) sends the text to the estimator and hands the itemized result over.
 class FoodSearchBox extends ConsumerStatefulWidget {
   const FoodSearchBox({
     super.key,
@@ -30,9 +37,22 @@ class FoodSearchBox extends ConsumerStatefulWidget {
     this.browseOnFocus = true,
     this.remoteDelay = _remoteDelay,
     this.onEnterByHand,
+    this.hint = 'Search foods',
+    this.onEstimate,
+    this.onBusyChanged,
+    this.collapsed = false,
   });
 
   final ValueChanged<SavedFood> onPick;
+
+  final String hint;
+
+  /// Turns on describing a meal in this field; receives the worked-out meal.
+  final ValueChanged<MealBreakdown>? onEstimate;
+  final ValueChanged<bool>? onBusyChanged;
+
+  /// Keeps the empty, focused field from listing foods, for when the meal already has items.
+  final bool collapsed;
 
   /// Where "Enter by hand" goes when a scan finds nothing; without it the scanner only offers
   /// "Search instead".
@@ -63,6 +83,8 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
   bool _remoteDone = false;
   bool _failed = false;
   bool _remoteFailed = false;
+  bool _estimating = false;
+  String? _estimateError;
 
   String get _query => _text.text.trim();
 
@@ -100,6 +122,7 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
       _remoteDone = false;
       _remoteFailed = false;
       _remotePending = _wantsRemote;
+      _estimateError = null;
     });
     if (_query.isEmpty && !widget.browseOnFocus) {
       _savedGeneration++;
@@ -147,8 +170,7 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
     }
   }
 
-  void _pick(SavedFood food) {
-    widget.onPick(food);
+  void _reset() {
     _remoteTimer?.cancel();
     _savedGeneration++;
     _remoteGeneration++;
@@ -159,7 +181,38 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
       _candidates = const [];
       _remotePending = false;
       _remoteDone = false;
+      _remoteFailed = false;
+      _failed = false;
     });
+  }
+
+  void _pick(SavedFood food) {
+    widget.onPick(food);
+    _reset();
+  }
+
+  void _setEstimating(bool value) {
+    setState(() => _estimating = value);
+    widget.onBusyChanged?.call(value);
+  }
+
+  Future<void> _estimate() async {
+    final text = _query;
+    if (widget.onEstimate == null || text.isEmpty || _estimating) return;
+    HapticFeedback.selectionClick();
+    setState(() => _estimateError = null);
+    _setEstimating(true);
+    try {
+      final breakdown = await ref.read(logActionsProvider).estimateMeal(text);
+      if (!mounted) return;
+      _setEstimating(false);
+      _reset();
+      widget.onEstimate!(breakdown);
+    } on Object catch (e) {
+      if (!mounted) return;
+      _setEstimating(false);
+      setState(() => _estimateError = estimateErrorCopy(e));
+    }
   }
 
   Future<void> _scan() async {
@@ -188,17 +241,71 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
     ),
   );
 
+  Widget _workItOut() => Semantics(
+    button: true,
+    label: 'Work it out: $_query',
+    excludeSemantics: true,
+    onTap: _estimate,
+    child: Pressable(
+      onTap: _estimate,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: kSunken,
+          borderRadius: BorderRadius.circular(kRadiusField),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, size: 20, color: context.accentText),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Work it out: \u201c$_query\u201d',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _estimatingNote() => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Semantics(
+      liveRegion: true,
+      label: 'Estimating the meal',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 3, color: context.accent),
+          ),
+          const SizedBox(width: 12),
+          Text('Estimating...', style: AppText.label.copyWith(color: kInkSecondary)),
+        ],
+      ),
+    ),
+  );
+
   Widget _field() => AppTextField(
     controller: _text,
-    hint: 'Search foods',
-    semanticLabel: 'Search foods',
+    hint: widget.hint,
+    semanticLabel: widget.hint,
     onChanged: _typed,
+    onSubmitted: widget.onEstimate == null ? null : (_) => _estimate(),
     focusNode: _focus,
   );
 
   @override
   Widget build(BuildContext context) {
-    final open = _focus.hasFocus || _query.isNotEmpty;
+    final open = !_estimating && (_query.isNotEmpty || (_focus.hasFocus && !widget.collapsed));
     final showHeading = _remotePending || _remoteDone;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,8 +323,11 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
           )
         else
           _field(),
+        if (_estimating) _estimatingNote(),
+        if (_estimateError case final error?) _note(error, danger: true),
         if (open) ...[
           const SizedBox(height: 8),
+          if (widget.onEstimate != null && _query.isNotEmpty) _workItOut(),
           for (final food in _saved.take(6))
             FoodTile(food: food, enabled: widget.enabled, onTap: () => _pick(food)),
           if (_saved.isEmpty && !_failed && (widget.browseOnFocus || _query.isNotEmpty))

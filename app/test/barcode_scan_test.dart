@@ -186,7 +186,9 @@ void main() {
     await app.tap(find.text('SEARCH INSTEAD'));
 
     expect(find.byKey(const Key('fake-preview')), findsNothing);
-    final search = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));
+    final search = find.byWidgetPredicate(
+      (w) => w is TextField && (w.decoration?.hintText ?? '').startsWith('Search'),
+    );
     expect(tester.widget<TextField>(search).focusNode?.hasFocus, isTrue);
   });
 

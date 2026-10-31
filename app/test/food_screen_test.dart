@@ -131,7 +131,9 @@ void main() {
     expect(find.text('What are you adding?'), findsNothing);
     expect(find.byType(LogSheet), findsOneWidget);
     expect(find.text('Portion'), findsOneWidget);
-    final search = find.ancestor(of: find.text('Search foods'), matching: find.byType(TextField));
+    final search = find.byWidgetPredicate(
+      (w) => w is TextField && (w.decoration?.hintText ?? '').startsWith('Search'),
+    );
     expect(tester.widget<TextField>(search).focusNode?.hasFocus, isTrue);
   });
 

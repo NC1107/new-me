@@ -92,8 +92,9 @@ func TestFinalizeDueCatchesUpEveryMissedDayPerTimezone(t *testing.T) {
 			t.Fatalf("Nick %s = %+v (present %v), want a finalized row", d, r, ok)
 		}
 	}
-	if r := nickRows["2026-10-30"]; r.BasePoints != 100 || r.BonusPoints != 20 || r.MaxBase != 300 || r.Percent != 33 {
-		t.Fatalf("the logged day was scored as %+v, want base 100, bonus 20 of 300", r)
+	// Points follow effort (docs/design-v19-points.md): strength is worth 75 as a 30 min session.
+	if r := nickRows["2026-10-30"]; r.BasePoints != 75 || r.BonusPoints != 15 || r.MaxBase != 135 || r.Percent != 55 {
+		t.Fatalf("the logged day was scored as %+v, want base 75, bonus 15 of 135", r)
 	}
 	if r := nickRows["2026-10-29"]; r.BasePoints != 0 || r.Counted {
 		t.Fatalf("an empty day = %+v, want a zero, uncounted row", r)

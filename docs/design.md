@@ -207,7 +207,7 @@ Every write path runs in one transaction:
 5.
    Upsert the result into `day_scores`.
 
-Write paths: `POST /logs`, `PATCH /logs/{id}`, `DELETE /logs/{id}`, `PUT /health/daily`, and the quest edits in `PATCH /me` (which snapshot today before applying the edit, so edits only affect the next day).
+Write paths: `POST /logs`, `PATCH /logs/{id}`, `DELETE /logs/{id}`, `PUT /health/daily`, and the quest edits in `PATCH /me` (which rescore the open days, then re-snapshot today so an edit applies at once; earlier days stay frozen, see `design-v18-quests.md`).
 `GET /today` and `GET /board` run the same lock, snapshot and score steps for today so reads are always fresh.
 
 `ensureSnapshot(tx, user, date)` is `INSERT INTO day_quests ... SELECT FROM quest_templates WHERE user_id = $1 AND enabled ON CONFLICT (user_id, local_date, key) DO NOTHING`.
@@ -595,7 +595,7 @@ GET    /recap?week=YYYY-Www                             auth
 GET    /goals/proposals                                 auth
   200 {week, weekStart, proposals: [{key: "steps"|"sleep", title, unit, current, proposed, reason}]}
 POST   /goals/proposals/{key}/accept
-  200 same body as GET /me; the target applies like a PATCH /me template edit (from tomorrow, today on the join day)
+  200 same body as GET /me; the target applies like a PATCH /me template edit (today and onwards, see `design-v18-quests.md`)
 POST   /goals/proposals/{key}/dismiss
   204
   404 not_found for an unknown key or a proposal that is not pending this week
@@ -731,7 +731,7 @@ All additive; the formulas, labels and citations are in `docs/design-v8.md`.
   - `inputs[] {key: weightKg|heightCm|age|sex|goal|steps14, value, unit, source: profile|health|missing, note}`; weight is the v7 smoothed trend, height is the profile value or else Health's, steps14 is the average of the days with steps in the 14 complete days before today (at least 5 days).
   - `targets[] {key, value, unit, current, formula, sources, label: guideline|convention|derivation, missing, applicable, details}` for `restingEnergy`, `maintenance`, `estimatedFromLogs`, `calories`, `protein`, `fat`, `saturatedFatMax`, `carbs`, `fiber`, `sleep`, `activity`, `steps` and `pushups`. `value` is null when an input is missing and `missing` says which; `formula` is one plain sentence with the numbers plugged in; `current` is the setting in force; `details` carries the extras (pace options, bedtime, 7-night shortfall, Sleep Regularity Index, WHO week, push-up sets).
   - `sources` maps every source key a target cites to its citation.
-- `POST /targets/apply {keys}`: sets `calories`, `protein`, `fat` and `carbs` on the profile targets and `steps`, `sleep`, `pushups` and `water` (v16, `docs/design-v16-water.md`) on the quest templates, through the same path as `PATCH /me` (open days are scored first, so a change starts tomorrow, except on the join day). All or nothing: an unknown or non-applicable key, or one with no value yet, is 422. 200 is the `GET /me` body plus `applied`.
+- `POST /targets/apply {keys}`: sets `calories`, `protein`, `fat` and `carbs` on the profile targets and `steps`, `sleep`, `pushups` and `water` (v16, `docs/design-v16-water.md`) on the quest templates, through the same path as `PATCH /me` (open days are scored first, then today is re-snapshotted, so a change applies today and onwards). All or nothing: an unknown or non-applicable key, or one with no value yet, is 422. 200 is the `GET /me` body plus `applied`.
 - `POST /pushups/max {reps: 1..1000, date?}`: records a max test (one a day, a second replaces it) and answers 201 `{date, reps}`. The date follows the log rules (today, or yesterday inside the grace window).
 - `GET /goals/proposals` gains the key `calories` (profile target, offered only when the person has one), and the `protein` proposal now follows the v8 goal-aware formula. Either is also offered when the formula value moved by more than 5% (100 kcal for calories) since its baseline because an input changed.
 
@@ -1232,7 +1232,7 @@ No other navigation.
 **Me**
 - Avatar and name, accent picker, timezone (device zone by default, PATCHed when the device zone changes).
 - Targets: kcal, protein, carbs, fat.
-- Quest editor: enabled toggle and target only, with the note "Takes effect tomorrow".
+- Quest editor: enabled toggle and target only, with the note "Takes effect tomorrow" (superseded in v18: edits apply today).
 - Health connection card: connect, last sync, what is read.
 - Admin only: "Create pairing code" showing the code, its expiry, and a copy button.
 - About: version and server address.

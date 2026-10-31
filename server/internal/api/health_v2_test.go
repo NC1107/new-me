@@ -239,15 +239,15 @@ func TestJoinDayPatchResnapshotsToday(t *testing.T) {
 	}
 }
 
-func TestPatchAfterJoinDayStillAppliesTomorrow(t *testing.T) {
+func TestPatchAfterJoinDayAppliesToday(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	h.get("/api/today", nick.Token).expect(http.StatusOK)
 
 	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{{"key": "pushups", "enabled": false}}}).expect(http.StatusOK)
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 8 {
-		t.Fatalf("today must keep its snapshot: %s", got.Body)
+	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 7 {
+		t.Fatalf("today must follow the switch: %s", got.Body)
 	}
 	h.clock.Set(ny(2026, time.November, 4, 12, 0))
 	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.length("quests") != 7 {

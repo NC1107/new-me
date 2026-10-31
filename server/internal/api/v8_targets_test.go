@@ -477,14 +477,14 @@ func TestApplyTargetsSetsFoodTargetsAndQuestTemplatesThroughTheProfilePaths(t *t
 		t.Fatalf("current = %s", got.Body)
 	}
 
-	// A later day keeps the next-day rule: today's snapshot is frozen, tomorrow follows.
+	// A later day follows too.
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	before := questsByKey(h.get("/api/today", nick.Token).expect(http.StatusOK))
 	h.post("/api/pushups/max", nick.Token, obj{"reps": 60}).expect(http.StatusCreated)
 	h.post("/api/targets/apply", nick.Token, obj{"keys": []string{"pushups"}}).expect(http.StatusOK)
 	after := questsByKey(h.get("/api/today", nick.Token).expect(http.StatusOK))
-	if after["pushups"].target != before["pushups"].target || before["pushups"].target != 90 {
-		t.Fatalf("today must keep its target: before %+v after %+v", before["pushups"], after["pushups"])
+	if before["pushups"].target != 90 || after["pushups"].target != 135 {
+		t.Fatalf("today must follow the new target: before %+v after %+v", before["pushups"], after["pushups"])
 	}
 	h.clock.Set(ny(2026, time.November, 4, 12, 0))
 	if tomorrow := questsByKey(h.get("/api/today", nick.Token).expect(http.StatusOK)); tomorrow["pushups"].target != 135 {

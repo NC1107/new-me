@@ -331,7 +331,7 @@ func applyTarget(field **int, patch nullable[int], upper int, name string) *http
 }
 
 // handlePatchMe edits the profile and the quest templates. Every still-open day is scored first,
-// which freezes its snapshot, so a template or protein-target change applies from the next day, except on the join day, which is re-snapshotted.
+// then a template or protein-target change re-snapshots today (see resnapshotToday).
 func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	var req patchMeRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -374,8 +374,7 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // commitPatch writes the validated profile and template changes in one transaction. Every
-// still-open day is scored first, which freezes its snapshot, so the change applies from the next
-// day, except on the join day (see resnapshotJoinDay). zone is the staged time zone, if any, and
+// still-open day is scored first, then today is re-snapshotted (see resnapshotToday). zone is the staged time zone, if any, and
 // after runs inside the same transaction.
 func (s *Server) commitPatch(ctx context.Context, c caller, user db.User, zone string, req patchMeRequest,
 	after ...func(tx pgx.Tx) error) error {
@@ -398,7 +397,7 @@ func (s *Server) commitPatch(ctx context.Context, c caller, user db.User, zone s
 		if err := applyTemplatePatches(ctx, tx, user.ID, req.QuestTemplates); err != nil {
 			return err
 		}
-		if err := s.resnapshotJoinDay(ctx, tx, c, user, req); err != nil {
+		if err := s.resnapshotToday(ctx, tx, c, user, req); err != nil {
 			return err
 		}
 		for _, fn := range after {
@@ -410,13 +409,13 @@ func (s *Server) commitPatch(ctx context.Context, c caller, user db.User, zone s
 	})
 }
 
-// resnapshotJoinDay lets a brand-new person's first day follow the quests and targets they
-// pick during onboarding. The day lock taken by the earlier rescore is still held, so a
-// concurrent log or Health write waits and then scores against the new snapshot. Every later
-// day keeps the next-day rule.
-func (s *Server) resnapshotJoinDay(ctx context.Context, tx pgx.Tx, c caller, user db.User, req patchMeRequest) error {
+// resnapshotToday makes a quest or target edit apply to today at once, because people expect a
+// switch to take effect when they flip it. The honest-use tradeoff is accepted for a private
+// two-person app. The day lock taken by the earlier rescore is still held, so a concurrent log
+// or Health write waits and then scores against the new snapshot. Days before today stay frozen.
+func (s *Server) resnapshotToday(ctx context.Context, tx pgx.Tx, c caller, user db.User, req patchMeRequest) error {
 	today := score.LocalToday(s.now(), c.loc)
-	if today != c.user.JoinedOn || (len(req.QuestTemplates) == 0 && req.Targets == nil) {
+	if len(req.QuestTemplates) == 0 && req.Targets == nil {
 		return nil
 	}
 	if err := db.LockUserDay(ctx, tx, user.ID, today); err != nil {

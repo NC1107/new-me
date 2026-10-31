@@ -89,10 +89,9 @@ func TestDismissedProposalStaysGoneForTheWeekAndReturnsNextMonday(t *testing.T) 
 	}
 }
 
-func TestAcceptingAppliesFromTomorrowLikeAPatch(t *testing.T) {
+func TestAcceptingAppliesLikeAPatch(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	// A day after joining, so the join-day exception does not apply.
 	h.clock.Set(ny(2026, time.November, 3, 12, 0))
 	h.seedSteps(nick, 1, steady(5000, 14)...)
 
@@ -102,8 +101,8 @@ func TestAcceptingAppliesFromTomorrowLikeAPatch(t *testing.T) {
 		t.Fatalf("template after accept = %s", me.Body)
 	}
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if today.num("quests.0.target") != 8000 {
-		t.Fatalf("today keeps its frozen target: %s", today.Body)
+	if today.num("quests.0.target") != 6000 {
+		t.Fatalf("today follows the accepted target: %s", today.Body)
 	}
 	h.clock.Set(ny(2026, time.November, 4, 12, 0))
 	if tomorrow := h.get("/api/today", nick.Token); tomorrow.num("quests.0.target") != 6000 {

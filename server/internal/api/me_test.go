@@ -117,11 +117,9 @@ func TestPatchMeRejectsBadValues(t *testing.T) {
 	_ = nadia
 }
 
-func TestTemplateEditsApplyFromTomorrow(t *testing.T) {
+func TestTemplateEditsApplyToTodayAndAfter(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
-	// The join day follows edits, so test on the day after. Its snapshot may not exist yet when
-	// the edit arrives; the edit must not leak into it.
 	h.clock.Set(ny(2026, time.November, 3, 9, 0))
 	got := h.patch("/api/me", nick.Token, obj{
 		"questTemplates": []obj{
@@ -139,11 +137,11 @@ func TestTemplateEditsApplyFromTomorrow(t *testing.T) {
 
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	if today.num("day.maxBase") != 300 {
-		t.Fatalf("today's maximum changed after the edit: %s", today.Body)
+		t.Fatalf("today's maximum after the edit: %s", today.Body)
 	}
 	byKey := questsByKey(today)
-	if byKey["pushups"].target != 30 || byKey["protein"].target != 100 || byKey["meals_logged"].target != 2 || byKey["yoga"].target != 0 {
-		t.Fatalf("today's snapshot picked up the edit: %s", today.Body)
+	if byKey["pushups"].target != 10 || byKey["protein"].target != 140 || byKey["meals_logged"].target != 0 || byKey["yoga"].target != 15 {
+		t.Fatalf("today's snapshot ignored the edit: %s", today.Body)
 	}
 
 	h.clock.Set(ny(2026, time.November, 4, 9, 0))
@@ -153,7 +151,7 @@ func TestTemplateEditsApplyFromTomorrow(t *testing.T) {
 		byKey["meals_logged"].target != 0 || byKey["reading"].target != 30 {
 		t.Fatalf("tomorrow's snapshot ignored the edit: %s", tomorrow.Body)
 	}
-	if tomorrow.num("quests.2.targetAlt") != 25 {
+	if today.num("quests.2.targetAlt") != 25 || tomorrow.num("quests.2.targetAlt") != 25 {
 		t.Fatalf("reading pages target = %s", tomorrow.Body)
 	}
 }

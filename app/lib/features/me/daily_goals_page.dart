@@ -15,13 +15,18 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../onboarding/goal_catalog.dart';
+import '../../api/daily_reps_models.dart';
+import '../../util/reps_exercises.dart';
+import 'daily_reps_page.dart';
 import 'goal_picker_page.dart';
 import 'me_support.dart';
 
 /// "8,000 steps", or "20 min or 15 pages" for a quest with two ways to finish it.
 String goalLabel(QuestTemplate q, int target, int? alt, {Units units = Units.metric}) {
   final spec = kGoalSpecs[q.key];
-  final main = spec?.describe(target, units) ?? '$target ${q.unit}';
+  final main = q.key == 'pushups'
+      ? '$target ${repsNoun(q.exercise, target)}'
+      : spec?.describe(target, units) ?? '$target ${q.unit}';
   if (q.targetAlt == null || alt == null) return main;
   return '$main or $alt ${q.unitAlt ?? ''}'.trim();
 }
@@ -87,6 +92,10 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
   }
 
   Future<void> _pick(QuestTemplate q) async {
+    if (q.key == 'pushups') {
+      await pushPage<DailyReps>(context, const DailyRepsPage());
+      return;
+    }
     final choice = await pushPage<GoalChoice>(
       context,
       GoalPickerPage(

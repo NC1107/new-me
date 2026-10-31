@@ -233,6 +233,7 @@ class QuestTemplate {
     required this.position,
     this.targetAlt,
     this.unitAlt,
+    this.exercise,
   });
 
   factory QuestTemplate.fromJson(Json j) => QuestTemplate(
@@ -245,6 +246,7 @@ class QuestTemplate {
     position: _int(j['position']),
     targetAlt: j['targetAlt'] as num?,
     unitAlt: j['unitAlt'] as String?,
+    exercise: j['exercise'] as String?,
   );
 
   final String key;
@@ -257,6 +259,10 @@ class QuestTemplate {
   final num? targetAlt;
   final String? unitAlt;
 
+  /// The daily-reps exercise of the push-ups quest; null for every other quest and for servers
+  /// that predate it.
+  final String? exercise;
+
   Json toJson() => {
     'key': key,
     'title': title,
@@ -267,6 +273,7 @@ class QuestTemplate {
     'position': position,
     'targetAlt': targetAlt,
     'unitAlt': unitAlt,
+    if (exercise != null) 'exercise': exercise,
   };
 }
 
@@ -535,6 +542,7 @@ class Quest {
     this.actualAlt,
     this.doneBy,
     this.detail,
+    this.exercise,
   });
 
   factory Quest.fromJson(Json j) => Quest(
@@ -552,6 +560,7 @@ class Quest {
     actualAlt: j['actualAlt'] as num?,
     doneBy: DoneBy.tryParse(j['doneBy']),
     detail: j['detail'] is Map ? (j['detail'] as Map).cast<String, dynamic>() : null,
+    exercise: j['exercise'] as String?,
   );
 
   final String key;
@@ -559,6 +568,9 @@ class Quest {
   final String unit;
   final num target;
   final num actual;
+
+  /// The daily-reps exercise the push-ups quest counts today; null for every other quest.
+  final String? exercise;
 
   /// Base points this quest is worth in full, before the completion bonus.
   final int points;
@@ -595,6 +607,7 @@ class Quest {
     'actualAlt': actualAlt,
     if (doneBy != null) 'doneBy': doneBy!.toJson(),
     if (detail != null) 'detail': detail,
+    if (exercise != null) 'exercise': exercise,
   };
 }
 
@@ -1288,6 +1301,7 @@ class ActivityLog extends LogEntry {
     required this.unit,
     this.name = '',
     this.intensity,
+    this.exercise,
   });
 
   factory ActivityLog.fromJson(Json j) => ActivityLog(
@@ -1299,6 +1313,7 @@ class ActivityLog extends LogEntry {
     unit: _str(j['unit']),
     name: _str(j['name']),
     intensity: j['intensity'] as String?,
+    exercise: j['exercise'] as String?,
   );
 
   /// `pushups`, `reading`, `yoga` or `other`.
@@ -1311,6 +1326,9 @@ class ActivityLog extends LogEntry {
 
   /// easy, moderate or hard, for an `other` activity.
   final String? intensity;
+
+  /// The daily-reps exercise of a push-ups entry.
+  final String? exercise;
 
   @override
   String get kind => 'activity';
@@ -1326,6 +1344,7 @@ class ActivityLog extends LogEntry {
     'unit': unit,
     if (name.isNotEmpty) 'name': name,
     'intensity': ?intensity,
+    'exercise': ?exercise,
   };
 }
 
@@ -1431,6 +1450,7 @@ class ActivityDraft extends LogDraft {
     super.date,
     this.name,
     this.intensity,
+    this.exercise,
   });
 
   /// A free-named activity that counts toward exercise minutes.
@@ -1442,7 +1462,8 @@ class ActivityDraft extends LogDraft {
     super.date,
   }) : type = 'other',
        quantity = minutes,
-       unit = 'minutes';
+       unit = 'minutes',
+       exercise = null;
 
   final String type;
   final int quantity;
@@ -1451,6 +1472,9 @@ class ActivityDraft extends LogDraft {
   /// Only for type `other`.
   final String? name;
   final String? intensity;
+
+  /// The daily-reps exercise of a push-ups entry; the server uses the day's exercise when null.
+  final String? exercise;
 
   @override
   String get kind => 'activity';
@@ -1463,6 +1487,7 @@ class ActivityDraft extends LogDraft {
     'unit': unit,
     'name': ?name,
     'intensity': ?intensity,
+    'exercise': ?exercise,
   };
 }
 

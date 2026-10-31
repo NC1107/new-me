@@ -19,11 +19,10 @@ import '../../widgets/offline_banner.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
-import '../log/log_kind.dart';
-import '../log/log_sheet.dart';
 import '../setup/about_you.dart';
 import '../setup/about_you_page.dart';
 import 'apple_health_page.dart';
+import 'daily_reps_page.dart';
 import 'me_support.dart';
 import 'target_card.dart';
 import 'targets_logic.dart';
@@ -90,7 +89,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
       case FixAt.health:
         await pushPage(context, const AppleHealthPage());
       case FixAt.pushupMax:
-        await showLogSheet(context, kind: LogKind.pushups, maxTest: true);
+        await pushPage(context, const DailyRepsPage());
     }
     if (mounted) unawaited(ref.read(targetsProvider.notifier).refresh());
   }
@@ -188,6 +187,7 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
           busy: !enabled || _busy.isNotEmpty,
           onUse: () => _apply([t]),
           onMaxTest: () => _fix(kPushupMaxItem),
+          onChangeExercise: t.key == 'pushups' ? () => _fix(kPushupMaxItem) : null,
         ),
       ],
     ];

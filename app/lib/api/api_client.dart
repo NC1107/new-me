@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'daily_reps_models.dart';
 import 'habit_models.dart';
 import 'models.dart';
 
@@ -278,6 +279,36 @@ class ApiClient {
   Future<PushupMaxResult> recordPushupMax({required int reps, String? date}) => _send(
     () => _dio.post<dynamic>('/api/pushups/max', data: {'reps': reps, 'date': ?date}),
     PushupMaxResult.parse,
+  );
+
+  /// Records a max test of a catalog exercise: one set to near failure.
+  Future<void> recordExerciseMax(String exercise, {required int reps, String? date}) => _send(
+    () => _dio.post<dynamic>('/api/exercises/$exercise/max', data: {'reps': reps, 'date': ?date}),
+    (_) {},
+  );
+
+  /// The exercises the daily-reps quest can count, the person's latest max of each and the
+  /// quest's current choice.
+  Future<DailyReps> dailyReps() =>
+      _send(() => _dio.get<dynamic>('/api/daily-reps'), DailyReps.parse);
+
+  /// The target a max would give for [exercise], before anything is saved.
+  Future<RepsPreview> previewDailyReps({required String exercise, required int max}) => _send(
+    () => _dio.get<dynamic>(
+      '/api/daily-reps/preview',
+      queryParameters: {'exercise': exercise, 'max': max},
+    ),
+    RepsPreview.parse,
+  );
+
+  /// Chooses the exercise and sizes the daily target from a max test ([max]) or from a starting
+  /// set the person picks ([repsPerSet]); exactly one of the two.
+  Future<DailyReps> saveDailyReps({required String exercise, int? max, int? repsPerSet}) => _send(
+    () => _dio.put<dynamic>(
+      '/api/daily-reps',
+      data: {'exercise': exercise, 'max': ?max, 'repsPerSet': ?repsPerSet},
+    ),
+    DailyReps.parse,
   );
 
   /// Signs in to Audiobookshelf through the server, which keeps the session and never the

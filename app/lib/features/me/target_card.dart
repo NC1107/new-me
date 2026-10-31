@@ -18,6 +18,7 @@ class TargetCard extends StatelessWidget {
     required this.busy,
     required this.onUse,
     required this.onMaxTest,
+    this.onChangeExercise,
     this.estimate,
     this.units = Units.metric,
   });
@@ -31,6 +32,9 @@ class TargetCard extends StatelessWidget {
   final VoidCallback onUse;
   final VoidCallback onMaxTest;
 
+  /// Opens the daily-reps setup; only the push-ups card has one.
+  final VoidCallback? onChangeExercise;
+
   /// How water is read.
   final Units units;
 
@@ -38,9 +42,10 @@ class TargetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = target;
     final value = t.value;
-    final name = targetName(t.key);
+    final name = nameOf(t);
     final differs = t.applicable && !t.isApplied && t.current != null;
     final maxTest = t.missing.contains('pushupMax');
+    final change = onChangeExercise;
     return AppCard(
       padding: const EdgeInsets.fromLTRB(16, 6, 6, 12),
       child: Column(
@@ -90,7 +95,7 @@ class TargetCard extends StatelessWidget {
               ],
             ),
           ),
-          if (differs || t.canUse || maxTest) ...[
+          if (differs || t.canUse || maxTest || change != null) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.only(right: 10),
@@ -112,6 +117,12 @@ class TargetCard extends StatelessWidget {
                       label: 'Max test',
                       onTap: onMaxTest,
                       semanticLabel: 'Record a max test',
+                    ),
+                  if (change != null)
+                    LogChip(
+                      label: 'Change exercise',
+                      onTap: change,
+                      semanticLabel: 'Change the daily reps exercise',
                     ),
                   if (differs)
                     Text(
@@ -148,7 +159,7 @@ class _HowSheet extends StatelessWidget {
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(targetName(t.key), style: AppText.title),
+              Text(nameOf(t), style: AppText.title),
               LabelChip(label: t.label),
             ],
           ),

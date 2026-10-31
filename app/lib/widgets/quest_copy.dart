@@ -1,5 +1,6 @@
 import '../api/models.dart';
 import '../util/format.dart';
+import '../util/reps_exercises.dart';
 import '../util/time_format.dart';
 
 /// Quests Apple Health fills in; everything else is logged by hand.
@@ -20,7 +21,7 @@ String durationLabel(num minutes) {
 }
 
 String _unitWord(Quest q, num n) => switch (q.unit) {
-  'reps' => 'push-ups',
+  'reps' => repsNoun(q.exercise, n),
   'g' => 'g',
   'meals' => n == 1 ? 'meal' : 'meals',
   _ => shortUnit(q.unit),
@@ -70,8 +71,9 @@ String questProgress(Quest q, {Units units = Units.metric}) {
   }
   if (q.key == 'pushups' && !q.done) {
     return q.actual == 0
-        ? 'A strength session or ${q.target.formatted} push-ups'
-        : '${q.actual.formatted} of ${q.target.formatted} push-ups, or a strength workout';
+        ? 'A strength session or ${q.target.formatted} ${repsNoun(q.exercise, q.target)}'
+        : '${q.actual.formatted} of ${q.target.formatted} ${repsNoun(q.exercise, q.target)}, '
+              'or a strength workout';
   }
   if (q.key == 'water') {
     return '${units.volumeNumber(q.actual)} of ${units.volume(q.target)}';

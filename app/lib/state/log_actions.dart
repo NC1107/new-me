@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../util/reps_exercises.dart';
 import 'board.dart';
 import 'meals_today.dart';
 import 'session.dart';
@@ -38,6 +39,18 @@ class LogActions {
     if (_ref.exists(targetsProvider)) unawaited(_ref.read(targetsProvider.notifier).refresh());
     _ref.invalidate(exerciseHistoryProvider);
     return result;
+  }
+
+  /// Records a max test of the daily-reps exercise. Push-ups go through the v8 endpoint; any
+  /// other exercise through its catalog max test.
+  Future<void> recordRepsMax(String exercise, int reps, {String? date}) async {
+    if (exercise == kDefaultRepsExercise) {
+      await recordPushupMax(reps, date: date);
+      return;
+    }
+    await _client.recordExerciseMax(exercise, reps: reps, date: date);
+    if (_ref.exists(targetsProvider)) unawaited(_ref.read(targetsProvider.notifier).refresh());
+    _ref.invalidate(exerciseHistoryProvider);
   }
 
   /// Saves a corrected meal. Today is refetched rather than patched, since the old totals are

@@ -22,6 +22,7 @@ import '../log/log_sheet.dart';
 import '../shell/home_tab.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/skeletons.dart';
+import '../../util/reps_exercises.dart';
 import '../../util/time_format.dart';
 
 /// Where an empty sheet sends the person: to log a meal, or to the Train tab for a set.
@@ -313,7 +314,7 @@ class _EntryRow extends StatelessWidget {
         _ => 'yoga',
       },
       switch (a.type) {
-        'pushups' => 'Push-ups',
+        'pushups' => repsTitle(a.exercise),
         'reading' => 'Reading',
         'other' => a.name.isEmpty ? 'Activity' : a.name,
         'water' => 'Water',

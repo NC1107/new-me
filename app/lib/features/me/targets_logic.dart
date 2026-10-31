@@ -1,5 +1,6 @@
 import '../../api/models.dart';
 import '../../util/format.dart';
+import '../../util/reps_exercises.dart';
 import '../health/health_metrics.dart';
 import '../setup/about_you.dart';
 
@@ -17,7 +18,7 @@ const kTargetGroups = [
   TargetGroup('Sleep', ['sleep']),
   TargetGroup('Activity', ['activity']),
   TargetGroup('Steps', ['steps']),
-  TargetGroup('Push-ups', ['pushups']),
+  TargetGroup('Daily reps', ['pushups']),
   TargetGroup('Water', ['water']),
   TargetGroup('Fruit and vegetables', ['produce']),
   TargetGroup('Breathing', ['breathing']),
@@ -45,7 +46,12 @@ const _names = {
   'breathing': 'Breathing',
 };
 
-String targetName(String key) => _names[key] ?? key;
+/// The target's display name. The push-ups target is titled by the daily-reps exercise.
+String targetName(String key, {String? exercise}) =>
+    key == 'pushups' && exercise != null ? repsTitle(exercise) : _names[key] ?? key;
+
+/// [targetName] for a target the server sent, which carries its exercise in its details.
+String nameOf(Target t) => targetName(t.key, exercise: t.details['exercise'] as String?);
 
 /// "2,300 kcal", "7 h 30 min" for minutes, "150 min a week", "2.2 L" or "74 fl oz" for water.
 String formatTargetValue(int value, String unit, {Units units = Units.metric}) {
@@ -106,7 +112,7 @@ const _missingCopy = {
   ),
   'pushupMax': MissingItem(
     'pushupMax',
-    'Push-up max test',
+    'Daily reps max test',
     'Record one set to near failure',
     FixAt.pushupMax,
   ),
@@ -139,8 +145,7 @@ List<Target> usable(TargetsReport report) => [
 String appliedToast(List<Target> applied, {Units units = Units.metric}) {
   if (applied.isEmpty) return 'Nothing to change';
   final parts = [
-    for (final t in applied)
-      '${targetName(t.key)} ${formatTargetValue(t.value!, t.unit, units: units)}',
+    for (final t in applied) '${nameOf(t)} ${formatTargetValue(t.value!, t.unit, units: units)}',
   ];
   return 'Starts tomorrow: ${parts.join(', ')}';
 }

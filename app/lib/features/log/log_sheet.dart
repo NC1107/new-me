@@ -20,6 +20,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../util/reps_exercises.dart';
 import '../../util/time_format.dart';
 import '../../widgets/dialogs.dart';
 import 'activity_pane.dart';
@@ -62,6 +63,18 @@ class _LogSheetState extends ConsumerState<LogSheet> {
   bool _yesterday = false;
   String? _error;
   Future<List<RecentMeal>>? _recent;
+
+  /// The exercise the push-ups quest counts today, which the rep form logs and tests.
+  String get _repsExercise =>
+      ref
+          .read(todayProvider)
+          .value
+          ?.data
+          .quests
+          .where((q) => q.key == 'pushups')
+          .firstOrNull
+          ?.exercise ??
+      kDefaultRepsExercise;
 
   Future<List<RecentMeal>> _loadRecent() => _recent ??= ref
       .read(logActionsProvider)
@@ -134,7 +147,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     });
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(logActionsProvider).recordPushupMax(reps, date: _entryDate());
+      await ref.read(logActionsProvider).recordRepsMax(_repsExercise, reps, date: _entryDate());
     } on Object catch (e) {
       if (mounted) {
         setState(() {
@@ -149,7 +162,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text('Max test saved: $reps ${reps == 1 ? 'push-up' : 'push-ups'}')),
+        SnackBar(content: Text('Max test saved: $reps ${repsNoun(_repsExercise, reps)}')),
       );
   }
 
@@ -238,6 +251,7 @@ class _LogSheetState extends ConsumerState<LogSheet> {
   Widget build(BuildContext context) {
     final kind = widget.kind;
     final palette = questPalette(kind.questKey);
+    final reps = _repsExercise;
     final window = _backdateWindow(
       ref.watch(todayProvider).value?.data,
       ref.watch(meProvider).value?.data,
@@ -261,7 +275,13 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Semantics(header: true, child: Text(kind.title, style: AppText.title)),
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        kind == LogKind.pushups ? 'Log ${repsNoun(reps, 2)}' : kind.title,
+                        style: AppText.title,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -276,25 +296,26 @@ class _LogSheetState extends ConsumerState<LogSheet> {
                 LogKind.pushups => QuantityPane(
                   key: const ValueKey(LogKind.pushups),
                   type: 'pushups',
+                  exercise: reps,
                   initialUnit: widget.maxTest ? kMaxTestUnit : null,
-                  units: const [
+                  units: [
                     UnitSpec(
                       unit: 'reps',
-                      label: 'push-ups',
+                      label: repsNoun(reps, 2),
                       start: 10,
                       step: 1,
-                      chips: [5, 10, 20],
+                      chips: const [5, 10, 20],
                     ),
                     UnitSpec(
                       unit: kMaxTestUnit,
                       label: 'Max test',
-                      countLabel: 'push-ups in one set',
+                      countLabel: '${repsNoun(reps, 2)} in one set',
                       start: 20,
                       step: 1,
-                      chips: [5, 10, 20],
+                      chips: const [5, 10, 20],
                       caption:
-                          'One set to near failure with good form. It sizes your daily push-up '
-                          'target. Testing every 2 to 4 weeks keeps it honest.',
+                          'One set to near failure with good form. It sizes your daily '
+                          '${repsNoun(reps, 1)} target. Testing every 2 to 4 weeks keeps it honest.',
                       saveLabel: 'Save max test',
                     ),
                   ],

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../util/reps_exercises.dart';
+
 import 'package:flutter/services.dart';
 
 import '../../api/models.dart';
@@ -60,12 +63,6 @@ int? _confirmAbove(String unit) => switch (unit) {
   _ => null,
 };
 
-String _noun(String unit, int n) => switch (unit) {
-  'reps' || kMaxTestUnit => n == 1 ? 'push-up' : 'push-ups',
-  'pages' => n == 1 ? 'page' : 'pages',
-  _ => n == 1 ? 'minute' : 'minutes',
-};
-
 /// How one unit of a quantity form behaves: where the number starts, how far - and + move it, and
 /// which quick chips add to it.
 class UnitSpec {
@@ -113,9 +110,13 @@ class QuantityPane extends StatefulWidget {
     required this.onLog,
     this.onMaxTest,
     this.initialUnit,
+    this.exercise,
   });
 
   final String type;
+
+  /// The daily-reps exercise whose reps this form counts; push-ups when null.
+  final String? exercise;
   final List<UnitSpec> units;
   final bool busy;
   final bool failed;
@@ -143,6 +144,12 @@ class _QuantityPaneState extends State<QuantityPane> {
   }
 
   String get _unit => _spec.unit;
+
+  String _noun(String unit, int n) => switch (unit) {
+    'reps' || kMaxTestUnit => repsNoun(widget.exercise, n),
+    'pages' => n == 1 ? 'page' : 'pages',
+    _ => n == 1 ? 'minute' : 'minutes',
+  };
 
   int? get _quantity => int.tryParse(_field.text);
 

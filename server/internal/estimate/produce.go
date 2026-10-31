@@ -34,13 +34,14 @@ var usdaProduceCategory = map[string]string{
 	"Fruits and Fruit Juices":           ProduceFruit,
 	"Vegetables and Vegetable Products": ProduceVegetable,
 
-	// FNDDS (what people report eating), as named in What We Eat in America.
+	// FNDDS (what people report eating), as the live FoodData Central search names them.
 	"Apples":                            ProduceFruit,
 	"Bananas":                           ProduceFruit,
 	"Grapes":                            ProduceFruit,
 	"Citrus fruits":                     ProduceFruit,
 	"Melons":                            ProduceFruit,
-	"Berries":                           ProduceFruit,
+	"Strawberries":                      ProduceFruit,
+	"Blueberries and other berries":     ProduceFruit,
 	"Peaches and nectarines":            ProduceFruit,
 	"Pears":                             ProduceFruit,
 	"Pineapple":                         ProduceFruit,
@@ -49,7 +50,11 @@ var usdaProduceCategory = map[string]string{
 	"Tomatoes":                          ProduceVegetable,
 	"Carrots":                           ProduceVegetable,
 	"Other red and orange vegetables":   ProduceVegetable,
-	"Dark green vegetables":             ProduceVegetable,
+	"Broccoli":                          ProduceVegetable,
+	"Spinach":                           ProduceVegetable,
+	"Other dark green vegetables":       ProduceVegetable,
+	"Corn":                              ProduceVegetable,
+	"Other starchy vegetables":          ProduceVegetable,
 	"Lettuce and lettuce salads":        ProduceVegetable,
 	"String beans":                      ProduceVegetable,
 	"Cabbage":                           ProduceVegetable,
@@ -63,9 +68,13 @@ var usdaProduceCategory = map[string]string{
 }
 
 // starchyHeads are the foods NHS 5 A Day says do not count. SR Legacy and Foundation file
-// potatoes under "Vegetables and Vegetable Products" and give no finer category, so USDA's own
-// description, which always starts with the food, is the only field that separates them.
-var starchyHeads = map[string]bool{"potatoes": true, "cassava": true, "yams": true, "plantains": true}
+// potatoes under "Vegetables and Vegetable Products", and FNDDS puts cassava beside green peas
+// in "Other starchy vegetables", so USDA's own description, which always starts with the food,
+// is the only field that separates them.
+var starchyHeads = map[string]bool{
+	"potato": true, "potatoes": true, "cassava": true, "yam": true, "yams": true,
+	"plantain": true, "plantains": true,
+}
 
 var juiceWord = regexp.MustCompile(`\b(juices?|smoothies?|nectars?)\b`)
 
@@ -80,11 +89,16 @@ func usdaProduceKind(dataType, category, description string) string {
 	if kind == "" {
 		return ""
 	}
-	if category == "Fruits and Fruit Juices" || category == "Vegetables and Vegetable Products" {
-		head, _, _ := strings.Cut(strings.ToLower(strings.TrimSpace(description)), ",")
+	head, _, _ := strings.Cut(strings.ToLower(strings.TrimSpace(description)), ",")
+	switch category {
+	case "Fruits and Fruit Juices", "Vegetables and Vegetable Products":
 		if juiceWord.MatchString(head) {
 			return ProduceJuice
 		}
+		if starchyHeads[strings.TrimSpace(head)] {
+			return ""
+		}
+	case "Other starchy vegetables":
 		if starchyHeads[strings.TrimSpace(head)] {
 			return ""
 		}

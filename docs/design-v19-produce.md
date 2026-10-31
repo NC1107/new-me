@@ -105,7 +105,8 @@ A meal item counts only when its data says it is produce:
 
 ## Limits
 
-- The FNDDS category names in the table come from What We Eat in America and were not all checked against the live API in this change, because the shared demo key was rate limited.
+- The FNDDS category names were checked against the live FoodData Central search on 2026-10-31.
+  Broccoli, spinach, strawberries, berries, other dark green vegetables, corn and other starchy vegetables have their own categories there, so the table names them; cassava, yams and plantains inside other starchy vegetables are excluded by their description, like potatoes.
   A wrong name only means that food does not count.
 - Dried fruit is counted by its weight, but NHS counts 30 g of dried fruit as a portion, so it is undercounted.
 - Mixed dishes such as stews count only when Claude estimated them, and then by its estimate.

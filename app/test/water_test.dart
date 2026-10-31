@@ -132,64 +132,99 @@ void main() {
 
       await app.tap(find.bySemanticsLabel('Add entry for Drink 101 fl oz'));
       expect(find.text('Log water'), findsOneWidget);
-      expect(find.text('8 fl oz'), findsOneWidget);
+      expect(find.text('+8 fl oz'), findsOneWidget);
     });
   });
 
   group('the water form', () {
-    testWidgets('metric offers 250 and 500 ml and a chip posts that many ml at once', (
+    testWidgets('metric chips add 250 and 500 ml to the number and nothing is posted yet', (
       tester,
     ) async {
-      final app = await _open(tester);
+      final adapter = _server();
+      final app = TestApp(tester, adapter);
+      await app.pump(const _Opener(), overrides: [unitsProvider.overrideWithValue(Units.metric)]);
+      await app.tap(find.text('Open'));
+      final field = find.byType(TextField);
       expect(find.text('Log water'), findsOneWidget);
-      expect(find.text('250 ml'), findsOneWidget);
-      expect(find.text('500 ml'), findsOneWidget);
+      expect(tester.widget<TextField>(field).controller!.text, '0');
+      expect(tester.widget<ChunkyButton>(_save()).onPressed, isNull, reason: 'nothing to save yet');
 
-      await app.tap(find.text('500 ml'));
+      await app.tap(find.text('+500 ml'));
+      expect(tester.widget<TextField>(field).controller!.text, '500');
+      await app.tap(find.text('+250 ml'));
+      expect(tester.widget<TextField>(field).controller!.text, '750');
+      expect(adapter.to('POST /api/logs'), isEmpty);
+
+      await app.tap(_save());
       final body = app.body('POST /api/logs');
       expect(body['kind'], 'activity');
       expect(body['type'], 'water');
       expect(body['unit'], 'ml');
-      expect(body['quantity'], 500);
+      expect(body['quantity'], 750);
       expect(find.text('Log water'), findsNothing, reason: 'the sheet closes after the save');
-      expect(find.text('Added 500 ml of water'), findsOneWidget);
+      expect(find.text('Added 750 ml of water'), findsOneWidget);
     });
 
-    testWidgets('imperial chips are 8 and 16 fl oz and post their size in ml', (tester) async {
+    testWidgets('imperial chips add 8 and 16 fl oz and Save posts the total in ml', (tester) async {
       final app = await _open(tester, units: Units.imperial);
-      expect(find.text('8 fl oz'), findsOneWidget);
-      expect(find.text('16 fl oz'), findsOneWidget);
-      expect(find.text('250 ml'), findsNothing);
+      expect(find.text('+8 fl oz'), findsOneWidget);
+      expect(find.text('+16 fl oz'), findsOneWidget);
+      expect(find.text('+250 ml'), findsNothing);
 
-      await app.tap(find.text('16 fl oz'));
+      await app.tap(find.text('+16 fl oz'));
+      await app.tap(find.text('+8 fl oz'));
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '24');
+
+      await app.tap(_save());
       final body = app.body('POST /api/logs');
       expect(body['type'], 'water');
       expect(body['unit'], 'ml');
-      expect(body['quantity'], 473);
-      expect(find.text('Added 16 fl oz of water'), findsOneWidget);
+      expect(body['quantity'], 710);
+      expect(find.text('Added 24 fl oz of water'), findsOneWidget);
     });
 
     testWidgets('a typed amount saves in ml, and the number steps by 50', (tester) async {
       final app = await _open(tester);
       final field = find.byType(TextField);
-      expect(tester.widget<TextField>(field).controller!.text, '250');
 
       await app.tap(find.bySemanticsLabel('More'));
-      expect(tester.widget<TextField>(field).controller!.text, '300');
+      expect(tester.widget<TextField>(field).controller!.text, '50');
 
       await app.enter(field, '750');
       await app.tap(_save());
       expect(app.body('POST /api/logs')['quantity'], 750);
     });
 
-    testWidgets('a typed imperial amount converts to ml', (tester) async {
+    testWidgets('a chip adds on top of a typed amount', (tester) async {
       final app = await _open(tester, units: Units.imperial);
       final field = find.byType(TextField);
-      expect(tester.widget<TextField>(field).controller!.text, '8');
 
       await app.enter(field, '12');
+      await app.tap(find.text('+8 fl oz'));
+      expect(tester.widget<TextField>(field).controller!.text, '20');
       await app.tap(_save());
-      expect(app.body('POST /api/logs')['quantity'], 355);
+      expect(app.body('POST /api/logs')['quantity'], 591);
+    });
+
+    testWidgets('today so far reads against the goal in the person unit', (tester) async {
+      final today = richTodayJson(stepsEverSynced: true);
+      today['quests'] = [
+        ...(today['quests']! as List),
+        quest('water', 'Water', {
+          'unit': 'ml',
+          'target': 3000,
+          'actual': 1200,
+          'points': 50,
+          'basePoints': 20,
+        }),
+      ];
+      final adapter = _server()..on('GET /api/today', StubResponse(200, today));
+      final app = TestApp(tester, adapter);
+      await app.pump(const _Opener(), overrides: [unitsProvider.overrideWithValue(Units.imperial)]);
+      await app.tap(find.text('Open'));
+      await app.settle();
+
+      expect(find.text('Today so far: 41 of 101 fl oz'), findsOneWidget);
     });
 
     testWidgets('over 5 L in one entry is refused inline', (tester) async {
@@ -202,9 +237,27 @@ void main() {
       expect(tester.widget<ChunkyButton>(_save()).onPressed, isNull);
     });
 
+    testWidgets('chips stop adding at the 5 L cap', (tester) async {
+      final app = await _open(tester);
+      await app.enter(find.byType(TextField), '4800');
+      await app.tap(find.text('+500 ml'));
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '5000');
+    });
+
     testWidgets('more than 2 L at once asks first', (tester) async {
       final app = await _open(tester);
       await app.enter(find.byType(TextField), '2500');
+      await app.tap(_save());
+      expect(find.textContaining('2.5 L in one go'), findsOneWidget);
+      await app.tap(find.text('Log it'));
+      expect(app.body('POST /api/logs')['quantity'], 2500);
+    });
+
+    testWidgets('chips building a total over 2 L also ask first', (tester) async {
+      final app = await _open(tester);
+      for (var i = 0; i < 5; i++) {
+        await app.tap(find.text('+500 ml'));
+      }
       await app.tap(_save());
       expect(find.textContaining('2.5 L in one go'), findsOneWidget);
       await app.tap(find.text('Log it'));

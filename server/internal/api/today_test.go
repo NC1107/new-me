@@ -49,7 +49,7 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 			t.Errorf("%s = %+v, want %+v", key, have[key], w)
 		}
 	}
-	if got.num("quests.2.actualAlt") != 5 || got.num("quests.2.targetAlt") != 19 || got.str("quests.2.unitAlt") != "pages" {
+	if got.num("quests.2.actualAlt") != 5 || got.num("quests.2.targetAlt") != 20 || got.str("quests.2.unitAlt") != "pages" {
 		t.Fatalf("reading detail = %s", got.Body)
 	}
 

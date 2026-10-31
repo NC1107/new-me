@@ -306,7 +306,10 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
   @override
   Widget build(BuildContext context) {
     final open = !_estimating && (_query.isNotEmpty || (_focus.hasFocus && !widget.collapsed));
-    final showHeading = _remotePending || _remoteDone;
+    // With a description on offer, an empty search is not news: "Work it out" is the answer.
+    final describing = widget.onEstimate != null && _query.isNotEmpty;
+    final nothingRemote = _remoteDone && !_remoteFailed && _candidates.isEmpty;
+    final showHeading = _remotePending || (_remoteDone && !(describing && nothingRemote));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -330,7 +333,10 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
           if (widget.onEstimate != null && _query.isNotEmpty) _workItOut(),
           for (final food in _saved.take(6))
             FoodTile(food: food, enabled: widget.enabled, onTap: () => _pick(food)),
-          if (_saved.isEmpty && !_failed && (widget.browseOnFocus || _query.isNotEmpty))
+          if (_saved.isEmpty &&
+              !_failed &&
+              !describing &&
+              (widget.browseOnFocus || _query.isNotEmpty))
             _note(_query.isEmpty ? 'Foods you save will show up here.' : 'Nothing saved matches.'),
           if (_failed) _note('Could not search right now.', danger: true),
           if (showHeading) ...[const SizedBox(height: 8), const FieldLabel('From the databases')],
@@ -364,8 +370,7 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
                 (c) => c.imageUrl != null || foodCategoryIcon(c.category) != null,
               ),
             ),
-          if (_remoteDone && !_remoteFailed && _candidates.isEmpty)
-            _note('Nothing found in the databases.'),
+          if (nothingRemote && !describing) _note('Nothing found in the databases.'),
         ],
       ],
     );

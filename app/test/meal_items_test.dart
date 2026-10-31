@@ -360,7 +360,9 @@ void main() {
 
     await app.enter(_searchField, 'sauce');
     await app.settle(4);
-    expect(find.text('Nothing saved matches.'), findsOneWidget);
+    // Work it out is the answer to an empty saved search, so no "nothing matches" note.
+    expect(find.text('Nothing saved matches.'), findsNothing);
+    expect(find.textContaining('Work it out'), findsOneWidget);
     expect(find.text('Searching USDA and Open Food Facts'), findsOneWidget);
     expect(server.to('GET /api/foods').every((r) => r.queryParameters['remote'] == null), isTrue);
 
@@ -408,7 +410,9 @@ void main() {
     await app.enter(_searchField, 'sauces');
     await app.settle(14);
     expect(find.text('Apple sauce'), findsNothing);
-    expect(find.text('Nothing found in the databases.'), findsOneWidget);
+    expect(find.text('Nothing found in the databases.'), findsNothing);
+    expect(find.text('From the databases'), findsNothing);
+    expect(find.textContaining('Work it out: “sauces”'), findsOneWidget);
   });
 
   testWidgets('an older server still pre-fills the form from the single meal', (tester) async {

@@ -16,6 +16,37 @@ const (
 // without a worth. It is a bonus, so it never moves the daily percent or the streak.
 const SharedHabitGems = HabitWorthDefault
 
+// Bounds of the worth two people agree on for a chore.
+const (
+	SharedMinWorth = 1
+	SharedMaxWorth = 100
+)
+
+// Who did a chore, from the point of view of the person who marked it.
+const (
+	SharedBySelf     = "self"
+	SharedByPartner  = "partner"
+	SharedByTogether = "together"
+)
+
+// ValidSharedWorth reports whether the gems are a worth a chore may be given.
+func ValidSharedWorth(worth int) bool { return worth >= SharedMinWorth && worth <= SharedMaxWorth }
+
+// SharedCredit is the gems each person earns for one completion of a chore worth worth. mine goes
+// to the person who marked it and theirs to the other. Done together the worth is split evenly and
+// the odd gem goes to whoever marked it, so the two halves always add up to the worth.
+func SharedCredit(by string, worth int) (mine, theirs int, ok bool) {
+	switch by {
+	case SharedBySelf:
+		return worth, 0, true
+	case SharedByPartner:
+		return 0, worth, true
+	case SharedByTogether:
+		return (worth + 1) / 2, worth / 2, true
+	}
+	return 0, 0, false
+}
+
 // Bounds of an every-N-days schedule.
 const (
 	SharedMinEveryDays = 2

@@ -59,20 +59,66 @@ class SharedSchedule {
   int get hashCode => Object.hash(kind, everyDays, weekdays.length);
 }
 
-/// Who did a shared habit last, and when.
+/// One person a chore counted for and the gems it paid them.
+class SharedDoer {
+  const SharedDoer({required this.userId, required this.name, required this.gems});
+
+  factory SharedDoer.fromJson(Json j) => SharedDoer(
+    userId: (j['userId'] as num).toInt(),
+    name: j['name'] as String? ?? '',
+    gems: (j['gems'] as num?)?.toInt() ?? 0,
+  );
+
+  final int userId;
+  final String name;
+  final int gems;
+}
+
+/// Who did a shared habit last, and when. [userId] is who marked it, the only person who can take
+/// it back; [doers] are the people it counted for, both of them when it was done [together].
 class SharedLast {
-  const SharedLast({required this.userId, required this.name, required this.at});
+  const SharedLast({
+    required this.userId,
+    required this.name,
+    required this.at,
+    this.together = false,
+    this.doers = const [],
+  });
 
   factory SharedLast.fromJson(Json j) => SharedLast(
     userId: (j['userId'] as num).toInt(),
     name: j['name'] as String? ?? '',
     at: DateTime.parse(j['at'] as String),
+    together: j['together'] as bool? ?? false,
+    doers: [for (final d in j['doers'] as List? ?? const []) SharedDoer.fromJson(d as Json)],
   );
 
   final int userId;
   final String name;
   final DateTime at;
+  final bool together;
+  final List<SharedDoer> doers;
 }
+
+/// Who a chore was done by, as the server names it, from the point of view of the person who
+/// marked it.
+abstract final class SharedBy {
+  static const self = 'self';
+  static const partner = 'partner';
+  static const together = 'together';
+}
+
+/// What the person who marks a chore and the other person each get for [worth] gems. Done
+/// together the worth splits evenly and the odd gem goes to whoever marked it, as on the server.
+({int mine, int theirs}) sharedCredit(String by, int worth) => switch (by) {
+  SharedBy.partner => (mine: 0, theirs: worth),
+  SharedBy.together => (mine: (worth + 1) ~/ 2, theirs: worth ~/ 2),
+  _ => (mine: worth, theirs: 0),
+};
+
+/// The worths offered for a chore, in gems.
+const kSharedWorths = [10, 25, 50, 75, 100];
+const kSharedDefaultWorth = 25;
 
 /// A household habit as I see it: due dates are in my own zone, `daysFromToday` negative when
 /// overdue.
@@ -89,6 +135,9 @@ class SharedHabit {
     required this.doneToday,
     required this.doneByMe,
     required this.gems,
+    this.proposedWorth,
+    this.proposedBy,
+    this.proposedByName = '',
   });
 
   factory SharedHabit.fromJson(Json j) => SharedHabit(
@@ -103,6 +152,9 @@ class SharedHabit {
     doneToday: j['doneToday'] as bool? ?? false,
     doneByMe: j['doneByMe'] as bool? ?? false,
     gems: (j['gems'] as num?)?.toInt() ?? 0,
+    proposedWorth: (j['proposedWorth'] as num?)?.toInt(),
+    proposedBy: (j['proposedBy'] as num?)?.toInt(),
+    proposedByName: j['proposedByName'] as String? ?? '',
   );
 
   final int id;
@@ -115,7 +167,18 @@ class SharedHabit {
   final int daysFromToday;
   final bool doneToday;
   final bool doneByMe;
+
+  /// The worth both of you agreed on, which is what a completion pays. [proposedWorth] is a
+  /// number one of you suggested that the other has not answered yet.
   final int gems;
+  final int? proposedWorth;
+  final int? proposedBy;
+  final String proposedByName;
+
+  bool get hasProposal => proposedWorth != null && proposedBy != null;
+
+  /// True when the number waiting is my partner's, so it is mine to agree to or counter.
+  bool proposalForMe(int? myId) => hasProposal && proposedBy != myId;
 
   /// The chore as it will read once I have done it today, shown before the server answers.
   SharedHabit markedDoneBy(SharedLast me) => SharedHabit(
@@ -130,6 +193,9 @@ class SharedHabit {
     doneToday: true,
     doneByMe: true,
     gems: gems,
+    proposedWorth: proposedWorth,
+    proposedBy: proposedBy,
+    proposedByName: proposedByName,
   );
 
   bool get isDue => state != SharedState.upcoming;

@@ -4,28 +4,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/shared_habit_models.dart';
 import '../../state/clock.dart';
+import '../../state/habit_proposals.dart';
 import '../../state/session.dart';
 import '../../state/shared_habits.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
+import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/pressable.dart';
 import '../habits/habit_icons.dart';
+import 'shared_done_sheet.dart';
 import 'shared_habit_sheet.dart';
 import 'shared_habit_text.dart';
 
 const _kOverdueDisc = Color(0xFFFFE0B2);
 const _kOverdueInk = Color(0xFF8A4B00);
 
-/// Marks a chore done, or takes my own mark back, and says so when the server refuses.
+/// Marks a chore done, or takes my own mark back, and says so when the server refuses. With a
+/// partner it first asks who did it, since that decides who earns the gems.
 Future<void> toggleSharedHabit(BuildContext context, WidgetRef ref, SharedHabit h) async {
   if (h.doneToday && !h.doneByMe) return;
+  final partner = ref.read(partnerNameProvider);
+  var by = SharedBy.self;
+  if (!h.doneByMe && partner != null) {
+    HapticFeedback.selectionClick();
+    final picked = await showSharedDoneSheet(context, h, partner);
+    if (picked == null || !context.mounted) return;
+    by = picked;
+  }
   HapticFeedback.mediumImpact();
   final notifier = ref.read(sharedHabitsProvider.notifier);
   try {
-    await (h.doneByMe ? notifier.undo(h.id) : notifier.markDone(h.id));
+    await (h.doneByMe ? notifier.undo(h.id) : notifier.markDone(h.id, by: by));
   } on Object catch (e) {
     if (!context.mounted) return;
     ScaffoldMessenger.maybeOf(context)
@@ -108,13 +120,17 @@ class _ChoreRow extends ConsumerWidget {
     final overdue = h.overdue && !h.doneToday;
     final due = sharedDueLabel(h);
     final last = sharedLastLabel(h, myId, now);
-    final detail = h.doneToday ? last : '${sharedScheduleLabel(h.schedule)} · $last';
+    final detail = h.doneToday
+        ? last
+        : '${sharedScheduleLabel(h.schedule)} · ${sharedWorthLabel(h)}';
+    final showLast = !h.doneToday && h.last != null;
+    final pending = sharedPendingLabel(h, myId, ref.watch(partnerNameProvider));
     final palette = context.accentPalette;
     return Column(
       children: [
         Semantics(
           button: true,
-          label: '${h.name}, ${h.doneToday ? 'done' : due}, $detail',
+          label: '${h.name}, ${h.doneToday ? 'done' : due}, $detail${showLast ? ', $last' : ''}',
           excludeSemantics: true,
           onTap: () => showSharedHabitSheet(context, habit: h),
           child: Pressable(
@@ -151,7 +167,9 @@ class _ChoreRow extends ConsumerWidget {
                             style: AppText.label.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            h.doneToday ? 'Done today' : due,
+                            h.doneToday
+                                ? (h.last?.together == true ? 'Done together' : 'Done today')
+                                : due,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.caption.copyWith(
@@ -165,6 +183,24 @@ class _ChoreRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                             style: AppText.caption,
                           ),
+                          if (showLast)
+                            Text(
+                              last,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption,
+                            ),
+                          if (pending != null)
+                            Text(
+                              pending,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption.copyWith(
+                                color: _kOverdueInk,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          if (h.proposalForMe(myId)) _AgreeButton(habit: h),
                         ],
                       ),
                     ),
@@ -177,6 +213,69 @@ class _ChoreRow extends ConsumerWidget {
           ),
         ),
         const Divider(height: 2, thickness: 2, color: kBorder),
+      ],
+    );
+  }
+}
+
+/// "Sam suggests 40 gems", with a tap to agree, shown on a chore whose new worth waits for me.
+class _AgreeButton extends ConsumerWidget {
+  const _AgreeButton({required this.habit});
+
+  final SharedHabit habit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final h = habit;
+    final palette = context.accentPalette;
+    final label = 'Agree to ${plural(h.proposedWorth ?? 0, 'gem', 'gems')}';
+    Future<void> agree() async {
+      HapticFeedback.mediumImpact();
+      try {
+        await ref.read(sharedHabitsProvider.notifier).acceptWorth(h.id);
+      } on Object catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.maybeOf(context)
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(errorCopy(e))));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${h.proposedByName} suggests ${plural(h.proposedWorth ?? 0, 'gem', 'gems')}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.caption.copyWith(color: _kOverdueInk, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Semantics(
+          button: true,
+          label: '${h.proposedByName} suggests ${h.proposedWorth} gems for ${h.name}. $label',
+          excludeSemantics: true,
+          onTap: agree,
+          child: Pressable(
+            onTap: agree,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 36),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: palette.tint,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: palette.fill, width: kBorderWidth),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption.copyWith(fontWeight: FontWeight.w800, color: palette.lip),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

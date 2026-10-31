@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/shared_habit_models.dart';
+import '../../state/session.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -15,23 +17,24 @@ const _kOverdueInk = Color(0xFF8A4B00);
 
 /// A shared chore as a chip in Today's habit strip. It looks like a personal habit chip, with a
 /// small people badge on the icon so it is clear it belongs to both of you.
-class SharedHabitChip extends StatelessWidget {
+class SharedHabitChip extends ConsumerWidget {
   const SharedHabitChip({super.key, required this.habit, required this.onTap});
 
   final SharedHabit habit;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.accentPalette;
     final reduce = MediaQuery.disableAnimationsOf(context);
+    final myId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     final h = habit;
     final done = h.doneToday;
     final overdue = h.overdue && !done;
     final Color fill = done ? palette.tint : (overdue ? _kOverdueFill : kSurface);
     final Color border = done ? palette.fill : (overdue ? kFlame : kBorder);
     final caption = done
-        ? (h.doneByMe ? 'Done by you' : 'Done by ${h.last?.name ?? 'your partner'}')
+        ? sharedDoneByLabel(h, myId)
         : (overdue ? sharedDueLabel(h).replaceFirst('Overdue by ', 'Overdue ') : 'Shared');
     final label = '${h.name}, shared, ${done ? 'done' : sharedDueLabel(h)}';
     return Semantics(

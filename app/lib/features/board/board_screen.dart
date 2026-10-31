@@ -139,12 +139,14 @@ class _UsBody extends ConsumerWidget {
           ),
         ),
         if (paired) ...[
-          const SizedBox(height: kCardGap),
+          // Home sits right under the two of you: below the recap links it was off the first
+          // screen, and a first chore was easy to miss.
+          const SharedHabitsCard(),
+          const SizedBox(height: 28),
           _ReviewCard(
             onRecap: () => pushPage(context, const RecapScreen()),
             onProgress: () => openProgress(context),
           ),
-          const SharedHabitsCard(),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),

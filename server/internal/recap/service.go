@@ -103,7 +103,7 @@ func (s *Service) Build(ctx context.Context, monday, viewerToday score.Date) (Re
 		curStats, prevStats := StatsOf(cur), StatsOf(prev)
 		out.People = append(out.People, PersonRecap{
 			UserID: u.ID, Name: u.Name, Color: u.Color, This: curStats, Previous: prevStats,
-			BestDay: Best(cur.Days), Suggestion: Suggest(curStats, prevStats, out.Complete),
+			BestDay: Best(cur.Days), Suggestion: Suggest(curStats, prevStats, out.Complete, u.JoinedOn.After(monday)),
 		})
 		thisAll, prevAll = append(thisAll, curStats), append(prevAll, prevStats)
 		dayLists = append(dayLists, cur.Days)

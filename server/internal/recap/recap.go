@@ -126,14 +126,16 @@ func CombineDays(people ...[]DayPoints) []DayPoints {
 }
 
 // Suggest picks the one thing most worth changing next week, first match wins. A week that is
-// not over yet gets an encouragement instead, since its numbers cannot be compared yet.
-func Suggest(cur, prev Stats, complete bool) string {
+// not over yet gets an encouragement instead, since its numbers cannot be compared yet. A person
+// who joined during the week was not there for all of it, so their counted days are not judged
+// against a whole week.
+func Suggest(cur, prev Stats, complete, joinedMidWeek bool) string {
 	if !complete {
 		// A partial week against a full one would always look like a slump.
 		return "The week is still running. Keep going to make it a good one."
 	}
 	switch {
-	case cur.CountedDays < CountedDaysGoal-1:
+	case !joinedMidWeek && cur.CountedDays < CountedDaysGoal-1:
 		return fmt.Sprintf("Aim for %d counted days next week. You had %d.", CountedDaysGoal, cur.CountedDays)
 	case prev.Steps > 0 && float64(cur.Steps) < float64(prev.Steps)*(1-stepsSlipFraction):
 		drop := int(math.Round((1 - float64(cur.Steps)/float64(prev.Steps)) * 100))

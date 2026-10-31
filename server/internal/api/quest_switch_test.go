@@ -33,8 +33,8 @@ func TestTurningProteinOffRemovesItFromTodayAndItsPossiblePoints(t *testing.T) {
 	if hasQuest(after, "protein") {
 		t.Fatalf("protein must leave today at once: %s", after.Body)
 	}
-	if after.num("day.maxBase") != maxBefore-50 {
-		t.Fatalf("maxBase = %d, want %d: %s", after.num("day.maxBase"), maxBefore-50, after.Body)
+	if after.num("day.maxBase") != maxBefore-20 {
+		t.Fatalf("maxBase = %d, want %d: %s", after.num("day.maxBase"), maxBefore-20, after.Body)
 	}
 }
 
@@ -53,7 +53,7 @@ func TestTurningAQuestOnAddsItToToday(t *testing.T) {
 	if !questsByKeyHas(after, "yoga") || questsByKey(after)["yoga"].target != 15 {
 		t.Fatalf("yoga must join today: %s", after.Body)
 	}
-	if after.num("day.maxBase") != before.num("day.maxBase")+50 {
+	if after.num("day.maxBase") != before.num("day.maxBase")+20 {
 		t.Fatalf("maxBase = %d: %s", after.num("day.maxBase"), after.Body)
 	}
 }

@@ -545,6 +545,7 @@ class Quest {
     this.doneBy,
     this.detail,
     this.exercise,
+    this.pointsWhy,
   });
 
   factory Quest.fromJson(Json j) => Quest(
@@ -563,6 +564,7 @@ class Quest {
     doneBy: DoneBy.tryParse(j['doneBy']),
     detail: j['detail'] is Map ? (j['detail'] as Map).cast<String, dynamic>() : null,
     exercise: j['exercise'] as String?,
+    pointsWhy: j['pointsWhy'] as String?,
   );
 
   final String key;
@@ -576,6 +578,9 @@ class Quest {
 
   /// Base points this quest is worth in full, before the completion bonus.
   final int points;
+
+  /// One line on what the points are based on; null for a day frozen before points followed effort.
+  final String? pointsWhy;
 
   /// Base points earned so far.
   final int basePoints;
@@ -610,6 +615,7 @@ class Quest {
     if (doneBy != null) 'doneBy': doneBy!.toJson(),
     if (detail != null) 'detail': detail,
     if (exercise != null) 'exercise': exercise,
+    if (pointsWhy != null) 'pointsWhy': pointsWhy,
   };
 }
 

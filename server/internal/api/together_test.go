@@ -225,7 +225,7 @@ func TestWorkoutChallengeCompletesOnceAndPaysBothFiftyPoints(t *testing.T) {
 	if err := h.srv.together.Settle(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if today := h.get("/api/today", nick.Token).expect(http.StatusOK); today.num("day.bonusPoints") != 70 {
+	if today := h.get("/api/today", nick.Token).expect(http.StatusOK); today.num("day.bonusPoints") != 54 {
 		t.Fatalf("Nick bonus = %s", today.Body)
 	}
 	if today := h.get("/api/today", nadia.Token).expect(http.StatusOK); today.num("day.bonusPoints") != 50 {

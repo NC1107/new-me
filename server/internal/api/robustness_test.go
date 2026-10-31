@@ -41,9 +41,9 @@ func TestProteinIsScoredInTenthsOfAGram(t *testing.T) {
 			protein = got.num("day.quests." + itoa(i) + ".basePoints")
 		}
 	}
-	// (50*299 + 150) / 300 with the progress counted in tenths.
-	if protein != 50 {
-		t.Fatalf("protein base points = %d, want 50; body: %s", protein, got.Body)
+	// (20*299 + 150) / 300 with the progress counted in tenths.
+	if protein != 20 {
+		t.Fatalf("protein base points = %d, want 20; body: %s", protein, got.Body)
 	}
 }
 

@@ -187,9 +187,9 @@ func TestCoachFactsUseThePersonsUnits(t *testing.T) {
 	waterTarget := targetJSON{Key: tgtWater, Unit: "ml", Value: intp(2200), Current: intp(2000)}
 
 	for _, c := range []struct{ got, want string }{
-		{questLine(imperial, water), "Drink water: not yet (1.5 L (51 fl oz) of 2.2 L (74 fl oz))"},
-		{questLine(metric, water), "Drink water: not yet (1.5 L of 2.2 L)"},
-		{questLine(metric, sleep), "Sleep: done (7.3 h of 7 h)"},
+		{questProgress(imperial, water), "Drink water: not yet (1.5 L (51 fl oz) of 2.2 L (74 fl oz))"},
+		{questProgress(metric, water), "Drink water: not yet (1.5 L of 2.2 L)"},
+		{questProgress(metric, sleep), "Sleep: done (7.3 h of 7 h)"},
 		{toChatTarget(imperial, waterTarget).Value, "2.2 L (74 fl oz) (currently set to 2.0 L (68 fl oz))"},
 		{toChatTarget(metric, targetJSON{Unit: "steps", Value: intp(8000)}).Value, "8,000 steps"},
 		{goalSentence(imperial), "lose 1 lb a week"},

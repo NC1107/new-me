@@ -33,8 +33,8 @@ func TestCreateUserSeedsTemplatesAndInitializes(t *testing.T) {
 			t.Fatalf("%+v; only yoga and the three v17 quests ship disabled, in order", tpl)
 		}
 	}
-	if templates[6].Key != db.QuestExercise || templates[6].Target != 30 || templates[6].Points != 100 ||
-		templates[7].Key != db.QuestSleep || templates[7].Target != 420 || templates[7].Points != 50 {
+	if templates[6].Key != db.QuestExercise || templates[6].Target != 30 || templates[6].Points != 85 ||
+		templates[7].Key != db.QuestSleep || templates[7].Target != 420 || templates[7].Points != 20 {
 		t.Fatalf("new templates = %+v %+v", templates[6], templates[7])
 	}
 	info, err := database.GetServerInfo(ctx)
@@ -318,19 +318,19 @@ func TestQuestTemplateConstraints(t *testing.T) {
 	}
 }
 
-func TestUpsertTemplateKeepsPointsFixed(t *testing.T) {
+func TestUpsertTemplatePointsFollowTheTarget(t *testing.T) {
 	database := dbtest.Fresh(t)
 	u := join(t, database, "Nick", "green", true)
 
 	if err := db.UpsertQuestTemplate(ctx, database.Pool, u.ID, db.QuestTemplate{
-		Key: db.QuestSteps, Target: 12000, Unit: "steps", Points: 500, Enabled: false,
+		Key: db.QuestSteps, Target: 3000, Unit: "steps", Points: 500, Enabled: false,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	templates, _ := db.GetQuestTemplates(ctx, database.Pool, u.ID)
 	for _, tpl := range templates {
-		if tpl.Key == db.QuestSteps && (tpl.Target != 12000 || tpl.Enabled || tpl.Points != 100) {
-			t.Fatalf("steps template = %+v; target and enabled change, points do not", tpl)
+		if tpl.Key == db.QuestSteps && (tpl.Target != 3000 || tpl.Enabled || tpl.Points != 85) {
+			t.Fatalf("steps template = %+v; points follow the target whatever the caller sends", tpl)
 		}
 	}
 }

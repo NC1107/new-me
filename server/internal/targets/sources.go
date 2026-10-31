@@ -46,5 +46,7 @@ var Sources = map[string]string{
 	"brysbaert2019":    "Brysbaert, J Mem Lang 2019;109:104047 (238 words a minute for adults reading non-fiction silently, 260 for fiction)",
 	"acx":              "ACX (Audible) narration guidance of about 9,300 words per finished hour, 155 a minute (an industry rule of thumb, not a study)",
 	"pagewords":        "250 words a printed page is a typesetting convention; no measured average of printed books was found",
+	"herrmann2024":     "Herrmann et al., 2024 Adult Compendium of Physical Activities, J Sport Health Sci 2024;13:6 (MET values: 3.8 moderate walking and calisthenics, 2.8 light calisthenics, 3.0 general bodyweight exercise, 2.3 Hatha yoga, 1.0 meditating)",
+	"marshall2009":     "Marshall et al., Am J Prev Med 2009;36:410 (100 steps a minute is the cadence of moderate walking)",
 	"impellizzeri2020": "Impellizzeri et al., Int J Sports Physiol Perform 2020;15:907",
 }

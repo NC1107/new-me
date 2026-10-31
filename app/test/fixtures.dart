@@ -49,7 +49,11 @@ Map<String, dynamic> dayJson({int points = 150, int percent = 62, bool counted =
 };
 
 final _richQuests = [
-  quest('steps', 'Steps', {'unit': 'steps', 'target': 8000}),
+  quest('steps', 'Steps', {
+    'unit': 'steps',
+    'target': 8000,
+    'pointsWhy': 'Worth 100: about 80 min of walking at a moderate pace.',
+  }),
   quest('pushups', 'Push-ups', {
     'target': 30,
     'actual': 30,

@@ -449,7 +449,7 @@ func TestAFailedEnqueueReleasesTheClaimSoTheNextPassRetries(t *testing.T) {
 	h := newHarness(t, func(s *Server) { s.WithNotifier(f) })
 	nick, nadia := h.pair()
 	h.clock.Set(ny(2026, time.November, 2, 10, 0))
-	h.logActivity(nadia, "pushups", "reps", 30).expect(http.StatusCreated)
+	h.putHealth(nadia, "2026-11-02", "steps", 9000).expect(http.StatusOK)
 
 	f.set(true)
 	h.runNudges(ny(2026, time.November, 2, 10, 5))
@@ -461,7 +461,7 @@ func TestAFailedEnqueueReleasesTheClaimSoTheNextPassRetries(t *testing.T) {
 	f.set(false)
 	h.runNudges(ny(2026, time.November, 2, 10, 10))
 	got := f.of(together.EventPartnerCheer, nick.ID)
-	if len(got) != 1 || got[0].Body != "Nadia did 30 push-ups today. A cheer is one tap away." {
+	if len(got) != 1 || got[0].Body != "Nadia did 9,000 steps today. A cheer is one tap away." {
 		t.Fatalf("the retry did not send: %+v", f.msgs)
 	}
 	h.runNudges(ny(2026, time.November, 2, 10, 15))
@@ -475,12 +475,12 @@ func TestACheerPromptComesOnceAndNeverAfterACheer(t *testing.T) {
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
 	h.clock.Set(ny(2026, time.November, 2, 10, 0))
-	h.logActivity(nadia, "pushups", "reps", 30).expect(http.StatusCreated)
+	h.putHealth(nadia, "2026-11-02", "steps", 9000).expect(http.StatusOK)
 
 	h.runNudges(ny(2026, time.November, 2, 10, 5))
 	got := n.of(together.EventPartnerCheer, nick.ID)
 	if len(got) != 1 || got[0].Title != "Worth a cheer" ||
-		got[0].Body != "Nadia did 30 push-ups today. A cheer is one tap away." {
+		got[0].Body != "Nadia did 9,000 steps today. A cheer is one tap away." {
 		t.Fatalf("prompt = %+v", n.msgs)
 	}
 	if !together.WordsOK(got[0].Body) {
@@ -496,7 +496,7 @@ func TestACheerPromptComesOnceAndNeverAfterACheer(t *testing.T) {
 
 	// Next day: Nick already cheered Nadia, so there is nothing to prompt.
 	h.clock.Set(ny(2026, time.November, 3, 10, 0))
-	h.logActivity(nadia, "pushups", "reps", 30).expect(http.StatusCreated)
+	h.putHealth(nadia, "2026-11-03", "steps", 9000).expect(http.StatusOK)
 	h.cheer(nick, nadia, "fire").expect(http.StatusCreated)
 	h.runNudges(ny(2026, time.November, 3, 10, 5))
 	if len(n.of(together.EventPartnerCheer, nick.ID)) != 1 {
@@ -510,7 +510,7 @@ func TestPartnerNudgesHaveOneADayAndTheirOwnSwitches(t *testing.T) {
 	nick, nadia := h.pair()
 	h.seedChallenge(together.KindWorkouts)
 	h.clock.Set(ny(2026, time.November, 5, 17, 30))
-	h.logActivity(nadia, "pushups", "reps", 30).expect(http.StatusCreated)
+	h.putHealth(nadia, "2026-11-05", "steps", 9000).expect(http.StatusOK)
 
 	h.patch("/api/me", nick.Token, obj{"notifications": obj{"partnerNudges": false}}).expect(http.StatusOK)
 	h.runNudges(ny(2026, time.November, 5, 17, 35))

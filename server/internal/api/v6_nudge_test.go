@@ -117,13 +117,10 @@ func TestCloseToDoneNudgeOnceADay(t *testing.T) {
 	h := newHarness(t, withPush(push))
 	nick := h.joinAdmin("Nick", "green")
 	h.putHealth(nick, "2026-11-02", "steps", 8200).expect(http.StatusOK)
-	h.logActivity(nick, "reading", "minutes", 20).expect(http.StatusCreated)
-	h.logMeal(nick, "Eggs", 300, 20).expect(http.StatusCreated)
-	h.logMeal(nick, "Rice", 400, 10).expect(http.StatusCreated)
 
 	h.runNudges(ny(2026, time.November, 2, 16, 0))
 	got := push.of(together.EventCloseToDone, nick.ID)
-	if len(got) != 1 || got[0].Title != "Almost there" || got[0].Body != "70 g more protein would make today count." {
+	if len(got) != 1 || got[0].Title != "Almost there" || got[0].Body != "30 push-ups would make today count." {
 		t.Fatalf("close to done = %+v", got)
 	}
 	h.runNudges(ny(2026, time.November, 2, 16, 5))
@@ -131,7 +128,7 @@ func TestCloseToDoneNudgeOnceADay(t *testing.T) {
 		t.Fatal("once a day")
 	}
 
-	h.logMeal(nick, "Steak", 500, 75).expect(http.StatusCreated)
+	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 	h.runNudges(ny(2026, time.November, 3, 16, 0))
 	if len(push.of(together.EventCloseToDone, nick.ID)) != 1 {
 		t.Fatal("a new day starts from nothing and is far from done")

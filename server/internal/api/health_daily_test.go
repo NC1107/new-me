@@ -23,11 +23,11 @@ func TestHealthPutRecomputesAndReturnsTheDays(t *testing.T) {
 	if got.length("days") != 1 || got.str("days.0.date") != "2026-11-02" {
 		t.Fatalf("days = %s", got.Body)
 	}
-	if got.num("days.0.basePoints") != 50 || got.num("days.0.maxBase") != 400 || got.num("days.0.quests.0.actual") != 4000 {
+	if got.num("days.0.basePoints") != 75 || got.num("days.0.maxBase") != 230 || got.num("days.0.quests.0.actual") != 4000 {
 		t.Fatalf("rescored day = %s", got.Body)
 	}
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if today.num("food.burned") != 351 || today.num("day.basePoints") != 50 {
+	if today.num("food.burned") != 351 || today.num("day.basePoints") != 75 {
 		t.Fatalf("today after sync = %s", today.Body)
 	}
 }
@@ -46,7 +46,7 @@ func TestHealthPutAcrossDaysRescoresEach(t *testing.T) {
 	if got.length("days") != 2 || got.str("days.0.date") != "2026-11-02" || got.str("days.1.date") != "2026-11-03" {
 		t.Fatalf("days must come back oldest first: %s", got.Body)
 	}
-	if got.num("days.0.basePoints") != 25 || got.num("days.1.basePoints") != 100 {
+	if got.num("days.0.basePoints") != 38 || got.num("days.1.basePoints") != 150 {
 		t.Fatalf("days = %s", got.Body)
 	}
 }
@@ -61,7 +61,7 @@ func TestHealthStaleReadingNeverLowersACount(t *testing.T) {
 	// A retry that was measured earlier, or a second device that lags, arrives later.
 	stale := h.put("/api/health/daily", nick.Token, obj{"items": []obj{
 		healthReading("2026-11-02", "steps", 1000, now.Add(-time.Hour))}}).expect(http.StatusOK)
-	if stale.num("days.0.quests.0.actual") != 8000 || stale.num("days.0.basePoints") != 100 || !stale.flag("days.0.quests.0.done") {
+	if stale.num("days.0.quests.0.actual") != 8000 || stale.num("days.0.basePoints") != 150 || !stale.flag("days.0.quests.0.done") {
 		t.Fatalf("a stale reading lowered the count: %s", stale.Body)
 	}
 

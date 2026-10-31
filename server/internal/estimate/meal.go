@@ -40,6 +40,12 @@ type ItemResult struct {
 	Confidence  string  `json:"confidence"`
 	// Origin is where a saved food's numbers first came from; empty for other sources.
 	Origin string `json:"origin"`
+	// ProduceKind is what the food is for the fruit and vegetable quest (fruit, vegetable, juice,
+	// pulse) and ProduceGrams the part of the amount that counts. A database says it from the
+	// food's category; for a food only Claude estimated, both are Claude's estimate from the
+	// food's composition.
+	ProduceKind  string  `json:"produceKind"`
+	ProduceGrams float64 `json:"produceGrams"`
 	// fromDatabase marks numbers that came from a food database or a label rather than a guess.
 	fromDatabase bool
 }
@@ -184,7 +190,19 @@ const itemPrompt = `You estimate the nutrition of one food item for a personal f
 Answer only by calling the tool. Estimate the whole amount given (quantity and unit), not per 100 g.
 Use typical values for the named product or food. name is a short title of the item. kcal is a whole number. protein, carbs, fat and fiber are grams.
 confidence is high only when the food and its amount are both clear, medium when one is a guess, low when both are.
-notes is one short sentence on the main assumption. Never refuse: give your best estimate.`
+notes is one short sentence on the main assumption. Never refuse: give your best estimate.
+produceKind says what the food is made of for a fruit and vegetable count: "fruit" or "vegetable" for whole or cut fruit and vegetables, "juice" for juice or a smoothie, "pulse" for beans, peas or lentils, and "none" for everything else, including potatoes, yams, cassava, plantain and dishes where fruit or vegetables are a minor part.
+produceG is the grams of the amount given that are fruit, vegetables, juice or pulses, taken from the food's usual composition (for a mixed dish only its fruit, vegetable or pulse part), 0 when produceKind is "none". It is an estimate, not a measurement.`
+
+// itemSchema is the one-meal schema plus the produce fields, which only a single food is asked for.
+func itemSchema() map[string]any {
+	s := schema()
+	props := s["properties"].(map[string]any)
+	props["produceKind"] = map[string]any{"type": "string", "enum": []string{"none", ProduceFruit, ProduceVegetable, ProduceJuice, ProducePulse}}
+	props["produceG"] = map[string]any{"type": "number", "description": "Grams of the amount that are fruit, vegetables, juice or pulses"}
+	s["required"] = append(s["required"].([]string), "produceKind", "produceG")
+	return s
+}
 
 func (e *Estimator) estimateItem(ctx context.Context, it Item) (ItemResult, error) {
 	if e.Client == nil {
@@ -198,7 +216,7 @@ func (e *Estimator) estimateItem(ctx context.Context, it Item) (ItemResult, erro
 	if it.Grams != nil {
 		desc += fmt.Sprintf(" (%s g in total)", trimFloat(*it.Grams))
 	}
-	est, err := e.run(ctx, itemPrompt, []anthropic.Block{{Text: desc}})
+	est, err := e.runWith(ctx, itemPrompt, []anthropic.Block{{Text: desc}}, itemSchema())
 	if err != nil {
 		return ItemResult{}, err
 	}
@@ -207,6 +225,9 @@ func (e *Estimator) estimateItem(ctx context.Context, it Item) (ItemResult, erro
 	res.Confidence = est.Confidence
 	res.Grams = knownGrams(it)
 	fill(&res, Nutrients{Kcal: float64(est.Kcal), Protein: est.Protein, Carbs: est.Carbs, Fat: est.Fat, Fiber: est.Fiber})
+	if est.ProduceKind != "" && est.ProduceG > 0 {
+		res.ProduceKind, res.ProduceGrams = est.ProduceKind, est.ProduceG
+	}
 	return res, nil
 }
 
@@ -283,6 +304,9 @@ func (e *Estimator) hitResult(it Item, h hit) ItemResult {
 	res.Confidence = h.Confidence
 	res.Grams = roundTenth(math.Min(h.Resolved.Grams, maxItemGrams))
 	res.fromDatabase = countsAsDatabase(h.Food.Source)
+	if h.Food.Produce != "" && res.Grams > 0 {
+		res.ProduceKind, res.ProduceGrams = h.Food.Produce, res.Grams
+	}
 	if h.Food.Source == SourceLibrary {
 		res.Brand = h.Food.Brand
 		res.Origin = h.Food.Origin

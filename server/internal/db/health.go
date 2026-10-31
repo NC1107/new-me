@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/targets"
 )
 
 // UpsertHealthDaily stores a day's reading for one metric unless a newer one is already there,
@@ -68,6 +69,10 @@ type DayInputs struct {
 	// logged by hand; the breathing quest takes the larger of the minutes and Health's mindful minutes.
 	ProduceServings    int
 	BreathingLoggedMin int
+	// ProduceLogged and ProduceFromMeals split ProduceServings into the servings logged by hand
+	// and the servings counted from the fruit and vegetables inside logged meals.
+	ProduceLogged    int
+	ProduceFromMeals int
 	// SleepNights are the sleep nights ending on the 7 days before the date and on the date, which
 	// the steady-bedtime quest compares against the person's own usual times; Loc is the zone
 	// those times are read in.
@@ -125,9 +130,10 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 		return in, err
 	}
 	in.RepsExercise = repsExercise
+	var mealProduce targets.ProduceGramsToday
 	err = q.QueryRow(ctx, `
 		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.produce, a.breathing, a.other_full, a.other_easy,
-		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber
+		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber, m.produce, m.juice, m.pulse
 		FROM (
 			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups' AND exercise = $3), 0)::int AS pushups,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_minutes'), 0)::int AS reading_minutes,
@@ -145,14 +151,19 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(protein_g), 0)::float8 AS protein,
 			       COALESCE(sum(carbs_g), 0)::float8 AS carbs,
 			       COALESCE(sum(fat_g), 0)::float8 AS fat,
-			       COALESCE(sum(fiber_g), 0)::float8 AS fiber
+			       COALESCE(sum(fiber_g), 0)::float8 AS fiber,
+			       COALESCE(sum(produce_g), 0)::float8 AS produce,
+			       COALESCE(sum(juice_g), 0)::float8 AS juice,
+			       COALESCE(sum(pulse_g), 0)::float8 AS pulse
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
 		) m`, userID, date, repsExercise).Scan(
-		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceServings, &in.BreathingLoggedMin, &in.OtherFullMinutes, &in.OtherEasyMinutes,
-		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
+		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceLogged, &in.BreathingLoggedMin, &in.OtherFullMinutes, &in.OtherEasyMinutes,
+		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG, &mealProduce.Whole, &mealProduce.Juice, &mealProduce.Pulse)
 	if err != nil {
 		return in, err
 	}
+	in.ProduceFromMeals = targets.ServingsFromMeals(mealProduce)
+	in.ProduceServings = targets.ProduceServingsToday(in.ProduceLogged, mealProduce)
 	setReps, err := RepsSetReps(ctx, q, userID, date, repsExercise)
 	if err != nil {
 		return in, err

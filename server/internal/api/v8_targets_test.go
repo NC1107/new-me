@@ -374,7 +374,7 @@ func TestPushupMaxRecordsAndSizesTheDailyTarget(t *testing.T) {
 	got := h.get("/api/targets", nick.Token).expect(http.StatusOK)
 	p := targetPath(t, got, "pushups")
 	if !got.isNull(p+".value") || got.str(p+".missing.0") != "pushupMax" || got.str(p+".label") != "derivation" ||
-		!strings.Contains(got.str(p+".formula"), "derivation") {
+		!strings.Contains(got.str(p+".formula"), "reps left in reserve") {
 		t.Fatalf("pushups = %s", got.Body)
 	}
 
@@ -396,6 +396,11 @@ func TestPushupMaxRecordsAndSizesTheDailyTarget(t *testing.T) {
 	if got.num(p+".value") != 90 || got.num(p+".details.repsPerSet") != 30 || got.num(p+".details.rangePerSet.0") != 28 ||
 		got.num(p+".details.rangePerSet.1") != 32 || got.num(p+".details.latestMax") != 40 || got.num(p+".current") != 30 {
 		t.Fatalf("pushups = %s", got.Body)
+	}
+	// The plain reason leads the sheet, so it states the max and avoids the jargon of the formula.
+	if why := got.str(p + ".why"); why != "About three quarters of your best set of 40, so each set ends with some reps left in the tank." ||
+		got.str(p+".cite") != "Zourdos 2016" {
+		t.Fatalf("pushups reason = %s", got.Body)
 	}
 
 	// A second test the same day replaces the first; the newest day wins.

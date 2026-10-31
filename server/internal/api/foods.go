@@ -61,6 +61,8 @@ type libFoodJSON struct {
 	SourceURL *string `json:"sourceUrl"`
 	// Category is the USDA food category on USDA candidates, null elsewhere.
 	Category *string `json:"category"`
+	// ProduceKind is fruit, vegetable, juice or pulse when the food's database said so, else "".
+	ProduceKind string `json:"produceKind"`
 }
 
 func toLibFoodJSON(f db.Food) libFoodJSON {
@@ -72,7 +74,7 @@ func toLibFoodJSON(f db.Food) libFoodJSON {
 	return libFoodJSON{ID: &id, Saved: true, Name: f.Name, Brand: f.Brand, ServingText: f.ServingText,
 		ServingGrams: f.ServingGrams, Kcal: f.Kcal, Protein: f.Protein, Carbs: f.Carbs, Fat: f.Fat,
 		Fiber: f.Fiber, Source: f.Source, SourceID: f.SourceID, Servings: servings, UseCount: f.UseCount,
-		LastUsedAt: f.LastUsedAt}
+		LastUsedAt: f.LastUsedAt, ProduceKind: f.ProduceKind}
 }
 
 // maxCategory bounds a category from USDA, whose longest names run to about 50 characters.
@@ -100,7 +102,7 @@ func candidateJSON(f estimate.Food) (libFoodJSON, bool) {
 		ServingGrams: roundTenth(v.Grams), Kcal: int(math.Round(v.N.Kcal)), Protein: roundTenth(v.N.Protein),
 		Carbs: roundTenth(v.N.Carbs), Fat: roundTenth(v.N.Fat), Fiber: roundTenth(v.N.Fiber),
 		Source: f.Source, SourceID: f.ID, Servings: servings, ImageURL: nonEmpty(f.ImageURL), SourceURL: nonEmpty(f.SourceURL),
-		Category: nonEmpty(truncate(f.Category, maxCategory))}, true
+		Category: nonEmpty(truncate(f.Category, maxCategory)), ProduceKind: f.Produce}, true
 }
 
 func nonEmpty(s string) *string {
@@ -133,7 +135,7 @@ func toLibrary(foods []db.Food) []estimate.LibraryFood {
 	out := make([]estimate.LibraryFood, len(foods))
 	for i, f := range foods {
 		lf := estimate.LibraryFood{ID: f.ID, Name: f.Name, Brand: f.Brand, ServingText: f.ServingText,
-			ServingGrams: f.ServingGrams, Source: f.Source, SourceID: f.SourceID, UseCount: f.UseCount,
+			ServingGrams: f.ServingGrams, Source: f.Source, SourceID: f.SourceID, UseCount: f.UseCount, Produce: f.ProduceKind,
 			N: estimate.Nutrients{Kcal: float64(f.Kcal), Protein: f.Protein, Carbs: f.Carbs, Fat: f.Fat, Fiber: f.Fiber}}
 		for _, s := range f.Servings {
 			lf.Servings = append(lf.Servings, estimate.Portion{Label: s.Text, Grams: s.Grams})
@@ -250,6 +252,7 @@ type foodRequest struct {
 	Source       *string        `json:"source"`
 	SourceID     *string        `json:"sourceId"`
 	Servings     *[]servingJSON `json:"servings"`
+	ProduceKind  *string        `json:"produceKind"`
 }
 
 // apply validates the request fields that are set and writes them into f.
@@ -294,6 +297,12 @@ func (req foodRequest) apply(f *db.Food) *httpError {
 			return invalid("kcal must be between 0 and 10000")
 		}
 		f.Kcal = int(math.Round(*req.Kcal))
+	}
+	if req.ProduceKind != nil {
+		if !estimate.ValidProduceKind(*req.ProduceKind) {
+			return invalid("produceKind must be fruit, vegetable, juice, pulse or empty")
+		}
+		f.ProduceKind = *req.ProduceKind
 	}
 	if req.Servings != nil {
 		if len(*req.Servings) > maxServings {

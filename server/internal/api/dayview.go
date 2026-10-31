@@ -33,7 +33,7 @@ type questJSON struct {
 	// entries did.
 	DoneBy *score.DoneBy `json:"doneBy"`
 	// Detail is extra, quest-specific facts: the steady bedtime sends the night against the
-	// person's usual times. Absent for every other quest.
+	// person's usual times, and fruit and vegetables send the servings from meals and logged by hand.
 	Detail map[string]any `json:"detail,omitempty"`
 }
 
@@ -93,6 +93,9 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		}
 		if q.Key == db.QuestSleepRegularity {
 			item.Detail = regularityDetail(engine.RegularityCheck(q, s.Inputs))
+		}
+		if q.Key == db.QuestProduce {
+			item.Detail = map[string]any{"fromMeals": s.Inputs.ProduceFromMeals, "logged": s.Inputs.ProduceLogged}
 		}
 		out = append(out, item)
 	}

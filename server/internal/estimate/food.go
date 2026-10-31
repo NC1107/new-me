@@ -66,6 +66,9 @@ type Food struct {
 	// Category is USDA's food category, such as "Sausages, Hotdogs & Brats", which the app draws
 	// as an icon in place of the photo USDA does not have.
 	Category string
+	// Produce is what the food is for the fruit and vegetable quest, one of the Produce
+	// constants, taken from the database's own classification; empty when it is not produce.
+	Produce string
 }
 
 func (f Food) per100() (Nutrients, bool) {

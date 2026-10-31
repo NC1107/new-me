@@ -177,6 +177,7 @@ The migration also widens the activity type check for `calisthenics_minutes`.
   The page recommends 2 to 3 days a week in words only.
 - Per-exercise rep history and progression for the circuit.
   The daily reps quest keeps its own progression.
-- Photos or video for the new exercises.
+- Photos for jumping jacks, wall sits and pike push-ups, which free-exercise-db does not have, and video for any exercise.
+  Mountain climbers and jump squats got its photos in migration `0038_v20_calisthenics_photos.sql`.
 - A server-side voice parameter for live lines.
   Rendering the coach offline worked, so the app does not need it.

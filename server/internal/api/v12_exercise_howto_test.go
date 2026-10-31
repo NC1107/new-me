@@ -39,8 +39,8 @@ func TestEveryCatalogExerciseHasAHowTo(t *testing.T) {
 			t.Errorf("%s has %d photos, want 0 or 2", key, photos)
 		}
 	}
-	if withPhotos != 40 {
-		t.Fatalf("%d exercises have photos, want 40", withPhotos)
+	if withPhotos != 42 {
+		t.Fatalf("%d exercises have photos, want 42", withPhotos)
 	}
 	i := exerciseIndex(t, got, "push_up")
 	if got.str(fmt.Sprintf("exercises.%d.imageUrls.1", i)) != "/api/exercises/push_up/images/1" {

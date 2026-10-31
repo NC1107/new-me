@@ -40,21 +40,112 @@ Future<void> showDayDetailSheet(BuildContext context, {required String date}) as
 }
 
 /// The day's entries with their time and quantity, each removable with a swipe.
-class DayDetailSheet extends ConsumerStatefulWidget {
+class DayDetailSheet extends StatefulWidget {
   const DayDetailSheet({super.key, required this.date});
 
   final String date;
 
   @override
-  ConsumerState<DayDetailSheet> createState() => _DayDetailSheetState();
+  State<DayDetailSheet> createState() => _DayDetailSheetState();
 }
 
-class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
-  List<LogEntry>? _entries;
-  Object? _error;
-
+class _DayDetailSheetState extends State<DayDetailSheet> {
   /// Set only by a fresh load, so deleting the last entry keeps the sheet (and its Undo) put.
   bool _emptyOnLoad = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_emptyOnLoad) return _empty(context);
+    final height = MediaQuery.sizeOf(context).height * 0.7;
+    return ScaffoldMessenger(
+      child: SizedBox(
+        height: height,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kGutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Semantics(
+                    header: true,
+                    child: const Text("Today's entries", style: AppText.title),
+                  ),
+                ),
+                Expanded(
+                  child: EntryList(
+                    date: widget.date,
+                    onLoaded: (entries) => setState(() => _emptyOnLoad = entries.isEmpty),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Nothing to list, so the sheet is only as tall as its title, line and two actions.
+  Widget _empty(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      kGutter,
+      0,
+      kGutter,
+      kGutter + MediaQuery.paddingOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(header: true, child: const Text("Today's entries", style: AppText.title)),
+        const SizedBox(height: 8),
+        Text('No meals or sets logged yet.', style: AppText.body.copyWith(color: kInkSecondary)),
+        const SizedBox(height: 20),
+        ChunkyButton(
+          label: 'Log a meal',
+          icon: Icons.add_rounded,
+          onPressed: () => Navigator.of(context).pop(_Next.meal),
+        ),
+        const SizedBox(height: kCardGap),
+        ChunkyButton.secondary(
+          label: 'Log a set',
+          icon: Icons.fitness_center_rounded,
+          onPressed: () => Navigator.of(context).pop(_Next.set),
+        ),
+      ],
+    ),
+  );
+}
+
+/// One day's log entries, each removable with a swipe and Undo, a meal opening its editor.
+/// [matches] narrows the list (the quest sheet shows one quest's entries); [shrinkWrap] sizes it
+/// to its rows for use inside another scroll view. [onLoaded] is called with every fresh load.
+class EntryList extends ConsumerStatefulWidget {
+  const EntryList({
+    super.key,
+    required this.date,
+    this.matches,
+    this.emptyText = 'No meals or sets logged yet.',
+    this.shrinkWrap = false,
+    this.onLoaded,
+  });
+
+  final String date;
+  final bool Function(LogEntry entry)? matches;
+  final String emptyText;
+  final bool shrinkWrap;
+  final ValueChanged<List<LogEntry>>? onLoaded;
+
+  @override
+  ConsumerState<EntryList> createState() => _EntryListState();
+}
+
+class _EntryListState extends ConsumerState<EntryList> {
+  List<LogEntry>? _entries;
+  Object? _error;
 
   @override
   void initState() {
@@ -65,13 +156,12 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
   Future<void> _load() async {
     try {
       final entries = await ref.read(logActionsProvider).entriesFor(widget.date);
-      if (mounted) {
-        setState(() {
-          _entries = entries;
-          _emptyOnLoad = entries.isEmpty;
-          _error = null;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _entries = entries;
+        _error = null;
+      });
+      widget.onLoaded?.call(entries);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e);
     }
@@ -116,70 +206,8 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (_emptyOnLoad) return _empty(context);
-    final height = MediaQuery.sizeOf(context).height * 0.7;
-    return ScaffoldMessenger(
-      child: Builder(
-        builder: (context) => SizedBox(
-          height: height,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: kGutter),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Semantics(
-                      header: true,
-                      child: const Text("Today's entries", style: AppText.title),
-                    ),
-                  ),
-                  Expanded(child: _content(ScaffoldMessenger.of(context))),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Nothing to list, so the sheet is only as tall as its title, line and two actions.
-  Widget _empty(BuildContext context) => Padding(
-    padding: EdgeInsets.fromLTRB(
-      kGutter,
-      0,
-      kGutter,
-      kGutter + MediaQuery.paddingOf(context).bottom,
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(header: true, child: const Text("Today's entries", style: AppText.title)),
-        const SizedBox(height: 8),
-        Text('No meals or sets logged yet.', style: AppText.body.copyWith(color: kInkSecondary)),
-        const SizedBox(height: 20),
-        ChunkyButton(
-          label: 'Log a meal',
-          icon: Icons.add_rounded,
-          onPressed: () => Navigator.of(context).pop(_Next.meal),
-        ),
-        const SizedBox(height: kCardGap),
-        ChunkyButton.secondary(
-          label: 'Log a set',
-          icon: Icons.fitness_center_rounded,
-          onPressed: () => Navigator.of(context).pop(_Next.set),
-        ),
-      ],
-    ),
-  );
-
-  Widget _content(ScaffoldMessengerState messenger) {
-    final entries = _entries;
-    if (entries == null) {
+    final all = _entries;
+    if (all == null) {
       if (_error != null) {
         return Center(
           child: ErrorBlock(
@@ -200,16 +228,19 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
         ],
       );
     }
+    final test = widget.matches;
+    final entries = test == null ? all : all.where(test).toList();
     if (entries.isEmpty) {
       return Align(
         alignment: Alignment.topLeft,
-        child: Text(
-          'No meals or sets logged yet.',
-          style: AppText.body.copyWith(color: kInkSecondary),
-        ),
+        child: Text(widget.emptyText, style: AppText.body.copyWith(color: kInkSecondary)),
       );
     }
+    final messenger = ScaffoldMessenger.of(context);
     return ListView.separated(
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
+      padding: EdgeInsets.zero,
       itemCount: entries.length,
       separatorBuilder: (_, _) => const Divider(height: 2, thickness: 2, color: kSunken),
       itemBuilder: (context, i) {
@@ -228,7 +259,7 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
             customSemanticsActions: {
               const CustomSemanticsAction(label: 'Delete'): () => _delete(entry, messenger),
             },
-            child: _EntryRow(
+            child: EntryRow(
               entry: entry,
               units: ref.watch(unitsProvider),
               onTap: entry is MealLog ? () => _edit(entry) : null,
@@ -240,8 +271,8 @@ class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
   }
 }
 
-class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.entry, required this.units, this.onTap});
+class EntryRow extends StatelessWidget {
+  const EntryRow({super.key, required this.entry, required this.units, this.onTap});
 
   final LogEntry entry;
   final Units units;

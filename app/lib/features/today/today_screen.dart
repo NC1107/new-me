@@ -35,8 +35,10 @@ import 'day_card.dart';
 import 'day_counted_sheet.dart';
 import 'day_detail_sheet.dart';
 import 'plan_sheet.dart';
+import 'quest_sheet.dart';
 import 'right_now.dart';
 import 'streak_sheet.dart';
+import 'turned_off_quests.dart';
 import 'today_header.dart';
 import 'today_providers.dart';
 import 'today_skeleton.dart';
@@ -155,6 +157,26 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
 
   void _openEntries() => showDayDetailSheet(context, date: today.localToday);
 
+  Future<void> _openQuest(String key) async {
+    final title = today.quests.where((q) => q.key == key).firstOrNull?.title ?? 'Quest';
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showQuestSheet(context, questKey: key);
+    if (result != QuestSheetResult.turnedOff) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('$title is off'),
+          persist: false,
+          duration: kUndoWindow,
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => setQuestEnabled(ref, key, true).ignore(),
+          ),
+        ),
+      );
+  }
+
   void _openPlan() {
     final plan = today.plan;
     if (plan != null) showPlanSheet(context, plan: plan, readiness: today.readiness);
@@ -260,7 +282,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             key: ValueKey(q.key),
             quest: q,
             units: ref.watch(unitsProvider),
-            onTap: _openEntries,
+            onTap: () => _openQuest(q.key),
             onAdd: kind == null ? null : () => showLogSheet(context, kind: kind),
             listeningMinutes: q.key == 'reading' ? today.listeningMinutes : 0,
             listeningNote: q.key == 'reading' && today.listeningSyncedAt != null
@@ -274,6 +296,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       cards.add(const SizedBox(height: 12));
       cards.add(const HealthNote());
     }
+    cards.add(const TurnedOffRow());
     if (!today.health.stepsEverSynced && !connectShown) {
       cards.insert(0, connect());
       cards.insert(0, const SizedBox(height: kCardGap));

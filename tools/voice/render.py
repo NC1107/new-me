@@ -9,6 +9,9 @@ Setup, once:
     looks for its data in the build machine's path, so point PHONEMIZER_ESPEAK_LIBRARY at the system
     one (for example /usr/lib64/libespeak-ng.so.1).
 
+A clip whose id starts with a prefix listed under "profiles" in the manifest uses that profile's
+voice and speed instead of the defaults, so the yoga teacher and the calisthenics coach differ.
+
 Run from the repo root:
     .venv/bin/python tools/voice/render.py --models /path/to/models [--only yoga_tree] [--missing]
 
@@ -69,6 +72,20 @@ def write_dart(clips: dict, seconds: dict) -> None:
     subprocess.run(["dart", "format", str(DART)], check=False)
 
 
+def settings_for(manifest: dict, clip_id: str) -> tuple[str, float]:
+    """The voice and speed of a clip: the longest matching entry of "profiles", else the defaults.
+
+    The yoga class keeps the default voice; the calisthenics coach (ids starting "cal.") has its own.
+    """
+    best = max(
+        (prefix for prefix in manifest.get("profiles", {}) if clip_id.startswith(prefix)),
+        key=len,
+        default=None,
+    )
+    profile = manifest["profiles"][best] if best else {}
+    return profile.get("voice", manifest["voice"]), profile.get("speed", manifest["speed"])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", required=True, type=Path)
@@ -90,9 +107,8 @@ def main() -> int:
         )
         if not wanted:
             continue
-        samples, rate = kokoro.create(
-            text, voice=manifest["voice"], speed=manifest["speed"], lang=manifest["lang"]
-        )
+        voice, speed = settings_for(manifest, clip_id)
+        samples, rate = kokoro.create(text, voice=voice, speed=speed, lang=manifest["lang"])
         with tempfile.TemporaryDirectory() as tmp:
             wav = Path(tmp) / "clip.wav"
             sf.write(wav, samples, rate)

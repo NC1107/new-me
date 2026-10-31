@@ -8,8 +8,12 @@ import 'set_assist.dart' show kHoldLeadInSeconds;
 /// Under this much time a stopped session is not worth logging.
 const kGuidedMinLogSeconds = 30;
 
-/// One timed hold of a guided routine: which stretch or pose it belongs to, how long it lasts,
-/// and how to tell it apart from the other holds of the same step.
+/// What a hold asks of the person: a countdown, a number of reps at their own pace, or a rest.
+enum GuidedKind { timed, reps, rest }
+
+/// One hold of a guided routine: which stretch, pose or exercise it belongs to, how long it
+/// lasts, and how to tell it apart from the other holds of the same step. A [GuidedKind.reps]
+/// hold has no countdown: it waits for the person to say they are done.
 @immutable
 class GuidedHold {
   const GuidedHold({
@@ -18,6 +22,11 @@ class GuidedHold {
     required this.label,
     required this.firstOfStep,
     required this.seconds,
+    this.kind = GuidedKind.timed,
+    this.reps = 0,
+    this.round = 0,
+    this.rounds = 0,
+    this.section = '',
   });
 
   final Exercise exercise;
@@ -28,7 +37,25 @@ class GuidedHold {
   /// "Left side", "Hold 1 of 2", or a short instruction.
   final String label;
   final bool firstOfStep;
+
+  /// The countdown of a timed hold or a rest. For a rep hold it is only the estimate that sizes
+  /// the progress bar and the minutes on the intro, since the person sets the pace.
   final int seconds;
+  final GuidedKind kind;
+
+  /// The target of a rep hold.
+  final int reps;
+
+  /// Which round of a circuit this hold is in, counted from 1, and how many there are; 0 outside one.
+  final int round;
+  final int rounds;
+
+  /// "Warm-up", "Circuit" or "Cool-down" for a calisthenics hold; empty elsewhere.
+  final String section;
+
+  bool get isReps => kind == GuidedKind.reps;
+  bool get isRest => kind == GuidedKind.rest;
+  bool get lastRound => rounds > 1 && round == rounds;
 }
 
 enum GuidedPhase { leadIn, hold, done }
@@ -44,17 +71,21 @@ const kGuidedHalfwayMinSeconds = 20;
 /// The last seconds of a hold that tick.
 const kGuidedCountdownSeconds = 3;
 
-/// Seconds a routine takes with its lead-ins, for the intro's "about N minutes".
+/// Seconds a routine takes with its lead-ins, for the intro's "about N minutes". A rest has no
+/// lead-in.
 int guidedTotalSeconds(List<GuidedHold> holds) =>
-    holds.fold(0, (sum, h) => sum + h.seconds + kHoldLeadInSeconds);
+    holds.fold(0, (sum, h) => sum + h.seconds + (h.isRest ? 0 : kHoldLeadInSeconds));
 
 /// The session clock as plain state: one [tick] per second of active time, a 3 second lead-in
-/// before every hold, auto-advance, pause, skip and back. It never reads the wall clock, so the
-/// page can replay seconds spent in the background. Mobility and yoga share it.
+/// before every hold but a rest, auto-advance, pause, skip and back. A rep hold stops the
+/// countdown and waits for [complete]. It never reads the wall clock, so the page can replay
+/// seconds spent in the background. Mobility, yoga and calisthenics share it.
 class GuidedController extends ChangeNotifier {
   GuidedController(this.holds) : assert(holds.isNotEmpty) {
     _holdLeft = holds.first.seconds;
   }
+
+  static const maxReps = 999;
 
   final List<GuidedHold> holds;
 
@@ -63,7 +94,11 @@ class GuidedController extends ChangeNotifier {
   int _leadLeft = kHoldLeadInSeconds;
   late int _holdLeft;
   int _active = 0;
+  int _elapsed = 0;
   bool _paused = false;
+  // Reps the person set before tapping Done, and the reps of the holds they finished.
+  final Map<int, int> _adjusted = {};
+  final Map<int, int> _completed = {};
 
   int get index => _index;
   GuidedHold get current => holds[_index];
@@ -73,6 +108,34 @@ class GuidedController extends ChangeNotifier {
   GuidedPhase get phase => _phase;
   int get leadLeft => _leadLeft;
   int get holdLeft => _holdLeft;
+
+  /// Seconds into the current hold, which a rep hold counts up because it has no countdown.
+  int get holdElapsed => current.isReps ? _elapsed : current.seconds - _holdLeft;
+
+  /// A rep hold the person is doing now, which only [complete] ends.
+  bool get awaitingDone => _phase == GuidedPhase.hold && current.isReps && !finished;
+
+  /// The reps to do on the current rep hold: the target unless the person changed it.
+  int get currentReps => _adjusted[_index] ?? current.reps;
+
+  void adjustReps(int delta) {
+    if (!current.isReps || finished) return;
+    final next = (currentReps + delta).clamp(1, maxReps);
+    if (next == currentReps) return;
+    _adjusted[_index] = next;
+    notifyListeners();
+  }
+
+  /// Reps finished per catalog exercise, as set by the person before Done. Skipped holds add none.
+  Map<String, int> get repsDone {
+    final out = <String, int>{};
+    _completed.forEach((i, reps) {
+      final key = holds[i].exercise.key;
+      out[key] = (out[key] ?? 0) + reps;
+    });
+    return out;
+  }
+
   bool get paused => _paused;
   bool get finished => _phase == GuidedPhase.done;
 
@@ -86,7 +149,7 @@ class GuidedController extends ChangeNotifier {
     if (finished) return 1;
     final total = holds.fold(0, (sum, h) => sum + h.seconds);
     final before = holds.take(_index).fold(0, (sum, h) => sum + h.seconds);
-    final held = _phase == GuidedPhase.hold ? current.seconds - _holdLeft : 0;
+    final held = _phase == GuidedPhase.hold && !current.isReps ? current.seconds - _holdLeft : 0;
     return (before + held) / total;
   }
 
@@ -107,19 +170,37 @@ class GuidedController extends ChangeNotifier {
       }
       _phase = GuidedPhase.hold;
       _holdLeft = current.seconds;
+      _elapsed = 0;
       notifyListeners();
       return GuidedEvent.go;
+    }
+    if (current.isReps) {
+      _elapsed += 1;
+      return null;
     }
     _holdLeft -= 1;
     if (_holdLeft > 0) {
       notifyListeners();
       if (_holdLeft <= kGuidedCountdownSeconds) return GuidedEvent.countdown;
-      if (current.seconds >= kGuidedHalfwayMinSeconds &&
+      if (!current.isRest &&
+          current.seconds >= kGuidedHalfwayMinSeconds &&
           current.seconds - _holdLeft == current.seconds ~/ 2) {
         return GuidedEvent.halfway;
       }
       return null;
     }
+    return _advance();
+  }
+
+  /// The person finished the reps of the current rep hold. Returns null when no rep hold is
+  /// being done, or while paused.
+  GuidedEvent? complete() {
+    if (_paused || !awaitingDone) return null;
+    _completed[_index] = currentReps;
+    return _advance();
+  }
+
+  GuidedEvent _advance() {
     if (_index == holds.length - 1) {
       _phase = GuidedPhase.done;
       notifyListeners();
@@ -167,8 +248,12 @@ class GuidedController extends ChangeNotifier {
 
   void _start(int index) {
     _index = index;
-    _phase = GuidedPhase.leadIn;
-    _leadLeft = kHoldLeadInSeconds;
+    _elapsed = 0;
+    _adjusted.remove(index);
+    _completed.remove(index);
+    final rest = holds[index].isRest;
+    _phase = rest ? GuidedPhase.hold : GuidedPhase.leadIn;
+    _leadLeft = rest ? 0 : kHoldLeadInSeconds;
     _holdLeft = holds[index].seconds;
     notifyListeners();
   }

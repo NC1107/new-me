@@ -102,6 +102,7 @@ var wireActivity = map[string][2]string{
 	db.ActivityWaterML:        {"water", "ml"},
 	db.ActivityProduce:        {"produce", "servings"},
 	db.ActivityBreathing:      {"breathing", "minutes"},
+	db.ActivityCalisthenics:   {"calisthenics", "minutes"},
 }
 
 // storedActivity resolves the wire's type and unit to a stored type. The stored names are
@@ -182,7 +183,7 @@ func validateLog(req createLogRequest) (validated, *httpError) {
 	case db.KindActivity:
 		stored, ok := storedActivity(req.Type, req.Unit)
 		if !ok {
-			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga, water (unit ml), produce (unit servings), breathing or other")
+			return v, invalid("type must be pushups, reading (with unit minutes or pages), yoga, water (unit ml), produce (unit servings), breathing, calisthenics or other")
 		}
 		activity := db.NewActivityLog{Type: stored, Quantity: req.Quantity, ClientOpID: v.opID}
 		if stored == db.ActivityOtherMinutes {

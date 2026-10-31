@@ -11,6 +11,7 @@ import '../../audio/session_audio.dart';
 import '../../audio/voice_line.dart';
 import '../../state/guided_sound.dart';
 import '../../state/log_actions.dart';
+import '../../state/today.dart';
 import '../../state/training.dart';
 import '../../state/yoga.dart';
 import '../../theme/accent.dart';
@@ -18,6 +19,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
+import '../../util/reps_exercises.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
@@ -35,8 +37,23 @@ enum _Logging { idle, busy, done, failed, nothing }
 
 enum _EndChoice { keepGoing, discard, log }
 
+/// One part of an intro outline, such as the warm-up, and its exercises.
+class GuidedOutlineSection {
+  GuidedOutlineSection(this.heading, this.rows);
+
+  final String heading;
+  final List<GuidedOutlineRow> rows;
+}
+
+class GuidedOutlineRow {
+  const GuidedOutlineRow(this.name, this.detail);
+
+  final String name;
+  final String detail;
+}
+
 /// What differs between guided routines: the words around the timer and how the holds are built.
-/// Mobility and the yoga flows both run on [GuidedPage].
+/// Mobility, the yoga flows and calisthenics all run on [GuidedPage].
 class GuidedRoutine {
   const GuidedRoutine({
     required this.title,
@@ -50,6 +67,14 @@ class GuidedRoutine {
     required this.emptyCopy,
     required this.footnote,
     required this.build,
+    this.outline,
+    this.voice = const GuidedVoice(),
+    this.activityType = 'yoga',
+    this.loggedTo = 'your yoga quest',
+    this.subtitleLead = '',
+    this.logsReps = false,
+    this.strengthCreditMinutes,
+    this.voiceCountdown = false,
   });
 
   /// "Mobility" or "Yoga 10".
@@ -72,6 +97,30 @@ class GuidedRoutine {
   final String emptyCopy;
   final String footnote;
   final List<GuidedHold> Function(ExerciseCatalog catalog) build;
+
+  /// Sections for the intro in place of one numbered list, for a routine with a warm-up,
+  /// rounds and a cool-down.
+  final List<GuidedOutlineSection> Function(List<GuidedHold> holds)? outline;
+
+  /// The script that narrates the session.
+  final GuidedVoice voice;
+
+  /// The activity type the finished minutes are logged as, and where they count, for "Logged 20
+  /// minutes to ...".
+  final String activityType;
+  final String loggedTo;
+
+  /// Before "exercise 3 of 30" in the app bar, such as the level.
+  final String subtitleLead;
+
+  /// Whether finished rep steps are logged toward the daily reps quest.
+  final bool logsReps;
+
+  /// The minutes from which a finished session counts as the day's strength session, if it can.
+  final int? strengthCreditMinutes;
+
+  /// Whether the voice counts the last seconds of a hold, which replaces the tick tones.
+  final bool voiceCountdown;
 }
 
 /// A guided routine: a timer with a lead-in before each hold, the photos and steps of the
@@ -101,6 +150,13 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
   _Logging _logging = _Logging.idle;
   String? _error;
   int _loggedMinutes = 0;
+  // Reps finished by exercise name, shown on the last screen; those of the daily-reps exercise
+  // are logged too, each under its own id so a retry cannot count them twice.
+  Map<String, int> _repsByKey = const {};
+  Map<String, String> _names = const {};
+  // Read when the session ends, since logging the minutes refreshes Today.
+  String? _questExercise;
+  final Map<String, String> _repsOpIds = {};
   // One id for the whole session, so a retry after a dropped reply cannot log it twice.
   final _clientOpId = newClientOpId();
 
@@ -111,6 +167,8 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     _audio = ref.read(sessionAudioProvider);
     // Read now so the saved choice has loaded by the time Start is tapped.
     ref.read(guidedSoundProvider);
+    // Needed at the end to log reps toward the quest's own exercise.
+    if (_routine.logsReps) ref.read(todayProvider);
     _lifecycle = AppLifecycleListener(onHide: _hide, onShow: _show);
   }
 
@@ -129,11 +187,12 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     SemanticsService.sendAnnouncement(View.of(context), message, TextDirection.ltr);
   }
 
-  String _holdPhrase(GuidedHold h) => '${h.exercise.name}, ${h.label}';
+  String _holdPhrase(GuidedHold h) =>
+      h.isRest ? 'Rest. Next, ${h.exercise.name}' : '${h.exercise.name}, ${h.label}';
 
-  final _voice = const GuidedVoice();
+  GuidedVoice get _voice => _routine.voice;
   int _cueIndex = -1;
-  Map<int, VoiceLine> _cues = const {};
+  Map<int, List<VoiceLine>> _cues = const {};
 
   /// How many changes ahead of the current hold are fetched from the server voice.
   static const _prefetchHolds = 3;
@@ -178,10 +237,10 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     if (session.phase != GuidedPhase.hold || !_voiceOn) return;
     if (_cueIndex != session.index) {
       _cueIndex = session.index;
-      _cues = _voice.cues(session.holds, session.index);
+      _cues = _voice.cueLines(session.holds, session.index);
     }
-    final clip = _cues[session.current.seconds - session.holdLeft];
-    if (clip != null) _audio.playLines([clip]);
+    final lines = _cues[session.holdElapsed];
+    if (lines != null) _audio.playLines(lines);
   }
 
   void _releaseScreen() {
@@ -194,6 +253,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
   /// where there is one. The next hold of the same pose is just its label.
   static String nextPhrase(GuidedHold? from, GuidedHold? to) {
     if (to == null) return 'Last one';
+    if (to.isRest) return 'Rest';
     if (from != null && from.stepIndex == to.stepIndex) return to.label;
     final side = to.label.startsWith('Left') || to.label.startsWith('Right') ? ', ${to.label}' : '';
     return '${to.exercise.name}$side';
@@ -270,9 +330,13 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
         if (loud) HapticFeedback.selectionClick();
       case GuidedEvent.go:
         if (loud) HapticFeedback.mediumImpact();
-        _announce('Go');
+        _announce(
+          session.current.isReps
+              ? 'Go. ${session.currentReps} reps. Tap Done when you finish'
+              : 'Go',
+        );
       case GuidedEvent.countdown:
-        if (loud) _tone((a) => a.tick());
+        if (loud && !(_routine.voiceCountdown && _voiceOn)) _tone((a) => a.tick());
       case GuidedEvent.halfway:
         if (loud) _tone((a) => a.halfway());
       case GuidedEvent.nextHold:
@@ -338,6 +402,21 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     );
   }
 
+  /// The person finished the reps of a rep step, so the session moves on.
+  void _done() {
+    final session = _session!;
+    final event = session.complete();
+    if (event == null) return;
+    HapticFeedback.mediumImpact();
+    _react(event, session);
+    if (session.finished) _finish();
+  }
+
+  void _adjustReps(int delta) {
+    _session!.adjustReps(delta);
+    HapticFeedback.selectionClick();
+  }
+
   void _finish() {
     final session = _session!;
     _ticker?.cancel();
@@ -352,12 +431,45 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
       _announce('${_routine.title} done. Nothing logged');
       return;
     }
-    _loggedMinutes = session.minutes;
+    _remember(session);
     setState(() => _stage = _Stage.finished);
     _announce(
       '${_routine.title} done. ${session.minutes} ${session.minutes == 1 ? 'minute' : 'minutes'}',
     );
     unawaited(_log());
+  }
+
+  void _remember(GuidedController session) {
+    _loggedMinutes = session.minutes;
+    _repsByKey = session.repsDone;
+    _names = {for (final h in session.holds) h.exercise.key: h.exercise.name};
+    _questExercise = _currentQuestExercise();
+  }
+
+  /// The exercise today's daily-reps quest counts, or null when that quest is off today.
+  String? _currentQuestExercise() {
+    final quests = ref.read(todayProvider).value?.data.quests ?? const <Quest>[];
+    for (final q in quests) {
+      if (q.key == 'pushups') return q.exercise ?? kDefaultRepsExercise;
+    }
+    return null;
+  }
+
+  Future<void> _logReps() async {
+    final exercise = _questExercise;
+    final reps = exercise == null ? 0 : (_repsByKey[exercise] ?? 0);
+    if (reps < 1) return;
+    await ref
+        .read(logActionsProvider)
+        .create(
+          ActivityDraft(
+            clientOpId: _repsOpIds.putIfAbsent(exercise!, newClientOpId),
+            type: 'pushups',
+            quantity: math.min(reps, 500),
+            unit: 'reps',
+            exercise: exercise,
+          ),
+        );
   }
 
   Future<void> _log() async {
@@ -372,11 +484,12 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
           .create(
             ActivityDraft(
               clientOpId: _clientOpId,
-              type: 'yoga',
+              type: _routine.activityType,
               quantity: _loggedMinutes,
               unit: 'minutes',
             ),
           );
+      if (_routine.logsReps) await _logReps();
     } on Object catch (e) {
       if (mounted) {
         setState(() {
@@ -405,8 +518,12 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     final minutes = session.minutes;
     final choice = await showAppSheet<_EndChoice>(
       context,
-      builder: (sheet) =>
-          _EndSheet(title: _routine.title, worthLogging: worthLogging, minutes: minutes),
+      builder: (sheet) => _EndSheet(
+        title: _routine.title,
+        loggedTo: _routine.loggedTo,
+        worthLogging: worthLogging,
+        minutes: minutes,
+      ),
     );
     if (!mounted) return;
     switch (choice ?? _EndChoice.keepGoing) {
@@ -419,7 +536,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
       case _EndChoice.log:
         _ticker?.cancel();
         _releaseScreen();
-        _loggedMinutes = minutes;
+        _remember(session);
         setState(() => _stage = _Stage.finished);
         unawaited(_log());
     }
@@ -452,10 +569,13 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
           onPause: _togglePause,
           onSkip: _skip,
           onBack: _back,
+          onDone: _done,
+          onReps: _adjustReps,
         ),
         _Stage.finished => _Finished(
           routine: _routine,
           minutes: _loggedMinutes,
+          reps: [for (final e in _repsByKey.entries) (_names[e.key] ?? e.key, e.value)],
           logging: _logging,
           error: _error,
           onRetry: _log,
@@ -502,7 +622,30 @@ class _Intro extends StatelessWidget {
           const SkeletonBlock(height: 240, radius: kRadiusCard)
         else if (list.isEmpty)
           Text(routine.emptyCopy, style: AppText.body.copyWith(color: kInkSecondary))
-        else ...[
+        else if (routine.outline != null) ...[
+          for (final section in routine.outline!(list)) ...[
+            FieldLabel(section.heading),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, row) in section.rows.indexed)
+                    Padding(
+                      padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(row.name, style: AppText.body)),
+                          Text(row.detail, style: AppText.caption.copyWith(color: kInkMuted)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Text(routine.footnote, style: AppText.caption.copyWith(color: kInkMuted)),
+        ] else ...[
           const FieldLabel('In this order'),
           AppCard(
             child: Column(
@@ -546,6 +689,8 @@ class _Running extends StatelessWidget {
     required this.onPause,
     required this.onSkip,
     required this.onBack,
+    required this.onDone,
+    required this.onReps,
   });
 
   final GuidedRoutine routine;
@@ -555,6 +700,8 @@ class _Running extends StatelessWidget {
   final VoidCallback onPause;
   final VoidCallback onSkip;
   final VoidCallback onBack;
+  final VoidCallback onDone;
+  final void Function(int delta) onReps;
 
   @override
   Widget build(BuildContext context) {
@@ -564,11 +711,20 @@ class _Running extends StatelessWidget {
     final accent = context.accentPalette;
     final instant = MediaQuery.disableAnimationsOf(context);
     final paused = session.paused;
-    final digits = leadIn ? session.leadLeft : session.holdLeft;
-    final status = paused ? 'Paused' : (leadIn ? 'Get ready' : 'seconds left');
+    final counting = hold.isReps && !leadIn;
+    final digits = leadIn
+        ? '${session.leadLeft}'
+        : counting
+        ? _clock(session.holdElapsed)
+        : '${session.holdLeft}';
+    final status = paused
+        ? 'Paused'
+        : (leadIn
+              ? 'Get ready'
+              : (counting ? 'your pace' : (hold.isRest ? 'rest left' : 'seconds left')));
     final fraction = leadIn
         ? 1 - session.leadLeft / kHoldLeadInSeconds
-        : 1 - session.holdLeft / hold.seconds;
+        : (counting ? 0.0 : 1 - session.holdLeft / hold.seconds);
     // The end position is the one to copy; a pose keeps its photos, since cat-cow is a movement.
     final photos = e.yoga ? e.imageUrls : (e.imageUrls.isEmpty ? <String>[] : [e.imageUrls.last]);
     final credits = e.pose?.imageCredits ?? const <ImageCredit>[];
@@ -590,7 +746,11 @@ class _Running extends StatelessWidget {
           // end of each hold instead of having VoiceOver read every second.
           Semantics(
             container: true,
-            label: paused ? 'Paused' : (leadIn ? 'Get ready' : 'Hold timer running'),
+            label: paused
+                ? 'Paused'
+                : (leadIn
+                      ? 'Get ready'
+                      : (hold.isReps ? 'Reps at your own pace' : 'Hold timer running')),
             excludeSemantics: true,
             child: SizedBox(
               width: 76,
@@ -612,8 +772,10 @@ class _Running extends StatelessWidget {
                   ),
                   MediaQuery.withNoTextScaling(
                     child: Text(
-                      '$digits',
-                      style: AppText.tabular(AppText.display.copyWith(fontSize: 32, height: 1)),
+                      digits,
+                      style: AppText.tabular(
+                        AppText.display.copyWith(fontSize: counting ? 22 : 32, height: 1),
+                      ),
                     ),
                   ),
                 ],
@@ -633,19 +795,30 @@ class _Running extends StatelessWidget {
     final heading = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(header: true, child: Text(e.name, style: AppText.headline)),
-        Text(hold.label, style: AppText.label.copyWith(color: kInkSecondary)),
-        const SizedBox(height: 2),
-        Text('Next: $next', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
+        Semantics(
+          header: true,
+          child: Text(hold.isRest ? 'Rest' : e.name, style: AppText.headline),
+        ),
+        Text(
+          hold.isRest ? 'Up next: ${e.name}' : hold.label,
+          style: AppText.label.copyWith(color: kInkSecondary),
+        ),
+        if (!hold.isRest) ...[
+          const SizedBox(height: 2),
+          Text('Next: $next', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ],
       ],
     );
 
     return PageScaffold(
       title: routine.title,
       subtitle:
-          '${routine.stepNoun[0].toUpperCase()}${routine.stepNoun.substring(1)} '
+          '${routine.subtitleLead.isEmpty ? '${routine.stepNoun[0].toUpperCase()}${routine.stepNoun.substring(1)}' : '${routine.subtitleLead}${routine.stepNoun}'} '
           '${hold.stepIndex + 1} of ${session.stepCount}',
-      actions: [_SoundButton(sound: sound, onTap: onSound)],
+      actions: [
+        if (session.awaitingDone && !paused) _PauseButton(onTap: onPause),
+        _SoundButton(sound: sound, onTap: onSound),
+      ],
       footer: _Controls(
         stepNoun: routine.stepNoun,
         paused: paused,
@@ -653,6 +826,7 @@ class _Running extends StatelessWidget {
         onPause: onPause,
         onSkip: onSkip,
         onBack: onBack,
+        onDone: session.awaitingDone && !paused ? onDone : null,
       ),
       children: [
         Row(
@@ -698,13 +872,28 @@ class _Running extends StatelessWidget {
             ),
           ),
         ),
+        if (hold.isReps) ...[
+          const SizedBox(height: 12),
+          _RepPanel(
+            reps: session.currentReps,
+            name: e.name,
+            caption: paused
+                ? 'Paused.'
+                : (leadIn
+                      ? 'Get into position.'
+                      : 'At your own pace. Tap the check when you finish.'),
+            onMinus: () => onReps(-1),
+            onPlus: () => onReps(1),
+          ),
+        ],
         if (tall && photos.isNotEmpty) ...[
           const SizedBox(height: 10),
           // The photo is what someone on the mat glances at, so on a tall phone it takes what
           // the screen has to spare past the fixed parts; a short one keeps it beside the name.
           LayoutBuilder(
             builder: (context, box) {
-              final height = ((MediaQuery.sizeOf(context).height - 560) * 0.6).clamp(120.0, 190.0);
+              final spare = MediaQuery.sizeOf(context).height - (hold.isReps ? 700 : 560);
+              final height = (spare * 0.6).clamp(110.0, 190.0);
               final gap = 8.0;
               final each = inlinePhoto
                   ? (height * 4 / 3).clamp(0.0, box.maxWidth)
@@ -738,6 +927,119 @@ class _Running extends StatelessWidget {
         ],
         for (final cue in e.cues) _CueLine(text: cue),
       ],
+    );
+  }
+}
+
+String _clock(int seconds) => '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+
+/// The target of a rep step, large, with a quick plus and minus for a different count. The
+/// person sets the pace and taps Done below when they finish.
+class _RepPanel extends StatelessWidget {
+  const _RepPanel({
+    required this.reps,
+    required this.name,
+    required this.caption,
+    required this.onMinus,
+    required this.onPlus,
+  });
+
+  final int reps;
+  final String name;
+  final String caption;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _Named(
+                label: 'One fewer rep',
+                onTap: reps > 1 ? onMinus : null,
+                child: IconButton(
+                  onPressed: reps > 1 ? onMinus : null,
+                  tooltip: 'One fewer rep',
+                  icon: const Icon(Icons.remove_rounded, size: 28),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(48, 48),
+                    foregroundColor: context.accentPalette.lip,
+                    backgroundColor: kSunken,
+                    shape: const CircleBorder(),
+                  ),
+                ),
+              ),
+              Semantics(
+                container: true,
+                label: '$reps reps of $name',
+                excludeSemantics: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MediaQuery.withNoTextScaling(
+                      child: Text(
+                        '$reps',
+                        style: AppText.tabular(AppText.display.copyWith(fontSize: 64, height: 1)),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      reps == 1 ? 'rep' : 'reps',
+                      style: AppText.label.copyWith(color: kInkSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              _Named(
+                label: 'One more rep',
+                onTap: reps < GuidedController.maxReps ? onPlus : null,
+                child: IconButton(
+                  onPressed: reps < GuidedController.maxReps ? onPlus : null,
+                  tooltip: 'One more rep',
+                  icon: const Icon(Icons.add_rounded, size: 28),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(48, 48),
+                    foregroundColor: context.accentPalette.lip,
+                    backgroundColor: kSunken,
+                    shape: const CircleBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            caption,
+            textAlign: TextAlign.center,
+            style: AppText.caption.copyWith(color: kInkSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pause while a rep step is under way, since its centre button is Done.
+class _PauseButton extends StatelessWidget {
+  const _PauseButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Named(
+      label: 'Pause',
+      onTap: onTap,
+      child: IconButton(
+        onPressed: onTap,
+        tooltip: 'Pause',
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+        icon: Icon(Icons.pause_rounded, color: context.accentPalette.lip, size: 26),
+      ),
     );
   }
 }
@@ -822,6 +1124,7 @@ class _Controls extends StatelessWidget {
     required this.onPause,
     required this.onSkip,
     required this.onBack,
+    this.onDone,
   });
 
   final String stepNoun;
@@ -830,6 +1133,9 @@ class _Controls extends StatelessWidget {
   final VoidCallback onPause;
   final VoidCallback onSkip;
   final VoidCallback onBack;
+
+  /// Set while a rep step waits for the person: the centre button then says Done.
+  final VoidCallback? onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -844,9 +1150,11 @@ class _Controls extends StatelessWidget {
         ),
         const SizedBox(width: 24),
         _TransportButton(
-          icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-          label: paused ? 'Resume' : 'Pause',
-          onTap: onPause,
+          icon: onDone != null
+              ? Icons.check_rounded
+              : (paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+          label: onDone != null ? 'Done' : (paused ? 'Resume' : 'Pause'),
+          onTap: onDone ?? onPause,
           diameter: 58,
           iconSize: 36,
           fill: accent.fill,
@@ -953,9 +1261,15 @@ class _SoundButton extends StatelessWidget {
 /// Ends the session early: a primary action that logs what was done, a secondary that does not,
 /// and "Keep going" as the way out, so dismissing the sheet is safe.
 class _EndSheet extends StatelessWidget {
-  const _EndSheet({required this.title, required this.worthLogging, required this.minutes});
+  const _EndSheet({
+    required this.title,
+    required this.loggedTo,
+    required this.worthLogging,
+    required this.minutes,
+  });
 
   final String title;
+  final String loggedTo;
   final bool worthLogging;
   final int minutes;
 
@@ -980,7 +1294,7 @@ class _EndSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             worthLogging
-                ? 'You\'ve done $minutes $unit. Log ${minutes == 1 ? 'it' : 'them'} to your yoga quest?'
+                ? 'You\'ve done $minutes $unit. Log ${minutes == 1 ? 'it' : 'them'} to $loggedTo?'
                 : 'You are under $kGuidedMinLogSeconds seconds in, so nothing will be logged.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
@@ -1020,6 +1334,7 @@ class _Finished extends StatelessWidget {
   const _Finished({
     required this.routine,
     required this.minutes,
+    required this.reps,
     required this.logging,
     required this.error,
     required this.onRetry,
@@ -1028,6 +1343,9 @@ class _Finished extends StatelessWidget {
 
   final GuidedRoutine routine;
   final int minutes;
+
+  /// Reps finished per exercise name, for a routine with rep steps.
+  final List<(String, int)> reps;
   final _Logging logging;
   final String? error;
   final VoidCallback onRetry;
@@ -1057,7 +1375,7 @@ class _Finished extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Under $kGuidedMinLogSeconds seconds of ${routine.activity}, so nothing was added to '
-            'your yoga quest.',
+            'your ${routine.activityType == 'yoga' ? 'yoga quest' : 'exercise minutes'}.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
         ] else ...[
@@ -1073,10 +1391,25 @@ class _Finished extends StatelessWidget {
           else
             Text(
               logging == _Logging.done
-                  ? 'Logged $minutes $unit to your yoga quest.'
-                  : 'Logging $minutes $unit to your yoga quest.',
+                  ? 'Logged $minutes $unit to ${routine.loggedTo}.'
+                  : 'Logging $minutes $unit to ${routine.loggedTo}.',
               style: AppText.body.copyWith(color: kInkSecondary),
             ),
+          if (reps.isNotEmpty && !failed) ...[
+            const SizedBox(height: 12),
+            for (final (name, count) in reps)
+              Text('$name: $count reps', style: AppText.body.copyWith(color: kInkSecondary)),
+          ],
+          if (routine.strengthCreditMinutes case final credit? when !failed) ...[
+            const SizedBox(height: 12),
+            Text(
+              minutes >= credit
+                  ? 'That is $credit minutes or more, so it counts as your strength session.'
+                  : 'Under $credit minutes, so it counts as exercise minutes but not as a strength '
+                        'session.',
+              style: AppText.caption.copyWith(color: kInkMuted),
+            ),
+          ],
         ],
       ],
     );

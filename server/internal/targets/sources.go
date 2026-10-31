@@ -36,6 +36,8 @@ var Sources = map[string]string{
 	"zourdos2016":      "Zourdos et al., J Strength Cond Res 2016",
 	"schoenfeld2017":   "Schoenfeld et al., J Sports Sci 2017;35:1073",
 	"acsm2009":         "ACSM position stand on progression, Med Sci Sports Exerc 2009;41:687",
+	"garber2011":       "Garber et al., ACSM position stand on exercise quantity and quality, Med Sci Sports Exerc 2011;43:1334",
+	"tabata1996":       "Tabata et al., Med Sci Sports Exerc 1996;28:1327",
 	"who2003":          "WHO/FAO, Diet, Nutrition and the Prevention of Chronic Diseases, WHO Technical Report Series 916, 2003",
 	"nhs5aday":         "NHS, 5 A Day portion sizes (80 g of fruit or vegetables is one portion)",
 	"aune2017":         "Aune et al., Int J Epidemiol 2017;46:1029",

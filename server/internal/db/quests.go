@@ -31,6 +31,7 @@ const (
 	ActivityWaterML        = "water_ml"
 	ActivityProduce        = "produce_servings"
 	ActivityBreathing      = "breathing_minutes"
+	ActivityCalisthenics   = "calisthenics_minutes"
 
 	MetricSteps        = "steps"
 	MetricActiveEnergy = "active_energy"

@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nc1107/new-me/server/internal/db"
-	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/targets"
 )
@@ -43,8 +42,8 @@ type dailyRepsJSON struct {
 	Exercise string `json:"exercise"`
 	Target   int    `json:"target"`
 	Enabled  bool   `json:"enabled"`
-	// DayExercise is what today's frozen quest counts, which differs from Exercise while a change
-	// waits for tomorrow.
+	// DayExercise is what today's quest counts, which differs from Exercise only on a day that
+	// was snapshotted before an exercise change reached it.
 	DayExercise string             `json:"dayExercise"`
 	Sets        int                `json:"sets"`
 	Exercises   []repsExerciseJSON `json:"exercises"`
@@ -183,7 +182,7 @@ type putDailyRepsRequest struct {
 
 // handlePutDailyReps sets the exercise and the daily target of the pushups quest. A max is
 // recorded as a max test of that exercise and sized into three sets; a starting set is taken as
-// given. The change applies from tomorrow, except to a day on which nothing is counted yet.
+// given. Like every goal edit, the change applies to today (docs/design-v18-quests.md).
 func (s *Server) handlePutDailyReps(w http.ResponseWriter, r *http.Request) {
 	var req putDailyRepsRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -215,12 +214,10 @@ func (s *Server) handlePutDailyReps(w http.ResponseWriter, r *http.Request) {
 	patch := patchMeRequest{QuestTemplates: []templatePatch{{Key: db.QuestPushups, Enabled: &enabled,
 		Target: &target, Exercise: &req.Exercise}}}
 	err := s.commitPatch(ctx, c, c.user, "", patch, func(tx pgx.Tx) error {
-		if req.Max != nil {
-			if err := s.recordRepsMax(ctx, tx, c, req.Exercise, *req.Max); err != nil {
-				return err
-			}
+		if req.Max == nil {
+			return nil
 		}
-		return s.retargetToday(ctx, tx, c, req.Exercise, target)
+		return s.recordRepsMax(ctx, tx, c, req.Exercise, *req.Max)
 	})
 	if err != nil {
 		fail(w, r, err)
@@ -247,26 +244,4 @@ func (s *Server) recordRepsMax(ctx context.Context, tx pgx.Tx, c caller, key str
 		return db.SetPushupMax(ctx, tx, c.user.ID, today, reps)
 	}
 	return nil
-}
-
-// retargetToday lets a change reach today's quest while nothing has been counted on it, so
-// setting up squats in the morning does not leave the day asking for push-ups.
-func (s *Server) retargetToday(ctx context.Context, tx pgx.Tx, c caller, exercise string, target int) error {
-	today := score.LocalToday(s.now(), c.loc)
-	if today == c.user.JoinedOn {
-		return nil
-	}
-	if err := db.LockUserDay(ctx, tx, c.user.ID, today); err != nil {
-		return err
-	}
-	in, err := db.LoadDayInputs(ctx, tx, c.user.ID, today)
-	if err != nil || in.Pushups > 0 {
-		return err
-	}
-	found, err := db.RetargetRepsQuest(ctx, tx, c.user.ID, today, exercise, target)
-	if err != nil || !found {
-		return err
-	}
-	_, err = engine.RecomputeDayAt(ctx, tx, c.user.ID, today, c.loc, s.now())
-	return err
 }

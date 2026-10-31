@@ -151,13 +151,13 @@ func TestPushupSetsStillCountForPushups(t *testing.T) {
 	}
 }
 
-func TestDailyRepsChangeReachesTodayOnlyWhileNothingIsCounted(t *testing.T) {
+func TestDailyRepsChangeReachesTodayEvenAfterReps(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")
 	h.clock.Set(ny(2026, time.November, 3, 9, 0))
 	q := todayQuest(t, h, nick, "pushups")
 
-	// Nothing counted yet: today follows the new choice.
+	// Today follows the new choice.
 	put := h.put("/api/daily-reps", nick.Token, obj{"exercise": "lunge", "repsPerSet": 6}).expect(http.StatusOK)
 	if put.str("dayExercise") != "lunge" || put.num("target") != 18 {
 		t.Fatalf("put = %s", put.Body)
@@ -166,15 +166,16 @@ func TestDailyRepsChangeReachesTodayOnlyWhileNothingIsCounted(t *testing.T) {
 		t.Fatalf("today = %s", got.Body)
 	}
 
-	// Counted reps freeze the day; the change waits for tomorrow.
+	// Logged reps do not hold the day back: like every goal edit, a switch applies today, and the
+	// lunges already logged stop counting toward the new exercise.
 	h.logActivity(nick, "pushups", "reps", 6).expect(http.StatusCreated)
 	put = h.put("/api/daily-reps", nick.Token, obj{"exercise": "glute_bridge", "repsPerSet": 8}).expect(http.StatusOK)
-	if put.str("exercise") != "glute_bridge" || put.str("dayExercise") != "lunge" {
+	if put.str("exercise") != "glute_bridge" || put.str("dayExercise") != "glute_bridge" {
 		t.Fatalf("put = %s", put.Body)
 	}
-	h.clock.Set(ny(2026, time.November, 4, 9, 0))
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.str(q+".title") != "Glute bridges" || got.num(q+".target") != 24 {
-		t.Fatalf("tomorrow = %s", got.Body)
+	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
+	if got.str(q+".title") != "Glute bridges" || got.num(q+".target") != 24 || got.num(q+".actual") != 0 {
+		t.Fatalf("today = %s", got.Body)
 	}
 }
 

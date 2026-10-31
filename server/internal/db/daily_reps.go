@@ -151,12 +151,3 @@ func RepsSetReps(ctx context.Context, q Querier, userID int64, date score.Date, 
 		userID, date, countedKeys(exercise)).Scan(&reps)
 	return reps, err
 }
-
-// RetargetRepsQuest rewrites the date's frozen pushups quest, for a day on which nothing has been
-// counted yet. It reports whether the day had the quest.
-func RetargetRepsQuest(ctx context.Context, q Querier, userID int64, date score.Date, exercise string, target int) (bool, error) {
-	tag, err := q.Exec(ctx, `
-		UPDATE day_quests SET exercise = $3, target = $4
-		WHERE user_id = $1 AND local_date = $2::date AND key = 'pushups'`, userID, date, exercise, target)
-	return tag.RowsAffected() > 0, err
-}

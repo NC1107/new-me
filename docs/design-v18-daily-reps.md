@@ -51,8 +51,8 @@ The app does not suggest a number: no published research gives a starting count 
 They type a number they can do with good form and plenty left, the page shows 3 times that, and the Targets page keeps asking for a max test.
 Once a max exists the target is derived from it as below.
 
-A change reaches today's quest only while nothing is counted on it yet (so setting up squats in the morning does not leave the day asking for push-ups).
-Once reps are logged the day stays frozen and the change starts tomorrow, the same rule every other goal edit follows.
+A change reaches today's quest at once, the same rule every other goal edit follows (docs/design-v18-quests.md).
+Reps already logged for the old exercise stop counting toward the new one.
 On the join day the onboarding choice applies at once, as before.
 
 ## The derivation

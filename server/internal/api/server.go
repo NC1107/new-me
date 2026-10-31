@@ -293,6 +293,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/shared-habits", s.handleCreateSharedHabit)
 		r.Patch("/api/shared-habits/{id}", s.handlePatchSharedHabit)
 		r.Delete("/api/shared-habits/{id}", s.handleDeleteSharedHabit)
+		r.Post("/api/shared-habits/{id}/worth/accept", s.handleAcceptSharedWorth)
 		r.With(s.settleAfter).Post("/api/shared-habits/{id}/done", s.handleDoneSharedHabit)
 		r.With(s.settleAfter).Delete("/api/shared-habits/{id}/done", s.handleUndoSharedHabit)
 

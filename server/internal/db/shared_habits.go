@@ -24,6 +24,12 @@ type SharedHabit struct {
 	StartOn   score.Date
 	CreatedBy int64
 	CreatedAt time.Time
+	// Worth is the gems both people agreed on. ProposedWorth waits for the person who is not
+	// ProposedBy to accept it or counter.
+	Worth         int
+	ProposedWorth *int
+	ProposedBy    *int64
+	ProposedAt    *time.Time
 }
 
 // Schedule is the habit's schedule for the due-date rules.
@@ -43,21 +49,35 @@ type SharedMark struct {
 	LocalDate     score.Date
 	DoneAt        time.Time
 	Points        int
+	// DoneBy is self, partner or together from the marker's side. When it is not self, the other
+	// person's gems sit in OtherPoints on their own day.
+	DoneBy         string
+	OtherUserID    *int64
+	OtherLocalDate *score.Date
+	OtherPoints    int
 }
 
-const sharedHabitColumns = `id, name, icon, schedule_kind, weekdays, every_days, start_on::text, created_by, created_at`
+const sharedHabitColumns = `id, name, icon, schedule_kind, weekdays, every_days, start_on::text, created_by, created_at, worth, proposed_worth, proposed_by, proposed_at`
 
 func scanSharedHabit(row pgx.Row) (SharedHabit, error) {
 	var h SharedHabit
-	err := row.Scan(&h.ID, &h.Name, &h.Icon, &h.Kind, &h.Weekdays, &h.EveryDays, &h.StartOn, &h.CreatedBy, &h.CreatedAt)
+	err := row.Scan(&h.ID, &h.Name, &h.Icon, &h.Kind, &h.Weekdays, &h.EveryDays, &h.StartOn, &h.CreatedBy, &h.CreatedAt,
+		&h.Worth, &h.ProposedWorth, &h.ProposedBy, &h.ProposedAt)
 	return h, err
 }
 
-const sharedMarkColumns = `id, shared_habit_id, user_id, local_date::text, done_at, points`
+const sharedMarkColumns = `id, shared_habit_id, user_id, local_date::text, done_at, points, done_by, other_user_id, other_local_date::text, other_points`
+
+// sharedMarkColumnsOf is sharedMarkColumns for a query that aliases the marks table.
+func sharedMarkColumnsOf(alias string) string {
+	return alias + `.id, ` + alias + `.shared_habit_id, ` + alias + `.user_id, ` + alias + `.local_date::text, ` + alias + `.done_at, ` +
+		alias + `.points, ` + alias + `.done_by, ` + alias + `.other_user_id, ` + alias + `.other_local_date::text, ` + alias + `.other_points`
+}
 
 func scanSharedMark(row pgx.Row) (SharedMark, error) {
 	var m SharedMark
-	err := row.Scan(&m.ID, &m.SharedHabitID, &m.UserID, &m.LocalDate, &m.DoneAt, &m.Points)
+	err := row.Scan(&m.ID, &m.SharedHabitID, &m.UserID, &m.LocalDate, &m.DoneAt, &m.Points,
+		&m.DoneBy, &m.OtherUserID, &m.OtherLocalDate, &m.OtherPoints)
 	return m, err
 }
 
@@ -78,9 +98,11 @@ func CountSharedHabits(ctx context.Context, q Querier) (int, error) {
 // CreateSharedHabit adds a shared habit.
 func CreateSharedHabit(ctx context.Context, q Querier, h SharedHabit) (SharedHabit, error) {
 	return scanSharedHabit(q.QueryRow(ctx, `
-		INSERT INTO shared_habits (name, icon, schedule_kind, weekdays, every_days, start_on, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6::date, $7)
-		RETURNING `+sharedHabitColumns, h.Name, h.Icon, h.Kind, h.Weekdays, h.EveryDays, h.StartOn, h.CreatedBy))
+		INSERT INTO shared_habits (name, icon, schedule_kind, weekdays, every_days, start_on, created_by,
+			worth, proposed_worth, proposed_by, proposed_at)
+		VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11)
+		RETURNING `+sharedHabitColumns, h.Name, h.Icon, h.Kind, h.Weekdays, h.EveryDays, h.StartOn, h.CreatedBy,
+		h.Worth, h.ProposedWorth, h.ProposedBy, h.ProposedAt))
 }
 
 // GetSharedHabit reads one live shared habit. With lock it holds the row until the transaction
@@ -115,9 +137,11 @@ func ListSharedHabits(ctx context.Context, q Querier) ([]SharedHabit, error) {
 // UpdateSharedHabit writes back the editable parts of a shared habit.
 func UpdateSharedHabit(ctx context.Context, q Querier, h SharedHabit) (SharedHabit, error) {
 	updated, err := scanSharedHabit(q.QueryRow(ctx, `
-		UPDATE shared_habits SET name = $2, icon = $3, schedule_kind = $4, weekdays = $5, every_days = $6
+		UPDATE shared_habits SET name = $2, icon = $3, schedule_kind = $4, weekdays = $5, every_days = $6,
+			worth = $7, proposed_worth = $8, proposed_by = $9, proposed_at = $10
 		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING `+sharedHabitColumns, h.ID, h.Name, h.Icon, h.Kind, h.Weekdays, h.EveryDays))
+		RETURNING `+sharedHabitColumns, h.ID, h.Name, h.Icon, h.Kind, h.Weekdays, h.EveryDays,
+		h.Worth, h.ProposedWorth, h.ProposedBy, h.ProposedAt))
 	return updated, notFound(err)
 }
 
@@ -136,7 +160,7 @@ func SoftDeleteSharedHabit(ctx context.Context, q Querier, id int64) error {
 // LastSharedMarks is the most recent mark of every live shared habit, by habit id.
 func LastSharedMarks(ctx context.Context, q Querier) (map[int64]SharedMark, error) {
 	rows, err := q.Query(ctx, `
-		SELECT DISTINCT ON (m.shared_habit_id) m.id, m.shared_habit_id, m.user_id, m.local_date::text, m.done_at, m.points
+		SELECT DISTINCT ON (m.shared_habit_id) `+sharedMarkColumnsOf("m")+`
 		FROM shared_habit_marks m JOIN shared_habits h ON h.id = m.shared_habit_id AND h.deleted_at IS NULL
 		ORDER BY m.shared_habit_id, m.done_at DESC, m.id DESC`)
 	if err != nil {
@@ -157,9 +181,11 @@ func LastSharedMarks(ctx context.Context, q Querier) (map[int64]SharedMark, erro
 // InsertSharedMark records that a person did a chore.
 func InsertSharedMark(ctx context.Context, q Querier, m SharedMark) (SharedMark, error) {
 	return scanSharedMark(q.QueryRow(ctx, `
-		INSERT INTO shared_habit_marks (shared_habit_id, user_id, local_date, done_at, points)
-		VALUES ($1, $2, $3::date, $4, $5) RETURNING `+sharedMarkColumns,
-		m.SharedHabitID, m.UserID, m.LocalDate, m.DoneAt, m.Points))
+		INSERT INTO shared_habit_marks (shared_habit_id, user_id, local_date, done_at, points,
+			done_by, other_user_id, other_local_date, other_points)
+		VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8::date, $9) RETURNING `+sharedMarkColumns,
+		m.SharedHabitID, m.UserID, m.LocalDate, m.DoneAt, m.Points,
+		m.DoneBy, m.OtherUserID, m.OtherLocalDate, m.OtherPoints))
 }
 
 // DeleteSharedMark removes one mark, and the gems it earned with it.
@@ -176,11 +202,15 @@ func PeekLastSharedMark(ctx context.Context, q Querier, habitID int64) (SharedMa
 	return m, notFound(err)
 }
 
-// SharedBonus is the gems the person earned from shared habits on a local day.
+// SharedBonus is the gems the person earned from shared habits on a local day, whether they
+// marked the chore or the other person marked it for them.
 func SharedBonus(ctx context.Context, q Querier, userID int64, date score.Date) (int, error) {
 	var points int
 	err := q.QueryRow(ctx, `
-		SELECT COALESCE(sum(points), 0)::int FROM shared_habit_marks WHERE user_id = $1 AND local_date = $2::date`,
+		SELECT COALESCE(sum(CASE WHEN user_id = $1 AND local_date = $2::date THEN points ELSE 0 END), 0)::int
+			+ COALESCE(sum(CASE WHEN other_user_id = $1 AND other_local_date = $2::date THEN other_points ELSE 0 END), 0)::int
+		FROM shared_habit_marks WHERE (user_id = $1 AND local_date = $2::date)
+			OR (other_user_id = $1 AND other_local_date = $2::date)`,
 		userID, date).Scan(&points)
 	return points, err
 }

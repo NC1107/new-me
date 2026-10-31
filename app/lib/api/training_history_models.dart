@@ -55,6 +55,7 @@ class HistoryDay {
     this.sets = 0,
     this.sessionCompleted = false,
     this.yogaMinutes = 0,
+    this.calisthenicsMinutes = 0,
     this.workoutTypes = const [],
     this.logged = const [],
   });
@@ -68,6 +69,7 @@ class HistoryDay {
       sets: _int(j['sets']),
       sessionCompleted: j['sessionCompleted'] == true,
       yogaMinutes: _int(j['yogaMinutes']),
+      calisthenicsMinutes: _int(j['calisthenicsMinutes']),
       workoutTypes: [
         if (j['workoutTypes'] case final List types)
           for (final t in types)
@@ -81,14 +83,17 @@ class HistoryDay {
   final int sets;
   final bool sessionCompleted;
   final int yogaMinutes;
+  final int calisthenicsMinutes;
   final List<String> workoutTypes;
   final List<HistorySet> logged;
 
   bool get hasSets => sets > 0;
   bool get hasYoga => yogaMinutes > 0;
+  bool get hasCalisthenics => calisthenicsMinutes > 0;
 
-  /// Apple Health workouts other than yoga, which already counts in [yogaMinutes].
-  bool get otherWorkouts => workoutTypes.any((t) => t != 'yoga');
+  /// Guided calisthenics and Apple Health workouts other than yoga, which already counts in
+  /// [yogaMinutes].
+  bool get otherWorkouts => hasCalisthenics || workoutTypes.any((t) => t != 'yoga');
 }
 
 /// GET /training/history: the days of one month with something on them.

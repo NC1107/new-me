@@ -31,6 +31,9 @@ func TestTrainingHistoryMonthAggregates(t *testing.T) {
 		(VALUES ('2026-10-05', now()), ('2026-10-12', NULL::timestamptz)) AS d(day, done) WHERE u.name = 'Nick'`)
 	h.sql(`INSERT INTO activity_logs (user_id, local_date, type, quantity, client_op_id)
 		SELECT id, '2026-11-01', 'yoga_minutes', q, gen_random_uuid() FROM users, (VALUES (15), (10)) AS v(q) WHERE name = 'Nick'`)
+	h.sql(`INSERT INTO activity_logs (user_id, local_date, type, quantity, client_op_id)
+		SELECT id, d::date, 'calisthenics_minutes', 24, gen_random_uuid() FROM users, (VALUES ('2026-11-01'), ('2026-11-03')) AS v(d)
+		WHERE name = 'Nick'`)
 	putWorkouts(h, nick,
 		workout("w-yoga", "yoga", ny(2026, time.October, 20, 7, 0), 30),
 		workout("w-run", "running", ny(2026, time.October, 20, 18, 0), 40),
@@ -58,7 +61,9 @@ func TestTrainingHistoryMonthAggregates(t *testing.T) {
 	}
 
 	nov := h.get("/api/training/history?month=2026-11", nick.Token).expect(http.StatusOK)
-	if nov.length("days") != 1 || nov.num("days.0.yogaMinutes") != 25 || nov.num("days.0.sets") != 0 {
+	if nov.length("days") != 2 || nov.num("days.0.yogaMinutes") != 25 || nov.num("days.0.calisthenicsMinutes") != 24 ||
+		nov.num("days.0.sets") != 0 || nov.str("days.1.date") != "2026-11-03" || nov.num("days.1.yogaMinutes") != 0 ||
+		nov.num("days.1.calisthenicsMinutes") != 24 || oct.num("days.0.calisthenicsMinutes") != 0 {
 		t.Fatalf("november = %s", nov.Body)
 	}
 	if h.get("/api/training/history?month=2026-12", nick.Token).expect(http.StatusOK).length("days") != 0 {

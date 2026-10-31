@@ -22,13 +22,15 @@ type HistoryDay struct {
 	Sets             []HistorySet
 	SessionCompleted bool
 	// YogaMinutes is logged yoga (mobility sessions log here too) plus yoga workouts from Health.
-	YogaMinutes  int
-	WorkoutTypes []string
+	YogaMinutes int
+	// CalisthenicsMinutes is logged guided calisthenics.
+	CalisthenicsMinutes int
+	WorkoutTypes        []string
 }
 
 // TrainingHistory returns the days between two dates on which the person did something
-// training related, oldest first, from one aggregate query over sets, sessions, yoga logs and
-// workouts.
+// training related, oldest first, from one aggregate query over sets, sessions, yoga and
+// calisthenics logs and workouts.
 func TrainingHistory(ctx context.Context, q Querier, userID int64, from, to score.Date) ([]HistoryDay, error) {
 	rows, err := q.Query(ctx, `
 		WITH sets AS (
@@ -41,9 +43,12 @@ func TrainingHistory(ctx context.Context, q Querier, userID int64, from, to scor
 		), sessions AS (
 			SELECT local_date AS d FROM training_sessions
 			WHERE user_id = $1 AND completed_at IS NOT NULL AND local_date BETWEEN $2::date AND $3::date
-		), yoga AS (
-			SELECT local_date AS d, sum(quantity)::int AS minutes FROM activity_logs
-			WHERE user_id = $1 AND type = 'yoga_minutes' AND deleted_at IS NULL
+		), guided AS (
+			SELECT local_date AS d,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'yoga_minutes'), 0)::int AS yoga,
+			       COALESCE(sum(quantity) FILTER (WHERE type = 'calisthenics_minutes'), 0)::int AS calisthenics
+			FROM activity_logs
+			WHERE user_id = $1 AND type IN ('yoga_minutes', 'calisthenics_minutes') AND deleted_at IS NULL
 			  AND local_date BETWEEN $2::date AND $3::date
 			GROUP BY local_date
 		), workouts_by_day AS (
@@ -53,15 +58,15 @@ func TrainingHistory(ctx context.Context, q Querier, userID int64, from, to scor
 			WHERE user_id = $1 AND local_date BETWEEN $2::date AND $3::date
 			GROUP BY local_date
 		), days AS (
-			SELECT d FROM sets UNION SELECT d FROM sessions UNION SELECT d FROM yoga UNION SELECT d FROM workouts_by_day
+			SELECT d FROM sets UNION SELECT d FROM sessions UNION SELECT d FROM guided UNION SELECT d FROM workouts_by_day
 		)
 		SELECT days.d::text, COALESCE(sets.n, 0), COALESCE(sets.sets, '[]'::jsonb),
 		       EXISTS (SELECT 1 FROM sessions WHERE sessions.d = days.d),
-		       COALESCE(yoga.minutes, 0) + COALESCE(workouts_by_day.yoga_minutes, 0),
-		       COALESCE(workouts_by_day.types, '{}')
+		       COALESCE(guided.yoga, 0) + COALESCE(workouts_by_day.yoga_minutes, 0),
+		       COALESCE(guided.calisthenics, 0), COALESCE(workouts_by_day.types, '{}')
 		FROM days
 		LEFT JOIN sets ON sets.d = days.d
-		LEFT JOIN yoga ON yoga.d = days.d
+		LEFT JOIN guided ON guided.d = days.d
 		LEFT JOIN workouts_by_day ON workouts_by_day.d = days.d
 		ORDER BY days.d`, userID, from, to)
 	if err != nil {
@@ -72,7 +77,7 @@ func TrainingHistory(ctx context.Context, q Querier, userID int64, from, to scor
 	for rows.Next() {
 		var day HistoryDay
 		if err := rows.Scan(&day.Date, &day.SetCount, &day.Sets, &day.SessionCompleted, &day.YogaMinutes,
-			&day.WorkoutTypes); err != nil {
+			&day.CalisthenicsMinutes, &day.WorkoutTypes); err != nil {
 			return nil, err
 		}
 		out = append(out, day)

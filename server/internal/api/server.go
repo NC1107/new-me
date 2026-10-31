@@ -207,6 +207,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/api/workouts", s.handleListWorkouts)
 		r.Get("/api/insights", s.handleInsights)
 		r.Get("/api/targets", s.handleGetTargets)
+		r.Get("/api/quests/{key}/history", s.handleQuestHistory)
 		r.Post("/api/targets/apply", s.handleApplyTargets)
 		r.Post("/api/pushups/max", s.handleRecordPushupMax)
 		r.Get("/api/exercises", s.handleListExercises)

@@ -101,6 +101,11 @@ class _QuestCardState extends State<QuestCard> {
     final person = context.accentPalette;
     final category = questPalette(q.key);
     final automatic = isAutomaticQuest(q.key);
+    final largeText = MediaQuery.textScalerOf(context).scale(10) > 13;
+    final chips = [
+      PointsChip(points: q.points, done: q.done, leading: largeText ? 0 : 8),
+      if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
+    ];
 
     final badge = Container(
       width: 22,
@@ -155,7 +160,7 @@ class _QuestCardState extends State<QuestCard> {
                           style: AppText.headline.copyWith(fontSize: 17),
                         ),
                       ),
-                      if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
+                      if (!largeText) ...chips,
                       // Exercise is fed by Health but also takes a hand-logged activity.
                       if (widget.onAdd != null && (!automatic || q.key == 'exercise'))
                         Padding(
@@ -171,6 +176,12 @@ class _QuestCardState extends State<QuestCard> {
                     ],
                   ),
                 ),
+                // Large text leaves no room beside the title, so the chips move under it.
+                if (largeText)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(children: [...chips]),
+                  ),
                 if (titleStatesTarget(q))
                   // Spoken only: the title and bar show the target, a screen reader still hears progress.
                   Semantics(
@@ -257,6 +268,42 @@ class HealthNote extends StatelessWidget {
       Flexible(child: Text('From Apple Health', style: AppText.caption)),
     ],
   );
+}
+
+/// What a quest is worth towards the day, "+100". Quiet while open, in the person's colour once
+/// the points are earned.
+class PointsChip extends StatelessWidget {
+  const PointsChip({super.key, required this.points, required this.done, this.leading = 8});
+
+  final int points;
+  final bool done;
+
+  /// Space before the chip, none when it starts a line.
+  final double leading;
+
+  @override
+  Widget build(BuildContext context) {
+    final person = context.accentPalette;
+    final ink = done ? context.accentText : kInkSecondary;
+    return Semantics(
+      label: done ? '$points points earned' : 'Worth $points points',
+      excludeSemantics: true,
+      child: Container(
+        margin: EdgeInsets.only(left: leading),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: done ? person.tint : kSunken,
+          borderRadius: BorderRadius.circular(9999),
+        ),
+        child: Text(
+          '+$points',
+          style: AppText.tabular(
+            AppText.caption.copyWith(color: ink, fontWeight: FontWeight.w800, fontSize: 12),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _BonusChip extends StatelessWidget {

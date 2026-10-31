@@ -264,6 +264,11 @@ class ApiClient {
     (data) => Me.fromJson(data as Json),
   );
 
+  Future<List<QuestDay>> questHistory(String key, {int days = 7}) => _send(
+    () => _dio.get<dynamic>('/api/quests/$key/history', queryParameters: {'days': days}),
+    parseQuestHistory,
+  );
+
   Future<TargetsReport> targets() =>
       _send(() => _dio.get<dynamic>('/api/targets'), TargetsReport.parse);
 

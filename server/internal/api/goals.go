@@ -312,7 +312,7 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 			if err := s.refreshBaseline(ctx, tx, c, key); err != nil {
 				return err
 			}
-			return s.resnapshotJoinDay(ctx, tx, c, user, patchMeRequest{Targets: &targetsPatch{}})
+			return s.resnapshotToday(ctx, tx, c, user, patchMeRequest{Targets: &targetsPatch{}})
 		}
 		patch := templatePatch{Key: key, Target: &p.Proposed}
 		if p.Kind == goals.KindEnable {
@@ -323,7 +323,7 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 		if err := applyTemplatePatches(ctx, tx, c.user.ID, patches); err != nil {
 			return err
 		}
-		return s.resnapshotJoinDay(ctx, tx, c, c.user, patchMeRequest{QuestTemplates: patches})
+		return s.resnapshotToday(ctx, tx, c, c.user, patchMeRequest{QuestTemplates: patches})
 	})
 	if err != nil {
 		fail(w, r, err)

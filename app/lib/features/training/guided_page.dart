@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
 import '../../audio/session_audio.dart';
+import '../../audio/voice_line.dart';
 import '../../state/guided_sound.dart';
 import '../../state/log_actions.dart';
 import '../../state/training.dart';
@@ -131,7 +133,10 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
 
   final _voice = const GuidedVoice();
   int _cueIndex = -1;
-  Map<int, String> _cues = const {};
+  Map<int, VoiceLine> _cues = const {};
+
+  /// How many changes ahead of the current hold are fetched from the server voice.
+  static const _prefetchHolds = 3;
 
   late final SessionAudio _audio;
 
@@ -145,15 +150,27 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
   bool get _voiceOn =>
       ref.read(guidedSoundProvider).voice && !MediaQuery.accessibleNavigationOf(context);
 
-  /// The recorded class voice for a moment, or the plain text-to-speech line where the pose has
-  /// no recording.
-  void _narrate(List<String> clips, String fallback) {
+  /// What to say for a moment: the script's lines, or the plain words where the pose has no
+  /// script. Either way the audio layer picks the bundled clip, the server voice or the phone's.
+  void _narrate(List<VoiceLine> lines, [String? fallback]) {
     if (!_voiceOn) return;
-    if (clips.isEmpty) {
-      _audio.speak(fallback);
-    } else {
-      _audio.playClips(clips);
-    }
+    final spoken = lines.isEmpty && fallback != null ? [VoiceLine(fallback)] : lines;
+    if (spoken.isNotEmpty) _audio.playLines(spoken);
+  }
+
+  List<VoiceLine> _advanceLines(List<GuidedHold> holds, int index) {
+    final lines = _voice.advance(holds, index);
+    return lines.isNotEmpty
+        ? lines
+        : [VoiceLine('Next: ${nextPhrase(holds[index - 1], holds[index])}')];
+  }
+
+  /// Asks the server voice for the next few changes now, so they start without a wait.
+  void _prefetchAhead(GuidedController session) {
+    if (!_voiceOn) return;
+    final holds = session.holds;
+    final end = math.min(holds.length, session.index + 1 + _prefetchHolds);
+    _audio.prefetch([for (var i = session.index + 1; i < end; i++) ..._advanceLines(holds, i)]);
   }
 
   /// The recorded cue due at this second of the hold, if any.
@@ -164,7 +181,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
       _cues = _voice.cues(session.holds, session.index);
     }
     final clip = _cues[session.current.seconds - session.holdLeft];
-    if (clip != null) _audio.playClips([clip]);
+    if (clip != null) _audio.playLines([clip]);
   }
 
   void _releaseScreen() {
@@ -189,6 +206,7 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
     unawaited(_awake.enable());
     unawaited(_audio.prepare());
     _narrate(_voice.opening(holds), 'Starting with ${nextPhrase(null, session.current)}');
+    _prefetchAhead(session);
     _startTicker();
     setState(() => _stage = _Stage.running);
     HapticFeedback.selectionClick();
@@ -261,10 +279,8 @@ class _GuidedPageState extends ConsumerState<GuidedPage> {
         if (loud) {
           HapticFeedback.lightImpact();
           _tone((a) => a.chime());
-          _narrate(
-            _voice.advance(session.holds, session.index),
-            'Next: ${nextPhrase(session.holds[session.index - 1], session.current)}',
-          );
+          _narrate(_advanceLines(session.holds, session.index));
+          _prefetchAhead(session);
         }
         _announce('Next. ${_holdPhrase(session.current)}');
       case GuidedEvent.finished:

@@ -132,7 +132,8 @@
     },
     "features": {
       "mealEstimate": false,
-      "planPolish": false
+      "planPolish": false,
+      "voice": false
     },
     "schedule": {
       "workdays": [

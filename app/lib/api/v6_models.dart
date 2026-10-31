@@ -166,20 +166,28 @@ class Plan {
 
 /// Optional server features, so the app hides what is switched off.
 class Features {
-  const Features({this.mealEstimate = false, this.planPolish = false});
+  const Features({this.mealEstimate = false, this.planPolish = false, this.voice = false});
 
   factory Features.fromJson(Object? v) {
     final j = _map(v);
     return Features(
       mealEstimate: j?['mealEstimate'] as bool? ?? false,
       planPolish: j?['planPolish'] as bool? ?? false,
+      voice: j?['voice'] as bool? ?? false,
     );
   }
 
   final bool mealEstimate;
   final bool planPolish;
 
-  Map<String, dynamic> toJson() => {'mealEstimate': mealEstimate, 'planPolish': planPolish};
+  /// The server can speak a line in the class voice (`POST /api/voice`).
+  final bool voice;
+
+  Map<String, dynamic> toJson() => {
+    'mealEstimate': mealEstimate,
+    'planPolish': planPolish,
+    'voice': voice,
+  };
 }
 
 /// What POST /me/audiobookshelf/sync answers.

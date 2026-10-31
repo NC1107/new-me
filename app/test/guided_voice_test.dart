@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/audio/voice_clip.dart';
 import 'package:newme/audio/voice_clips.dart';
+import 'package:newme/audio/voice_line.dart';
 import 'package:newme/features/training/guided_session.dart';
 import 'package:newme/features/training/guided_voice.dart';
 import 'package:newme/features/training/yoga_flows.dart';
@@ -13,6 +14,12 @@ ExerciseCatalog get _catalog =>
     ExerciseCatalog.parse(jsonDecode(File('test/contract_v9/exercises.json').readAsStringSync()));
 
 const _voice = GuidedVoice();
+
+List<String> _ids(List<VoiceLine> lines) => [for (final l in lines) l.clip!];
+
+Map<int, String> _cuesOf(List<GuidedHold> holds, int i) => {
+  for (final e in _voice.cues(holds, i).entries) e.key: e.value.clip!,
+};
 
 List<GuidedHold> _holds(int flow) => buildYogaHolds(kYogaFlows[flow], _catalog);
 
@@ -65,24 +72,24 @@ void main() {
 
   group('the class script', () {
     test('opens with the welcome and the first pose', () {
-      expect(_voice.opening(_holds(0)), ['welcome', 'yoga_easy.again']);
+      expect(_ids(_voice.opening(_holds(0))), ['welcome', 'yoga_easy.again']);
     });
 
     test('names the next pose, the other side and a repeated round', () {
       final holds = _holds(1);
       int at(String key, [String label = '']) =>
           holds.indexWhere((h) => h.exercise.key == key && h.label.startsWith(label));
-      expect(_voice.advance(holds, at('yoga_cat_cow')), ['yoga_cat_cow.intro']);
-      expect(_voice.advance(holds, at('yoga_low_lunge', 'Right')), ['switch_sides']);
+      expect(_ids(_voice.advance(holds, at('yoga_cat_cow'))), ['yoga_cat_cow.intro']);
+      expect(_ids(_voice.advance(holds, at('yoga_low_lunge', 'Right'))), ['switch_sides']);
       final second = holds.indexWhere(
         (h) => h.exercise.key == 'yoga_seated_forward_fold' && h.label == 'Hold 2 of 2',
       );
-      expect(_voice.advance(holds, second).single, startsWith('stay.'));
+      expect(_ids(_voice.advance(holds, second)).single, startsWith('stay.'));
     });
 
     test('a skip or step back plays the pose from its start', () {
       final holds = _holds(0);
-      expect(_voice.jump(holds, 2), ['yoga_downward_dog.again']);
+      expect(_ids(_voice.jump(holds, 2)), ['yoga_downward_dog.again']);
     });
 
     test('has nothing to say for a pose without recordings, so the page speaks it', () {
@@ -97,9 +104,9 @@ void main() {
         GuidedHold(exercise: stretch, stepIndex: 0, label: 'Hold', firstOfStep: true, seconds: 30),
         GuidedHold(exercise: stretch, stepIndex: 1, label: 'Hold', firstOfStep: true, seconds: 30),
       ];
-      expect(_voice.opening(mobility), isEmpty);
-      expect(_voice.advance(mobility, 1), isEmpty);
-      expect(_voice.cues(mobility, 1), isEmpty);
+      expect(_ids(_voice.opening(mobility)), isEmpty);
+      expect(_ids(_voice.advance(mobility, 1)), isEmpty);
+      expect(_cuesOf(mobility, 1), isEmpty);
     });
   });
 
@@ -110,7 +117,7 @@ void main() {
       for (var f = 0; f < kYogaFlows.length; f++) {
         final holds = _holds(f);
         for (var i = 0; i < holds.length; i++) {
-          final cues = _voice.cues(holds, i);
+          final cues = _cuesOf(holds, i);
           final at = cues.keys.toList()..sort();
           expect(
             cues.values.any((c) => c.contains('.cue')),
@@ -141,7 +148,7 @@ void main() {
           if (holds[i].exercise.key == 'yoga_low_lunge') i,
       ];
       expect(lunge, hasLength(4));
-      final firsts = [for (final i in lunge) _voice.cues(holds, i).values.firstWhere(_isCue)];
+      final firsts = [for (final i in lunge) _cuesOf(holds, i).values.firstWhere(_isCue)];
       expect(firsts, [
         'yoga_low_lunge.cue',
         'yoga_low_lunge.cue2',
@@ -153,27 +160,27 @@ void main() {
     test('the closing words end before the last hold does', () {
       for (var f = 0; f < kYogaFlows.length; f++) {
         final holds = _holds(f);
-        final cues = _voice.cues(holds, holds.length - 1);
+        final cues = _cuesOf(holds, holds.length - 1);
         final start = cues.entries.firstWhere((e) => e.value == 'closing').key;
         expect(
           start + clip('closing').seconds,
           lessThanOrEqualTo(holds.last.seconds - kGuidedCountdownSeconds),
         );
         expect(cues.values.where((c) => c == 'closing'), hasLength(1));
-        expect(_voice.cues(holds, holds.length - 2).values, isNot(contains('closing')));
+        expect(_cuesOf(holds, holds.length - 2).values, isNot(contains('closing')));
       }
     });
 
     test('a long rest keeps breathing cues coming', () {
       final holds = _holds(2);
       final legsUp = holds.indexWhere((h) => h.exercise.key == 'yoga_legs_up_wall');
-      final breaths = _voice.cues(holds, legsUp).values.where((c) => c.startsWith('breath.'));
+      final breaths = _cuesOf(holds, legsUp).values.where((c) => c.startsWith('breath.'));
       expect(breaths.length, greaterThan(2));
     });
 
     test('holds the first pose back until the welcome has been said', () {
       final holds = _holds(0);
-      final first = _voice.cues(holds, 0).keys.reduce((a, b) => a < b ? a : b);
+      final first = _cuesOf(holds, 0).keys.reduce((a, b) => a < b ? a : b);
       final welcome = clip('welcome').seconds + clip('yoga_easy.again').seconds;
       expect(first, greaterThan(welcome - 3));
     });

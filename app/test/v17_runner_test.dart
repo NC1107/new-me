@@ -235,6 +235,23 @@ void main() {
       await _leave(tester);
     });
 
+    testWidgets('a session with no recordings is spoken as text and fetched ahead', (tester) async {
+      final app = await _open(tester, routine: mobilityRoutine);
+      expect(app.audio.cues.last, startsWith('play: text:Starting with '));
+      expect(app.audio.prefetched, hasLength(3));
+      expect(
+        app.audio.prefetched.every((l) => l.clip == null && l.text.startsWith('Next: ')),
+        isTrue,
+      );
+      await _leave(tester);
+    });
+
+    testWidgets('a yoga session has bundled clips and nothing to fetch', (tester) async {
+      final app = await _open(tester);
+      expect(app.audio.prefetched.every((l) => l.clip != null), isTrue);
+      await _leave(tester);
+    });
+
     testWidgets('skip and previous name the pose again', (tester) async {
       final app = await _open(tester);
       app.audio.cues.clear();

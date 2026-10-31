@@ -15,6 +15,7 @@ It also only said the pose name, so there was no teaching in it.
 - A written class script covers a welcome, every pose, mid-hold cues, breath cues, side switches, repeated rounds and a closing.
 - The runner plays the clips for each event of the session.
   Text-to-speech stays only as the fallback for text that has no clip, which today means the Mobility stretches.
+- Lines with no clip are spoken live by a self-hosted Kokoro through the server, cached on disk, with the phone's voice as the last fallback.
 - Pose videos were researched and are not added (see below).
 
 ## The voice
@@ -79,7 +80,68 @@ Time replayed after the app was in the background plays no cues, as before.
 - The speaker button works as before: sounds and voice, tones only, silent.
   With VoiceOver on the clips stay silent, because the page already announces each change.
 - If a clip cannot be played its text is spoken through text-to-speech, so a bad file never leaves a silent gap.
+- The web build has no platform text-to-speech, so its setup is guarded on its own and cannot take the recorded voice down with it.
+- With VoiceOver on (and so with Flutter web's accessibility mode on) the voice stays silent by design; review the web build before enabling semantics.
 - The halfway tone, ticks, chimes and the end-early sheet are unchanged.
+
+## Live voice from the server
+
+The bundled clips are the offline baseline.
+Nick also wants lesson scripts that are unique, written or generated per lesson later, so any line the app has no clip for can be spoken live by a self-hosted Kokoro in the same voice.
+Whisper is speech-to-text and is not used anywhere in this design.
+
+### How a line is heard
+
+The class script is data: each event gives a list of `VoiceLine`s, a line being its text plus the id of its bundled clip when there is one.
+A future generated lesson supplies lines with text only.
+`LineResolver` (`app/lib/audio/voice_line.dart`) picks the sound for each line in this order:
+
+1. the bundled clip, if the line names one the app ships;
+2. the server voice, if `/api/me` says `features.voice` is on, with the audio held in memory;
+3. the phone's own text-to-speech, if the server voice is off, fails, answers with nothing or takes more than 6 seconds.
+
+The runner prefetches the lines for the next three changes of pose as soon as a hold starts, so a server line is ready before its turn.
+Today that means the Mobility stretches, whose "Starting with ..." and "Next: ..." lines now come from the server voice when it is on.
+Yoga poses need no fetch because every line has a clip.
+Failures are swallowed, never end a session, and fall through to the next step in the order above.
+
+### The endpoint
+
+`POST /api/voice` with `{"text": "..."}` answers with `audio/mpeg`.
+It needs the app key and a device token like every other call.
+It answers 404 `voice_disabled` while `NEWME_TTS_URL` is unset, 422 for text that is empty, over 600 characters or has control characters, 429 with `Retry-After` past the budget, and 502 `voice_unavailable` when the sidecar fails or takes over 45 seconds.
+The audio carries `Cache-Control: private, max-age=31536000, immutable`, since the same text, voice and speed always give the same sound.
+`GET /api/me` adds `features.voice`.
+
+Rate limit: 300 new lines per person per hour.
+A line already in the cache is served without counting, so replaying a lesson costs nothing; the budget guards the sidecar's CPU, which is the only real cost.
+
+### The cache
+
+Lines are stored as files under `NEWME_TTS_CACHE_DIR`, named by the SHA-256 of voice, speed, format and text, two directory levels deep, written to a temporary file and renamed so a reader never sees half a line.
+Disk beats Postgres here for three reasons: there is no migration (everything up to 0028 is applied and this feature owns none), a cached line is regenerable so it does not belong in the backups that `pg_dump` makes, and serving a file avoids pulling an audio blob through the database pool.
+Changing the voice or speed changes every key, so old lines are never served in the wrong voice and nothing needs flushing.
+Concurrent requests for one new line share a single synthesis (`singleflight`).
+A cache that cannot be written only costs a re-synthesis.
+In compose the folder is a named volume, `voice_cache`, and the image creates `/data/voice` owned by the non-root user so the volume starts writable.
+
+### Configuration
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `NEWME_TTS_URL` | empty (off) | Base URL of the Kokoro-FastAPI sidecar, for example `http://kokoro:8880`. |
+| `NEWME_TTS_VOICE` | `af_heart` | The same voice as the bundled clips. |
+| `NEWME_TTS_SPEED` | `0.8` | The same pace as the bundled clips, from 0.5 to 1.5. |
+| `NEWME_TTS_CACHE_DIR` | a folder under the system temp dir | Where lines are kept. Compose sets `/data/voice`. |
+
+### The sidecar
+
+`ghcr.io/remsky/kokoro-fastapi-cpu:v0.9.2` (checked to exist) is added to `deploy/docker-compose.yml` on the internal network only, with no published port.
+It exposes an OpenAI-compatible `/v1/audio/speech`; the server asks it for MP3 with the configured voice and speed.
+The image is large (3.3 GB on disk, because the model and PyTorch ship inside it) and used about 1.4 GB of memory idle in a local run, so compose gives it a 3 GB limit and 2 CPUs.
+A line of about 50 characters rendered in 0.4 seconds on a laptop CPU once warm.
+Pinning the tag keeps watchtower from moving it, because only the app container carries the watchtower label.
+Switching it on in production needs the compose addition plus `NEWME_TTS_URL=http://kokoro:8880` in the server's environment.
 
 ## Pose videos
 

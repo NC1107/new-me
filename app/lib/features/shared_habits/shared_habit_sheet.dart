@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/shared_habit_models.dart';
+import '../../state/clock.dart';
 import '../../state/habit_proposals.dart';
+import '../../state/session.dart';
 import '../../state/shared_habits.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -15,6 +17,7 @@ import '../../widgets/dialogs.dart';
 import '../habits/habit_editor_page.dart';
 import '../habits/habit_icons.dart';
 import 'shared_habit_templates.dart';
+import 'shared_habit_text.dart';
 
 /// Adds a household habit, or edits [habit].
 Future<void> showSharedHabitSheet(BuildContext context, {SharedHabit? habit}) =>
@@ -54,10 +57,15 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
   late String _kind = widget.habit?.schedule.kind ?? SharedKind.weekly;
   late Set<int> _days = {...?widget.habit?.schedule.weekdays};
   late int _every = widget.habit?.schedule.everyDays ?? _kEveryNDefault;
+  late int _worth = _baselineWorth;
   bool _busy = false;
   String? _error;
 
   SharedHabit? get _existing => widget.habit;
+
+  /// The number the sheet opens on: what is waiting for an answer, else what is agreed. Saving
+  /// proposes a worth only when it moved off this, so an untouched sheet never changes it.
+  int get _baselineWorth => _existing?.proposedWorth ?? _existing?.gems ?? kSharedDefaultWorth;
 
   @override
   void dispose() {
@@ -108,11 +116,17 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
     HapticFeedback.mediumImpact();
     final name = _name.text.trim();
     final existing = _existing;
+    final worth = _worth == _baselineWorth ? null : _worth;
     return _run(
       (n) => existing == null
-          ? n.create(name, _icon, _schedule)
-          : n.save(existing.id, name, _icon, _schedule),
+          ? n.create(name, _icon, _schedule, worth: worth)
+          : n.save(existing.id, name, _icon, _schedule, worth: worth),
     );
+  }
+
+  Future<void> _agree() {
+    HapticFeedback.mediumImpact();
+    return _run((n) => n.acceptWorth(_existing!.id));
   }
 
   Future<void> _delete() async {
@@ -144,14 +158,45 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
     HapticFeedback.selectionClick();
     setState(() {
       _kind = kind;
-      if (kind == SharedKind.weekdays && _days.isEmpty) _days = {1, 2, 3, 4, 5};
+      // Today, because a chore made today is first due today; a pre-picked work week would
+      // quietly push it to Monday.
+      if (kind == SharedKind.weekdays && _days.isEmpty) {
+        _days = {ref.read(clockProvider)().weekday};
+      }
     });
+  }
+
+  List<int> get _worthOptions => {...kSharedWorths, _worth, _baselineWorth}.toList()..sort();
+
+  /// One line on where the worth stands, so it is never unclear what a completion pays right now.
+  String _worthNote(String? partner) {
+    final existing = _existing;
+    if (partner == null) return 'What it earns whoever does it.';
+    final paying = existing?.gems ?? kSharedDefaultWorth;
+    if (existing != null && existing.proposalForMe(ref.read(sessionProvider).session?.userId)) {
+      return '${existing.proposedByName} suggests ${existing.proposedWorth} gems. It pays '
+          '$paying for now. Agree, or pick another number and save to counter.';
+    }
+    if (existing != null && existing.hasProposal && _worth == existing.gems) {
+      return 'Keeps the worth at $_worth gems and withdraws the suggestion.';
+    }
+    if (_worth != _baselineWorth) {
+      return 'You suggest $_worth gems. It pays $paying until $partner agrees.';
+    }
+    if (existing != null && existing.hasProposal) {
+      return 'Waiting for $partner to agree to $_worth gems. It pays $paying for now.';
+    }
+    if (existing == null) {
+      return 'It starts at $_worth gems. Pick another number to suggest it to $partner.';
+    }
+    return 'You and $partner agreed on this. Pick another number to suggest a change.';
   }
 
   @override
   Widget build(BuildContext context) {
     final existing = _existing;
     final partner = ref.watch(partnerNameProvider);
+    final myId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         kGutter,
@@ -259,6 +304,13 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
                   ),
               ],
             ),
+            if (_days.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Due ${[for (final d in _days.toList()..sort()) kDayNames[d - 1]].join(', ')}.',
+                style: AppText.caption,
+              ),
+            ],
           ],
           if (_kind == SharedKind.everyN) ...[
             const SizedBox(height: 12),
@@ -273,6 +325,42 @@ class _SharedHabitSheetState extends ConsumerState<SharedHabitSheet> {
           if (_kind == SharedKind.weekly || _kind == SharedKind.everyN) ...[
             const SizedBox(height: 8),
             const Text('Counted from the last time it was done.', style: AppText.caption),
+          ],
+          const SizedBox(height: 20),
+          const FieldLabel('Worth'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final w in _worthOptions)
+                HabitPill(
+                  label: '$w gems',
+                  selected: w == _worth,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _worth = w);
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(_worthNote(partner), style: AppText.caption),
+          if (existing != null && existing.proposalForMe(myId)) ...[
+            const SizedBox(height: 12),
+            ChunkyButton.secondary(
+              label: 'Agree to ${existing.proposedWorth} gems',
+              icon: Icons.handshake_outlined,
+              busy: _busy,
+              onPressed: _busy ? null : _agree,
+            ),
+          ],
+          if (existing?.last != null) ...[
+            const SizedBox(height: 20),
+            const FieldLabel('Last done'),
+            Text(
+              sharedLastLabel(existing!, myId, ref.watch(clockProvider)()),
+              style: AppText.label.copyWith(fontWeight: FontWeight.w700),
+            ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),

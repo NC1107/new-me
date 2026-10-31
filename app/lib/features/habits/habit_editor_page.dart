@@ -38,7 +38,8 @@ class _SlotForm {
   bool reminder;
 }
 
-const kDayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+// Two letters, so Saturday and Sunday are never both an "S".
+const kDayLetters = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const kDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /// Creates a habit, or edits [habit]. A new one starts from a template so the usual habits are

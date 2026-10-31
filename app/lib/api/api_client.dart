@@ -393,10 +393,16 @@ class ApiClient {
   Future<void> deleteSharedHabit(int id) =>
       _send(() => _dio.delete<dynamic>('/api/shared-habits/$id'), (_) {});
 
-  /// Marks the chore done by me. The answer is the habit as it stands, so a chore the partner
-  /// had just done comes back unchanged.
-  Future<SharedHabit> doneSharedHabit(int id) => _send(
-    () => _dio.post<dynamic>('/api/shared-habits/$id/done'),
+  /// Marks the chore done, by me, by my partner or by both ([SharedBy]). The answer is the habit
+  /// as it stands, so a chore the partner had just done comes back unchanged.
+  Future<SharedHabit> doneSharedHabit(int id, {String by = SharedBy.self}) => _send(
+    () => _dio.post<dynamic>('/api/shared-habits/$id/done', data: {'by': by}),
+    (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
+  );
+
+  /// Agrees to the worth my partner proposed for the chore.
+  Future<SharedHabit> acceptSharedWorth(int id) => _send(
+    () => _dio.post<dynamic>('/api/shared-habits/$id/worth/accept'),
     (data) => SharedHabit.fromJson((data as Json)['habit'] as Json),
   );
 

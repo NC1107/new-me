@@ -32,6 +32,8 @@ The rules are pure functions in `server/internal/score/shared_habits.go` (`Share
 
 ## Credit
 
+v19 replaces the fixed 25 with a worth both people agree on and records who did the chore, see `docs/design-v19-shared-chores.md`.
+
 The person who marks a chore done earns `score.SharedHabitGems`, which is 25, the worth a personal habit gets when it is created without one.
 The gems are written as a row in `shared_habit_marks` with the doer's local day.
 Scoring adds them to the day's bonus points, next to the weekly challenge award.

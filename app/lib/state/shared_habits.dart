@@ -44,13 +44,29 @@ class SharedHabitsNotifier extends AsyncNotifier<List<SharedHabit>> {
     state = AsyncData(await _client.sharedHabits());
   }
 
-  Future<void> create(String name, String icon, SharedSchedule schedule) async {
-    await _client.createSharedHabit({'name': name, 'icon': icon, 'schedule': schedule.toJson()});
+  /// [worth] is a number of gems to propose to my partner; null leaves the worth alone.
+  Future<void> create(String name, String icon, SharedSchedule schedule, {int? worth}) async {
+    await _client.createSharedHabit({
+      'name': name,
+      'icon': icon,
+      'schedule': schedule.toJson(),
+      'worth': ?worth,
+    });
     await _reload();
   }
 
-  Future<void> save(int id, String name, String icon, SharedSchedule schedule) async {
-    await _client.patchSharedHabit(id, {'name': name, 'icon': icon, 'schedule': schedule.toJson()});
+  Future<void> save(int id, String name, String icon, SharedSchedule schedule, {int? worth}) async {
+    await _client.patchSharedHabit(id, {
+      'name': name,
+      'icon': icon,
+      'schedule': schedule.toJson(),
+      'worth': ?worth,
+    });
+    await _reload();
+  }
+
+  Future<void> acceptWorth(int id) async {
+    await _client.acceptSharedWorth(id);
     await _reload();
   }
 
@@ -59,8 +75,9 @@ class SharedHabitsNotifier extends AsyncNotifier<List<SharedHabit>> {
     await _reload();
   }
 
-  /// Marks a chore done by me. Throws when the server refuses, after putting the list back.
-  Future<void> markDone(int id) async {
+  /// Marks a chore done, by me, my partner or both. Throws when the server refuses, after putting
+  /// the list back.
+  Future<void> markDone(int id, {String by = SharedBy.self}) async {
     final before = _current;
     final userId = ref.read(sessionProvider).session?.userId;
     final name = ref.read(meProvider).value?.data.user.name ?? '';
@@ -68,11 +85,23 @@ class SharedHabitsNotifier extends AsyncNotifier<List<SharedHabit>> {
     if (userId != null) {
       state = AsyncData([
         for (final h in before)
-          h.id == id ? h.markedDoneBy(SharedLast(userId: userId, name: name, at: now)) : h,
+          h.id == id
+              ? h.markedDoneBy(
+                  SharedLast(
+                    userId: userId,
+                    name: name,
+                    at: now,
+                    together: by == SharedBy.together,
+                    doers: [
+                      SharedDoer(userId: userId, name: name, gems: sharedCredit(by, h.gems).mine),
+                    ],
+                  ),
+                )
+              : h,
       ]);
     }
     try {
-      await _client.doneSharedHabit(id);
+      await _client.doneSharedHabit(id, by: by);
       await _reload();
     } on Object {
       state = AsyncData(before);

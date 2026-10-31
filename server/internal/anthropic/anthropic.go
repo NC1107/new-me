@@ -68,10 +68,19 @@ type Tool struct {
 	Schema      map[string]any
 }
 
-// Request is one single-turn call.
+// Turn is one earlier message of a conversation, as plain text.
+type Turn struct {
+	// Role is "user" or "assistant".
+	Role string
+	Text string
+}
+
+// Request is one call: a single user message, or a whole conversation in Turns.
 type Request struct {
-	System    string
-	User      []Block
+	System string
+	User   []Block
+	// Turns, when set, is sent instead of User and must end with a user turn.
+	Turns     []Turn
 	MaxTokens int
 	// Tool, when set, is forced as the only way to answer.
 	Tool *Tool
@@ -88,15 +97,23 @@ type response struct {
 
 func (c *Client) call(ctx context.Context, req Request) (response, error) {
 	var out response
-	blocks := make([]map[string]any, len(req.User))
-	for i, b := range req.User {
-		blocks[i] = b.wire()
+	messages := []map[string]any{}
+	if len(req.Turns) > 0 {
+		for _, t := range req.Turns {
+			messages = append(messages, map[string]any{"role": t.Role, "content": t.Text})
+		}
+	} else {
+		blocks := make([]map[string]any, len(req.User))
+		for i, b := range req.User {
+			blocks[i] = b.wire()
+		}
+		messages = append(messages, map[string]any{"role": "user", "content": blocks})
 	}
 	body := map[string]any{
 		"model":      Model,
 		"max_tokens": req.MaxTokens,
 		"system":     req.System,
-		"messages":   []map[string]any{{"role": "user", "content": blocks}},
+		"messages":   messages,
 	}
 	if req.Tool != nil {
 		body["tools"] = []map[string]any{{

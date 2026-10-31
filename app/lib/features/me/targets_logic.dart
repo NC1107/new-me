@@ -19,7 +19,7 @@ const kTargetGroups = [
   TargetGroup('Your body', ['restingEnergy', 'maintenance'], hasYours: false),
   TargetGroup('Food', ['calories', 'protein', 'fat', 'saturatedFatMax', 'carbs', 'fiber']),
   TargetGroup('Move and rest', ['steps', 'exercise', 'activity', 'sleep', 'pushups']),
-  TargetGroup('Habits', ['water', 'produce', 'breathing']),
+  TargetGroup('Habits', ['water', 'produce', 'breathing', 'reading']),
 ];
 
 /// The estimate from logs is a secondary line under maintenance, not a row of its own.
@@ -43,6 +43,7 @@ const _names = {
   'water': 'Water',
   'produce': 'Fruit and vegetables',
   'breathing': 'Breathing',
+  'reading': 'Reading, in pages',
 };
 
 /// The target's display name. The push-ups target is titled by the daily-reps exercise.
@@ -204,7 +205,7 @@ List<String> detailLines(Target t) {
         add('One serving is $kProduceServingGrams g: ${examples.whereType<String>().join(', ')}.');
       }
       add(str(d['note']));
-    case 'water' || 'breathing':
+    case 'water' || 'breathing' || 'reading':
       add(str(d['note']));
     case 'pushups':
       final range = d['rangePerSet'];

@@ -25,16 +25,46 @@ Map<String, dynamic> _day(String date, bool tracked, {num actual = 0, bool done 
   'done': done,
 };
 
-StubAdapter _server({List<Map<String, dynamic>>? logs}) => fullServer()
-  ..on(
-    'GET /api/targets',
-    StubResponse(
-      200,
+/// The reading target as GET /api/targets sends it for a 20 minute goal.
+const _readingTarget = {
+  'key': 'reading',
+  'value': 19,
+  'unit': 'pages',
+  'current': 19,
+  'formula':
+      '20 minutes, or about 19 pages: adults read non-fiction at about 238 words a minute, and a '
+      'page is taken as about 250 words (20 x 238 / 250).',
+  'sources': ['brysbaert2019', 'acx', 'pagewords'],
+  'label': 'guideline',
+  'missing': <String>[],
+  'applicable': true,
+  'details': {
+    'minutes': 20,
+    'note':
+        'An audiobook minute counts as 65% of a reading minute, because a narrator speaks about '
+        '155 words a minute against the 238 an adult reads.',
+  },
+};
+
+Map<String, dynamic> _targetsBody() {
+  final body =
       (jsonDecode(File('test/contract_v8/targets.json').readAsStringSync())
               as Map<String, dynamic>)['body']
-          as Map<String, dynamic>,
-    ),
-  )
+          as Map<String, dynamic>;
+  return {
+    ...body,
+    'targets': [...(body['targets'] as List), _readingTarget],
+    'sources': {
+      ...(body['sources'] as Map<String, dynamic>),
+      'brysbaert2019': 'Brysbaert, J Mem Lang 2019;109:104047',
+      'acx': 'ACX narration guidance, 9,300 words per finished hour',
+      'pagewords': '250 words a page is a typesetting convention',
+    },
+  };
+}
+
+StubAdapter _server({List<Map<String, dynamic>>? logs}) => fullServer()
+  ..on('GET /api/targets', StubResponse(200, _targetsBody()))
   ..on(
     'GET /api/quests/{key}/history',
     StubResponse(200, {
@@ -123,7 +153,7 @@ void main() {
     test('only quests with published research name a target', () {
       expect(targetKeyForQuest('steps'), 'steps');
       expect(targetKeyForQuest('exercise'), 'activity');
-      expect(targetKeyForQuest('reading'), isNull);
+      expect(targetKeyForQuest('reading'), 'reading');
     });
   });
 
@@ -139,6 +169,20 @@ void main() {
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);
       expect(find.textContaining('7,000 steps a day'), findsOneWidget);
       expect(find.text('Log water'), findsNothing);
+    });
+
+    testWidgets('the reading sheet explains the pages figure and the audiobook credit', (
+      tester,
+    ) async {
+      await _open(tester, _server(), 'reading');
+
+      expect(find.textContaining('20 minutes, or about 19 pages'), findsOneWidget);
+      expect(find.textContaining('238 words a minute'), findsOneWidget);
+      expect(find.textContaining('An audiobook minute counts as 65%'), findsOneWidget);
+      expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsOneWidget);
+      expect(find.textContaining('250 words a page is a typesetting convention'), findsOneWidget);
+      // The fixture's pages goal is the old 15, so it is called the person's own.
+      expect(find.text('Your pages goal is 15 pages, which is your own pick.'), findsOneWidget);
     });
 
     testWidgets('a logged quest lists only its own entries, with a log action', (tester) async {

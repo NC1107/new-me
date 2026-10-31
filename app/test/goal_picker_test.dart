@@ -7,6 +7,7 @@ import 'package:newme/api/models.dart';
 import 'package:newme/features/me/goal_advice.dart';
 import 'package:newme/features/me/goal_picker_page.dart';
 import 'package:newme/features/onboarding/goal_catalog.dart';
+import 'package:newme/features/me/reading_pages.dart';
 import 'package:newme/features/onboarding/steps_plan.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -134,6 +135,74 @@ void main() {
       for (final tier in _tiers) {
         expect(find.text(tier), findsNothing, reason: tier);
       }
+    });
+
+    group('the reading goal and its pages figure', () {
+      QuestTemplate reading() => QuestTemplate.fromJson({
+        'key': 'reading',
+        'title': 'Reading',
+        'enabled': true,
+        'target': 20,
+        'unit': 'minutes',
+        'targetAlt': 19,
+        'unitAlt': 'pages',
+        'points': 100,
+        'position': 2,
+      });
+
+      Future<TestApp> openReading(WidgetTester tester, {int alt = 19}) async {
+        final app = TestApp(tester, fullServer(), surfaceHeight: 2000);
+        await app.pump(
+          GoalPickerPage(quest: reading(), target: 20, targetAlt: alt),
+          key: UniqueKey(),
+        );
+        return app;
+      }
+
+      testWidgets('the pages figure is minutes x 238 words a minute over 250 words a page', (
+        tester,
+      ) async {
+        expect(
+          [
+            for (final m in [1, 10, 20, 30, 45, 60]) pagesForMinutes(m),
+          ],
+          [1, 10, 19, 29, 43, 57],
+        );
+        expect(kReadingWpm, 238);
+        expect(kWordsPerPage, 250);
+      });
+
+      testWidgets('the pages follow the minutes and say why', (tester) async {
+        final app = await openReading(tester);
+        expect(
+          find.textContaining('About 19 pages: reading at about 238 words a minute'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('about 250 words a page'), findsOneWidget);
+
+        await app.tap(find.text('30 min'));
+        expect(find.widgetWithText(TextField, '29'), findsOneWidget);
+        expect(find.textContaining('About 29 pages'), findsOneWidget);
+      });
+
+      testWidgets('a pages figure of your own stays put until you type the matching one', (
+        tester,
+      ) async {
+        final app = await openReading(tester, alt: 40);
+        expect(
+          find.textContaining('Your own figure. 20 minutes of reading is about 19 pages'),
+          findsOneWidget,
+        );
+
+        await app.tap(find.text('30 min'));
+        expect(find.widgetWithText(TextField, '40'), findsOneWidget);
+
+        await tester.enterText(find.widgetWithText(TextField, '40'), '29');
+        await tester.pump();
+        expect(find.textContaining('About 29 pages'), findsOneWidget);
+        await app.tap(find.text('45 min'));
+        expect(find.widgetWithText(TextField, '43'), findsOneWidget);
+      });
     });
 
     testWidgets('the steady bedtime window says the research names none', (tester) async {

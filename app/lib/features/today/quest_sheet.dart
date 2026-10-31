@@ -16,6 +16,7 @@ import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
+import '../../util/format.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
@@ -33,6 +34,9 @@ import 'day_detail_sheet.dart';
 String? targetKeyForQuest(String questKey) => switch (questKey) {
   'steps' || 'protein' || 'sleep' || 'water' || 'produce' || 'breathing' || 'pushups' => questKey,
   'exercise' => 'activity',
+  // The pages way to finish it is derived from the minutes; the minutes themselves are the
+  // person's pick.
+  'reading' => 'reading',
   _ => null,
 };
 
@@ -286,11 +290,17 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
 
   /// The formula's number is a suggestion; a goal set to something else is said to be the
   /// person's own, so the sentence above never reads as the reason for a different number.
-  bool _differs(Quest quest, Target target) =>
-      target.value != null && target.unit == quest.unit && target.value != quest.target.round();
+  bool _differs(Quest quest, Target target) {
+    if (target.value == null) return false;
+    if (quest.key == 'reading') {
+      return quest.targetAlt != null && target.value != quest.targetAlt!.round();
+    }
+    return target.unit == quest.unit && target.value != quest.target.round();
+  }
 
-  String _goalText(Quest quest, Target target) =>
-      formatTargetValue(quest.target.round(), target.unit, units: ref.watch(unitsProvider));
+  String _goalText(Quest quest, Target target) => quest.key == 'reading'
+      ? 'Your pages goal is ${quest.targetAlt!.round().formatted} pages'
+      : 'Your goal is ${formatTargetValue(quest.target.round(), target.unit, units: ref.watch(unitsProvider))}';
 
   List<Widget> _why(Quest quest) {
     final key = targetKeyForQuest(quest.key);
@@ -310,16 +320,30 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(target!.formula, style: AppText.body),
+                  if (quest.key == 'reading' && target.details['note'] is String) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      target.details['note'] as String,
+                      style: AppText.body.copyWith(color: kInkSecondary),
+                    ),
+                  ],
                   if (_differs(quest, target)) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Your goal is ${_goalText(quest, target)}, which is your own pick.',
+                      '${_goalText(quest, target)}, which is your own pick.',
                       style: AppText.label.copyWith(color: kInkSecondary),
                     ),
                   ],
                   if (target.sources.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text(report!.citation(target.sources.first), style: AppText.caption),
+                    Text(
+                      [
+                        for (final k
+                            in quest.key == 'reading' ? target.sources : target.sources.take(1))
+                          report!.citation(k),
+                      ].join('\n'),
+                      style: AppText.caption,
+                    ),
                   ],
                 ],
               ),

@@ -40,6 +40,8 @@ type PartnerPrefs struct {
 type HardQuest struct {
 	Key    string
 	Actual int
+	// Noun words Actual reps of a pushups quest, such as "squats"; empty reads as push-ups.
+	Noun string
 }
 
 // ChallengeFacts is the person's own standing in the week's challenge.
@@ -130,7 +132,11 @@ func questFigure(q HardQuest) string {
 	case "steps":
 		return fmt.Sprintf("%s steps", thousands(q.Actual))
 	case "pushups":
-		return fmt.Sprintf("%d push-ups", q.Actual)
+		noun := q.Noun
+		if noun == "" {
+			noun = "push-ups"
+		}
+		return fmt.Sprintf("%d %s", q.Actual, noun)
 	case "reading":
 		return fmt.Sprintf("%d minutes of reading", q.Actual)
 	case "exercise":

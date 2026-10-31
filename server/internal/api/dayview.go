@@ -27,6 +27,8 @@ type questJSON struct {
 	BasePoints  int     `json:"basePoints"`
 	BonusPoints int     `json:"bonusPoints"`
 	Done        bool    `json:"done"`
+	// Exercise is the daily-reps exercise of the pushups quest, absent for every other quest.
+	Exercise string `json:"exercise,omitempty"`
 	// DoneBy says which Health workout or planned session completed the quest; null when logged
 	// entries did.
 	DoneBy *score.DoneBy `json:"doneBy"`
@@ -79,9 +81,12 @@ func toQuestsJSON(s engine.Scored) []questJSON {
 		earned := byKey[q.Key]
 		actual, actualAlt := engine.Actuals(q, s.Inputs)
 		item := questJSON{
-			Key: q.Key, Title: questTitle(q.Key), Target: q.Target, Unit: q.Unit,
+			Key: q.Key, Title: questTitleFor(q.Key, q.Exercise), Target: q.Target, Unit: q.Unit,
 			TargetAlt: q.TargetAlt, UnitAlt: q.UnitAlt, Actual: actual, ActualAlt: actualAlt,
 			Points: q.Points, BasePoints: earned.Base, BonusPoints: earned.Bonus, Done: earned.Complete,
+		}
+		if q.Key == db.QuestPushups {
+			item.Exercise = q.Exercise
 		}
 		if earned.Complete {
 			item.DoneBy = engine.DoneBy(q, s.Inputs)

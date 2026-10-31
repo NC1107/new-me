@@ -122,6 +122,13 @@ func (s *Service) partnerHardQuest(ctx context.Context, u, partner db.User, now 
 	for _, q := range quests {
 		if q.Complete && q.Points >= HardQuestPoints {
 			hard = &HardQuest{Key: q.Key, Actual: q.Actual}
+			if q.Key == db.QuestPushups {
+				exercise, err := db.RepsExerciseOf(ctx, s.DB.Pool, partner.ID, ptoday)
+				if err != nil {
+					return nil, false, err
+				}
+				hard.Noun = db.RepsNoun(exercise, q.Actual)
+			}
 			break
 		}
 	}

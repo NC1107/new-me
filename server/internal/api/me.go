@@ -37,6 +37,8 @@ type templateJSON struct {
 	UnitAlt   *string `json:"unitAlt"`
 	Points    int     `json:"points"`
 	Position  int     `json:"position"`
+	// Exercise is the daily-reps exercise of the pushups quest, absent for every other quest.
+	Exercise string `json:"exercise,omitempty"`
 }
 
 type meJSON struct {
@@ -228,10 +230,14 @@ func (s *Server) buildMe(ctx context.Context, q db.Querier, u db.User) (meJSON, 
 	}
 	out := make([]templateJSON, 0, len(templates))
 	for _, t := range templates {
-		out = append(out, templateJSON{
-			Key: t.Key, Title: questTitle(t.Key), Enabled: t.Enabled, Target: t.Target, Unit: t.Unit,
+		item := templateJSON{
+			Key: t.Key, Title: questTitleFor(t.Key, t.Exercise), Enabled: t.Enabled, Target: t.Target, Unit: t.Unit,
 			TargetAlt: t.TargetAlt, UnitAlt: t.UnitAlt, Points: t.Points, Position: t.Position,
-		})
+		}
+		if t.Key == db.QuestPushups {
+			item.Exercise = t.Exercise
+		}
+		out = append(out, item)
 	}
 	abs, err := s.absState(ctx, q, u.ID)
 	if err != nil {
@@ -288,6 +294,8 @@ type templatePatch struct {
 	Enabled   *bool  `json:"enabled"`
 	Target    *int   `json:"target"`
 	TargetAlt *int   `json:"targetAlt"`
+	// Exercise picks the daily-reps exercise and is only for the pushups quest.
+	Exercise *string `json:"exercise"`
 }
 
 type patchMeRequest struct {
@@ -608,6 +616,12 @@ func applyTemplatePatches(ctx context.Context, tx pgx.Tx, userID int64, patches 
 		}
 		if p.Target != nil {
 			t.Target = *p.Target
+		}
+		if p.Exercise != nil {
+			if herr := validRepsExercise(ctx, tx, userID, p.Key, *p.Exercise); herr != nil {
+				return herr
+			}
+			t.Exercise = *p.Exercise
 		}
 		if p.TargetAlt != nil {
 			if t.UnitAlt == nil {

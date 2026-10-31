@@ -56,7 +56,9 @@ type DayInputs struct {
 	// Health-fed quest appear.
 	Synced map[string]bool
 
-	Pushups        int
+	Pushups int
+	// RepsExercise is the exercise Pushups counts, the daily-reps choice of the day.
+	RepsExercise   string
 	ReadingMinutes int
 	ReadingPages   int
 	YogaMinutes    int
@@ -118,11 +120,16 @@ func (in DayInputs) Connected(key string) bool { return in.Synced[key] }
 // A metric is Synced once any reading of it exists on or before the date.
 func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date) (DayInputs, error) {
 	in := DayInputs{Date: date}
-	err := q.QueryRow(ctx, `
+	repsExercise, err := RepsExerciseOf(ctx, q, userID, date)
+	if err != nil {
+		return in, err
+	}
+	in.RepsExercise = repsExercise
+	err = q.QueryRow(ctx, `
 		SELECT a.pushups, a.reading_minutes, a.reading_pages, a.yoga_minutes, a.water_ml, a.produce, a.breathing, a.other_full, a.other_easy,
 		       m.meals, m.kcal, m.protein, m.carbs, m.fat, m.fiber
 		FROM (
-			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups'), 0)::int AS pushups,
+			SELECT COALESCE(sum(quantity) FILTER (WHERE type = 'pushups' AND exercise = $3), 0)::int AS pushups,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_minutes'), 0)::int AS reading_minutes,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'reading_pages'), 0)::int AS reading_pages,
 			       COALESCE(sum(quantity) FILTER (WHERE type = 'yoga_minutes'), 0)::int AS yoga_minutes,
@@ -140,13 +147,13 @@ func LoadDayInputs(ctx context.Context, q Querier, userID int64, date score.Date
 			       COALESCE(sum(fat_g), 0)::float8 AS fat,
 			       COALESCE(sum(fiber_g), 0)::float8 AS fiber
 			FROM meal_logs WHERE user_id = $1 AND local_date = $2::date AND deleted_at IS NULL
-		) m`, userID, date).Scan(
+		) m`, userID, date, repsExercise).Scan(
 		&in.Pushups, &in.ReadingMinutes, &in.ReadingPages, &in.YogaMinutes, &in.WaterLoggedML, &in.ProduceServings, &in.BreathingLoggedMin, &in.OtherFullMinutes, &in.OtherEasyMinutes,
 		&in.Meals, &in.Kcal, &in.ProteinG, &in.CarbsG, &in.FatG, &in.FiberG)
 	if err != nil {
 		return in, err
 	}
-	setReps, err := PushupSetReps(ctx, q, userID, date)
+	setReps, err := RepsSetReps(ctx, q, userID, date, repsExercise)
 	if err != nil {
 		return in, err
 	}

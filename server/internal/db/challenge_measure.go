@@ -61,7 +61,7 @@ func ChallengeMeasure(ctx context.Context, q Querier, userID int64, kind string,
 			LEFT JOIN day_quests d ON d.user_id = m.user_id AND d.local_date = m.local_date AND d.key = 'protein'`
 		args = []any{DefaultProteinTarget}
 	case ChallengePushupReps:
-		sql = activitySQL(`type = 'pushups'`, "pushups")
+		sql = activitySQL(`type = 'pushups' AND exercise = 'push_up'`, "pushups")
 	case ChallengeYogaMinutes:
 		sql = activitySQL(`type = 'yoga_minutes'`, "yoga")
 	case ChallengeHabitMarks:

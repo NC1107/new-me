@@ -112,16 +112,26 @@ type targetData struct {
 	Age                *int
 	Sex                *targets.Sex
 
-	Steps        insights.Steps
-	StepAvg14    float64
-	StepAvgDays  int
-	Intake       map[score.Date]float64
-	Nights       []insights.Night
-	Activity     insights.Activity
-	Templates    map[string]db.QuestTemplate
-	PushupMax    *db.PushupMax
-	PushupSets   map[score.Date][]int
+	Steps       insights.Steps
+	StepAvg14   float64
+	StepAvgDays int
+	Intake      map[score.Date]float64
+	Nights      []insights.Night
+	Activity    insights.Activity
+	Templates   map[string]db.QuestTemplate
+	PushupMax   *db.RepsMax
+	PushupSets  map[score.Date][]int
+	// RepsExercise is the exercise the daily-reps quest counts, which the max and sets are of.
+	RepsExercise string
 	ProteinToday int
+}
+
+// repsExercise is the exercise of the standing pushups template, push-ups before one is set.
+func (d targetData) repsExercise() string {
+	if e := d.Templates[db.QuestPushups].Exercise; e != "" {
+		return e
+	}
+	return db.DefaultRepsExercise
 }
 
 // loadTargetData reads the person's inputs and history.
@@ -195,12 +205,13 @@ func (s *Server) loadTargetData(ctx context.Context, q db.Querier, u db.User, lo
 	if d.Activity, err = s.activityInsight(ctx, caller{user: u, loc: loc}, today); err != nil {
 		return d, err
 	}
-	if m, err := db.LatestPushupMax(ctx, q, u.ID); err == nil {
+	d.RepsExercise = d.repsExercise()
+	if m, err := db.LatestRepsMax(ctx, q, u.ID, d.RepsExercise); err == nil {
 		d.PushupMax = &m
 	} else if err != db.ErrNotFound {
 		return d, err
 	}
-	if d.PushupSets, err = db.PushupSets(ctx, q, u.ID, today.AddDays(-targets.ProgressionWindow), today.AddDays(-1)); err != nil {
+	if d.PushupSets, err = db.RepsSets(ctx, q, u.ID, d.RepsExercise, today.AddDays(-targets.ProgressionWindow), today.AddDays(-1)); err != nil {
 		return d, err
 	}
 	protein, err := proteinFor(ctx, q, u, today, d.Templates[db.QuestProtein].Target)
@@ -641,13 +652,16 @@ func (d targetData) stepsTarget(current *int) targetJSON {
 	return t
 }
 
-// pushupsTarget is 3 sets at 75% of the latest max, with the progression rule.
+// pushupsTarget is 3 sets at 75% of the latest max of the chosen exercise, with the progression
+// rule. The key stays pushups for compatibility.
 func (d targetData) pushupsTarget(current *int) targetJSON {
+	name := db.RepsNoun(d.RepsExercise, 2)
 	t := targetJSON{Key: tgtPushups, Unit: "reps", Label: labelDerivation, Applicable: true, Current: current, Missing: []string{},
-		Sources: []string{"zourdos2016", "schoenfeld2017", "acsm2009"}}
+		Sources: []string{"zourdos2016", "schoenfeld2017", "acsm2009"},
+		Details: map[string]any{"exercise": d.RepsExercise}}
 	if d.PushupMax == nil {
 		t.Missing = []string{"pushupMax"}
-		t.Formula = "3 sets at about 70 to 80% of your latest max, a derivation from reps-in-reserve guidance rather than a published constant. Record a max test (one set to near failure) to size it."
+		t.Formula = fmt.Sprintf("3 sets at about 70 to 80%% of your latest max of %s, a derivation from reps-in-reserve guidance rather than a published constant. Record a max test (one set to near failure) to size it.", name)
 		return t
 	}
 	perSet := 0
@@ -662,15 +676,16 @@ func (d targetData) pushupsTarget(current *int) targetJSON {
 	}
 	p := targets.ComputePushups(d.PushupMax.Reps, perSet, completed)
 	t.Value = intp(p.Daily())
-	t.Formula = fmt.Sprintf("%d sets × %d reps, 75%% (the middle of 70 to 80%%) of your latest max of %d, a derivation from reps-in-reserve guidance rather than a published constant.",
-		targets.PushupSets, p.RepsPerSet, p.Max)
+	t.Formula = fmt.Sprintf("%d sets × %d reps, 75%% (the middle of 70 to 80%%) of your latest max of %d %s, a derivation from reps-in-reserve guidance rather than a published constant.",
+		targets.PushupSets, p.RepsPerSet, p.Max, name)
 	if p.Progressed {
 		t.Formula = fmt.Sprintf("%d sets × %d reps: %d reps a set raised by 5%% (at least 1 rep) because every set was completed on %d of the last 7 days, a derivation from reps-in-reserve and progression guidance.",
 			targets.PushupSets, p.RepsPerSet, p.ProgressedFrom, completed)
 	}
-	t.Details = map[string]any{"sets": targets.PushupSets, "repsPerSet": p.RepsPerSet, "rangePerSet": []int{p.Low, p.High},
-		"latestMax": p.Max, "latestMaxDate": d.PushupMax.Date, "progressed": p.Progressed,
-		"daysCompleted7": completed, "progressionDays": targets.ProgressionDays, "suggestRetestEveryWeeks": "2 to 4"}
+	t.Details = map[string]any{"exercise": d.RepsExercise, "sets": targets.PushupSets, "repsPerSet": p.RepsPerSet,
+		"rangePerSet": []int{p.Low, p.High}, "latestMax": p.Max, "latestMaxDate": d.PushupMax.Date,
+		"progressed": p.Progressed, "daysCompleted7": completed, "progressionDays": targets.ProgressionDays,
+		"suggestRetestEveryWeeks": "2 to 4"}
 	return t
 }
 

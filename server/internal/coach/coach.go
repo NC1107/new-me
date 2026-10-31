@@ -76,7 +76,7 @@ func Load(ctx context.Context, q db.Querier, user db.User, loc *time.Location, s
 			continue
 		}
 		actual, alt := engine.Actuals(dq, scored.Inputs)
-		pq := plan.Quest{Key: dq.Key, Target: dq.Target, Actual: actual, TargetAlt: dq.TargetAlt, ActualAlt: alt, Done: qs.Complete}
+		pq := plan.Quest{Key: dq.Key, Exercise: dq.Exercise, Target: dq.Target, Actual: actual, TargetAlt: dq.TargetAlt, ActualAlt: alt, Done: qs.Complete}
 		if qs.Complete {
 			pq.DoneBy = engine.DoneBy(dq, scored.Inputs)
 		}

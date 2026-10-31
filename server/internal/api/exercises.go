@@ -165,7 +165,7 @@ func (s *Server) handleListExercises(w http.ResponseWriter, r *http.Request) {
 	for _, set := range sets {
 		byExercise[set.ExerciseID] = append(byExercise[set.ExerciseID], trainingSet(set))
 	}
-	pushupMax, err := db.LatestPushupMax(ctx, s.db.Pool, c.user.ID)
+	pushupMax, err := db.LatestRepsMax(ctx, s.db.Pool, c.user.ID, "push_up")
 	if err != nil && !errors.Is(err, db.ErrNotFound) {
 		fail(w, r, err)
 		return

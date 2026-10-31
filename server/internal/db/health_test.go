@@ -106,7 +106,7 @@ func TestLoadDayInputsAggregatesTheDay(t *testing.T) {
 	in.Loc, in.Date, in.SleepNights = nil, "", nil
 	want := db.DayInputs{
 		Metrics: map[string]float64{db.MetricSteps: 4321, db.MetricActiveEnergy: 540},
-		Synced:  map[string]bool{db.MetricSteps: true, db.MetricActiveEnergy: true}, Pushups: 35, ReadingMinutes: 12,
+		Synced:  map[string]bool{db.MetricSteps: true, db.MetricActiveEnergy: true}, Pushups: 35, RepsExercise: "push_up", ReadingMinutes: 12,
 		ReadingPages: 5, YogaMinutes: 30, Meals: 2, Kcal: 1200, ProteinG: 70.9, CarbsG: 120, FatG: 30, FiberG: 7.5}
 	if !reflect.DeepEqual(in, want) {
 		t.Fatalf("inputs = %+v\nwant     %+v", in, want)

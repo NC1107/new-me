@@ -7,51 +7,14 @@ import (
 	"github.com/nc1107/new-me/server/internal/score"
 )
 
-// PushupMax is a recorded max test: one set of push-ups to near failure.
-type PushupMax struct {
-	Date score.Date
-	Reps int
-}
-
-// SetPushupMax records the test of a day, replacing an earlier test the same day.
+// SetPushupMax records the push-up max test of a day in the v8 table, replacing an earlier test
+// the same day.
 func SetPushupMax(ctx context.Context, q Querier, userID int64, date score.Date, reps int) error {
 	_, err := q.Exec(ctx, `
 		INSERT INTO pushup_max_tests (user_id, local_date, reps) VALUES ($1, $2::date, $3)
 		ON CONFLICT (user_id, local_date) DO UPDATE SET reps = EXCLUDED.reps, created_at = now()`,
 		userID, date, reps)
 	return err
-}
-
-// LatestPushupMax is the newest max test, or ErrNotFound.
-func LatestPushupMax(ctx context.Context, q Querier, userID int64) (PushupMax, error) {
-	var m PushupMax
-	err := q.QueryRow(ctx, `
-		SELECT local_date::text, reps FROM pushup_max_tests
-		WHERE user_id = $1 ORDER BY local_date DESC LIMIT 1`, userID).Scan(&m.Date, &m.Reps)
-	return m, notFound(err)
-}
-
-// PushupSets lists each day's push-up log entries (one entry is one set), oldest first.
-func PushupSets(ctx context.Context, q Querier, userID int64, from, to score.Date) (map[score.Date][]int, error) {
-	rows, err := q.Query(ctx, `
-		SELECT local_date::text, quantity FROM activity_logs
-		WHERE user_id = $1 AND type = 'pushups' AND deleted_at IS NULL
-		  AND local_date BETWEEN $2::date AND $3::date
-		ORDER BY local_date, id`, userID, from, to)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[score.Date][]int{}
-	for rows.Next() {
-		var d score.Date
-		var reps int
-		if err := rows.Scan(&d, &reps); err != nil {
-			return nil, err
-		}
-		out[d] = append(out[d], reps)
-	}
-	return out, rows.Err()
 }
 
 // DailyKcal sums the logged energy of each day from..to that has any.

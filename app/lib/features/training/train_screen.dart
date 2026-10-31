@@ -19,6 +19,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../../state/today.dart';
 import '../me/settings_row.dart';
+import 'calisthenics_page.dart';
 import 'exercises_page.dart';
 import 'mobility_page.dart';
 import 'yoga_page.dart';
@@ -132,6 +133,13 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
               icon: Icons.spa_rounded,
               colorId: 'violet',
               page: YogaPage(),
+            ),
+            const _RoutineCard(
+              title: 'Calisthenics',
+              blurb: 'No equipment, beginner to intense. Reps at your own pace.',
+              icon: Icons.sports_gymnastics_rounded,
+              colorId: 'amber',
+              page: CalisthenicsPage(),
             ),
             const _RoutineCard(
               title: 'Mobility',

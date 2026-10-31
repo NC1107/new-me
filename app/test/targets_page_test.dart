@@ -7,6 +7,7 @@ import 'package:newme/api/models.dart';
 import 'package:newme/features/log/log_kind.dart';
 import 'package:newme/features/log/log_sheet.dart';
 import 'package:newme/features/me/me_screen.dart';
+import 'package:newme/features/me/target_row.dart';
 import 'package:newme/features/me/profile_page.dart';
 import 'package:newme/features/me/targets_page.dart';
 import 'package:newme/features/setup/about_you_page.dart';
@@ -41,6 +42,11 @@ Future<TestApp> _open(WidgetTester tester, StubAdapter server, {double scale = 1
 
 Finder _chip(String label) => find.bySemanticsLabel(label);
 
+Finder _row(String name) => find.bySemanticsLabel(RegExp('^$name\\.'));
+
+Finder _button(String label) =>
+    find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
+
 void _expectTapTargets(WidgetTester tester, Iterable<Finder> finders) {
   for (final f in finders) {
     expect(f, findsWidgets);
@@ -64,29 +70,32 @@ void main() {
     ) async {
       await _open(tester, _server());
 
-      for (final group in ['Energy', 'Macros', 'Sleep', 'Activity', 'Steps', 'Push-ups']) {
-        expect(find.text(group), findsWidgets, reason: group);
+      for (final group in ['Your body', 'Food', 'Move and rest', 'Habits']) {
+        expect(find.text(group), findsOneWidget, reason: group);
       }
       expect(find.text('This is general guidance, not medical advice.'), findsOneWidget);
 
+      // Yours and Recommended sit side by side under one heading each.
+      expect(find.text('Yours'), findsNWidgets(3));
+      expect(find.text('Recommended'), findsNWidgets(3));
       expect(find.text('2,350 kcal'), findsOneWidget);
-      expect(find.text('Yours: 2,200 kcal'), findsOneWidget);
+      expect(find.text('2,200 kcal'), findsOneWidget);
       expect(find.text('7 h 30 min'), findsOneWidget);
-      expect(find.text('Yours: 7 h'), findsOneWidget);
-      expect(find.textContaining('Your setting'), findsNothing);
-      // Formulas, labels and sources wait behind the info button.
+      expect(find.text('7 h'), findsOneWidget);
+      // Fruit and vegetables read in grams as well as servings.
+      expect(find.text('5 servings (400 g)'), findsNWidgets(2));
+      expect(find.text('3.0 L'), findsOneWidget);
+      // Formulas, labels and sources wait behind a tap on the row.
       expect(find.textContaining('Mifflin-St Jeor'), findsNothing);
       expect(find.text('Guideline'), findsNothing);
       expect(find.textContaining('Sources'), findsNothing);
       expect(find.text('Add these to work out your targets'), findsNothing);
     });
 
-    testWidgets('the info button explains the formula, its label and full citations', (
-      tester,
-    ) async {
+    testWidgets('tapping a row explains the formula, its label and full citations', (tester) async {
       final app = await _open(tester, _server());
 
-      await app.tap(find.byTooltip('How Resting energy is worked out'));
+      await app.tap(_row('Resting energy'));
       expect(find.textContaining('Mifflin-St Jeor: 10 x 82.4 kg'), findsOneWidget);
       expect(find.text('Guideline'), findsOneWidget);
       expect(find.text('Sources'), findsOneWidget);
@@ -98,7 +107,7 @@ void main() {
       final app = await _open(tester, _server());
       expect(find.textContaining('Estimated from your logs'), findsNothing);
 
-      await app.tap(find.byTooltip('How Maintenance is worked out'));
+      await app.tap(_row('Maintenance'));
       expect(find.text('Estimated from your logs: 2,650 kcal'), findsOneWidget);
       expect(find.textContaining('logged intake is commonly under-reported'), findsOneWidget);
     });
@@ -106,7 +115,7 @@ void main() {
     testWidgets('extra detail lines show bedtime, shortfall and the push-up max', (tester) async {
       final app = await _open(tester, _server());
       Future<void> info(String name) async {
-        await app.tap(find.byTooltip('How $name is worked out'));
+        await app.tap(_row(name));
       }
 
       Future<void> close() async {
@@ -126,24 +135,49 @@ void main() {
       expect(find.text('About 0.4 g/kg a meal, 33 g, across 4 meals.'), findsOneWidget);
     });
 
-    testWidgets('Use this applies one target and the toast says it starts tomorrow', (
+    testWidgets('Use in a row sheet applies one target and the toast says it applies today', (
       tester,
     ) async {
       final server = _server();
       final app = await _open(tester, server);
 
-      await app.tap(_chip('Use this calories target'));
+      await app.tap(_row('Calories'));
+      await app.tap(_button('Use 2,350 kcal'));
       expect(app.body('POST /api/targets/apply'), {
         'keys': ['calories'],
       });
-      expect(find.text('Starts tomorrow: Calories 2,350 kcal'), findsOneWidget);
+      expect(find.text('Applied today: Calories 2,350 kcal'), findsOneWidget);
+    });
+
+    testWidgets('a row that matches its recommendation offers no Use', (tester) async {
+      final app = await _open(tester, _server());
+
+      await app.tap(_row('Fruit and vegetables'));
+      expect(find.text('Recommended'), findsWidgets);
+      expect(_button('Use 5 servings (400 g)'), findsNothing);
+      // What one serving looks like comes from the cited guide.
+      expect(find.textContaining('3 heaped tablespoons of cooked vegetables'), findsOneWidget);
+      expect(find.textContaining('NHS, 5 A Day portion sizes'), findsOneWidget);
+    });
+
+    testWidgets('a row sheet shows the plain why and the other published figures', (tester) async {
+      final app = await _open(tester, _server());
+
+      await app.tap(_row('Water'));
+      expect(find.textContaining('adequate intake of drinks for men'), findsOneWidget);
+      expect(
+        find.text('2.0 L: EFSA: 2.5 L of total water for men, the drinks part'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Use all applies every target that differs, in one request', (tester) async {
       final server = _server();
       final app = await _open(tester, server);
 
-      final useAll = find.byWidgetPredicate((w) => w is ChunkyButton && w.label == 'Use all (7)');
+      final useAll = find.byWidgetPredicate(
+        (w) => w is ChunkyButton && w.label == 'Use all recommended (9)',
+      );
       expect(useAll, findsOneWidget);
       await app.tap(useAll);
       expect(app.body('POST /api/targets/apply')['keys'], [
@@ -152,8 +186,10 @@ void main() {
         'fat',
         'carbs',
         'sleep',
+        'exercise',
         'steps',
         'pushups',
+        'water',
       ]);
     });
 
@@ -165,7 +201,8 @@ void main() {
         );
       final app = await _open(tester, server);
 
-      await app.tap(_chip('Use this calories target'));
+      await app.tap(_row('Calories'));
+      await app.tap(_button('Use 2,350 kcal'));
       expect(find.textContaining('calories has no value yet'), findsOneWidget);
       expect(find.text('Calories'), findsOneWidget);
     });
@@ -178,8 +215,8 @@ void main() {
       expect(find.text('Sex'), findsOneWidget);
       expect(find.text('Push-up max test'), findsOneWidget);
       // The rows explain themselves instead of showing a number.
-      expect(find.text('Not available yet'), findsWidgets);
-      await app.tap(find.byTooltip('How Resting energy is worked out'));
+      expect(find.text('Not yet'), findsWidgets);
+      await app.tap(_row('Resting energy'));
       expect(find.textContaining('Needs height, sex to be filled in'), findsOneWidget);
       Navigator.of(tester.element(find.text('Sources'))).pop();
       await app.settle(4);
@@ -205,7 +242,7 @@ void main() {
       final server = _server()..on('GET /api/targets', StubResponse(200, body));
       await _open(tester, server);
       expect(find.textContaining('Use all'), findsNothing);
-      expect(find.text('Changes start tomorrow.'), findsNothing);
+      expect(find.textContaining('Changes apply today'), findsNothing);
     });
 
     testWidgets('a failed first load says so and can retry', (tester) async {
@@ -242,7 +279,7 @@ void main() {
         var infoButtons = 0;
         for (var i = 0; i < 40; i++) {
           expect(tester.takeException(), isNull, reason: 'while scrolling');
-          final rows = find.byTooltip(RegExp('^How '));
+          final rows = find.byType(TargetRow);
           infoButtons += rows.evaluate().length;
           if (rows.evaluate().isNotEmpty) _expectTapTargets(tester, [rows]);
           await tester.drag(list, const Offset(0, -400));
@@ -253,11 +290,11 @@ void main() {
       });
     }
 
-    testWidgets('an info sheet and the Use buttons fit at scale 2.0', (tester) async {
+    testWidgets('a row sheet and the Use all button fit at scale 2.0', (tester) async {
       final app = await _open(tester, _server(), scale: 2);
-      _expectTapTargets(tester, [_chip('Use this calories target')]);
+      _expectTapTargets(tester, [find.byType(ChunkyButton)]);
 
-      await app.tap(find.byTooltip('How Resting energy is worked out'));
+      await app.tap(_row('Resting energy'));
       expect(find.textContaining('Am J Clin Nutr 1990;51:241'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

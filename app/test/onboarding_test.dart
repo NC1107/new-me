@@ -274,7 +274,7 @@ void main() {
     expect(find.text('2,350 kcal'), findsOneWidget);
     expect(find.text('3 meals'), findsOneWidget);
     expect(
-      find.textContaining('A starting point'),
+      find.textContaining('no research figure'),
       findsOneWidget,
       reason: 'meals have no formula',
     );

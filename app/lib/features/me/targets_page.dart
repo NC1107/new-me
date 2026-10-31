@@ -25,7 +25,8 @@ import '../setup/about_you.dart';
 import '../setup/about_you_page.dart';
 import 'apple_health_page.dart';
 import 'me_support.dart';
-import 'target_card.dart';
+import 'target_row.dart';
+import 'target_sheet.dart';
 import 'targets_logic.dart';
 
 /// Research-backed targets (docs/design-v8.md): each with its formula, label and sources, and a
@@ -138,23 +139,22 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
             onRetry: ref.read(targetsProvider.notifier).refresh,
           ),
         ],
+        if (usableTargets.isNotEmpty || _error != null) ...[
+          const SizedBox(height: 16),
+          if (_error != null) SaveError(_error!),
+          if (usableTargets.isNotEmpty)
+            _UseAllCard(
+              count: usableTargets.length,
+              busy: _busy.length > 1,
+              onUse: offline == null && _busy.isEmpty ? () => _apply(usableTargets) : null,
+            ),
+        ] else if (report.targets.any((t) => t.isApplied && t.applicable)) ...[
+          const SizedBox(height: 16),
+          const _AllMatchNote(),
+        ],
         if (missing.isNotEmpty) ...[
           const SizedBox(height: 16),
           _MissingCard(items: missing, onFix: _fix, enabled: offline == null),
-        ],
-        if (usableTargets.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          if (_error != null) SaveError(_error!),
-          ChunkyButton(
-            label: 'Use all (${usableTargets.length})',
-            busy: _busy.length > 1,
-            onPressed: offline == null && _busy.isEmpty ? () => _apply(usableTargets) : null,
-          ),
-          const SizedBox(height: 6),
-          const Text('Changes start tomorrow.', style: AppText.caption),
-        ] else if (_error != null) ...[
-          const SizedBox(height: 16),
-          SaveError(_error!),
         ],
         for (final group in kTargetGroups)
           ..._group(group, report, estimate, enabled: offline == null),
@@ -170,28 +170,79 @@ class _TargetsPageState extends ConsumerState<TargetsPage> {
   }) {
     final targets = [for (final key in group.keys) ?report.target(key)];
     if (targets.isEmpty) return const [];
-    // A lone card's own name is the heading, so the group title would only repeat it.
-    final titled = targets.length > 1;
+    final units = ref.watch(unitsProvider);
     return [
-      SizedBox(height: titled ? 24 : kCardGap),
-      if (titled) ...[
-        Semantics(header: true, child: Text(group.title, style: AppText.headline)),
-        const SizedBox(height: 10),
-      ],
-      for (final (i, t) in targets.indexed) ...[
-        if (i > 0) const SizedBox(height: kCardGap),
-        TargetCard(
-          target: t,
-          report: report,
-          estimate: t.key == 'maintenance' && estimate?.value != null ? estimate : null,
-          units: ref.watch(unitsProvider),
-          busy: !enabled || _busy.isNotEmpty,
-          onUse: () => _apply([t]),
-          onMaxTest: () => _fix(kPushupMaxItem),
+      const SizedBox(height: 24),
+      Semantics(header: true, child: Text(group.title, style: AppText.headline)),
+      const SizedBox(height: 8),
+      TargetColumnHeads(hasYours: group.hasYours),
+      AppCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (final (i, t) in targets.indexed) ...[
+              if (i > 0) const Divider(height: 0, thickness: kBorderWidth, color: kBorder),
+              TargetRow(
+                target: t,
+                hasYours: group.hasYours,
+                units: units,
+                onTap: () => showTargetSheet(
+                  context,
+                  target: t,
+                  report: report,
+                  estimate: t.key == 'maintenance' && estimate?.value != null ? estimate : null,
+                  hasYours: group.hasYours,
+                  enabled: enabled && _busy.isEmpty,
+                  units: units,
+                  onUse: () => _apply([t]),
+                  onMaxTest: () => _fix(kPushupMaxItem),
+                ),
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
     ];
   }
+}
+
+class _UseAllCard extends StatelessWidget {
+  const _UseAllCard({required this.count, required this.busy, required this.onUse});
+
+  final int count;
+  final bool busy;
+  final VoidCallback? onUse;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      ChunkyButton(label: 'Use all recommended ($count)', busy: busy, onPressed: onUse),
+      const SizedBox(height: 6),
+      const Text(
+        'Sets your goals to the recommended figures. Changes apply today.',
+        style: AppText.caption,
+      ),
+    ],
+  );
+}
+
+class _AllMatchNote extends StatelessWidget {
+  const _AllMatchNote();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      const Icon(Icons.check_circle_rounded, size: 20, color: kSuccess),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          'Your goals match the recommendations.',
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  );
 }
 
 class _MissingCard extends StatelessWidget {

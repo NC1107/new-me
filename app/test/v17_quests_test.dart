@@ -180,9 +180,12 @@ void main() {
     test('Targets lists the two guideline targets and their notes', () {
       expect(targetName('produce'), 'Fruit and vegetables');
       expect(targetName('breathing'), 'Breathing');
-      expect(formatTargetValue(5, 'servings'), '5 servings');
+      expect(formatTargetValue(5, 'servings'), '5 servings (400 g)');
       expect(formatTargetValue(5, 'min'), '5 min');
-      expect(kTargetGroups.map((g) => g.title), containsAll(['Fruit and vegetables', 'Breathing']));
+      expect(
+        kTargetGroups.expand((g) => g.keys),
+        containsAll(['produce', 'breathing', 'exercise']),
+      );
     });
   });
 
@@ -481,17 +484,17 @@ void main() {
           g.key: g,
       };
       expect(goals['produce']!.value, 5);
-      expect(goals['produce']!.label(5), '5 servings');
+      expect(goals['produce']!.label(5), '5 servings (400 g)');
       expect(goals['breathing']!.value, 5);
       expect(goals['breathing']!.label(5), '5 min');
       expect(goals['sleep_regularity']!.value, 45);
       expect(goals['sleep_regularity']!.min, 15);
       expect(goals['sleep_regularity']!.label(45), 'within 45 min');
-      expect(goals['sleep_regularity']!.why, contains('starting point'));
+      expect(goals['sleep_regularity']!.why, contains('does not name a window'));
     });
 
     test('daily goal labels read in plain words', () {
-      expect(kGoalSpecs['produce']!.label(1), '1 serving');
+      expect(kGoalSpecs['produce']!.label(1), '1 serving (80 g)');
       expect(kGoalSpecs['breathing']!.label(10), '10 min');
       expect(kGoalSpecs['sleep_regularity']!.options.map((o) => o.value), [30, 45, 60, 90]);
     });

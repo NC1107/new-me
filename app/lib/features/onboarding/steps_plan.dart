@@ -67,6 +67,7 @@ class PlanGoal {
     required this.why,
     required this.label,
     this.min = 1,
+    this.extra = const [],
   });
 
   /// A quest key, or `calories` for the food target.
@@ -76,125 +77,79 @@ class PlanGoal {
   final int step;
   final int min;
 
-  /// One line naming the formula or guideline, or saying it is a starting point.
+  /// One line naming where the number comes from, with its short citation, or saying there is
+  /// no research figure.
   final String why;
   final String Function(int value) label;
 
-  PlanGoal withValue(int v) =>
-      PlanGoal(key: key, name: name, value: v, step: step, why: why, label: label, min: min);
+  /// More lines under [why], such as what one serving of fruit and vegetables looks like.
+  final List<String> extra;
+
+  PlanGoal withValue(int v) => PlanGoal(
+    key: key,
+    name: name,
+    value: v,
+    step: step,
+    why: why,
+    label: label,
+    min: min,
+    extra: extra,
+  );
 }
 
 int? _value(TargetsReport? report, String key) => report?.target(key)?.value;
 
-int _upTo(int v, int step) => ((v + step - 1) ~/ step) * step;
-
-/// The daily goals for the chosen focuses, from the v8 formulas where they apply and from a
-/// stated starting point where none does.
+/// The daily goals for the chosen focuses. A goal with a published figure leads with the
+/// recommendation the server worked out from the answers so far; one without says so.
 List<PlanGoal> planGoals(
   List<String> questKeys,
   bool wantsFood,
   TargetsReport? report, {
   Units units = Units.metric,
 }) {
-  String label(String k, int v) => kGoalSpecs[k]?.describe(v, units) ?? '$v';
-  PlanGoal goal(
-    String key,
-    String name,
-    int? formula,
-    int fallback,
-    int step,
-    String fromFormula, {
-    int min = 1,
-  }) => PlanGoal(
-    key: key,
-    name: name,
-    value: formula ?? fallback,
-    step: step,
-    min: min,
-    why: formula != null ? fromFormula : 'A starting point. Change it any time in Me.',
-    label: (v) => label(key, v),
-  );
-  final activityWeek = _value(report, 'activity');
+  PlanGoal goal(String key, String name, int fallback, int step, {int min = 1}) {
+    final spec = kGoalSpecs[key];
+    final target = spec?.targetKey == null ? null : report?.target(spec!.targetKey!);
+    final recommended = target?.value;
+    final why = switch (target) {
+      final t? when recommended != null && t.why.isNotEmpty =>
+        t.cite.isEmpty ? t.why : '${t.why} (${t.cite})',
+      _ when spec?.noResearch != null => spec!.noResearch!,
+      _ when spec?.targetKey != null => 'A starting point. Add what is missing in Me > Targets.',
+      _ => 'A starting point. Change it any time in Me.',
+    };
+    final examples = target?.details['servingExamples'];
+    return PlanGoal(
+      key: key,
+      name: name,
+      value: recommended ?? fallback,
+      step: step,
+      min: min,
+      why: why,
+      label: (v) => spec?.describe(v, units) ?? '$v',
+      extra: [
+        if (recommended != null && examples is List && examples.isNotEmpty)
+          'One serving is $kProduceServingGrams g: ${examples.whereType<String>().join(', ')}.',
+      ],
+    );
+  }
+
   return [
     for (final k in questKeys)
       switch (k) {
-        'steps' => goal(
-          k,
-          'Steps',
-          _value(report, 'steps'),
-          7000,
-          500,
-          'Around where the benefit of walking starts to level off (Paluch et al. 2022).',
-        ),
-        'exercise' => goal(
-          k,
-          'Exercise',
-          activityWeek == null ? null : _upTo((activityWeek / 7).ceil(), 5),
-          25,
-          5,
-          'WHO 2020: 150 to 300 minutes of moderate activity a week, spread over the days.',
-        ),
-        'pushups' => goal(
-          k,
-          'Push-ups, or a strength workout',
-          _value(report, 'pushups'),
-          20,
-          5,
-          '75% of your latest max test, in sets (a derivation).',
-        ),
-        'reading' => goal(k, 'Reading', null, 20, 5, ''),
-        'meals_logged' => goal(k, 'Meals logged', null, 3, 1, ''),
-        'protein' => goal(
-          k,
-          'Protein',
-          _value(report, 'protein'),
-          100,
-          5,
-          'For your weight and goal, from the ISSN and ACSM ranges.',
-        ),
-        'sleep' => goal(
-          k,
-          'Sleep',
-          _value(report, 'sleep'),
-          450,
-          15,
-          'Within the 7 to 9 hours recommended for adults (AASM and SRS).',
-        ),
-        'water' => goal(
-          k,
-          'Water',
-          _value(report, 'water'),
-          2200,
-          250,
-          'National Academies: 3.0 L of drinks a day for men and 2.2 L for women.',
-        ),
-        'sleep_regularity' => goal(
-          k,
-          'Steady bedtime',
-          null,
-          45,
-          15,
-          'Research favours regular timing but names no window, so 45 minutes is a starting point.',
-          min: 15,
-        ),
-        'produce' => goal(
-          k,
-          'Fruit and vegetables',
-          _value(report, 'produce'),
-          5,
-          1,
-          'WHO: at least 400 g a day, and a serving is 80 g (NHS 5 A Day).',
-        ),
-        'breathing' => goal(
-          k,
-          'Breathing',
-          _value(report, 'breathing'),
-          5,
-          1,
-          'Five minutes a day of cyclic sighing for a month (Balban et al. 2023).',
-        ),
-        'yoga' => goal(k, 'Stretching', null, 15, 5, ''),
-        _ => goal(k, k, null, kGoalSpecs[k]?.defaultValue ?? 1, 1, ''),
+        'steps' => goal(k, 'Steps', 7000, 500),
+        'exercise' => goal(k, 'Exercise', 22, 5),
+        'pushups' => goal(k, 'Push-ups, or a strength workout', 20, 5),
+        'reading' => goal(k, 'Reading', 20, 5),
+        'meals_logged' => goal(k, 'Meals logged', 3, 1),
+        'protein' => goal(k, 'Protein', 100, 5),
+        'sleep' => goal(k, 'Sleep', 450, 15),
+        'water' => goal(k, 'Water', 2200, 250),
+        'sleep_regularity' => goal(k, 'Steady bedtime', 45, 15, min: 15),
+        'produce' => goal(k, 'Fruit and vegetables', 5, 1),
+        'breathing' => goal(k, 'Breathing', 5, 1),
+        'yoga' => goal(k, 'Stretching', 15, 5),
+        _ => goal(k, k, kGoalSpecs[k]?.defaultValue ?? 1, 1),
       },
     if (wantsFood && _value(report, 'calories') != null)
       PlanGoal(
@@ -336,6 +291,8 @@ class _GoalRow extends StatelessWidget {
               Text(goal.label(goal.value), style: AppText.tabular(AppText.headline)),
               const SizedBox(height: 2),
               Text(goal.why, style: AppText.caption.copyWith(color: kInkSecondary)),
+              for (final line in goal.extra)
+                Text(line, style: AppText.caption.copyWith(color: kInkSecondary)),
             ],
           ),
         ),

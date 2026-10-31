@@ -39,7 +39,7 @@ void main() {
       final report = await _client(StubAdapter(), 'targets').targets();
       expect(report.asOf, '2026-10-27');
       expect(report.disclaimer, 'This is general guidance, not medical advice.');
-      expect(report.targets, hasLength(13));
+      expect(report.targets, hasLength(16));
       expect(report.inputs.map((i) => i.key), [
         'weightKg',
         'heightCm',
@@ -65,6 +65,14 @@ void main() {
       expect(report.target('restingEnergy')!.applicable, isFalse);
       expect(report.target('steps')!.details['incrementSteps'], 1000);
       expect(report.input('heightCm')!.source, 'health');
+
+      final water = report.target('water')!;
+      expect(water.why, contains('adequate intake of drinks for men'));
+      expect(water.cite, 'National Academies 2005');
+      expect(water.alternatives.single.value, 2000);
+      expect(water.alternatives.single.label, startsWith('EFSA'));
+      expect(report.target('protein')!.alternatives.map((a) => a.value), [65, 115, 165]);
+      expect(report.target('restingEnergy')!.why, isEmpty);
     });
 
     test('a target equal to its setting, or with no value, cannot be used', () {
@@ -243,15 +251,17 @@ void main() {
         'fat',
         'carbs',
         'sleep',
+        'exercise',
         'steps',
         'pushups',
+        'water',
       ]);
       expect(usable(missing).map((t) => t.key), ['protein', 'sleep', 'steps']);
     });
 
-    test('the toast names what starts tomorrow', () {
+    test('the toast names what was applied', () {
       final applied = [full.target('calories')!, full.target('sleep')!];
-      expect(appliedToast(applied), 'Starts tomorrow: Calories 2,350 kcal, Sleep 7 h 30 min');
+      expect(appliedToast(applied), 'Applied today: Calories 2,350 kcal, Sleep 7 h 30 min');
       expect(appliedToast(const []), 'Nothing to change');
     });
 

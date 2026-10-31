@@ -26,7 +26,8 @@ String goalLabel(QuestTemplate q, int target, int? alt, {Units units = Units.met
   return '$main or $alt ${q.unitAlt ?? ''}'.trim();
 }
 
-/// Turn each quest on or off and set its daily goal. Edits stay on the page until Save.
+/// Turn each quest on or off and set its daily goal; every row opens its goal picker, on or off.
+/// Edits stay on the page until Save.
 class DailyGoalsPage extends ConsumerStatefulWidget {
   const DailyGoalsPage({super.key});
 
@@ -137,7 +138,7 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
         ],
       ),
       children: [
-        const _TomorrowNote(),
+        const _TodayNote(),
         const SizedBox(height: 16),
         for (final (i, q) in quests.indexed) ...[
           if (i > 0) const SizedBox(height: kCardGap),
@@ -160,8 +161,8 @@ class _DailyGoalsPageState extends ConsumerState<DailyGoalsPage> with MeSaving {
   }
 }
 
-class _TomorrowNote extends StatelessWidget {
-  const _TomorrowNote();
+class _TodayNote extends StatelessWidget {
+  const _TodayNote();
 
   @override
   Widget build(BuildContext context) => Row(
@@ -171,7 +172,7 @@ class _TomorrowNote extends StatelessWidget {
       const SizedBox(width: 10),
       Expanded(
         child: Text(
-          'Changes start tomorrow, so today keeps the goals you began it with.',
+          'Changes apply today. Turn a goal off to hide it, or tap it to change the number.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
       ),
@@ -236,7 +237,7 @@ class _QuestGoalCard extends StatelessWidget {
             ],
           ),
         ),
-        if (enabled) const Icon(Icons.chevron_right_rounded, color: kInkMuted),
+        const Icon(Icons.chevron_right_rounded, color: kInkMuted),
       ],
     );
     return AppCard(

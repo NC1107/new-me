@@ -1,26 +1,24 @@
 import '../../api/models.dart';
 import '../../util/format.dart';
 import '../health/health_metrics.dart';
+import '../onboarding/goal_catalog.dart';
 import '../setup/about_you.dart';
 
-/// A page section and the targets it lists, in the order the research doc presents them.
+/// A page section and the targets it lists. [hasYours] is false for sections of facts about the
+/// body, which have no setting of the person's own to set beside the figure.
 class TargetGroup {
-  const TargetGroup(this.title, this.keys);
+  const TargetGroup(this.title, this.keys, {this.hasYours = true});
 
   final String title;
   final List<String> keys;
+  final bool hasYours;
 }
 
 const kTargetGroups = [
-  TargetGroup('Energy', ['restingEnergy', 'maintenance', 'calories']),
-  TargetGroup('Macros', ['protein', 'fat', 'saturatedFatMax', 'carbs', 'fiber']),
-  TargetGroup('Sleep', ['sleep']),
-  TargetGroup('Activity', ['activity']),
-  TargetGroup('Steps', ['steps']),
-  TargetGroup('Push-ups', ['pushups']),
-  TargetGroup('Water', ['water']),
-  TargetGroup('Fruit and vegetables', ['produce']),
-  TargetGroup('Breathing', ['breathing']),
+  TargetGroup('Your body', ['restingEnergy', 'maintenance'], hasYours: false),
+  TargetGroup('Food', ['calories', 'protein', 'fat', 'saturatedFatMax', 'carbs', 'fiber']),
+  TargetGroup('Move and rest', ['steps', 'exercise', 'activity', 'sleep', 'pushups']),
+  TargetGroup('Habits', ['water', 'produce', 'breathing']),
 ];
 
 /// The estimate from logs is a secondary line under maintenance, not a row of its own.
@@ -33,11 +31,12 @@ const _names = {
   'calories': 'Calories',
   'protein': 'Protein',
   'fat': 'Fat',
-  'saturatedFatMax': 'Saturated fat (max)',
+  'saturatedFatMax': 'Saturated fat, at most',
   'carbs': 'Carbohydrate',
   'fiber': 'Fiber',
   'sleep': 'Sleep',
-  'activity': 'Activity',
+  'activity': 'Activity a week',
+  'exercise': 'Exercise',
   'steps': 'Steps',
   'pushups': 'Push-ups',
   'water': 'Water',
@@ -51,6 +50,7 @@ String targetName(String key) => _names[key] ?? key;
 String formatTargetValue(int value, String unit, {Units units = Units.metric}) {
   if (unit == 'min') return formatDuration(value);
   if (unit == 'ml') return units.volume(value);
+  if (unit == 'servings') return '${value.formatted} servings (${value * kProduceServingGrams} g)';
   return unit.isEmpty ? value.formatted : '${value.formatted} $unit';
 }
 
@@ -135,14 +135,14 @@ List<Target> usable(TargetsReport report) => [
     if (t.canUse) t,
 ];
 
-/// What the toast says after applying. Open days are scored first, so a change starts tomorrow.
+/// What the toast says after applying.
 String appliedToast(List<Target> applied, {Units units = Units.metric}) {
   if (applied.isEmpty) return 'Nothing to change';
   final parts = [
     for (final t in applied)
       '${targetName(t.key)} ${formatTargetValue(t.value!, t.unit, units: units)}',
   ];
-  return 'Starts tomorrow: ${parts.join(', ')}';
+  return 'Applied today: ${parts.join(', ')}';
 }
 
 /// Short lines under a target from its `details`, which the server fills per target.
@@ -193,7 +193,13 @@ List<String> detailLines(Target t) {
         }
         add(str(reg['note']));
       }
-    case 'water' || 'produce' || 'breathing':
+    case 'produce':
+      final examples = d['servingExamples'];
+      if (examples is List && examples.isNotEmpty) {
+        add('One serving is $kProduceServingGrams g: ${examples.whereType<String>().join(', ')}.');
+      }
+      add(str(d['note']));
+    case 'water' || 'breathing':
       add(str(d['note']));
     case 'pushups':
       final range = d['rangePerSet'];

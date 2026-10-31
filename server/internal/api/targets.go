@@ -32,6 +32,7 @@ const (
 	tgtFiber       = "fiber"
 	tgtSleep       = "sleep"
 	tgtActivity    = "activity"
+	tgtExercise    = "exercise"
 	tgtSteps       = "steps"
 	tgtPushups     = "pushups"
 	tgtWater       = "water"
@@ -88,6 +89,12 @@ type targetJSON struct {
 	// Applicable is true for the targets POST /api/targets/apply can set.
 	Applicable bool           `json:"applicable"`
 	Details    map[string]any `json:"details,omitempty"`
+	// Why is one plain line on where Value comes from and Cite the short citation for it. Both are
+	// left out for targets that are not goals.
+	Why  string `json:"why,omitempty"`
+	Cite string `json:"cite,omitempty"`
+	// Alternatives are other published figures to pick instead, each saying what it is.
+	Alternatives []targets.Alternative `json:"alternatives,omitempty"`
 }
 
 type targetsResponse struct {
@@ -495,11 +502,16 @@ func computeTargets(d targetData) targetsResponse {
 
 	add(d.sleepTarget(tpl(db.QuestSleep)))
 	add(d.activityTarget())
+	add(exerciseTarget(tpl(db.QuestExercise)))
 	add(d.stepsTarget(tpl(db.QuestSteps)))
 	add(d.pushupsTarget(tpl(db.QuestPushups)))
 	add(d.waterTarget(tpl(db.QuestWater)))
 	add(produceTarget(tpl(db.QuestProduce)))
 	add(breathingTarget(tpl(db.QuestBreathing)))
+
+	for i := range out {
+		d.addAdvice(&out[i])
+	}
 
 	return targetsResponse{AsOf: d.Today, Disclaimer: targetsDisclaimer, Inputs: d.inputs(), Targets: out, Sources: targets.Sources}
 }
@@ -620,8 +632,17 @@ func (d targetData) activityTarget() targetJSON {
 		Sources: []string{"who2020", "piercy2018", "impellizzeri2020"},
 		Formula: fmt.Sprintf("150 to 300 minutes of moderate or 75 to 150 minutes of vigorous activity a week (a vigorous minute counts as two) plus muscle-strengthening on 2 or more days; this week you have %d moderate-equivalent minutes and %d strength days.",
 			a.ModerateEquivalentMin, a.StrengthDays),
-		Details: map[string]any{"week": a, "maxMin": insights.GuidelineAerobicMaxMin,
-			"note": "No training-load ratio is used or prescribed."}}
+		Details: map[string]any{"week": a, "maxMin": insights.GuidelineAerobicMaxMin, "note": "No training-load ratio is used or prescribed."}}
+}
+
+// exerciseTarget is the weekly guideline spread over seven days, the shape of the exercise quest.
+func exerciseTarget(current *int) targetJSON {
+	perDay := targets.DailyFromWeekly(insights.GuidelineAerobicMinMin)
+	return targetJSON{Key: tgtExercise, Unit: "min", Label: labelGuideline, Applicable: true, Current: current,
+		Value: intp(perDay), Missing: []string{}, Sources: []string{"who2020", "piercy2018"},
+		Formula: fmt.Sprintf("%d minutes of moderate activity a week (WHO 2020) spread over 7 days = %d minutes a day, rounded up. The guideline is a weekly figure, so a rest day is fine as long as the week adds up.",
+			insights.GuidelineAerobicMinMin, perDay),
+		Details: map[string]any{"perWeekMin": insights.GuidelineAerobicMinMin, "perWeekMaxMin": insights.GuidelineAerobicMaxMin}}
 }
 
 // stepsTarget is 7,000 a day, or the v4 age band suggestion when the person is already above it.
@@ -710,11 +731,11 @@ func (d targetData) waterTarget(current *int) targetJSON {
 func produceTarget(current *int) targetJSON {
 	return targetJSON{Key: tgtProduce, Unit: "servings", Label: labelGuideline, Applicable: true, Current: current,
 		Value: intp(targets.ProduceServings), Missing: []string{}, Sources: []string{"who2003", "nhs5aday", "aune2017"},
-		Formula: fmt.Sprintf("WHO advises at least %d g of fruit and vegetables a day, and one serving is %d g (NHS 5 A Day), so %d servings.",
-			targets.ProduceWHOGrams, targets.ProduceServingGrams, targets.ProduceServings),
+		Formula: fmt.Sprintf("WHO advises at least %d g of fruit and vegetables a day, and one serving is %d g (NHS 5 A Day), so %d servings = %d g.",
+			targets.ProduceWHOGrams, targets.ProduceServingGrams, targets.ProduceServings, targets.ProduceServings*targets.ProduceServingGrams),
 		Details: map[string]any{"servingGrams": targets.ProduceServingGrams, "whoMinGrams": targets.ProduceWHOGrams,
-			"lowestRiskGrams": targets.ProduceLowestRiskGrams,
-			"note":            "Potatoes do not count, beans and pulses count once a day, and juice and smoothies count once however much you drink. Aune et al. 2017 found risk kept falling up to about 800 g (10 servings) a day, so five is a floor, not a ceiling."}}
+			"lowestRiskGrams": targets.ProduceLowestRiskGrams, "servingExamples": targets.ProduceExamples,
+			"note": "Potatoes do not count, beans and pulses count once a day, and juice and smoothies count once however much you drink. Aune et al. 2017 found risk kept falling up to about 800 g (10 servings) a day, so five is a floor, not a ceiling."}}
 }
 
 // breathingTarget is the five minutes a day of the Balban trial.
@@ -832,6 +853,8 @@ func (s *Server) handleApplyTargets(w http.ResponseWriter, r *http.Request) {
 			user.CarbsTarget = &v
 		case tgtSteps:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestSteps, Target: &v})
+		case tgtExercise:
+			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestExercise, Target: &v})
 		case tgtSleep:
 			patch.QuestTemplates = append(patch.QuestTemplates, templatePatch{Key: db.QuestSleep, Target: &v})
 		case tgtWater:

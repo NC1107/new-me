@@ -133,6 +133,9 @@ class Target {
     this.missing = const [],
     this.applicable = false,
     this.details = const {},
+    this.why = '',
+    this.cite = '',
+    this.alternatives = const [],
   });
 
   static Target? tryParse(Object? v) {
@@ -149,6 +152,12 @@ class Target {
       missing: _strings(j['missing']),
       applicable: j['applicable'] as bool? ?? false,
       details: _map(j['details']) ?? const {},
+      why: _str(j['why']),
+      cite: _str(j['cite']),
+      alternatives: [
+        if (j['alternatives'] is List)
+          for (final a in j['alternatives'] as List) ?TargetAlternative.tryParse(a),
+      ],
     );
   }
 
@@ -173,6 +182,14 @@ class Target {
   final bool applicable;
   final Map<String, dynamic> details;
 
+  /// One plain line on where [value] comes from, and its short citation. Empty for targets that
+  /// are not daily goals.
+  final String why;
+  final String cite;
+
+  /// Other published figures to pick instead of [value], each saying what it is.
+  final List<TargetAlternative> alternatives;
+
   bool get hasValue => value != null;
 
   /// The formula value already is the setting in force.
@@ -192,7 +209,27 @@ class Target {
     'missing': missing,
     'applicable': applicable,
     if (details.isNotEmpty) 'details': details,
+    if (why.isNotEmpty) 'why': why,
+    if (cite.isNotEmpty) 'cite': cite,
+    if (alternatives.isNotEmpty) 'alternatives': [for (final a in alternatives) a.toJson()],
   };
+}
+
+/// Another published figure for a goal, such as "EFSA: 2.5 L of total water for men".
+class TargetAlternative {
+  const TargetAlternative({required this.value, required this.label});
+
+  static TargetAlternative? tryParse(Object? v) {
+    final j = _map(v);
+    final value = _intOrNull(j?['value']);
+    if (j == null || value == null) return null;
+    return TargetAlternative(value: value, label: _str(j['label']));
+  }
+
+  final int value;
+  final String label;
+
+  Map<String, dynamic> toJson() => {'value': value, 'label': label};
 }
 
 /// GET /api/targets.

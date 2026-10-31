@@ -192,17 +192,17 @@ void main() {
       _host(
         PresetList<int>(
           presets: const [
-            Preset(name: 'Casual', valueLabel: '5,000 steps', value: 5000),
-            Preset(name: 'Regular', valueLabel: '8,000 steps', value: 8000),
+            Preset(name: 'Low end', valueLabel: '5,000 steps', value: 5000),
+            Preset(name: 'Middle', valueLabel: '8,000 steps', value: 8000),
           ],
           selected: 8000,
           onChanged: picked.add,
         ),
       ),
     );
-    await tester.tap(find.text('Casual'));
+    await tester.tap(find.text('Low end'));
     expect(picked, [5000]);
-    expect(find.bySemanticsLabel('Regular, 8,000 steps'), findsOneWidget);
+    expect(find.bySemanticsLabel('Middle, 8,000 steps'), findsOneWidget);
   });
 
   testWidgets('SpeechBubble paints with a tail on either side without throwing', (tester) async {

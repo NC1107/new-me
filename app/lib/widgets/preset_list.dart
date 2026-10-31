@@ -6,17 +6,17 @@ import '../theme/typography.dart';
 import 'pressable.dart';
 
 class Preset<T> {
-  const Preset({required this.name, required this.valueLabel, required this.value});
+  const Preset({required this.name, this.valueLabel = '', required this.value});
 
-  /// "Casual"
+  /// What the choice is: "8,000 steps", or "EFSA: 2.5 L of total water for men".
   final String name;
 
-  /// "5,000 steps"
+  /// The number on the right when [name] says what it is rather than how much.
   final String valueLabel;
   final T value;
 }
 
-/// A vertical list of named presets with one selected, in the style of Duolingo's daily goal.
+/// A vertical list of choices with one selected, in the style of Duolingo's daily goal.
 class PresetList<T> extends StatelessWidget {
   const PresetList({
     super.key,
@@ -44,11 +44,12 @@ class PresetList<T> extends StatelessWidget {
             builder: (context) {
               final preset = presets[i];
               final on = preset.value == selected;
+              final hasValue = preset.valueLabel.isNotEmpty;
               return Semantics(
                 button: true,
                 selected: on,
                 inMutuallyExclusiveGroup: true,
-                label: '${preset.name}, ${preset.valueLabel}',
+                label: hasValue ? '${preset.name}, ${preset.valueLabel}' : preset.name,
                 excludeSemantics: true,
                 onTap: () => onChanged(preset.value),
                 child: Pressable(
@@ -56,8 +57,8 @@ class PresetList<T> extends StatelessWidget {
                   onTap: () => onChanged(preset.value),
                   child: AnimatedContainer(
                     duration: reduce ? Duration.zero : kMotionDuration,
-                    constraints: const BoxConstraints(minHeight: 64),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    constraints: const BoxConstraints(minHeight: 56),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: on ? person.tint : kSurface,
                       borderRadius: BorderRadius.circular(kRadiusCard),
@@ -66,25 +67,37 @@ class PresetList<T> extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(preset.name, style: AppText.headline.copyWith(fontSize: 18)),
+                          child: Text(
+                            preset.name,
+                            style: hasValue
+                                ? AppText.body
+                                : AppText.tabular(
+                                    AppText.headline.copyWith(
+                                      fontSize: 18,
+                                      color: on ? person.lip : kInk,
+                                    ),
+                                  ),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              preset.valueLabel,
-                              maxLines: 1,
-                              style: AppText.tabular(
-                                AppText.body.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: on ? person.lip : kInkSecondary,
+                        if (hasValue) ...[
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                preset.valueLabel,
+                                maxLines: 1,
+                                style: AppText.tabular(
+                                  AppText.body.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: on ? person.lip : kInkSecondary,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),

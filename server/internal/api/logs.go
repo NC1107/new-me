@@ -392,12 +392,28 @@ type patchMealRequest struct {
 	Carbs   *float64 `json:"carbs"`
 	Fat     *float64 `json:"fat"`
 	Fiber   *float64 `json:"fiber"`
+
+	// LoggedAt is an RFC 3339 moment; its day for the caller becomes the meal's day.
+	LoggedAt *string `json:"loggedAt"`
 }
 
-func (req patchMealRequest) validate() (db.MealPatch, *httpError) {
+func (req patchMealRequest) validate(now time.Time, loc *time.Location) (db.MealPatch, *httpError) {
 	patch := db.MealPatch{Kcal: req.Kcal, ProteinG: req.Protein, CarbsG: req.Carbs, FatG: req.Fat, FiberG: req.Fiber}
-	if req.Name == nil && req.Kcal == nil && req.Protein == nil && req.Carbs == nil && req.Fat == nil && req.Fiber == nil {
-		return patch, invalid("send at least one of name, kcal, protein, carbs, fat or fiber")
+	if req.Name == nil && req.Kcal == nil && req.Protein == nil && req.Carbs == nil && req.Fat == nil &&
+		req.Fiber == nil && req.LoggedAt == nil {
+		return patch, invalid("send at least one of name, kcal, protein, carbs, fat, fiber or loggedAt")
+	}
+	if req.LoggedAt != nil {
+		at, err := time.Parse(time.RFC3339, *req.LoggedAt)
+		if err != nil {
+			return patch, invalid("loggedAt must be an RFC 3339 time")
+		}
+		if at.After(now.Add(time.Minute)) {
+			return patch, invalid("loggedAt cannot be in the future")
+		}
+		at = at.UTC()
+		date := score.LocalToday(at, loc)
+		patch.LoggedAt, patch.LocalDate = &at, &date
 	}
 	if req.Name != nil {
 		name, herr := validMealName(*req.Name)
@@ -436,12 +452,12 @@ func (s *Server) handlePatchLog(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	patch, herr := req.validate()
+	c := callerFrom(r)
+	patch, herr := req.validate(s.now(), c.loc)
 	if herr != nil {
 		fail(w, r, herr)
 		return
 	}
-	c := callerFrom(r)
 	ctx := r.Context()
 	var (
 		entry  logJSON
@@ -449,6 +465,12 @@ func (s *Server) handlePatchLog(w http.ResponseWriter, r *http.Request) {
 		scored engine.Scored
 	)
 	err = s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var from *score.Date
+		if patch.LocalDate != nil {
+			if old, err := db.MealLocalDate(ctx, tx, c.user.ID, id); err == nil {
+				from = &old
+			}
+		}
 		meal, err := db.UpdateMealLog(ctx, tx, c.user.ID, id, patch)
 		if errors.Is(err, db.ErrNotFound) {
 			isActivity, aerr := db.ActivityLogExists(ctx, tx, c.user.ID, id)
@@ -468,6 +490,14 @@ func (s *Server) handlePatchLog(w http.ResponseWriter, r *http.Request) {
 			return errDateClosed
 		}
 		entry = toMealJSON(meal)
+		if from != nil && *from != date {
+			if !s.writable(c.user, c.loc, *from) {
+				return errDateClosed
+			}
+			if _, err := s.scoreDay(ctx, tx, c, *from); err != nil {
+				return err
+			}
+		}
 		scored, err = s.scoreDay(ctx, tx, c, date)
 		return err
 	})

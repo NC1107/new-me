@@ -46,6 +46,7 @@ class LogActions {
     final result = await _client.updateMeal(meal.id, edit);
     await _ref.read(todayProvider.notifier).refresh();
     _ref.invalidate(mealsTodayProvider);
+    _ref.invalidate(mealsYesterdayProvider);
     _refreshBoard();
     return result;
   }

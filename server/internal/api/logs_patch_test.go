@@ -121,6 +121,48 @@ func TestPatchMealObeysTheDayWindow(t *testing.T) {
 	}
 }
 
+func TestPatchMealMovesToAnotherTimeAndDay(t *testing.T) {
+	h := newHarness(t)
+	h.clock.Set(ny(2026, time.November, 1, 20, 0))
+	nick := h.joinAdmin("Nick", "green")
+	h.clock.Set(ny(2026, time.November, 2, 9, 0))
+	id := logID(h.logMeal(nick, "Oats", 400, 10).expect(http.StatusCreated))
+
+	sameDay := ny(2026, time.November, 2, 8, 15).Format(time.RFC3339)
+	got := h.patch("/api/logs/"+id, nick.Token, obj{"loggedAt": sameDay}).expect(http.StatusOK)
+	if got.str("day.date") != "2026-11-02" || got.num("log.kcal") != 400 {
+		t.Fatalf("same-day move = %s", got.Body)
+	}
+
+	yesterday := ny(2026, time.November, 1, 19, 30).Format(time.RFC3339)
+	got = h.patch("/api/logs/"+id, nick.Token, obj{"loggedAt": yesterday}).expect(http.StatusOK)
+	if got.str("day.date") != "2026-11-01" || got.str("log.localDate") != "2026-11-01" {
+		t.Fatalf("day move = %s", got.Body)
+	}
+	if h.get("/api/logs?date=2026-11-02", nick.Token).length("logs") != 0 {
+		t.Fatal("the meal must have left today")
+	}
+	if h.get("/api/logs?date=2026-11-01", nick.Token).num("logs.0.kcal") != 400 {
+		t.Fatal("the meal must be on yesterday")
+	}
+}
+
+func TestPatchMealMoveValidation(t *testing.T) {
+	h := newHarness(t)
+	h.clock.Set(ny(2026, time.November, 2, 20, 0))
+	nick := h.joinAdmin("Nick", "green")
+	id := logID(h.logMeal(nick, "Oats", 400, 10).expect(http.StatusCreated))
+
+	h.patch("/api/logs/"+id, nick.Token, obj{"loggedAt": "yesterday"}).expect(http.StatusUnprocessableEntity).code("invalid_request")
+	future := ny(2026, time.November, 2, 22, 0).Format(time.RFC3339)
+	h.patch("/api/logs/"+id, nick.Token, obj{"loggedAt": future}).expect(http.StatusUnprocessableEntity).code("invalid_request")
+	tooOld := ny(2026, time.October, 30, 12, 0).Format(time.RFC3339)
+	h.patch("/api/logs/"+id, nick.Token, obj{"loggedAt": tooOld}).expect(http.StatusUnprocessableEntity).code("date_closed")
+	if got := h.get("/api/logs?date=2026-11-02", nick.Token); got.num("logs.0.kcal") != 400 {
+		t.Fatalf("a refused move must leave the meal where it was: %s", got.Body)
+	}
+}
+
 func TestPatchRefusesActivities(t *testing.T) {
 	h := newHarness(t)
 	nick := h.joinAdmin("Nick", "green")

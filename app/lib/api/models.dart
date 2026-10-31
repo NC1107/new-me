@@ -1381,7 +1381,15 @@ class MealLog extends LogEntry {
 
 /// The body of PATCH /logs/{id} for a meal: only the fields that changed.
 class MealEdit {
-  const MealEdit({this.name, this.kcal, this.protein, this.carbs, this.fat, this.fiber});
+  const MealEdit({
+    this.name,
+    this.kcal,
+    this.protein,
+    this.carbs,
+    this.fat,
+    this.fiber,
+    this.loggedAt,
+  });
 
   final String? name;
   final int? kcal;
@@ -1390,7 +1398,11 @@ class MealEdit {
   final num? fat;
   final num? fiber;
 
+  /// Moves the meal to another moment, which may be another day.
+  final DateTime? loggedAt;
+
   bool get isEmpty =>
+      loggedAt == null &&
       name == null &&
       kcal == null &&
       protein == null &&
@@ -1405,6 +1417,7 @@ class MealEdit {
     'carbs': ?carbs,
     'fat': ?fat,
     'fiber': ?fiber,
+    'loggedAt': ?_timeJson(loggedAt),
   };
 }
 

@@ -311,6 +311,35 @@ class MealItem {
 
   MealItem withQuantity(double q) => _copy(quantity: q);
 
+  /// The numbers for the whole item as the person corrected them. They are no longer the
+  /// database's, so the item reads as an estimate and a saved food is left as it was.
+  MealItem withNumbers({
+    required int kcal,
+    required double protein,
+    required double carbs,
+    required double fat,
+  }) => MealItem._(
+    text: text,
+    name: name,
+    brand: brand,
+    quantity: quantity,
+    unit: unit,
+    source: FoodSource.estimated,
+    sourceId: '',
+    matchedName: matchedName,
+    confidence: confidence,
+    origin: FoodSource.estimated,
+    perKcal: kcal / quantity,
+    perProtein: protein / quantity,
+    perCarbs: carbs / quantity,
+    perFat: fat / quantity,
+    perFiber: perFiber,
+    perGrams: perGrams,
+    saveToLibrary: false,
+    servingText: servingText,
+    baseAmount: baseAmount,
+  );
+
   MealItem withName(String n) => _copy(name: n);
 
   MealItem withSave(bool v) => _copy(saveToLibrary: v);

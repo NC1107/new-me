@@ -180,6 +180,26 @@ void main() {
     },
   );
 
+  testWidgets('fixing an item numbers moves the total, drops its database source and is logged', (
+    tester,
+  ) async {
+    final server = _server();
+    final app = await _described(tester, server);
+
+    await app.tap(find.bySemanticsLabel('Fix the numbers of Apple'));
+    await app.enter(fieldWith('95'), '150');
+    await app.enter(fieldWith('25'), '30');
+    expect(find.text('540 kcal'), findsOneWidget);
+    expect(find.text('150 kcal   protein 0.5 g   carbs 30 g   fat 0.3 g'), findsOneWidget);
+    expect(find.text('USDA'), findsNothing, reason: 'corrected numbers are no longer the database');
+
+    await app.tap(find.text('LOG AS ONE MEAL'));
+    final saved = app.body('POST /api/logs');
+    expect((saved['kcal'], saved['carbs']), (540, 60));
+    final sources = [for (final r in server.to('POST /api/foods')) (r.data as Map)['source']];
+    expect(sources, ['openfoodfacts'], reason: 'only the untouched database food is kept');
+  });
+
   testWidgets('keeping an estimate saves it with the rest', (tester) async {
     final server = _server();
     final app = await _described(tester, server);

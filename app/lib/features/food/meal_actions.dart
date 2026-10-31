@@ -49,6 +49,43 @@ Future<void> deleteMealWithUndo(
     );
 }
 
+/// Logs [meal] again as a new entry for today, and offers an Undo that removes the copy.
+/// Resolves true when the copy was saved.
+Future<bool> logMealAgain(
+  ScaffoldMessengerState messenger,
+  LogActions actions,
+  MealLog meal,
+) async {
+  final LogResult result;
+  try {
+    result = await actions.create(meal.toDraft(newClientOpId()));
+  } on ApiException catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
+    return false;
+  }
+  HapticFeedback.mediumImpact();
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text('Logged ${meal.name} again'),
+        persist: false,
+        duration: kUndoWindow,
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            try {
+              await actions.delete(result.log);
+            } on ApiException catch (e) {
+              messenger.showSnackBar(SnackBar(content: Text(errorCopy(e))));
+            }
+          },
+        ),
+      ),
+    );
+  return true;
+}
+
 /// Whether the server would still take a change to this meal: its day is today, or yesterday
 /// while [backdateUntil] has not passed. Without Today loaded the server decides.
 bool mealIsEditable({

@@ -11,11 +11,22 @@ import 'package:newme/widgets/mascot.dart';
 import 'fixtures.dart';
 import 'test_support.dart';
 
-StubAdapter _server({List<Map<String, dynamic>>? logs}) => fullServer()
-  ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()))
-  ..on('GET /api/logs', StubResponse(200, logsJson(logs ?? [logJson(), mealLogJson()])))
-  ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
-  ..on('POST /api/logs', StubResponse(201, logResultJson()));
+StubAdapter _server({List<Map<String, dynamic>>? logs}) {
+  final adapter = fullServer()
+    ..on('GET /api/today', StubResponse(200, richTodayJson()..['food'] = restingFoodJson()))
+    ..on('DELETE /api/logs/78', StubResponse(200, deleteLogJson()))
+    ..on('POST /api/logs', StubResponse(201, logResultJson()));
+  // Yesterday is empty, so the Yesterday section stays out of these tests.
+  adapter.routes['GET /api/logs'] = (request) => StubResponse(
+    200,
+    logsJson(
+      request.queryParameters['date'] == '2026-10-25'
+          ? const []
+          : (logs ?? [logJson(), mealLogJson()]),
+    ),
+  );
+  return adapter;
+}
 
 Finder _chunky(String label) =>
     find.byWidgetPredicate((w) => w is ChunkyButton && w.label == label);
@@ -44,7 +55,9 @@ void main() {
     expect(find.textContaining('600 kcal'), findsOneWidget);
     expect(find.byTooltip('Delete Chicken bowl'), findsOneWidget);
     expect(find.text('Push-ups'), findsNothing, reason: 'only meals are listed');
-    expect(adapter.to('GET /api/logs').single.queryParameters, {'date': '2026-10-26'});
+    expect([
+      for (final r in adapter.to('GET /api/logs')) r.queryParameters['date'],
+    ], unorderedEquals(['2026-10-26', '2026-10-25']));
 
     expect(find.text('Food targets'), findsOneWidget);
     expect(find.text('2,200 kcal, 150 g protein'), findsOneWidget);

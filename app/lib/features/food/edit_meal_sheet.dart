@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/clock.dart';
+import '../../state/foods.dart';
 import '../../state/log_actions.dart';
 import '../../state/today.dart';
 import '../../theme/quest_style.dart';
@@ -12,6 +13,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../util/time_format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
@@ -57,11 +59,35 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
   late final _carbs = TextEditingController(text: gramsText(widget.meal.carbs));
   late final _fat = TextEditingController(text: gramsText(widget.meal.fat));
   late final _fiber = TextEditingController(text: gramsText(widget.meal.fiber));
+  late String _day = _meal.localDate;
+  late TimeOfDay _time = _initialTime;
   double? _scale;
   bool _busy = false;
   String? _error;
 
   MealLog get _meal => widget.meal;
+
+  TimeOfDay get _initialTime => TimeOfDay.fromDateTime(_meal.loggedAt.toLocal());
+
+  DateTime get _when {
+    final d = parseLocalDate(_day);
+    return DateTime(d.year, d.month, d.day, _time.hour, _time.minute);
+  }
+
+  bool get _whenChanged => _day != _meal.localDate || _time != _initialTime;
+
+  bool get _inFuture => _whenChanged && _when.isAfter(ref.read(clockProvider)());
+
+  /// The days the meal may sit on: today, and yesterday while its window is open or it is there.
+  List<String> get _days {
+    final today = ref.watch(todayProvider).value?.data;
+    final localToday = today?.localToday;
+    if (localToday == null) return [_meal.localDate];
+    final yesterday = previousDate(localToday);
+    final windowOpen =
+        today?.backdateUntil != null && ref.read(clockProvider)().isBefore(today!.backdateUntil!);
+    return [if (windowOpen || _meal.localDate == yesterday) yesterday, localToday];
+  }
 
   @override
   void dispose() {
@@ -93,6 +119,7 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
 
   bool get _valid =>
       _nameError == null &&
+      !_inFuture &&
       _kcalValue > 0 &&
       _kcalError == null &&
       [_protein, _carbs, _fat, _fiber].every((c) => _gramsError(c) == null);
@@ -110,6 +137,7 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
       carbs: _sameGrams(_grams(_carbs), _meal.carbs) ? null : _grams(_carbs),
       fat: _sameGrams(_grams(_fat), _meal.fat) ? null : _grams(_fat),
       fiber: _sameGrams(_grams(_fiber), _meal.fiber) ? null : _grams(_fiber),
+      loggedAt: _whenChanged ? _when.toUtc() : null,
     );
   }
 
@@ -157,6 +185,60 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text('Updated $name')));
     if (mounted) Navigator.of(context).pop(true);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _time);
+    if (picked == null) return;
+    setState(() {
+      _time = picked;
+      _error = null;
+    });
+  }
+
+  Future<void> _logAgain() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final saved = await logMealAgain(widget.messenger, ref.read(logActionsProvider), _meal);
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _saveAsFood() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(logActionsProvider)
+          .saveFood(
+            SavedFood(
+              name: _meal.name,
+              servingText: '1 meal',
+              kcal: _meal.kcal,
+              protein: _meal.protein.toDouble(),
+              carbs: _meal.carbs.toDouble(),
+              fat: _meal.fat.toDouble(),
+              fiber: _meal.fiber.toDouble(),
+            ),
+          );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = errorCopy(e);
+      });
+      return;
+    }
+    ref.invalidate(foodLibraryProvider);
+    HapticFeedback.mediumImpact();
+    widget.messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('Saved ${_meal.name} to My foods')));
+    if (mounted) Navigator.of(context).pop(false);
   }
 
   Future<void> _delete() async {
@@ -232,6 +314,8 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
         style: AppText.label.copyWith(color: kInkSecondary),
       ),
       const SizedBox(height: 20),
+      ..._reuseActions(),
+      const SizedBox(height: 4),
       ChunkyButton.secondary(label: 'Done', onPressed: () => Navigator.of(context).pop(false)),
     ];
   }
@@ -265,6 +349,16 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
       const SizedBox(height: 16),
       const FieldLabel('Scale'),
       _scaleChips(),
+      const SizedBox(height: 16),
+      const FieldLabel('When'),
+      _whenRow(),
+      if (_inFuture) ...[
+        const SizedBox(height: 6),
+        Text(
+          'That time has not happened yet.',
+          style: AppText.caption.copyWith(color: kDangerText),
+        ),
+      ],
       const SizedBox(height: 20),
       ChunkyButton(
         label: _error != null ? 'Try again' : 'Save',
@@ -272,7 +366,8 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
         onPressed: _valid && !_edit.isEmpty && !_busy ? _save : null,
       ),
       if (_error != null) ...[const SizedBox(height: 12), LogErrorLine(message: _error!)],
-      const SizedBox(height: 4),
+      const SizedBox(height: 8),
+      ..._reuseActions(),
       TextButton.icon(
         onPressed: _busy ? null : _delete,
         icon: const Icon(Icons.delete_outline_rounded, size: 20),
@@ -284,6 +379,54 @@ class _EditMealSheetState extends ConsumerState<EditMealSheet> {
         ),
       ),
     ];
+  }
+
+  /// Using the meal again: a copy for today, or a saved food that search finds next time.
+  List<Widget> _reuseActions() => [
+    ChunkyButton.secondary(
+      label: 'Log again today',
+      icon: Icons.replay_rounded,
+      onPressed: _busy ? null : _logAgain,
+    ),
+    TextButton.icon(
+      onPressed: _busy ? null : _saveAsFood,
+      icon: const Icon(Icons.bookmark_border_rounded, size: 20),
+      label: const Text('Save to My foods'),
+      style: TextButton.styleFrom(
+        foregroundColor: kInkSecondary,
+        minimumSize: const Size.fromHeight(48),
+        textStyle: AppText.label.copyWith(fontWeight: FontWeight.w700),
+      ),
+    ),
+  ];
+
+  Widget _whenRow() {
+    final days = _days;
+    final localToday = ref.watch(todayProvider).value?.data.localToday;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (days.length > 1)
+          for (final d in days)
+            LogChip(
+              label: d == localToday ? 'Today' : 'Yesterday',
+              selected: d == _day,
+              onTap: () => setState(() {
+                _day = d;
+                _error = null;
+                // Moving a late-night meal onto today would otherwise land in the future.
+                final now = ref.read(clockProvider)();
+                if (_when.isAfter(now)) _time = TimeOfDay.fromDateTime(now);
+              }),
+            ),
+        LogChip(
+          label: formatClock(DateTime(2000, 1, 1, _time.hour, _time.minute)),
+          semanticLabel: 'Time eaten',
+          onTap: _pickTime,
+        ),
+      ],
+    );
   }
 
   Widget _macroFields(BuildContext context) {

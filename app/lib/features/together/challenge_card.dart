@@ -148,7 +148,7 @@ class ChallengeCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Done! +$kChallengeBonus points each',
+                      'Done! +$kChallengeBonus gems each',
                       style: AppText.label.copyWith(
                         color: kSuccessText,
                         fontWeight: FontWeight.w800,

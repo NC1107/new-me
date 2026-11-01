@@ -40,7 +40,7 @@ struct NewMeComplication: Widget {
       RingComplicationView(entry: entry)
     }
     .configurationDisplayName("Today ring")
-    .description("Today's percent and points.")
+    .description("Today's percent and gems.")
     .supportedFamilies([.accessoryCircular])
   }
 }

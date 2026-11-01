@@ -193,9 +193,9 @@ class ReadinessSheet extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               readiness.basisNote == null
-                  ? 'Take it easy is a suggestion. Your points and streak work the same either way.'
+                  ? 'Take it easy is a suggestion. Your gems and streak work the same either way.'
                   : '${readiness.basisNote}. HRV and resting heart rate are compared with your own '
-                        'usual once there are 7 days of readings. Your points and streak work the '
+                        'usual once there are 7 days of readings. Your gems and streak work the '
                         'same either way.',
               style: AppText.body.copyWith(color: kInkSecondary),
             ),

@@ -212,7 +212,7 @@ class NotificationsPage extends ConsumerWidget {
       title: 'Notifications',
       children: [
         Text(
-          'Pick what is worth a buzz. Points and challenges count either way.',
+          'Pick what is worth a buzz. Gems and challenges count either way.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),

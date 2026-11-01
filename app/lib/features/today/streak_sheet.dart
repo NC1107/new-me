@@ -132,7 +132,7 @@ class StreakSheet extends StatelessWidget {
               title: 'Repair',
               text:
                   'Missed yesterday with no freeze left? Until $_repairCloses today you can '
-                  'repair it by earning every point today, not just the goal. A repaired day '
+                  'repair it by earning every gem today, not just the goal. A repaired day '
                   'counts as a frozen day.',
             ),
             const SizedBox(height: 12),

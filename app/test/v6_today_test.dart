@@ -392,7 +392,7 @@ void main() {
       final server = _server(recap: _recapJson());
       final app = await _open(tester, server, at: _sundayEvening);
       expect(find.text('Your week is in'), findsOneWidget);
-      expect(find.textContaining('Together you earned 1,600 points'), findsOneWidget);
+      expect(find.textContaining('Together you earned 1,600 gems'), findsOneWidget);
 
       await app.tap(find.text('Open the recap'));
       expect(find.byType(RecapScreen), findsOneWidget);

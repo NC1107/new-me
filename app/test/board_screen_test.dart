@@ -191,9 +191,9 @@ void main() {
     await app.pump(const BoardScreen());
     await app.tap(find.byType(PersonCard).at(1));
     expect(find.text('Week'), findsOneWidget);
-    expect(find.text('1,200 points'), findsOneWidget);
+    expect(find.text('1,200 gems'), findsOneWidget);
     expect(find.text('Season'), findsOneWidget);
-    expect(find.text('8,000 points'), findsOneWidget);
+    expect(find.text('8,000 gems'), findsOneWidget);
     expect(find.text('Freezes'), findsOneWidget);
     expect(find.text('Synced 3h ago'), findsOneWidget);
   });

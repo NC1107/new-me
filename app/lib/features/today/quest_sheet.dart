@@ -72,7 +72,7 @@ String questWorthLine(Quest q, int dayMax) {
   final share = dayMax > 0 && q.points <= dayMax
       ? ', ${(q.points * 100 / dayMax).round()}% of today'
       : '';
-  return q.done ? 'Earned +${q.points} points$share' : '+${q.points} points$share';
+  return q.done ? 'Earned +${q.points} gems$share' : '+${q.points} gems$share';
 }
 
 /// What the sheet hands back, so the caller can offer Undo on the page behind it.

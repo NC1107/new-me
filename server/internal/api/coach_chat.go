@@ -212,7 +212,7 @@ func questLine(u db.User, q questJSON) string {
 	if q.PointsWhy != "" {
 		return line + ". " + q.PointsWhy
 	}
-	return fmt.Sprintf("%s. Worth %d points.", line, q.Points)
+	return fmt.Sprintf("%s. Worth %d gems.", line, q.Points)
 }
 
 func questProgress(u db.User, q questJSON) string {
@@ -241,7 +241,7 @@ func dayLine(d score.Date, row db.DayScoreRow, series map[string]map[score.Date]
 		if !row.Counted {
 			verdict = "does not count toward the streak"
 		}
-		parts = append(parts, fmt.Sprintf("%d points, %d%% of base points, %s", row.Points(), row.Percent, verdict))
+		parts = append(parts, fmt.Sprintf("%d gems, %d%% of base gems, %s", row.Points(), row.Percent, verdict))
 		var done, missed []string
 		var results []score.QuestScore
 		if json.Unmarshal(row.Detail, &results) == nil {

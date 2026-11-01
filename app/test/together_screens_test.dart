@@ -258,7 +258,7 @@ void main() {
       expect(find.text('Challenge complete!'), findsOneWidget);
       expect(find.byType(CelebrationSheet), findsOneWidget);
       await app.tap(find.text('CONTINUE'));
-      expect(find.text('Done! +50 points each'), findsOneWidget);
+      expect(find.text('Done! +50 gems each'), findsOneWidget);
 
       await app.pump(const BoardScreen(), key: UniqueKey());
       app.container.read(homeTabProvider.notifier).select(HomeTab.board);

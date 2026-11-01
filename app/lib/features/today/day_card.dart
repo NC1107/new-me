@@ -25,7 +25,7 @@ bool oneQuestAway(DayScore day, List<Quest> quests) {
 /// fresh morning at 0% is not a test already failed.
 String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
   if (day.counted) {
-    return 'Goal reached. Anything extra still earns bonus points.';
+    return 'Goal reached. Anything extra still earns bonus gems.';
   }
   if (oneQuestAway(day, quests)) return 'One more and you count today.';
   if (streak.current < 1) return 'Fill the bar today to start your streak.';
@@ -92,7 +92,7 @@ class DayCard extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      '${day.basePoints.formatted} of ${day.goalPoints.formatted} points',
+                      '${day.basePoints.formatted} of ${day.goalPoints.formatted} gems',
                       style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
                     ),
                   ],

@@ -145,9 +145,9 @@ func Suggest(cur, prev Stats, complete, joinedMidWeek bool) string {
 	case cur.Workouts == 0:
 		return "No workouts this week. Plan two for next week."
 	case prev.Points > 0 && cur.Points < prev.Points:
-		return "Points dipped. Pick one quest to do first thing each day next week."
+		return "Gems dipped. Pick one quest to do first thing each day next week."
 	}
-	return fmt.Sprintf("Solid week. Keep the routine and try to beat %s points.", plan.Thousands(cur.Points))
+	return fmt.Sprintf("Solid week. Keep the routine and try to beat %s gems.", plan.Thousands(cur.Points))
 }
 
 // SummaryLine is the one-sentence push for a person: their week against the one before, plus the pair.
@@ -156,7 +156,7 @@ func SummaryLine(cur, prev, pair Stats) string {
 	if cur.CountedDays == 1 {
 		days = "counted day"
 	}
-	line := fmt.Sprintf("%s points, %d %s, %s steps.", plan.Thousands(cur.Points), cur.CountedDays, days, plan.Thousands(cur.Steps))
+	line := fmt.Sprintf("%s gems, %d %s, %s steps.", plan.Thousands(cur.Points), cur.CountedDays, days, plan.Thousands(cur.Steps))
 	if prev.Points > 0 {
 		change := int(math.Round((float64(cur.Points)/float64(prev.Points) - 1) * 100))
 		switch {
@@ -168,7 +168,7 @@ func SummaryLine(cur, prev, pair Stats) string {
 			line += " Level with last week."
 		}
 	}
-	return line + fmt.Sprintf(" Together: %s points.", plan.Thousands(pair.Points))
+	return line + fmt.Sprintf(" Together: %s gems.", plan.Thousands(pair.Points))
 }
 
 // ScoredRange is the part of the week from monday that the board counts for a person whose local

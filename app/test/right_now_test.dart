@@ -236,10 +236,10 @@ void main() {
         recapHeadline(_recap(now: 100, before: 200)),
         contains('100 fewer than the week before'),
       );
-      expect(recapHeadline(_recap(now: 100, before: 0)), 'Together you earned 100 points.');
+      expect(recapHeadline(_recap(now: 100, before: 0)), 'Together you earned 100 gems.');
       expect(
         recapHeadline(_recap(now: 150, complete: false, before: 0)),
-        'Together you have 150 points so far.',
+        'Together you have 150 gems so far.',
       );
     });
 

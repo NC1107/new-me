@@ -181,7 +181,7 @@ void main() {
                 'color': 'amber',
                 'this': {'points': 700},
                 'previous': {'points': 750},
-                'suggestion': 'Beat 700 points.',
+                'suggestion': 'Beat 700 gems.',
               },
             ],
             'pair': {

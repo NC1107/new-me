@@ -266,7 +266,7 @@ class _Header extends ConsumerWidget {
                       _Stat(
                         icon: Icons.diamond_rounded,
                         color: accentById('sky').fill,
-                        text: '${mine.season.formatted} season points',
+                        text: '${mine.season.formatted} season gems',
                       ),
                     ],
                   ),

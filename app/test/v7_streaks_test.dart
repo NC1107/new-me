@@ -229,7 +229,7 @@ void main() {
       await _openToday(tester, _server(today: _today(repair: _repair(), percent: 62)));
       expect(find.text('Repair yesterday'), findsOneWidget);
       expect(find.textContaining('You missed Sunday'), findsOneWidget);
-      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 points$')), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 gems$')), findsOneWidget);
     });
 
     testWidgets('follows today progress and says so at 100%', (tester) async {
@@ -238,7 +238,7 @@ void main() {
         _server(today: _today(repair: _repair(progress: 100), percent: 100)),
       );
       expect(find.text('Yesterday is repaired'), findsOneWidget);
-      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 points$')), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 gems$')), findsOneWidget);
     });
 
     testWidgets('is gone once its window has closed', (tester) async {

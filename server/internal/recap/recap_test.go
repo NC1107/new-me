@@ -67,8 +67,8 @@ func TestSuggestFirstMatchingRuleWins(t *testing.T) {
 		{"short sleep", with(good, func(s *Stats) { s.SleepAvgMin = 385 }), good, true, false, "averaged 6 h 25 of sleep"},
 		{"sleep needs three nights", with(good, func(s *Stats) { s.SleepAvgMin = 300; s.SleepNights = 2 }), good, true, false, "Solid week"},
 		{"no workouts", with(good, func(s *Stats) { s.Workouts = 0 }), good, true, false, "No workouts this week"},
-		{"points dipped", with(good, func(s *Stats) { s.Points = 1800 }), good, true, false, "Points dipped"},
-		{"solid", good, good, true, false, "try to beat 2,000 points"},
+		{"points dipped", with(good, func(s *Stats) { s.Points = 1800 }), good, true, false, "Gems dipped"},
+		{"solid", good, good, true, false, "try to beat 2,000 gems"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -86,7 +86,7 @@ func with(s Stats, edit func(*Stats)) Stats {
 
 func TestSummaryLineSingularDay(t *testing.T) {
 	got := SummaryLine(Stats{Points: 10, CountedDays: 1}, Stats{}, Stats{Points: 10})
-	if got != "10 points, 1 counted day, 0 steps. Together: 10 points." {
+	if got != "10 gems, 1 counted day, 0 steps. Together: 10 gems." {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -98,10 +98,10 @@ func TestSummaryLine(t *testing.T) {
 		prev Stats
 		want string
 	}{
-		{Stats{Points: 1625}, "1,820 points, 5 counted days, 61,200 steps. Up 12% on last week. Together: 3,410 points."},
-		{Stats{Points: 2000}, "1,820 points, 5 counted days, 61,200 steps. Down 9% on last week. Together: 3,410 points."},
-		{Stats{Points: 1820}, "1,820 points, 5 counted days, 61,200 steps. Level with last week. Together: 3,410 points."},
-		{Stats{}, "1,820 points, 5 counted days, 61,200 steps. Together: 3,410 points."},
+		{Stats{Points: 1625}, "1,820 gems, 5 counted days, 61,200 steps. Up 12% on last week. Together: 3,410 gems."},
+		{Stats{Points: 2000}, "1,820 gems, 5 counted days, 61,200 steps. Down 9% on last week. Together: 3,410 gems."},
+		{Stats{Points: 1820}, "1,820 gems, 5 counted days, 61,200 steps. Level with last week. Together: 3,410 gems."},
+		{Stats{}, "1,820 gems, 5 counted days, 61,200 steps. Together: 3,410 gems."},
 	}
 	for _, tc := range cases {
 		if got := SummaryLine(cur, tc.prev, pair); got != tc.want {

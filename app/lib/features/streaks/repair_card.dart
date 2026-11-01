@@ -22,7 +22,7 @@ String weekdayLong(String date) => DateFormat.EEEE().format(parseLocalDate(date)
   final until = repair.until == null ? '22:00' : formatClock(repair.until!.toLocal());
   return (
     title: 'Repair yesterday',
-    body: 'You missed $day. Earn every point today before $until and it counts as a frozen day.',
+    body: 'You missed $day. Earn every gem today before $until and it counts as a frozen day.',
   );
 }
 
@@ -77,7 +77,7 @@ class RepairCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '${day.basePoints.formatted} of ${day.maxBase.formatted} points',
+              '${day.basePoints.formatted} of ${day.maxBase.formatted} gems',
               style: AppText.tabular(
                 AppText.label.copyWith(color: kFreezeText, fontWeight: FontWeight.w800),
               ),

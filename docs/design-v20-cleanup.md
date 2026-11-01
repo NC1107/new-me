@@ -39,7 +39,9 @@ The board now rescores each person's today before it reads it, as the partner's 
 - The flame and the partner avatar are their own VoiceOver elements, so a tap on either lands on it.
 - The training history page asks for the app clock's month before Today loads, instead of the phone's.
 
-## Left for Nick to decide
+## Gems, not points
 
-- Habits and chores are priced in "gems" while quests say "points", for the same day score.
-  One word should win.
+Habits and chores were priced in "gems" while quests and the day card said "points", for the same thing.
+A person's gems earned are the sum of every day's base and bonus points (`db.ReadPersonGems`), so one point is one gem.
+Nick chose gems, so every place the app or server talks to a person now says gems: quest chips and sheets, the day and repair cards, the streak sheet, Us, the recap, the look-back, the weekly push, the coach, and the iOS widget descriptions.
+Code and the API keep the name points.

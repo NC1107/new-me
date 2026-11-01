@@ -298,10 +298,10 @@ func TestWeeklyRecapPushOnSundayEveningOnce(t *testing.T) {
 	if len(mine) != 1 || len(hers) != 1 || mine[0].Title != "Your week" {
 		t.Fatalf("pushes = %+v", push.msgs)
 	}
-	if !strings.HasPrefix(mine[0].Body, "340 points, 1 counted day, 36,000 steps.") || !strings.HasSuffix(mine[0].Body, "Together: 540 points.") {
+	if !strings.HasPrefix(mine[0].Body, "340 gems, 1 counted day, 36,000 steps.") || !strings.HasSuffix(mine[0].Body, "Together: 540 gems.") {
 		t.Fatalf("Nick's line = %q", mine[0].Body)
 	}
-	if !strings.HasPrefix(hers[0].Body, "200 points, 0 counted days, 0 steps.") {
+	if !strings.HasPrefix(hers[0].Body, "200 gems, 0 counted days, 0 steps.") {
 		t.Fatalf("Nadia's line = %q", hers[0].Body)
 	}
 

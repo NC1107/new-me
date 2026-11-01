@@ -286,7 +286,7 @@ class PointsChip extends StatelessWidget {
     final person = context.accentPalette;
     final ink = done ? context.accentText : kInkSecondary;
     return Semantics(
-      label: done ? '$points points earned' : 'Worth $points points',
+      label: done ? '$points gems earned' : 'Worth $points gems',
       excludeSemantics: true,
       child: Container(
         margin: EdgeInsets.only(left: leading),

@@ -255,7 +255,7 @@ class _HabitRow extends ConsumerWidget {
       } else if (await confirmDialog(
         context,
         title: 'Delete ${habit.name}?',
-        message: 'It leaves Today and its reminders stop. Past days keep their points.',
+        message: 'It leaves Today and its reminders stop. Past days keep their gems.',
         confirmLabel: 'Delete',
         destructive: true,
       )) {

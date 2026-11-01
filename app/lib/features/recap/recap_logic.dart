@@ -15,7 +15,7 @@ String signedChange(num delta, {String unit = ''}) {
 String recapHeadline(Recap recap) {
   final now = recap.pair.thisWeek.points;
   final before = recap.pair.previous.points;
-  final points = '${now.formatted} ${now == 1 ? 'point' : 'points'}';
+  final points = '${now.formatted} ${now == 1 ? 'gem' : 'gems'}';
   final base = recap.complete
       ? 'Together you earned $points.'
       : 'Together you have $points so far.';
@@ -112,7 +112,7 @@ List<RecapRow> recapRows(
   final compareSleep = compare && hasSleep && before.sleepNights > 0;
   return [
     _row(
-      'Points',
+      'Gems',
       Icons.diamond_rounded,
       now.points.formatted,
       now.points,

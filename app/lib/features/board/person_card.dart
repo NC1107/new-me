@@ -51,7 +51,7 @@ class PersonCard extends StatelessWidget {
         ? 'away today'
         : '${user.today.goalPercent} percent of the goal${user.today.counted ? ', counted' : ''}';
     final streak = user.streak < 1 ? 'no streak yet' : '${user.streak}-day streak';
-    return '${user.name}: ${user.today.points} points today, $goal, $streak. Show details';
+    return '${user.name}: ${user.today.points} gems today, $goal, $streak. Show details';
   }
 
   @override
@@ -226,7 +226,7 @@ class _Ring extends StatelessWidget {
       maxScaleFactor: 1.2,
       child: Semantics(
         label:
-            '${user.name}: ${user.today.points} points today, ${user.today.goalPercent} percent of the goal',
+            '${user.name}: ${user.today.points} gems today, ${user.today.goalPercent} percent of the goal',
         excludeSemantics: true,
         child: SizedBox.square(
           dimension: _kRingSize,
@@ -252,7 +252,7 @@ class _Ring extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text('points', style: AppText.caption.copyWith(fontSize: 12)),
+                  Text('gems', style: AppText.caption.copyWith(fontSize: 12)),
                 ],
               ),
             ),

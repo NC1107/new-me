@@ -590,8 +590,8 @@ void main() {
       expect(find.text('Workouts: 3.3 a week, up from 2.6'), findsOneWidget);
       expect(find.text('Push-ups: 40 a day, up from 32'), findsOneWidget);
       expect(find.text('+25%'), findsOneWidget);
-      expect(find.text('8,000 points, both counted on 19 days'), findsOneWidget);
-      expect(find.text('4,120 points, 24 days counted'), findsOneWidget);
+      expect(find.text('8,000 gems, both counted on 19 days'), findsOneWidget);
+      expect(find.text('4,120 gems, 24 days counted'), findsOneWidget);
     });
 
     testWidgets('moves to the month before and back', (tester) async {

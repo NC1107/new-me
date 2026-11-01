@@ -504,7 +504,7 @@ class _SeasonLine extends StatelessWidget {
           Semantics(header: true, child: const Text('Preseason', style: AppText.title)),
           const SizedBox(height: 8),
           const Text(
-            'Season points start from zero each season, while streaks and history carry on. This '
+            'Season gems start from zero each season, while streaks and history carry on. This '
             'is the preseason, the warm-up before Season 1.',
             style: AppText.body,
           ),

@@ -109,13 +109,13 @@ void main() {
     testWidgets('shows what the quest is worth, quiet while open', (tester) async {
       await tester.pumpWidget(host(const PointsChip(points: 100, done: false)));
       expect(find.text('+100'), findsOneWidget);
-      expect(find.bySemanticsLabel('Worth 100 points'), findsOneWidget);
+      expect(find.bySemanticsLabel('Worth 100 gems'), findsOneWidget);
     });
 
     testWidgets('says the points are earned once the quest is done', (tester) async {
       await tester.pumpWidget(host(const PointsChip(points: 50, done: true)));
       expect(find.text('+50'), findsOneWidget);
-      expect(find.bySemanticsLabel('50 points earned'), findsOneWidget);
+      expect(find.bySemanticsLabel('50 gems earned'), findsOneWidget);
     });
 
     testWidgets('sits on every quest card', (tester) async {
@@ -129,9 +129,9 @@ void main() {
     test('the worth line is the share of the day, and says earned once done', () {
       final open = Quest.fromJson(quest('steps', 'Steps', {'points': 100}));
       final done = Quest.fromJson(quest('steps', 'Steps', {'points': 100, 'done': true}));
-      expect(questWorthLine(open, 420), '+100 points, 24% of today');
-      expect(questWorthLine(done, 420), 'Earned +100 points, 24% of today');
-      expect(questWorthLine(open, 0), '+100 points');
+      expect(questWorthLine(open, 420), '+100 gems, 24% of today');
+      expect(questWorthLine(done, 420), 'Earned +100 gems, 24% of today');
+      expect(questWorthLine(open, 0), '+100 gems');
     });
 
     test('a quest lists only the entries that feed it', () {
@@ -161,7 +161,7 @@ void main() {
       expect(find.text('Walk 8,000 steps'), findsOneWidget);
       expect(find.text('Counted by Apple Health'), findsWidgets);
       // maxBase is 400 in the fixture.
-      expect(find.text('+100 points, 25% of today'), findsOneWidget);
+      expect(find.text('+100 gems, 25% of today'), findsOneWidget);
       expect(find.text('Worth 100: about 80 min of walking at a moderate pace.'), findsOneWidget);
       expect(find.textContaining('Nothing to log here'), findsOneWidget);
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);

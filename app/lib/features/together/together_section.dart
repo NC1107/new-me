@@ -63,7 +63,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         await showCelebrationSheet(
           context,
           title: 'Challenge complete!',
-          message: '${ch.title}\n+$kChallengeBonus points each',
+          message: '${ch.title}\n+$kChallengeBonus gems each',
           users: board.users,
         );
         if (!await _settled()) return;

@@ -96,7 +96,7 @@ void main() {
       expect(find.text('Sam'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
       expect(find.text('4 day streak'), findsOneWidget);
-      expect(find.text('900 season points'), findsOneWidget);
+      expect(find.text('900 season gems'), findsOneWidget);
       for (final row in ['Daily goals', 'About you', 'Schedule', 'Apple Health']) {
         expect(find.text(row), findsOneWidget);
       }

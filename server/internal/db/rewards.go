@@ -27,9 +27,9 @@ var (
 	// ErrRewardState means the reward is not in a state the action applies to.
 	ErrRewardState = errors.New("the reward is not in a state for that")
 	// ErrNotTreatOwner means someone tried to redeem a treat that is not theirs.
-	ErrNotTreatOwner = errors.New("that treat belongs to the other person")
+	ErrNotTreatOwner = errors.New("that reward belongs to the other person")
 	// ErrInsufficientGems means the person's own balance does not cover a treat.
-	ErrInsufficientGems = errors.New("your gems do not cover that treat")
+	ErrInsufficientGems = errors.New("your gems do not cover that reward")
 )
 
 // Reward is one wishlist entry, priced in gems.

@@ -11,7 +11,6 @@ import 'package:newme/features/together/challenge_card.dart';
 import 'package:newme/features/together/cheer_chip.dart';
 import 'package:newme/features/together/cheer_sheet.dart';
 import 'package:newme/features/together/notifications_page.dart';
-import 'package:newme/features/together/reward_card.dart';
 import 'package:newme/features/together/reward_sheet.dart';
 import 'package:newme/reminders/reminder_scheduler.dart';
 import 'package:newme/widgets/confetti.dart';
@@ -445,7 +444,7 @@ void main() {
       final app = TestApp(tester, server);
       await _openUs(app);
 
-      expect(find.text('Ana wants Weekend away for 3,000 gems'), findsOneWidget);
+      expect(find.text('Ana wants a shared reward: Weekend away for 3,000 gems'), findsOneWidget);
       expect(find.text('Weekend away'), findsNothing, reason: 'it is not on the wishlist yet');
       await app.tap(find.text('DECLINE'));
       expect(app.adapter.to('POST /api/rewards/4/decline'), hasLength(1));
@@ -493,9 +492,9 @@ void main() {
       await _openUs(app);
 
       expect(find.text('Movie night'), findsOneWidget);
-      expect(find.text('600 gems'), findsOneWidget);
-      expect(find.text('4,000 gems · waiting for Ana'), findsOneWidget);
-      expect(find.text('9,000 gems · declined'), findsOneWidget);
+      expect(find.text('Shared · 600 gems'), findsOneWidget);
+      expect(find.text('Shared · 4,000 gems · waiting for Ana'), findsOneWidget);
+      expect(find.text('Shared · 9,000 gems · declined'), findsOneWidget);
     });
 
     testWidgets('opening my pending proposal edits it and can withdraw it', (tester) async {
@@ -545,7 +544,7 @@ void main() {
       expect(app.adapter.to('POST /api/rewards/5/focus'), hasLength(1));
 
       await app.tap(find.text('Movie night'));
-      await app.tap(find.text('CANCEL REWARD'));
+      await app.tap(find.text('REMOVE REWARD'));
       expect(app.adapter.to('POST /api/rewards/5/cancel'), hasLength(1));
     });
 
@@ -583,7 +582,7 @@ void main() {
       final app = TestApp(tester, server);
       await _openUs(app);
 
-      expect(find.text('600 gems · ready'), findsOneWidget);
+      expect(find.text('Shared · 600 gems · ready'), findsOneWidget);
       await app.tap(find.text('Movie night'));
       await app.tap(find.text('WE DID IT'));
       expect(app.adapter.to('POST /api/rewards/5/claim'), hasLength(1));
@@ -659,7 +658,6 @@ void main() {
       await _openUs(app);
 
       expect(find.text('Rewards earned'), findsOneWidget);
-      expect(find.byType(RewardHistory), findsOneWidget);
       expect(find.text('Pizza night'), findsOneWidget);
       expect(find.textContaining('enjoyed Oct 26'), findsOneWidget);
       expect(find.textContaining('reached Oct 25'), findsOneWidget);

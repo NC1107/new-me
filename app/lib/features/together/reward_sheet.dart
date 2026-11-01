@@ -15,27 +15,29 @@ import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/segmented.dart';
 
 const kRewardNameIdeas = ['Date night', 'Dinner out', 'Movie night', 'Day trip'];
 const kTreatNameIdeas = ['Monster energy drink', 'Big Gulp', 'Ice cream', 'Coffee'];
 const kRewardNameMax = 40;
 const kRewardPriceMax = 100000;
 
-/// Adds a reward to the wishlist, or edits [reward]. With [treat] it adds a personal treat.
+/// Adds a reward, shared or solo, or edits [reward]. [treat] starts a new one on Solo.
 Future<void> showRewardSheet(BuildContext context, {Reward? reward, bool treat = false}) =>
     showAppSheet<void>(
       context,
       builder: (_) => RewardSheet(reward: reward, treat: treat),
     );
 
-/// Name a treat and price it in gems, with prices suggested from the pair's own pace. For an
-/// existing reward it also holds what can be done with it: withdraw, cancel, focus or claim.
+/// Name a reward, say whether it is shared or solo, and price it in gems, with prices for a
+/// shared one suggested from the pair's own pace. For an existing reward it also holds what can be
+/// done with it: withdraw, cancel, focus or claim.
 class RewardSheet extends ConsumerStatefulWidget {
   const RewardSheet({super.key, this.reward, this.treat = false});
 
   final Reward? reward;
 
-  /// A new treat of mine; an existing [reward] says for itself whether it is one.
+  /// Whether a new reward starts on Solo; an existing [reward] says for itself which it is.
   final bool treat;
 
   @override
@@ -49,16 +51,27 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
         ? (widget.treat ? '' : _suggestedStart())
         : '${widget.reward!.price}',
   );
+  late bool _solo = widget.treat;
   bool _busy = false;
   String? _error;
 
   Reward? get _existing => widget.reward;
 
-  bool get _isTreat => widget.treat || (_existing?.isTreat ?? false);
+  bool get _isTreat => _existing?.isTreat ?? _solo;
+
+  void _setSolo(bool solo) {
+    final suggested = _suggestedStart();
+    setState(() {
+      // Only a price the sheet filled in itself follows the switch; a typed one stays.
+      if (solo && _price.text == suggested) _price.clear();
+      if (!solo && _price.text.isEmpty) _price.text = suggested;
+      _solo = solo;
+    });
+  }
 
   List<String> get _ideas => _isTreat ? kTreatNameIdeas : kRewardNameIdeas;
 
-  /// A treat's price is not paced by what the pair earns, so no suggestions are made for it.
+  /// A solo reward's price is not paced by what the pair earns, so no suggestions are made for it.
   PriceHelp? get _help => _isTreat ? null : ref.read(rewardsProvider).value?.priceHelp;
 
   String _suggestedStart() {
@@ -124,8 +137,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
 
   String _submitLabel(String? partner) {
     final existing = _existing;
-    final noun = _isTreat ? 'treat' : 'reward';
-    if (existing == null) return partner == null ? 'Add $noun' : 'Propose $noun';
+    if (existing == null) return partner == null ? 'Add reward' : 'Propose reward';
     if (existing.declined) return 'Propose again';
     if (_priceChangesApproved && partner != null) return 'Propose new price';
     return 'Save';
@@ -135,13 +147,14 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
     final existing = _existing;
     if (existing == null && _isTreat) {
       return partner == null
-          ? 'Redeem it as often as you like from your own gems.'
-          : '$partner agrees on the price first, so neither of you sets your own.';
+          ? 'Just for you, redeemed from your own gems as often as you like.'
+          : 'Just for you, redeemed from your own gems as often as you like. '
+                '$partner agrees on the price first.';
     }
     if (existing == null) {
       return partner == null
-          ? 'Gems you earn pile up in the shared bank.'
-          : '$partner approves it before it joins the wishlist.';
+          ? 'Earned together from the shared bank.'
+          : 'Earned together from the shared bank. $partner approves it first.';
     }
     if (existing.pending) return 'Waiting for ${partner ?? 'your partner'} to answer.';
     if (existing.declined) {
@@ -191,24 +204,28 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
         children: [
           Semantics(
             header: true,
-            child: Text(
-              existing == null
-                  ? (_isTreat ? 'Add a treat' : 'Add a reward')
-                  : (_isTreat ? 'Edit treat' : 'Edit reward'),
-              style: AppText.title,
-            ),
+            child: Text(existing == null ? 'Add a reward' : 'Edit reward', style: AppText.title),
           ),
-          const SizedBox(height: 4),
+          if (existing == null) ...[
+            const SizedBox(height: 12),
+            Segmented<bool>(
+              options: const [(false, 'Shared'), (true, 'Solo')],
+              selected: _solo,
+              onChanged: _setSolo,
+              spokenLabel: (solo) => solo ? 'Solo, just for you' : 'Shared, earned together',
+            ),
+          ],
+          const SizedBox(height: 8),
           Text(
             _caption(partner),
             style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 18),
-          FieldLabel(_isTreat ? 'What is the treat?' : 'What are you earning?'),
+          const FieldLabel('What are you earning?'),
           AppTextField(
             controller: _name,
             hint: _ideas.first,
-            semanticLabel: _isTreat ? 'Treat name' : 'Reward name',
+            semanticLabel: 'Reward name',
             textCapitalization: TextCapitalization.sentences,
             inputFormatters: [LengthLimitingTextInputFormatter(kRewardNameMax)],
             onChanged: (_) => setState(() {}),
@@ -325,7 +342,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
           if (existing != null && existing.approved) ...[
             const SizedBox(height: 10),
             ChunkyButton.secondary(
-              label: _isTreat ? 'Remove treat' : 'Cancel reward',
+              label: 'Remove reward',
               onPressed: _busy ? null : () => _run((r) => r.cancel(existing.id)),
             ),
           ],

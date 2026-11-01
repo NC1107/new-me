@@ -75,7 +75,7 @@ StubAdapter _server({
     }),
   );
 
-// The Treats half sits below the weekly challenge and the shared rewards, so the surface is tall.
+// The rewards sit below the weekly challenge and the shared rewards, so the surface is tall.
 TestApp _app(WidgetTester tester, StubAdapter server) =>
     TestApp(tester, server, surfaceHeight: 3200);
 
@@ -90,23 +90,27 @@ void main() {
   });
 
   group('treats on Us', () {
-    testWidgets('splits Together from Treats and shows both balances, mine first', (tester) async {
+    testWidgets('one Rewards section shows both balances, mine first, and the bank', (
+      tester,
+    ) async {
       final app = _app(tester, _server(treats: [_treat(progress: 400)]));
       await _openUs(app);
 
-      expect(find.text('Together'), findsWidgets);
-      expect(find.text('Treats'), findsOneWidget);
+      expect(find.text('Rewards'), findsOneWidget);
+      expect(find.text('Treats'), findsNothing);
       expect(find.text('Your gems'), findsOneWidget);
       expect(find.text("Ana's gems"), findsOneWidget);
+      expect(find.text('Shared bank'), findsOneWidget);
       expect(find.text('400'), findsOneWidget);
       expect(find.text('1,500'), findsOneWidget);
+      expect(find.text('1,900'), findsOneWidget);
       expect(
         tester.getTopLeft(find.text('Your gems')).dx,
         lessThan(tester.getTopLeft(find.text("Ana's gems")).dx),
       );
     });
 
-    testWidgets('shows progress toward the cheapest treat and hides Redeem until it is covered', (
+    testWidgets('a solo reward says what is left and hides Redeem until it is covered', (
       tester,
     ) async {
       final app = _app(
@@ -120,11 +124,10 @@ void main() {
       );
       await _openUs(app);
 
-      expect(find.text('Next up: Monster energy drink'), findsOneWidget);
-      expect(find.text('400 of 1,000 gems'), findsOneWidget);
-      expect(find.text('600 to go'), findsOneWidget);
+      expect(find.text('Solo · 1,000 gems · 600 to go'), findsOneWidget);
+      expect(find.text('Solo · 1,500 gems · 1,100 to go'), findsOneWidget);
       expect(find.text('REDEEM'), findsNothing);
-      final names = tester.getTopLeft(find.text('Monster energy drink').last).dy;
+      final names = tester.getTopLeft(find.text('Monster energy drink')).dy;
       expect(
         names,
         lessThan(tester.getTopLeft(find.text('Big Gulp')).dy),
@@ -187,20 +190,21 @@ void main() {
       expect(find.textContaining('own gems do not cover'), findsOneWidget);
     });
 
-    testWidgets("my partner's treats are listed without a way to redeem them", (tester) async {
+    testWidgets("my partner's solo rewards are listed without a way to redeem them", (
+      tester,
+    ) async {
       final app = _app(
         tester,
         _server(treats: [_treat(id: 12, name: 'Latte', price: 300, owner: 1, proposedBy: 1)]),
       );
       await _openUs(app);
 
-      expect(find.text("Ana's treats"), findsOneWidget);
       expect(find.text('Latte'), findsOneWidget);
-      expect(find.text('300 gems'), findsOneWidget);
+      expect(find.text("Ana's · 300 gems"), findsOneWidget);
       expect(find.text('REDEEM'), findsNothing);
     });
 
-    testWidgets("my partner's price proposal for their treat waits for my answer", (tester) async {
+    testWidgets("my partner's solo reward waits for my answer", (tester) async {
       final server =
           _server(
             treats: [
@@ -213,37 +217,41 @@ void main() {
       final app = _app(tester, server);
       await _openUs(app);
 
-      expect(find.text('Ana wants Latte as a treat for 300 gems'), findsOneWidget);
+      expect(find.text('Ana wants a solo reward: Latte for 300 gems'), findsOneWidget);
       await app.tap(find.text('APPROVE'));
       expect(app.adapter.to('POST /api/rewards/12/approve'), hasLength(1));
     });
 
-    testWidgets('my pending treat shows who it waits on', (tester) async {
+    testWidgets('my pending solo reward shows who it waits on', (tester) async {
       final app = _app(tester, _server(treats: [_treat(status: 'pending')]));
       await _openUs(app);
 
-      expect(find.text('1,000 gems · waiting for Ana'), findsOneWidget);
+      expect(find.text('Solo · 1,000 gems · waiting for Ana'), findsOneWidget);
       expect(find.text('REDEEM'), findsNothing);
     });
 
-    testWidgets('adding a treat proposes it as a treat, with no suggested prices', (tester) async {
+    testWidgets('Solo in the one add sheet proposes a solo reward, with no suggested prices', (
+      tester,
+    ) async {
       final server = _server()
         ..on('POST /api/rewards', StubResponse(201, {'reward': _treat(status: 'pending')}));
       final app = _app(tester, server);
       await _openUs(app);
 
-      await app.tap(find.text('Add a treat'));
+      await app.tap(find.text('ADD A REWARD'));
       expect(find.byType(RewardSheet), findsOneWidget);
+      expect(find.text('Date night'), findsWidgets, reason: 'starts on Shared');
+      await app.tap(find.bySemanticsLabel('Solo, just for you'));
       expect(find.textContaining('at your pace'), findsNothing);
       await app.tap(find.text('Big Gulp'));
       await tester.enterText(find.byType(TextField).last, '1000');
       await app.settle();
-      await app.tap(find.text('PROPOSE TREAT'));
+      await app.tap(find.text('PROPOSE REWARD'));
 
       expect(app.body('POST /api/rewards'), {'name': 'Big Gulp', 'price': 1000, 'treat': true});
     });
 
-    testWidgets('the history lists what either of you redeemed', (tester) async {
+    testWidgets('rewards earned lists what either of you redeemed', (tester) async {
       final app = _app(
         tester,
         _server(
@@ -262,7 +270,7 @@ void main() {
       );
       await _openUs(app);
 
-      expect(find.text('Treats redeemed'), findsOneWidget);
+      expect(find.text('Rewards earned'), findsOneWidget);
       expect(find.textContaining('Ana · 300 gems'), findsOneWidget);
     });
   });

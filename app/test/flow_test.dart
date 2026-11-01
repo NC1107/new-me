@@ -55,9 +55,8 @@ void main() {
     await app.tap(_save());
     await app.settle(30);
 
-    expect(find.text('170'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
-    expect(find.text('Streak saved for today!'), findsOneWidget);
+    expect(find.textContaining('Goal reached'), findsOneWidget);
     expect(find.text('4'), findsWidgets, reason: 'the flame follows the counted day');
     expect(
       find.byType(DayCountedSheet),
@@ -95,7 +94,6 @@ void main() {
     await app.tap(_logPushups());
     await app.tap(_save());
 
-    expect(find.text('160'), findsOneWidget);
     expect(find.text('94%'), findsOneWidget);
     expect(adapter.to('GET /api/today'), hasLength(loads));
   });
@@ -129,7 +127,7 @@ void main() {
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
     expect(find.text("Today's entries"), findsOneWidget);
     expect(find.text('20 reps'), findsOneWidget);
     expect(find.text('600 kcal'), findsOneWidget);
@@ -160,7 +158,7 @@ void main() {
     final adapter = _server();
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
 
     final row = find.ancestor(of: find.text('20 reps'), matching: find.byType(Semantics)).first;
     final node = tester.getSemantics(row);
@@ -182,7 +180,7 @@ void main() {
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
     await tester.drag(find.text('20 reps'), const Offset(-500, 0));
     await app.settle(20);
     expect(find.text('20 reps'), findsOneWidget);

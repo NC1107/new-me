@@ -51,20 +51,16 @@ void main() {
     Mascot.idleMotion = false;
   });
 
-  testWidgets('renders the top bar, header, day card, quest states, connect card and food', (
-    tester,
-  ) async {
+  testWidgets('renders the top bar, day card, quest states, connect card and food', (tester) async {
     final app = _app(tester, fullServer());
     await app.pump(const TodayScreen());
 
     expect(find.text('Monday, Oct 26'), findsOneWidget);
     expect(find.textContaining('Sam'), findsWidgets);
-    expect(find.text('150'), findsOneWidget, reason: "today's points beside the gem");
     expect(find.text('3'), findsOneWidget, reason: 'the streak beside the flame');
     expect(find.text('88%'), findsOneWidget);
     expect(find.text('130 of 280 points'), findsOneWidget);
-    expect(find.textContaining('Reach 100% to keep your streak going'), findsOneWidget);
-    expect(find.text('Nice, keep it rolling.'), findsOneWidget);
+    expect(find.textContaining('Fill the bar to keep your streak going'), findsOneWidget);
 
     expect(find.text('Get stronger'), findsOneWidget);
     expect(find.text('+20'), findsOneWidget);
@@ -121,14 +117,13 @@ void main() {
     );
   });
 
-  testWidgets('a counted day says so in the bubble and the day card', (tester) async {
+  testWidgets('a counted day says so on the day card', (tester) async {
     final adapter = fullServer()
       ..on('GET /api/today', StubResponse(200, richTodayJson(counted: true, percent: 75)));
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
-    expect(find.text('Streak saved for today!'), findsOneWidget);
     expect(find.textContaining('Goal reached'), findsOneWidget);
-    expect(find.textContaining('Reach 100%'), findsNothing);
+    expect(find.textContaining('Fill the bar'), findsNothing);
     await app.closeSheet();
   });
 
@@ -139,7 +134,7 @@ void main() {
 
     await app.tap(find.bySemanticsLabel(RegExp(r'day streak')));
     expect(find.text('Day 1'), findsOneWidget);
-    expect(find.textContaining('reach 100% of the day'), findsOneWidget);
+    expect(find.textContaining('when you fill its bar'), findsOneWidget);
     expect(find.text('Earning and using freezes'), findsOneWidget);
     expect(find.text('0 of 2 freezes'), findsOneWidget);
   });
@@ -156,14 +151,14 @@ void main() {
     expect(find.text('A freeze covered Tue.'), findsOneWidget);
   });
 
-  testWidgets('with nothing logged and a rest day ready the mascot says so', (tester) async {
+  testWidgets('with a freeze ready the day card says so', (tester) async {
     final adapter = fullServer()
       ..on('GET /api/today', StubResponse(200, richTodayJson(points: 0, percent: 0)));
     await _app(tester, adapter).pump(const TodayScreen());
-    expect(find.text('A freeze is ready'), findsOneWidget);
+    expect(find.textContaining('A freeze is ready if you need it'), findsOneWidget);
   });
 
-  testWidgets('the partner mini avatar opens Us and the own avatar opens Me', (tester) async {
+  testWidgets('the partner mini avatar opens Us', (tester) async {
     final adapter = fullServer()
       ..on(
         'GET /api/board',
@@ -177,8 +172,6 @@ void main() {
 
     await app.tap(find.bySemanticsLabel('Nick, 58 percent of the goal today, open Us'));
     expect(app.container.read(homeTabProvider), HomeTab.board);
-    await app.tap(find.bySemanticsLabel('Sam, open Me'));
-    expect(app.container.read(homeTabProvider), HomeTab.me);
   });
 
   testWidgets('no partner on the board leaves the corner empty', (tester) async {

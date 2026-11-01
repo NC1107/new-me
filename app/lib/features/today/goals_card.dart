@@ -103,7 +103,9 @@ class _ProposalRow extends StatelessWidget {
             Text(p.reason, style: AppText.label.copyWith(color: kInkSecondary)),
           ],
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _Pill(
                 label: 'Accept',
@@ -111,7 +113,6 @@ class _ProposalRow extends StatelessWidget {
                 filled: true,
                 onTap: onAccept,
               ),
-              const SizedBox(width: 8),
               _Pill(label: 'Not now', semanticLabel: 'Not now for ${p.title}', onTap: onDismiss),
             ],
           ),

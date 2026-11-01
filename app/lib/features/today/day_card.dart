@@ -9,6 +9,7 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/mascot.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/thick_progress_bar.dart';
 
@@ -27,21 +28,23 @@ String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
     return 'Goal reached. Anything extra still earns bonus points.';
   }
   if (oneQuestAway(day, quests)) return 'One more and you count today.';
-  if (streak.current < 1) return 'Reach 100% today to start your streak.';
-  final base = 'Reach 100% to keep your streak going.';
+  if (streak.current < 1) return 'Fill the bar today to start your streak.';
+  final base = 'Fill the bar to keep your streak going.';
   return streak.restAvailable && streak.restUsedOn == null
       ? '$base A freeze is ready if you need it.'
       : base;
 }
 
-/// Progress towards the day's goal: a thick bar that is full at the goal with any extra shown
-/// as a bonus segment, the points, and one plain sentence about what keeps the streak.
+/// Progress towards the day's goal: the mascot, a thick bar that is full at the goal with any
+/// extra shown as a bonus segment, the points, one plain sentence about what keeps the streak,
+/// and the way to today's plan and entries.
 class DayCard extends StatelessWidget {
   const DayCard({
     super.key,
     required this.day,
     required this.streak,
     required this.onEntries,
+    this.onPlan,
     this.quests = const [],
   });
 
@@ -49,6 +52,9 @@ class DayCard extends StatelessWidget {
   final List<Quest> quests;
   final Streak streak;
   final VoidCallback onEntries;
+
+  /// Opens today's plan; null when the server has none.
+  final VoidCallback? onPlan;
 
   int get bonusPercent => math.max(0, day.goalPercent - 100);
 
@@ -61,30 +67,40 @@ class DayCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('${day.goalPercent}%', style: AppText.tabular(AppText.display)),
-              if (bonusPercent > 0) ...[
-                const SizedBox(width: 8),
-                Text(
-                  '+$bonusPercent% bonus',
-                  style: AppText.tabular(
-                    AppText.label.copyWith(color: context.accentText, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
+              Mascot(size: 56, state: day.counted ? MascotState.happy : MascotState.idle),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  '${day.basePoints.formatted} of ${day.goalPoints.formatted} points',
-                  textAlign: TextAlign.end,
-                  style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      children: [
+                        Text('${day.goalPercent}%', style: AppText.tabular(AppText.display)),
+                        if (bonusPercent > 0)
+                          Text(
+                            '+$bonusPercent% bonus',
+                            style: AppText.tabular(
+                              AppText.label.copyWith(
+                                color: context.accentText,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      '${day.basePoints.formatted} of ${day.goalPoints.formatted} points',
+                      style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           ThickProgressBar(
             value: bonusPercent > 0 ? 100 / day.goalPercent : day.goalPercent / 100,
             bonusValue: bonusPercent > 0 ? bonusPercent / day.goalPercent : 0,
@@ -94,32 +110,61 @@ class DayCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(_sentence, style: AppText.body.copyWith(fontSize: 15, color: kInkSecondary)),
           const SizedBox(height: 4),
-          Semantics(
-            container: true,
-            button: true,
-            label: "See today's entries",
-            excludeSemantics: true,
-            onTap: onEntries,
-            child: Pressable(
-              onTap: onEntries,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'What I logged today',
-                        style: AppText.label.copyWith(color: context.accentText),
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: context.accentText),
-                  ],
+          Row(
+            children: [
+              if (onPlan case final plan?) ...[
+                Expanded(
+                  child: _Link(label: "Today's plan", spoken: "Open today's plan", onTap: plan),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: _Link(
+                  label: 'What I logged',
+                  spoken: "See today's entries",
+                  onTap: onEntries,
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+class _Link extends StatelessWidget {
+  const _Link({required this.label, required this.spoken, required this.onTap});
+
+  final String label;
+  final String spoken;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    button: true,
+    label: spoken,
+    excludeSemantics: true,
+    onTap: onTap,
+    child: Pressable(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Row(
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.label.copyWith(color: context.accentText),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: context.accentText),
+          ],
+        ),
+      ),
+    ),
+  );
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
+import '../../state/clock.dart';
 import '../../state/today.dart';
 import '../../state/training.dart';
 import '../../theme/accent.dart';
@@ -108,7 +109,7 @@ class _TrainingHistoryPageState extends ConsumerState<TrainingHistoryPage> {
   Widget build(BuildContext context) {
     final today =
         ref.watch(todayProvider.select((v) => v.value?.data.localToday)) ??
-        formatDateKey(DateTime.now());
+        formatDateKey(ref.watch(clockProvider)());
     final now = _current(today);
     final shown = _shown ?? now;
     final key = monthKey(shown.year, shown.month);

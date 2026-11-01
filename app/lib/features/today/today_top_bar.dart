@@ -12,101 +12,127 @@ import '../../widgets/pressable.dart';
 
 /// Dark enough to read on the canvas; the flame fill itself is too light for text.
 const _kFlameText = Color(0xFFB45309);
-const _kGemFill = Color(0xFF3D8FD6);
-const _kGemText = Color(0xFF2C70AD);
 
-/// Own avatar (opens Me), flame and streak, gem and today's points, and the partner's avatar
-/// ringed by their day percent (opens Us).
+String greetingFor(DateTime now, String name) {
+  final part = now.hour < 12
+      ? 'Good morning'
+      : now.hour < 18
+      ? 'Good afternoon'
+      : 'Good evening';
+  return name.trim().isEmpty ? part : '$part, ${name.trim()}';
+}
+
+/// The one row above the day: the greeting and date, the streak (opens the streak sheet), the
+/// coach when the server has one, and the partner's avatar ringed by their day (opens Us).
 class TodayTopBar extends StatelessWidget {
   const TodayTopBar({
     super.key,
     required this.name,
-    required this.palette,
+    required this.now,
+    required this.localToday,
     required this.streak,
-    required this.points,
     required this.partner,
-    required this.onOpenMe,
     required this.onOpenUs,
     required this.onStreak,
+    this.onCoach,
   });
 
   final String name;
-  final AccentPalette palette;
+  final DateTime now;
+  final String localToday;
   final int streak;
-  final int points;
   final BoardUser? partner;
-  final VoidCallback onOpenMe;
   final VoidCallback onOpenUs;
   final VoidCallback onStreak;
+
+  /// Opens the coach chat; null hides the button, as when the server has no Claude key.
+  final VoidCallback? onCoach;
 
   @override
   Widget build(BuildContext context) {
     final p = partner;
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.3,
-      child: SizedBox(
-        height: 48,
-        child: Row(
-          children: [
-            Semantics(
-              button: true,
-              label: '$name, open Me',
-              excludeSemantics: true,
-              onTap: onOpenMe,
-              child: Pressable(
-                onTap: onOpenMe,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(
-                    child: Avatar(name: name, palette: palette, size: 40),
-                  ),
+    final coach = onCoach;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                header: true,
+                container: true,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(greetingFor(now, name), maxLines: 1, style: AppText.title),
                 ),
               ),
-            ),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: _Stat(
-                      icon: Icons.local_fire_department_rounded,
-                      iconColor: kFlame,
-                      textColor: _kFlameText,
-                      value: streak.formatted,
-                      label: '$streak day streak',
-                      onTap: onStreak,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: _Stat(
-                      icon: Icons.diamond_rounded,
-                      iconColor: _kGemFill,
-                      textColor: _kGemText,
-                      value: points.formatted,
-                      label: '$points points today',
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 2),
+              Text(dayLong(localToday), style: AppText.caption),
+            ],
+          ),
+        ),
+        MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: _Stat(
+            icon: Icons.local_fire_department_rounded,
+            iconColor: kFlame,
+            textColor: _kFlameText,
+            value: streak.formatted,
+            label: '$streak day streak',
+            onTap: onStreak,
+          ),
+        ),
+        if (coach != null) _CoachButton(onTap: coach),
+        if (p != null)
+          Semantics(
+            container: true,
+            button: true,
+            label: '${p.name}, ${p.today.goalPercent} percent of the goal today, open Us',
+            excludeSemantics: true,
+            onTap: onOpenUs,
+            child: Pressable(
+              onTap: onOpenUs,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Center(child: _PartnerRing(user: p)),
               ),
             ),
-            SizedBox(
-              width: 48,
-              child: p == null
-                  ? null
-                  : Semantics(
-                      button: true,
-                      label: '${p.name}, ${p.today.goalPercent} percent of the goal today, open Us',
-                      excludeSemantics: true,
-                      onTap: onOpenUs,
-                      child: Pressable(
-                        onTap: onOpenUs,
-                        child: Center(child: _PartnerRing(user: p)),
-                      ),
-                    ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A round button that opens the coach chat.
+class _CoachButton extends StatelessWidget {
+  const _CoachButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.accentPalette;
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Ask your coach',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Pressable(
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_rounded, size: 20, color: palette.lip),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -154,6 +180,7 @@ class _Stat extends StatelessWidget {
       ),
     );
     return Semantics(
+      container: true,
       button: onTap != null,
       label: label,
       excludeSemantics: true,

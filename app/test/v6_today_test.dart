@@ -212,7 +212,6 @@ void main() {
       await _open(tester, _server(readiness: _readiness(), habits: true));
       final order = [
         find.text('Good morning, Sam'),
-        find.text(_bubble),
         find.text('88%'),
         find.text('Take it easy today'),
         find.text('Habits'),
@@ -233,16 +232,13 @@ void main() {
     },
   );
 
-  group('the bubble and the plan', () {
-    testWidgets('the bubble is one short line and opens the plan with the full summary', (
-      tester,
-    ) async {
+  group('the plan', () {
+    testWidgets("the day card's plan link opens the plan with the full summary", (tester) async {
       final app = await _open(tester, _server());
-      expect(find.text(_bubble), findsOneWidget);
-      expect(find.text(_summary), findsNothing, reason: 'the bubble does not restate progress');
-      expect(find.text("See today's plan"), findsOneWidget);
+      expect(find.text(_summary), findsNothing, reason: 'the day card does not restate progress');
+      expect(find.text(_bubble), findsNothing, reason: 'the mascot bubble is gone');
 
-      await app.tap(find.text(_bubble));
+      await app.tap(find.text("Today's plan"));
       expect(find.byType(PlanSheet), findsOneWidget);
       expect(find.text(_summary), findsOneWidget);
       expect(find.text('Already done'), findsOneWidget);
@@ -253,13 +249,11 @@ void main() {
       expect(find.text('Brush teeth at 22:00'), findsOneWidget);
     });
 
-    testWidgets('without a plan the mascot keeps its short line and the bubble is plain', (
-      tester,
-    ) async {
+    testWidgets('without a plan there is no plan link', (tester) async {
       await _open(tester, _server(plan: false));
       expect(find.text(_summary), findsNothing);
-      expect(find.text("See today's plan"), findsNothing);
-      expect(find.text(_bubble), findsOneWidget);
+      expect(find.text("Today's plan"), findsNothing);
+      expect(find.text('What I logged'), findsOneWidget);
     });
   });
 

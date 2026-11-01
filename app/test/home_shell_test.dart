@@ -182,7 +182,7 @@ void main() {
     final adapter = fullServer();
     final app = TestApp(tester, adapter);
     await app.pump(const HomeShell());
-    expect(find.text('150'), findsOneWidget);
+    expect(find.text('Monday, Oct 26'), findsOneWidget);
 
     final gate = Completer<void>();
     adapter.routes['GET /api/today'] = (_) async {
@@ -201,11 +201,10 @@ void main() {
           ),
         );
     await app.settle();
-    expect(find.text('150'), findsNothing);
     expect(find.text('Monday, Oct 26'), findsNothing);
 
     gate.complete();
     await app.settle();
-    expect(find.text('999'), findsOneWidget);
+    expect(find.textContaining('979 of'), findsOneWidget);
   });
 }

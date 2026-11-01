@@ -105,7 +105,7 @@ void _layoutSuite(double textScale) {
     await tester.drag(find.byType(ListView).first, const Offset(0, 4000));
     await app.settle();
 
-    await _tapOnToday(tester, app, find.text('What I logged today'));
+    await _tapOnToday(tester, app, find.text('What I logged'));
     noOverflow('day detail sheet');
     await app.closeSheet();
 

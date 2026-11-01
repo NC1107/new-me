@@ -4,11 +4,15 @@ import '../../api/models.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
+import '../../util/time_format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../streaks/streak_visuals.dart';
+
+/// When the repair window closes, the server's `score.RepairHour`, in the phone's clock style.
+String get _repairCloses => formatClock(DateTime(2000, 1, 1, 22));
 
 Future<void> showStreakSheet(
   BuildContext context, {
@@ -69,7 +73,7 @@ class StreakSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'A day counts toward your streak when you reach 100% of the day\'s goal. '
+              'A day counts toward your streak when you fill its bar, which is the day\'s goal. '
               'The streak is how many counted days you have in a row.',
               style: body,
             ),
@@ -123,12 +127,13 @@ class StreakSheet extends StatelessWidget {
                   'but the day adds nothing to it.',
             ),
             const SizedBox(height: 12),
-            const _Point(
+            _Point(
               icon: Icons.healing_rounded,
               title: 'Repair',
               text:
-                  'Missed yesterday with no freeze left? Until 22:00 today you can repair it by '
-                  'reaching 100% of today. A repaired day counts as a frozen day.',
+                  'Missed yesterday with no freeze left? Until $_repairCloses today you can '
+                  'repair it by earning every point today, not just the goal. A repaired day '
+                  'counts as a frozen day.',
             ),
             const SizedBox(height: 12),
             const _Point(

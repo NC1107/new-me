@@ -29,12 +29,15 @@ String weekdayLong(String date) => DateFormat.EEEE().format(parseLocalDate(date)
 /// Shown in the right-now slot while yesterday is a missed, unfrozen day and the window to
 /// repair it is open, with today's progress toward earning every point.
 class RepairCard extends StatelessWidget {
-  const RepairCard({super.key, required this.repair, required this.percent});
+  const RepairCard({super.key, required this.repair, required this.day});
 
   final Repair repair;
 
-  /// Today's progress through the day, 0 to 100.
-  final int percent;
+  /// Today, whose base points must all be earned; its goal percent stops at the goal line, so
+  /// the card counts points instead.
+  final DayScore day;
+
+  int get percent => day.percent;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +77,7 @@ class RepairCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '$shown% of today\'s points',
+              '${day.basePoints.formatted} of ${day.maxBase.formatted} points',
               style: AppText.tabular(
                 AppText.label.copyWith(color: kFreezeText, fontWeight: FontWeight.w800),
               ),

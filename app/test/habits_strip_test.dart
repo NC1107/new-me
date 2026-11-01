@@ -87,7 +87,6 @@ void main() {
     final adapter = habitsServer()..routes[_markBrushMorning] = (_) => answer.future;
     final app = await open(tester, adapter);
     expect(_check('h1s0'), findsNothing);
-    expect(find.text('150'), findsOneWidget);
 
     await tester.tap(_chipBox('h1s0'));
     await tester.pump();
@@ -99,7 +98,6 @@ void main() {
     answer.complete(StubResponse(200, markResponse(_afterBrushMorning(), points: 155)));
     await app.settle();
     expect(_check('h1s0'), findsOneWidget);
-    expect(find.text('155'), findsOneWidget, reason: 'the day points come from the answer');
     expect(app.container.read(todayProvider).value!.data.day.points, 155);
   });
 

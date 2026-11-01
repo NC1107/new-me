@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/nc1107/new-me/server/internal/db"
 	"github.com/nc1107/new-me/server/internal/engine"
 	"github.com/nc1107/new-me/server/internal/score"
@@ -172,6 +174,17 @@ func (s *Server) boardEntry(ctx context.Context, u db.User, seasons []score.Seas
 	now := s.now()
 	today := score.LocalToday(now, loc)
 	season, _ := seasonOn(today, seasons)
+
+	// Today's stored row is only as fresh as the last write, and a new day has none until
+	// something scores it, so the board would show 0 while that person's own Today shows their
+	// progress. Rescoring is deterministic, as for the partner's Today, so reading it early
+	// changes nothing.
+	if err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := engine.ScoreAt(ctx, tx, u.ID, today, loc, now)
+		return err
+	}); err != nil {
+		return boardUserJSON{}, score.StreakResult{}, err
+	}
 
 	streak, err := engine.StreakFor(ctx, s.db.Pool, u, now, loc)
 	if err != nil {

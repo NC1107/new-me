@@ -13,6 +13,7 @@ import 'v8_models.dart';
 export '../util/units.dart';
 export 'food_models.dart';
 export 'together_models.dart';
+export 'task_models.dart';
 export 'v6_models.dart';
 export 'v7_models.dart';
 export 'training_history_models.dart';

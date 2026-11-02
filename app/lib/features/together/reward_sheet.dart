@@ -14,7 +14,7 @@ import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
-import '../../widgets/pressable.dart';
+import '../../widgets/pill_chip.dart';
 import '../../widgets/segmented.dart';
 
 const kRewardNameIdeas = ['Date night', 'Dinner out', 'Movie night', 'Day trip'];
@@ -237,7 +237,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
               runSpacing: 8,
               children: [
                 for (final idea in _ideas)
-                  _Pill(
+                  PillChip(
                     label: idea,
                     selected: _name.text.trim() == idea,
                     palette: person,
@@ -254,7 +254,7 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
               runSpacing: 8,
               children: [
                 for (final o in help.options)
-                  _Pill(
+                  PillChip(
                     label: '${o.price.formatted} · ${o.span}',
                     selected: _priceValue == o.price,
                     palette: person,
@@ -350,52 +350,4 @@ class _RewardSheetState extends ConsumerState<RewardSheet> {
       ),
     );
   }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.label,
-    required this.selected,
-    required this.palette,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final AccentPalette palette;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    label: label,
-    excludeSemantics: true,
-    onTap: onTap,
-    child: Pressable(
-      scale: 0.97,
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: selected ? palette.tint : kSurface,
-          borderRadius: BorderRadius.circular(kRadiusButton),
-          border: Border.all(color: selected ? palette.fill : kBorder, width: kBorderWidth),
-        ),
-        child: Center(
-          widthFactor: 1,
-          child: Text(
-            label,
-            style: AppText.tabular(
-              AppText.label.copyWith(
-                fontWeight: FontWeight.w800,
-                color: selected ? palette.lip : kInk,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }

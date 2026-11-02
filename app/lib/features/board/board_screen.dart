@@ -9,6 +9,7 @@ import '../../state/board.dart';
 import '../../state/clock.dart';
 import '../../state/habit_proposals.dart';
 import '../../state/shared_habits.dart';
+import '../../state/tasks.dart';
 import '../../state/together.dart';
 import '../../state/me.dart';
 import '../../theme/accent.dart';
@@ -61,6 +62,7 @@ class BoardScreen extends ConsumerWidget {
             unawaited(ref.read(habitProposalsProvider.notifier).refresh());
             unawaited(ref.read(sharedHabitsProvider.notifier).refresh());
             unawaited(ref.read(rewardsProvider.notifier).refresh());
+            unawaited(ref.read(tasksProvider.notifier).refresh());
             await notifier.refresh();
           },
           child: Center(

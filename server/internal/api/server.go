@@ -314,6 +314,14 @@ func (s *Server) Router() http.Handler {
 		r.Post("/api/rewards/{id}/focus", s.handleFocusReward)
 		r.With(s.settleAfter).Post("/api/rewards/{id}/claim", s.handleClaimReward)
 		r.Post("/api/rewards/{id}/redeem", s.handleRedeemTreat)
+
+		r.Get("/api/tasks", s.handleListTasks)
+		r.Post("/api/tasks", s.handleCreateTask)
+		r.Patch("/api/tasks/{id}", s.handlePatchTask)
+		r.Delete("/api/tasks/{id}", s.handleWithdrawTask)
+		r.Post("/api/tasks/{id}/agree", s.handleAgreeTask)
+		r.Post("/api/tasks/{id}/decline", s.handleDeclineTask)
+		r.With(s.settleAfter).Post("/api/tasks/{id}/done", s.handleFinishTask)
 		r.Put("/api/devices/me/push", s.handlePutPushToken)
 		r.Delete("/api/devices/me/push", s.handleDeletePushToken)
 

@@ -14,12 +14,15 @@ import '../../state/together_prefs.dart';
 import '../../state/together_seen.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../shell/home_tab.dart';
 import 'celebration_sheet.dart';
 import 'challenge_card.dart';
 import 'reward_proposals_card.dart';
 import 'rewards_section.dart';
+import 'task_proposals_card.dart';
+import 'tasks_section.dart';
 
 /// Everything shared on Us below the two people: the weekly challenge, answers my partner waits
 /// on, and the rewards. Also where the "we did it" celebrations play, once each.
@@ -141,8 +144,18 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         ],
         const SizedBox(height: kCardGap),
         const RewardProposalsCard(),
+        const TaskProposalsCard(),
         const SizedBox(height: kCardGap),
         RewardsSection(board: board, claiming: _claiming, claimError: _claimError, onClaim: _claim),
+        const SizedBox(height: 28),
+        Semantics(header: true, child: const Text('Tasks', style: AppText.headline)),
+        const SizedBox(height: 4),
+        const Text(
+          'A chore with gems on it. Finish it by the deadline to earn them, or they come off.',
+          style: AppText.caption,
+        ),
+        const SizedBox(height: 10),
+        const TasksSection(),
       ],
     );
   }

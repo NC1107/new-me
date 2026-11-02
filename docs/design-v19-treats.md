@@ -42,7 +42,7 @@ The split is stored per claim in `reward_payments`, so balances are exact and ne
 Rewards claimed before this migration were split by what each person had earned and stored the same way.
 A claim still needs the bank to cover the price; the bank already excludes treat spending.
 
-If a later re-score lowers someone's earned gems below what they paid out, their balance reads zero and the bank is clamped at zero.
+Superseded by v21: a balance below zero now shows as a debt, see docs/design-v21-tasks.md.
 In that case the balances can add up to more than the bank; the bank is the figure shared rewards are checked against.
 
 ## Redeeming

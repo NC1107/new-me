@@ -5,12 +5,28 @@ import (
 	"testing"
 )
 
-func TestBalanceNeverReadsBelowZero(t *testing.T) {
+func TestBalanceShowsADebtButSpendableNeverGoesBelowZero(t *testing.T) {
 	if got := (Person{Earned: 900, Paid: 300}).Balance(); got != 600 {
 		t.Fatalf("balance = %d", got)
 	}
-	if got := (Person{Earned: 100, Paid: 300}).Balance(); got != 0 {
-		t.Fatalf("a re-score below the spend must read zero, got %d", got)
+	debt := Person{Earned: 100, Paid: 300}
+	if debt.Balance() != -200 || debt.Spendable() != 0 {
+		t.Fatalf("a spend above earnings is a debt of 200: balance %d, spendable %d", debt.Balance(), debt.Spendable())
+	}
+}
+
+func TestTaskGemsAreTheirOwnLedgerInTheBalance(t *testing.T) {
+	won := Person{Earned: 100, Paid: 20, Tasks: 40}
+	if won.Balance() != 120 {
+		t.Fatalf("balance = %d, want 120", won.Balance())
+	}
+	lost := Person{Earned: 100, Tasks: -150}
+	if lost.Balance() != -50 || lost.Spendable() != 0 {
+		t.Fatalf("a missed stake above the balance is a debt: %d / %d", lost.Balance(), lost.Spendable())
+	}
+	paidDown := Person{Earned: 160, Tasks: -150}
+	if paidDown.Balance() != 10 {
+		t.Fatalf("later earnings pay the debt down first: %d", paidDown.Balance())
 	}
 }
 
@@ -27,6 +43,28 @@ func TestBankIsEverythingEarnedMinusAllSpending(t *testing.T) {
 	}
 	if got := Bank(nil); got != 0 {
 		t.Fatalf("bank = %d", got)
+	}
+}
+
+func TestOnePersonsDebtIsCoveredByTheOthersGemsInTheBank(t *testing.T) {
+	people := []Person{{Earned: 100}, {Earned: 10, Tasks: -50}}
+	if Bank(people) != 60 {
+		t.Fatalf("bank = %d, want 100 - 40", Bank(people))
+	}
+	balances := Balances(people)
+	if !slices.Equal(balances, []int{100, 0}) {
+		t.Fatalf("spendable = %v", balances)
+	}
+	shares := SplitPrice(60, balances)
+	if !slices.Equal(shares, []int{60, 0}) {
+		t.Fatalf("the debtor pays nothing toward a reward: %v", shares)
+	}
+	after := []Person{{Earned: 100, Paid: 60}, {Earned: 10, Tasks: -50}}
+	if Bank(after) != 0 {
+		t.Fatalf("bank after = %d", Bank(after))
+	}
+	if Bank([]Person{{Earned: 10, Tasks: -50}, {Earned: 10}}) != 0 {
+		t.Fatal("a bank in debt reads zero")
 	}
 }
 

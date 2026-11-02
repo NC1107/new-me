@@ -80,7 +80,7 @@ func (v rewardView) json(r db.Reward) rewardJSON {
 	funds := v.bank
 	if r.OwnerID != nil {
 		owner, _ := v.people.Find(*r.OwnerID)
-		funds = owner.Balance()
+		funds = owner.Spendable()
 	}
 	progress := together.RewardProgress(funds, r.Price)
 	if r.Status == db.RewardClaimed {
@@ -101,18 +101,20 @@ func (v rewardView) json(r db.Reward) rewardJSON {
 }
 
 type balanceJSON struct {
-	UserID  int64  `json:"userId"`
-	Name    string `json:"name"`
-	Earned  int    `json:"earned"`
-	Paid    int    `json:"paid"`
-	Balance int    `json:"balance"`
+	UserID int64  `json:"userId"`
+	Name   string `json:"name"`
+	Earned int    `json:"earned"`
+	Paid   int    `json:"paid"`
+	// Tasks is the net of won and lost task stakes, already inside Balance.
+	Tasks   int `json:"tasks"`
+	Balance int `json:"balance"`
 }
 
 // balances is each person's own gems, the figures treats are paid from.
 func (v rewardView) balances() []balanceJSON {
 	out := make([]balanceJSON, len(v.people))
 	for i, p := range v.people {
-		out[i] = balanceJSON{UserID: p.UserID, Name: p.Name, Earned: p.Earned, Paid: p.Paid, Balance: p.Balance()}
+		out[i] = balanceJSON{UserID: p.UserID, Name: p.Name, Earned: p.Earned, Paid: p.Paid, Tasks: p.Tasks, Balance: p.Balance()}
 	}
 	return out
 }

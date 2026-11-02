@@ -8,32 +8,37 @@ import "slices"
 const MaxTreatsPerPerson = 30
 
 // Person is one person's lifetime gems: earned from scored days, and paid out on their own
-// treats and on their share of shared rewards.
+// treats and on their share of shared rewards. Tasks is the net of their settled tasks (gems won
+// by finishing, minus stakes lost by missing); it is a ledger of its own, never day points.
 type Person struct {
 	Earned int
 	Paid   int
+	Tasks  int
 }
 
-// Balance is what the person can spend on a treat. It never reads below zero; a later re-score
-// can lower Earned below Paid.
-func (p Person) Balance() int { return max(p.Earned-p.Paid, 0) }
+// Balance is what the person holds. It reads below zero when missed tasks or a re-score took
+// more than they had, so a debt shows and later earnings pay it down. See docs/design-v21-tasks.md.
+func (p Person) Balance() int { return p.Earned + p.Tasks - p.Paid }
 
-// Bank is the shared bank: both people's earnings minus all spending, shared rewards and treats
-// alike. It equals the sum of the balances unless a re-score pushed someone below zero.
+// Spendable is the balance a treat or a shared reward may draw on: a debt spends nothing.
+func (p Person) Spendable() int { return max(p.Balance(), 0) }
+
+// Bank is the shared bank: both people's balances added up, so one person's debt is covered by
+// the other's gems before anything is left to claim. It never reads below zero.
 func Bank(people []Person) int {
-	earned, paid := 0, 0
+	total := 0
 	for _, p := range people {
-		earned += p.Earned
-		paid += p.Paid
+		total += p.Balance()
 	}
-	return max(earned-paid, 0)
+	return max(total, 0)
 }
 
-// Balances lists each person's balance in order.
+// Balances lists what each person can spend, in order. A person in debt contributes zero, which
+// keeps SplitPrice from asking them for gems they do not hold.
 func Balances(people []Person) []int {
 	out := make([]int, len(people))
 	for i, p := range people {
-		out[i] = p.Balance()
+		out[i] = p.Spendable()
 	}
 	return out
 }

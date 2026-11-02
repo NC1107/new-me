@@ -922,6 +922,50 @@ class ApiClient {
         (throw const FormatException('redemption')),
   );
 
+  Future<TaskList> tasks() =>
+      _send(() => _dio.get<dynamic>('/api/tasks'), (data) => TaskList.fromJson(data as Json));
+
+  GemTask _task(Object? data) =>
+      GemTask.tryParse((data as Json)['task']) ?? (throw const FormatException('task'));
+
+  /// Proposes a task. The other person agrees first unless I am alone on the server.
+  Future<GemTask> createTask({
+    required String title,
+    required int assigneeId,
+    required int stake,
+    required String deadline,
+  }) => _send(
+    () => _dio.post<dynamic>(
+      '/api/tasks',
+      data: {'title': title, 'assigneeId': assigneeId, 'stake': stake, 'deadline': deadline},
+    ),
+    _task,
+  );
+
+  /// Edits my proposal, which asks the other person again.
+  Future<GemTask> patchTask(
+    int id, {
+    String? title,
+    int? assigneeId,
+    int? stake,
+    String? deadline,
+  }) => _send(
+    () => _dio.patch<dynamic>(
+      '/api/tasks/$id',
+      data: {'title': ?title, 'assigneeId': ?assigneeId, 'stake': ?stake, 'deadline': ?deadline},
+    ),
+    _task,
+  );
+
+  Future<void> withdrawTask(int id) => _send(() => _dio.delete<dynamic>('/api/tasks/$id'), (_) {});
+
+  Future<GemTask> answerTask(int id, {required bool agree}) =>
+      _send(() => _dio.post<dynamic>('/api/tasks/$id/${agree ? 'agree' : 'decline'}'), _task);
+
+  /// Marks my own task done. Throws code `task_state` (409) once the deadline has passed.
+  Future<GemTask> finishTask(int id) =>
+      _send(() => _dio.post<dynamic>('/api/tasks/$id/done'), _task);
+
   Future<void> putPushToken(String token) =>
       _send(() => _dio.put<dynamic>('/api/devices/me/push', data: {'token': token}), (_) {});
 

@@ -56,6 +56,11 @@ const (
 	EventRewardProposal = "reward_proposal"
 	// EventTreat tells the partner a treat was redeemed (v19). It follows the reward switch.
 	EventTreat = "treat"
+	// EventTaskProposal asks a person to agree to a task and its stake (v21). It follows the
+	// approvals switch like the other proposals.
+	EventTaskProposal = "task_proposal"
+	// EventTask tells a person a task was finished or missed (v21). It follows the reward switch.
+	EventTask = "task"
 )
 
 // AutoKinds are the automatic pushes that count toward a person's daily budget. Cheers,
@@ -123,7 +128,7 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Cheers
 	case EventChallenge:
 		return n.Challenge
-	case EventReward, EventTreat:
+	case EventReward, EventTreat, EventTask:
 		return n.Reward
 	case EventBehindPaceAfternoon, EventBehindPaceEvening:
 		return n.BehindPace
@@ -141,7 +146,7 @@ func wants(n db.Notifications, kind string) bool {
 		return n.Milestones
 	case EventCover, EventPartnerCover:
 		return n.Cover
-	case EventHabitProposal, EventRewardProposal:
+	case EventHabitProposal, EventRewardProposal, EventTaskProposal:
 		return n.Approvals
 	case EventPartnerCheer, EventPartnerChallenge, EventRewardProgress:
 		return n.PartnerNudges
@@ -179,6 +184,9 @@ func (s *Service) Settle(ctx context.Context) error {
 		if _, err := db.CloseMissedChallenges(ctx, s.DB.Pool, slices.Min(weeks)); err != nil {
 			errs = append(errs, fmt.Errorf("close missed challenges: %w", err))
 		}
+	}
+	if err := s.SettleTasks(ctx); err != nil {
+		errs = append(errs, fmt.Errorf("tasks: %w", err))
 	}
 	if err := s.settleReward(ctx, users); err != nil {
 		errs = append(errs, fmt.Errorf("reward: %w", err))

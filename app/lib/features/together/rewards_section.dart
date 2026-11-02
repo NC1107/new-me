@@ -323,7 +323,12 @@ class _Figure extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Text(value.formatted, style: AppText.tabular(AppText.title)),
+        Text(
+          value.formatted,
+          style: AppText.tabular(AppText.title.copyWith(color: value < 0 ? kDangerText : null)),
+        ),
+        // A missed task can take a balance below zero; the gems earned next pay it down first.
+        if (value < 0) const Text('In debt', style: AppText.caption),
       ],
     ),
   );

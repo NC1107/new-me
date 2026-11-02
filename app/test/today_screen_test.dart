@@ -98,7 +98,7 @@ void main() {
     final today = richTodayJson(stepsEverSynced: true);
     today['quests'] = [
       ...today['quests']! as List<dynamic>,
-      quest('sleep', 'Sleep', {'unit': 'min', 'target': 420, 'actual': 330, 'basePoints': 39}),
+      quest('sleep', 'Sleep', {'unit': 'min', 'target': 420}),
       quest('exercise', 'Exercise', {'unit': 'min', 'target': 30}),
     ];
     final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
@@ -106,7 +106,6 @@ void main() {
 
     expect(find.text('Walk 8,000 steps'), findsOneWidget);
     expect(find.text('Sleep 7 h'), findsOneWidget);
-    expect(find.text('5 h 30 min of 7 h'), findsNothing, reason: 'the title states the target');
     expect(find.text('Exercise 30 min'), findsOneWidget);
     expect(find.text('From Apple Health'), findsOneWidget, reason: 'once, not on every card');
     expect(find.text('Apple Health'), findsNothing);
@@ -115,6 +114,20 @@ void main() {
       findsNWidgets(4),
       reason: '3 manual quests and the food quest',
     );
+  });
+
+  testWidgets('a short night leaves the quests for a note of what it earned', (tester) async {
+    final today = richTodayJson(stepsEverSynced: true);
+    today['quests'] = [
+      ...today['quests']! as List<dynamic>,
+      quest('sleep', 'Sleep', {'unit': 'min', 'target': 420, 'actual': 330, 'basePoints': 39}),
+    ];
+    final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
+    await _app(tester, adapter).pump(const TodayScreen());
+
+    expect(find.text('Sleep 7 h'), findsNothing);
+    expect(find.text('Slept 5 h 30 min of 7 h'), findsOneWidget);
+    expect(find.textContaining('Last night, 39 of'), findsOneWidget);
   });
 
   testWidgets('a counted day says so on the day card', (tester) async {

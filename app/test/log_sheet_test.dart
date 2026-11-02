@@ -271,7 +271,38 @@ void main() {
     expect(find.text('Added Chicken bowl'), findsOneWidget);
   });
 
-  testWidgets('with no recent meals the chip row is hidden', (tester) async {
+  testWidgets('recent meals show whole names, five at first, and the rest under Show more', (
+    tester,
+  ) async {
+    const long = "Dave's Killer Toast, Butter, Chicken Breakfast Sausage, Scrambled Eggs";
+    final adapter = _server()
+      ..on(
+        'GET /api/meals/recent',
+        StubResponse(200, {
+          'meals': [
+            {'name': long, 'kcal': 640, 'protein': 43, 'carbs': 50, 'fat': 30, 'fiber': 4},
+            for (var i = 1; i <= 7; i++)
+              {'name': 'Meal $i', 'kcal': 100 * i, 'protein': i, 'carbs': 0, 'fat': 0, 'fiber': 0},
+          ],
+        }),
+      );
+    final app = await _open(tester, adapter, LogKind.meal);
+
+    expect(find.text(long), findsOneWidget);
+    expect(find.text('640 kcal · 43 g protein'), findsOneWidget);
+    expect(find.text('Meal 4'), findsOneWidget);
+    expect(find.text('Meal 5'), findsNothing);
+    expect(find.bySemanticsLabel("$long, 640 kcal · 43 g protein"), findsOneWidget);
+
+    await app.tap(find.text('Show 3 more'));
+    expect(find.text('Meal 7'), findsOneWidget);
+    expect(find.text('Show fewer'), findsOneWidget);
+
+    await app.tap(find.text(long));
+    expect(app.body('POST /api/logs')['name'], long);
+  });
+
+  testWidgets('with no recent meals the list is hidden', (tester) async {
     final adapter = _server()
       ..on('GET /api/meals/recent', const StubResponse(200, {'meals': <Object>[]}));
     await _open(tester, adapter, LogKind.meal);

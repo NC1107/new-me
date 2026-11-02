@@ -161,7 +161,7 @@ void main() {
         questProgress(q('protein', {'unit': 'g', 'target': 130, 'actual': 82})),
         '82 of 130 g',
       );
-      expect(questProgress(q('sleep', {'unit': 'min', 'target': 420})), 'No sleep recorded');
+      expect(questProgress(q('sleep', {'unit': 'min', 'target': 420})), 'No night from Health yet');
       expect(
         questProgress(
           q('reading', {'unit': 'minutes', 'unitAlt': 'pages', 'target': 20, 'targetAlt': 15}),

@@ -45,3 +45,17 @@ Habits and chores were priced in "gems" while quests and the day card said "poin
 A person's gems earned are the sum of every day's base and bonus points (`db.ReadPersonGems`), so one point is one gem.
 Nick chose gems, so every place the app or server talks to a person now says gems: quest chips and sheets, the day and repair cards, the streak sheet, Us, the recap, the look-back, the weekly push, the coach, and the iOS widget descriptions.
 Code and the API keep the name points.
+
+## Recent meals
+The meal sheet listed recent meals as chips capped at 200 px.
+Real names are often whole ingredient lists, "Dave's Killer Toast, Butter, Chicken Breakfast Sausage, Scrambled Eggs", so several chips read "Dave's Killer Toast, ..." and could not be told apart.
+They are now rows like the food search results: the whole name on up to two lines, then kcal and protein.
+Five show at first and "Show N more" opens the rest, so the form below stays in reach.
+
+## Last night
+A night of sleep is stored under the morning it ends, so the sleep quests already count for the day you wake into.
+They differ from every other quest because the night is over by the time the app opens: nothing done today can change them.
+- A sleep or steady bedtime quest that met its goal leads the quest list, so a good night is the first thing ticked off in the morning.
+- One that fell short leaves the list for a quiet note under the quests, "Slept 5 h 34 min of 7 h 30 min", with what it still earned, "Last night, 40 of 50 gems".
+  Every quest pays in proportion, so a short night still earns most of its gems; only the finish bonus needs the whole goal.
+- Before the night arrives from Health the quest stays an open card that says "No night from Health yet".

@@ -54,14 +54,14 @@ Map<String, dynamic> _measuredDetail({int bedOffset = 30, int wakeOffset = -15})
   'wakeOk': wakeOffset.abs() <= 45,
 };
 
-Quest _steady({int actual = 2, Map<String, dynamic>? detail, bool done = false}) => Quest.fromJson(
+Quest _steady({int actual = 2, Map<String, dynamic>? detail, bool? done}) => Quest.fromJson(
   quest('sleep_regularity', 'Steady bedtime', {
     'unit': 'min',
     'target': 45,
     'actual': actual,
     'points': 50,
     'basePoints': 25 * actual,
-    'done': done,
+    'done': done ?? actual == 2,
     'detail': detail ?? _measuredDetail(),
   }),
 );
@@ -168,7 +168,7 @@ void main() {
         actual: 0,
         detail: {'measurable': false, 'baselineNights': 5, 'minBaseline': 3},
       );
-      expect(steadyBedtimeProgress(noNight), 'No sleep recorded');
+      expect(steadyBedtimeProgress(noNight), 'No night from Health yet');
     });
 
     test('each quest has its own colour and icon', () {

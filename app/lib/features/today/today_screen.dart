@@ -40,6 +40,7 @@ import 'plan_sheet.dart';
 import 'quest_sheet.dart';
 import 'right_now.dart';
 import 'streak_sheet.dart';
+import 'last_night.dart';
 import 'turned_off_quests.dart';
 import 'today_providers.dart';
 import 'today_skeleton.dart';
@@ -267,7 +268,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       onConnect: () => ref.read(healthSyncProvider.notifier).connect(),
     );
 
-    for (final q in today.quests) {
+    final ordered = orderQuests(today.quests);
+    for (final q in ordered.list) {
       cards.add(const SizedBox(height: kCardGap));
       if (q.key == 'steps' && !today.health.stepsEverSynced) {
         cards.add(connect());
@@ -288,6 +290,10 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           ),
         );
       }
+    }
+    if (ordered.missed.isNotEmpty) {
+      cards.add(const SizedBox(height: kCardGap));
+      cards.add(LastNightCard(missed: ordered.missed, onOpen: _openQuest));
     }
     if (today.quests.any((q) => isAutomaticQuest(q.key))) {
       cards.add(const SizedBox(height: 12));

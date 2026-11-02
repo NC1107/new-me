@@ -17,6 +17,7 @@ import 'meal_estimate.dart';
 import 'food_search.dart';
 import 'log_chip.dart';
 import 'meal_items.dart';
+import 'recent_meals.dart';
 
 /// Builds the write for one attempt; the sheet supplies the idempotency key and the date.
 typedef DraftBuilder = LogDraft Function(String clientOpId, String? localDate);
@@ -525,27 +526,7 @@ class _MealPaneState extends State<MealPane> {
           if (meals.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('Recent meals, tap to log'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final meal in meals)
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 200),
-                        child: LogChip(
-                          label: meal.name,
-                          enabled: !widget.busy,
-                          onTap: () => _logRecent(meal),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+            child: RecentMeals(meals: meals, enabled: !widget.busy, onLog: _logRecent),
           );
         },
       ),

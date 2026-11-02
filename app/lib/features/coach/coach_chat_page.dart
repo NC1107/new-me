@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/coach_models.dart';
+import '../../state/clock.dart';
 import '../../state/coach_chat.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
@@ -10,6 +11,8 @@ import '../../theme/typography.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
+import '../me/coach_knows_page.dart';
+import 'coach_cards.dart';
 
 /// Opens the coach chat from Today or Insights.
 Future<void> openCoachChat(BuildContext context) => pushPage(context, const CoachChatPage());
@@ -23,7 +26,8 @@ const kCoachStarters = [
 
 const _kDisclaimer =
     'Answers come only from your own numbers and the research behind your targets. '
-    'General guidance, not medical advice.';
+    'The coach can suggest changes to your targets and remember what you tell it, '
+    'and nothing changes until you tap Apply. General guidance, not medical advice.';
 
 /// A chat with the coach: plain text in and out, the thread kept on the phone for the day.
 class CoachChatPage extends ConsumerStatefulWidget {
@@ -89,7 +93,10 @@ class _CoachChatPageState extends ConsumerState<CoachChatPage> {
                     padding: const EdgeInsets.fromLTRB(kGutter, 8, kGutter, 16),
                     children: [
                       if (empty) _Intro(onPick: _send) else const _Disclaimer(),
-                      for (final m in chat.messages) _Bubble(message: m),
+                      for (final m in chat.messages) ...[
+                        _Bubble(message: m),
+                        for (final a in m.actions) _action(chat, a),
+                      ],
                       if (chat.sending) const _Typing(),
                       if (chat.error != null)
                         _ErrorBubble(
@@ -105,6 +112,32 @@ class _CoachChatPageState extends ConsumerState<CoachChatPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _action(CoachChatState chat, CoachAction a) {
+    final proposal = a.proposal;
+    if (proposal == null) {
+      return FactNote(action: a, onOpen: () => pushPage(context, const CoachKnowsPage()));
+    }
+    final notifier = ref.read(coachChatProvider.notifier);
+    return ProposalCard(
+      proposal: proposal,
+      now: ref.read(clockProvider)(),
+      working: chat.working.contains(proposal.id),
+      error: chat.cardErrors[proposal.id],
+      onApply: () {
+        HapticFeedback.mediumImpact();
+        notifier.applyProposal(proposal.id);
+      },
+      onDismiss: () {
+        HapticFeedback.selectionClick();
+        notifier.dismissProposal(proposal.id);
+      },
+      onUndo: () {
+        HapticFeedback.selectionClick();
+        notifier.undoProposal(proposal.id);
+      },
     );
   }
 

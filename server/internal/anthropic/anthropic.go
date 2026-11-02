@@ -84,12 +84,58 @@ type Request struct {
 	MaxTokens int
 	// Tool, when set, is forced as the only way to answer.
 	Tool *Tool
+	// Tools, when set, are offered and the model chooses whether to call them. Use with
+	// Messages; it is ignored when Tool is set.
+	Tools []Tool
+	// Messages, when set, is sent instead of User and Turns. It carries tool calls and results.
+	Messages []Message
+}
+
+// Content is one block of a Message: text, a tool call the model made, or the result of one.
+type Content struct {
+	// Type is "text", "tool_use" or "tool_result".
+	Type string
+	Text string
+	// ID and Name identify a tool call, and ID is echoed as ToolUseID on its result.
+	ID    string
+	Name  string
+	Input json.RawMessage
+	// ToolUseID, Result and IsError describe a tool_result.
+	ToolUseID string
+	Result    string
+	IsError   bool
+}
+
+// Message is one turn of a conversation made of content blocks.
+type Message struct {
+	Role    string
+	Content []Content
+}
+
+func (c Content) wire() map[string]any {
+	switch c.Type {
+	case "tool_use":
+		input := c.Input
+		if len(input) == 0 {
+			input = json.RawMessage("{}")
+		}
+		return map[string]any{"type": "tool_use", "id": c.ID, "name": c.Name, "input": input}
+	case "tool_result":
+		out := map[string]any{"type": "tool_result", "tool_use_id": c.ToolUseID, "content": c.Result}
+		if c.IsError {
+			out["is_error"] = true
+		}
+		return out
+	}
+	return map[string]any{"type": "text", "text": c.Text}
 }
 
 type response struct {
 	Content []struct {
 		Type  string          `json:"type"`
 		Text  string          `json:"text"`
+		ID    string          `json:"id"`
+		Name  string          `json:"name"`
 		Input json.RawMessage `json:"input"`
 	} `json:"content"`
 	StopReason string `json:"stop_reason"`
@@ -98,11 +144,20 @@ type response struct {
 func (c *Client) call(ctx context.Context, req Request) (response, error) {
 	var out response
 	messages := []map[string]any{}
-	if len(req.Turns) > 0 {
+	switch {
+	case len(req.Messages) > 0:
+		for _, m := range req.Messages {
+			blocks := make([]map[string]any, len(m.Content))
+			for i, b := range m.Content {
+				blocks[i] = b.wire()
+			}
+			messages = append(messages, map[string]any{"role": m.Role, "content": blocks})
+		}
+	case len(req.Turns) > 0:
 		for _, t := range req.Turns {
 			messages = append(messages, map[string]any{"role": t.Role, "content": t.Text})
 		}
-	} else {
+	default:
 		blocks := make([]map[string]any, len(req.User))
 		for i, b := range req.User {
 			blocks[i] = b.wire()
@@ -119,6 +174,12 @@ func (c *Client) call(ctx context.Context, req Request) (response, error) {
 		body["tools"] = []map[string]any{{
 			"name": req.Tool.Name, "description": req.Tool.Description, "input_schema": req.Tool.Schema}}
 		body["tool_choice"] = map[string]any{"type": "tool", "name": req.Tool.Name}
+	} else if len(req.Tools) > 0 {
+		tools := make([]map[string]any, len(req.Tools))
+		for i, t := range req.Tools {
+			tools[i] = map[string]any{"name": t.Name, "description": t.Description, "input_schema": t.Schema}
+		}
+		body["tools"] = tools
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {

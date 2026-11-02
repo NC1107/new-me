@@ -350,28 +350,12 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := callerFrom(r)
-	user := c.user
-	if err := s.applyProfilePatch(&user, req); err != nil {
-		fail(w, r, err)
-		return
-	}
-	var zone string
-	if req.Timezone != nil {
-		loc, herr := loadZone(*req.Timezone)
-		if herr != nil {
-			fail(w, r, herr)
-			return
-		}
-		zone = loc.String()
-	}
-
 	ctx := r.Context()
-	err := s.commitPatch(ctx, c, user, zone, req)
-	if err != nil {
+	if err := s.patchMe(ctx, c, req); err != nil {
 		fail(w, r, err)
 		return
 	}
-	fresh, err := db.GetUser(ctx, s.db.Pool, user.ID)
+	fresh, err := db.GetUser(ctx, s.db.Pool, c.user.ID)
 	if err != nil {
 		fail(w, r, err)
 		return
@@ -382,6 +366,24 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, me)
+}
+
+// patchMe validates and writes a profile and template patch: the one path behind PATCH /api/me
+// and the coach.
+func (s *Server) patchMe(ctx context.Context, c caller, req patchMeRequest, after ...func(tx pgx.Tx) error) error {
+	user := c.user
+	if herr := s.applyProfilePatch(&user, req); herr != nil {
+		return herr
+	}
+	var zone string
+	if req.Timezone != nil {
+		loc, herr := loadZone(*req.Timezone)
+		if herr != nil {
+			return herr
+		}
+		zone = loc.String()
+	}
+	return s.commitPatch(ctx, c, user, zone, req, after...)
 }
 
 // commitPatch writes the validated profile and template changes in one transaction. Every

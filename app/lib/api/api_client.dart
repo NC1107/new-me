@@ -699,19 +699,43 @@ class ApiClient {
   /// One turn of the coach conversation: the whole chat so far, the reply back. Nothing is kept
   /// on the server. Throws codes `coach_disabled`, `rate_limited`, `invalid_request` and
   /// `coach_unavailable`.
-  Future<String> coachChat(List<ChatMessage> messages) => _send(
+  Future<CoachReply> coachChat(List<ChatMessage> messages) => _send(
     () => _dio.post<dynamic>(
       '/api/coach/chat',
       data: {
-        'messages': [for (final m in messages) m.toJson()],
+        'messages': [for (final m in messages) m.toWire()],
       },
       options: Options(
         sendTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 60),
       ),
     ),
-    (data) => (data as Json)['reply'] as String,
+    (data) => CoachReply.fromJson(data as Json),
   );
+
+  /// Applies, dismisses or undoes a card the coach proposed. Each is safe to repeat and answers
+  /// the card as it now stands. Throws `proposal_expired` (410) and `proposal_state` (409).
+  Future<CoachProposal> applyCoachProposal(int id) => _decideProposal(id, 'apply');
+
+  Future<CoachProposal> dismissCoachProposal(int id) => _decideProposal(id, 'dismiss');
+
+  Future<CoachProposal> undoCoachProposal(int id) => _decideProposal(id, 'undo');
+
+  Future<CoachProposal> _decideProposal(int id, String action) => _send(
+    () => _dio.post<dynamic>('/api/coach/proposals/$id/$action'),
+    (data) => CoachProposal.fromJson(data as Json),
+  );
+
+  /// What the coach has saved about the person.
+  Future<List<CoachFact>> coachFacts() => _send(
+    () => _dio.get<dynamic>('/api/coach/facts'),
+    (data) => [
+      for (final f in (data as Json)['facts'] as List<dynamic>) CoachFact.fromJson(f as Json),
+    ],
+  );
+
+  Future<void> deleteCoachFact(int id) =>
+      _send(() => _dio.delete<dynamic>('/api/coach/facts/$id'), (_) {});
 
   /// Searches the household food library; [remote] also searches USDA and Open Food Facts.
   Future<FoodSearch> foods({String q = '', bool remote = false}) => _send(

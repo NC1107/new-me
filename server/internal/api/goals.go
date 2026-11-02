@@ -41,15 +41,22 @@ const proposalCalories = "calories"
 // handleGoalProposals lists this week's pending target proposals. A proposal is frozen the
 // first time it is shown and, once accepted or dismissed, does not come back until next week.
 func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
-	c := callerFrom(r)
-	ctx := r.Context()
+	week, out, err := s.weeklyProposals(r.Context(), callerFrom(r))
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"week": score.ISOWeekLabel(week), "weekStart": week, "proposals": out})
+}
+
+// weeklyProposals computes and freezes this week's pending proposals for the caller.
+func (s *Server) weeklyProposals(ctx context.Context, c caller) (score.Date, []proposalJSON, error) {
 	today := score.LocalToday(s.now(), c.loc)
 	week := score.WeekStart(today)
 
 	templates, err := db.GetQuestTemplates(ctx, s.db.Pool, c.user.ID)
 	if err != nil {
-		fail(w, r, err)
-		return
+		return week, nil, err
 	}
 	byKey := map[string]db.QuestTemplate{}
 	for _, t := range templates {
@@ -57,8 +64,7 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 	}
 	stored, err := db.ListGoalProposals(ctx, s.db.Pool, c.user.ID, week)
 	if err != nil {
-		fail(w, r, err)
-		return
+		return week, nil, err
 	}
 	storedByKey := map[string]db.GoalProposal{}
 	for _, p := range stored {
@@ -75,39 +81,36 @@ func (s *Server) handleGoalProposals(w http.ResponseWriter, r *http.Request) {
 		if !ok || (hasPrior && prior.State != db.ProposalPending) {
 			continue
 		}
-		kind, current, applies, err := s.proposalBasis(r, c, key, tmpl, today)
+		kind, current, applies, err := s.proposalBasis(ctx, c, key, tmpl, today)
 		if err != nil {
-			fail(w, r, err)
-			return
+			return week, nil, err
 		}
 		if !applies {
 			continue
 		}
 		chosen := prior
 		if !hasPrior || prior.Current != current || prior.Kind != kind {
-			fresh, err := s.freshProposal(r, c, key, kind, current, tmpl, today)
+			fresh, err := s.freshProposal(ctx, c, key, kind, current, tmpl, today)
 			if err != nil {
-				fail(w, r, err)
-				return
+				return week, nil, err
 			}
 			if fresh == nil {
 				continue
 			}
 			chosen = db.GoalProposal{Key: key, Kind: fresh.Kind, Current: fresh.Current, Proposed: fresh.Proposed, Reason: fresh.Reason}
 			if err := db.SaveGoalProposal(ctx, s.db.Pool, c.user.ID, week, chosen); err != nil {
-				fail(w, r, err)
-				return
+				return week, nil, err
 			}
 		}
 		out = append(out, proposalJSON{Key: key, Kind: chosen.Kind, Title: questTitle(key), Unit: tmpl.Unit,
 			Current: chosen.Current, Proposed: chosen.Proposed, Reason: chosen.Reason})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"week": score.ISOWeekLabel(week), "weekStart": week, "proposals": out})
+	return week, out, nil
 }
 
 // proposalBasis says what kind of proposal a quest can have right now and the target it would be
 // measured against. applies is false when the quest has nothing to propose.
-func (s *Server) proposalBasis(r *http.Request, c caller, key string, tmpl db.QuestTemplate, today score.Date) (kind string, current int, applies bool, err error) {
+func (s *Server) proposalBasis(ctx context.Context, c caller, key string, tmpl db.QuestTemplate, today score.Date) (kind string, current int, applies bool, err error) {
 	switch key {
 	case db.QuestSteps:
 		return goals.KindTarget, tmpl.Target, tmpl.Enabled, nil
@@ -122,7 +125,7 @@ func (s *Server) proposalBasis(r *http.Request, c caller, key string, tmpl db.Qu
 		if !tmpl.Enabled {
 			return "", 0, false, nil
 		}
-		protein, err := proteinFor(r.Context(), s.db.Pool, c.user, today, tmpl.Target)
+		protein, err := proteinFor(ctx, s.db.Pool, c.user, today, tmpl.Target)
 		return goals.KindTarget, protein.Effective, true, err
 	case proposalCalories:
 		if c.user.KcalTarget == nil {
@@ -134,8 +137,7 @@ func (s *Server) proposalBasis(r *http.Request, c caller, key string, tmpl db.Qu
 }
 
 // freshProposal computes the proposal for one quest from the recent data.
-func (s *Server) freshProposal(r *http.Request, c caller, key, kind string, current int, tmpl db.QuestTemplate, today score.Date) (*goals.Proposal, error) {
-	ctx := r.Context()
+func (s *Server) freshProposal(ctx context.Context, c caller, key, kind string, current int, tmpl db.QuestTemplate, today score.Date) (*goals.Proposal, error) {
 	if kind == goals.KindEnable {
 		since := score.WeekStart(today).AddDays(-goals.EnableDismissedDays)
 		dismissed, err := db.EnableDismissedSince(ctx, s.db.Pool, c.user.ID, key, since)
@@ -273,19 +275,11 @@ func proposalKey(r *http.Request) (string, *httpError) {
 	return "", errNoProposal
 }
 
-// handleAcceptProposal applies the proposed target the way PATCH /api/me does: open days are
-// scored first, which freezes their quests, so the new target starts tomorrow, except on the
-// join day.
-func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
-	key, herr := proposalKey(r)
-	if herr != nil {
-		fail(w, r, herr)
-		return
-	}
-	c := callerFrom(r)
-	ctx := r.Context()
+// acceptProposal accepts this week's pending proposal for key the way the goals page does:
+// open days are scored first, so the new target starts tomorrow, except on the join day.
+func (s *Server) acceptProposal(ctx context.Context, c caller, key string) error {
 	week := score.WeekStart(score.LocalToday(s.now(), c.loc))
-	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+	return s.db.WithTx(ctx, func(tx pgx.Tx) error {
 		p, err := db.DecideGoalProposal(ctx, tx, c.user.ID, week, key, db.ProposalAccepted)
 		if errors.Is(err, db.ErrNotFound) {
 			return errNoProposal
@@ -325,7 +319,20 @@ func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
 		}
 		return s.resnapshotToday(ctx, tx, c, c.user, patchMeRequest{QuestTemplates: patches})
 	})
-	if err != nil {
+}
+
+// handleAcceptProposal applies the proposed target the way PATCH /api/me does: open days are
+// scored first, which freezes their quests, so the new target starts tomorrow, except on the
+// join day.
+func (s *Server) handleAcceptProposal(w http.ResponseWriter, r *http.Request) {
+	key, herr := proposalKey(r)
+	if herr != nil {
+		fail(w, r, herr)
+		return
+	}
+	c := callerFrom(r)
+	ctx := r.Context()
+	if err := s.acceptProposal(ctx, c, key); err != nil {
 		fail(w, r, err)
 		return
 	}

@@ -31,6 +31,7 @@ import 'audiobookshelf_page.dart';
 import 'daily_goals_page.dart';
 import '../streaks/away_page.dart';
 import 'pairing_page.dart';
+import 'coach_knows_page.dart';
 import 'profile_page.dart';
 import 'schedule_page.dart';
 import '../together/notifications_page.dart';
@@ -140,6 +141,14 @@ class _MeBody extends ConsumerWidget {
               subtitle: scheduleSummary(me.schedule),
               onTap: () => pushPage(context, const SchedulePage()),
             ),
+            if (me.features.coachChat)
+              SettingsRow(
+                icon: Icons.psychology_alt_rounded,
+                palette: accentById('violet'),
+                title: 'What the coach knows',
+                subtitle: 'Facts you told your coach',
+                onTap: () => pushPage(context, const CoachKnowsPage()),
+              ),
             SettingsRow(
               icon: Icons.pause_circle_rounded,
               palette: accentById('sky'),

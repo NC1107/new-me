@@ -5,11 +5,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../api/api_client.dart' show ApiException;
+import '../api/api_client.dart' show ApiClient, ApiException;
 import '../api/coach_models.dart';
 import '../util/errors.dart';
+import 'board.dart';
 import 'clock.dart';
+import 'me.dart';
 import 'session.dart';
+import 'targets.dart';
+import 'today.dart';
+import 'training.dart';
 
 /// The server accepts at most this many messages, starting and ending with the person.
 const kCoachWindow = 20;
@@ -22,10 +27,34 @@ const _kStoredMessages = 40;
 
 @immutable
 class CoachChatState {
-  const CoachChatState({this.messages = const [], this.sending = false, this.error});
+  const CoachChatState({
+    this.messages = const [],
+    this.sending = false,
+    this.error,
+    this.working = const {},
+    this.cardErrors = const {},
+  });
 
   final List<ChatMessage> messages;
   final bool sending;
+
+  /// Proposal ids with a request in flight, so a card cannot be tapped twice.
+  final Set<int> working;
+
+  /// Why a card's last tap failed, by proposal id.
+  final Map<int, String> cardErrors;
+
+  CoachChatState copyWith({
+    List<ChatMessage>? messages,
+    Set<int>? working,
+    Map<int, String>? cardErrors,
+  }) => CoachChatState(
+    messages: messages ?? this.messages,
+    sending: sending,
+    error: error,
+    working: working ?? this.working,
+    cardErrors: cardErrors ?? this.cardErrors,
+  );
 
   /// Why the last message got no answer; the message itself stays in [messages] to retry.
   final String? error;
@@ -131,12 +160,111 @@ class CoachChat extends Notifier<CoachChatState> {
     try {
       final reply = await client.coachChat(window(state.messages));
       if (!ref.mounted) return;
-      state = CoachChatState(messages: [...state.messages, ChatMessage(ChatRole.assistant, reply)]);
+      state = CoachChatState(
+        messages: [
+          ...state.messages,
+          ChatMessage(ChatRole.assistant, reply.text, actions: reply.actions),
+        ],
+      );
+      if (reply.actions.any((a) => a.type != 'proposal')) unawaited(_reloadFacts());
     } on Object catch (e) {
       if (!ref.mounted) return;
       state = CoachChatState(messages: state.messages, error: _copy(e));
     }
     unawaited(_persist());
+  }
+
+  Future<void> applyProposal(int id) => _decide(id, (c) => c.applyCoachProposal(id), reload: true);
+
+  Future<void> dismissProposal(int id) => _decide(id, (c) => c.dismissCoachProposal(id));
+
+  Future<void> undoProposal(int id) => _decide(id, (c) => c.undoCoachProposal(id), reload: true);
+
+  Future<void> _decide(
+    int id,
+    Future<CoachProposal> Function(ApiClient client) call, {
+    bool reload = false,
+  }) async {
+    final client = ref.read(apiClientProvider);
+    if (client == null || state.working.contains(id)) return;
+    state = state.copyWith(
+      working: {...state.working, id},
+      cardErrors: {...state.cardErrors}..remove(id),
+    );
+    try {
+      final next = await call(client);
+      if (!ref.mounted) return;
+      _replaceProposal(next);
+      if (reload) await _reloadSettings();
+    } on Object catch (e) {
+      if (!ref.mounted) return;
+      if (e is ApiException && e.code == 'proposal_expired') {
+        _markStatus(id, 'expired');
+      }
+      state = state.copyWith(cardErrors: {...state.cardErrors, id: _cardCopy(e)});
+    }
+    if (!ref.mounted) return;
+    state = state.copyWith(working: {...state.working}..remove(id));
+    unawaited(_persist());
+  }
+
+  void _replaceProposal(CoachProposal next) {
+    state = state.copyWith(
+      messages: [
+        for (final m in state.messages)
+          m.withActions([
+            for (final a in m.actions) a.proposal?.id == next.id ? CoachAction.proposal(next) : a,
+          ]),
+      ],
+    );
+  }
+
+  void _markStatus(int id, String status) {
+    for (final m in state.messages) {
+      for (final a in m.actions) {
+        final p = a.proposal;
+        if (p != null && p.id == id) {
+          _replaceProposal(
+            CoachProposal(
+              id: p.id,
+              kind: p.kind,
+              summary: p.summary,
+              changes: p.changes,
+              why: p.why,
+              source: p.source,
+              status: status,
+              expiresAt: p.expiresAt,
+              canUndo: false,
+            ),
+          );
+          return;
+        }
+      }
+    }
+  }
+
+  String _cardCopy(Object e) {
+    if (e is ApiException && (e.code == 'proposal_expired' || e.code == 'proposal_state')) {
+      return e.message;
+    }
+    return errorCopy(e);
+  }
+
+  /// A change made here moves targets, quests and the training plan, so every screen that
+  /// shows them is reloaded.
+  Future<void> _reloadSettings() async {
+    await ref.read(meProvider.notifier).refresh();
+    if (ref.exists(todayProvider)) unawaited(ref.read(todayProvider.notifier).refresh());
+    if (ref.exists(boardProvider)) unawaited(ref.read(boardProvider.notifier).refresh());
+    if (ref.exists(targetsProvider)) unawaited(ref.read(targetsProvider.notifier).refresh());
+    if (ref.exists(trainingSetupProvider)) ref.invalidate(trainingSetupProvider);
+    if (ref.exists(trainingTodayProvider)) {
+      unawaited(ref.read(trainingTodayProvider.notifier).refresh());
+    }
+  }
+
+  Future<void> _reloadFacts() async {
+    if (ref.exists(coachFactsProvider)) ref.invalidate(coachFactsProvider);
   }
 
   /// The coach's own failures arrive as 5xx, which errorCopy would call offline; the server's
@@ -150,3 +278,34 @@ class CoachChat extends Notifier<CoachChatState> {
 }
 
 final coachChatProvider = NotifierProvider<CoachChat, CoachChatState>(CoachChat.new);
+
+/// What the coach has saved about the person, shown under Me.
+class CoachFactsNotifier extends AsyncNotifier<List<CoachFact>> {
+  @override
+  Future<List<CoachFact>> build() async {
+    final client = ref.watch(apiClientProvider);
+    if (client == null) return const [];
+    return client.coachFacts();
+  }
+
+  /// Deletes at once and puts the fact back if the server refuses.
+  Future<void> remove(CoachFact fact) async {
+    final client = ref.read(apiClientProvider);
+    final before = state.value ?? const [];
+    if (client == null) return;
+    state = AsyncData([
+      for (final f in before)
+        if (f.id != fact.id) f,
+    ]);
+    try {
+      await client.deleteCoachFact(fact.id);
+    } on Object {
+      if (ref.mounted) state = AsyncData(before);
+      rethrow;
+    }
+  }
+}
+
+final coachFactsProvider = AsyncNotifierProvider<CoachFactsNotifier, List<CoachFact>>(
+  CoachFactsNotifier.new,
+);

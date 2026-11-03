@@ -50,6 +50,14 @@ Future<void> showInfoSheet(BuildContext context, InfoContent info) => showAppShe
 class InfoNote extends StatelessWidget {
   const InfoNote(this.text, {super.key, required this.info, this.style});
 
+  /// A row that is only a label, for a page whose research and safety notes all sit behind it.
+  InfoNote.label(String label, {Key? key, required List<String> paragraphs})
+    : this(
+        label,
+        key: key,
+        info: InfoContent(title: label, paragraphs: paragraphs),
+      );
+
   final String text;
   final InfoContent info;
   final TextStyle? style;
@@ -59,7 +67,7 @@ class InfoNote extends StatelessWidget {
     void open() => showInfoSheet(context, info);
     return Semantics(
       button: true,
-      label: '$text. More about ${info.title}',
+      label: text == info.title ? text : '$text. More about ${info.title}',
       excludeSemantics: true,
       onTap: open,
       child: Pressable(

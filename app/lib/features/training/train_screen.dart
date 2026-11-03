@@ -163,12 +163,11 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
       children: [
         if (profile == null) ...[
           Text(
-            'Tell New Me what you have and how much time you can give, and Claude designs a plan '
-            'inside published limits. Progression from session to session follows fixed rules.',
+            'Tell New Me your equipment and time, and get a strength plan made for you.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
           const SizedBox(height: 16),
-          ChunkyButton(label: 'Set up training', onPressed: () => _editProfile(null)),
+          ChunkyButton.secondary(label: 'Set up training', onPressed: () => _editProfile(null)),
         ] else ...[
           _ProfileSummary(profile: profile, onEdit: () => _editProfile(profile)),
           const SizedBox(height: 20),

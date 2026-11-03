@@ -20,6 +20,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/reps_exercises.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
@@ -28,7 +29,6 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import 'how_to_sheet.dart';
 import 'guided_session.dart';
-import 'info_note.dart';
 import 'guided_voice.dart';
 import 'set_assist.dart' show kHoldLeadInSeconds;
 
@@ -640,7 +640,7 @@ class _Intro extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          InfoNote(paragraphs: [...routine.notes, routine.footnote]),
+          InfoNote.label('Sources and safety', paragraphs: [...routine.notes, routine.footnote]),
         ] else ...[
           const FieldLabel('In this order'),
           AppCard(
@@ -669,7 +669,7 @@ class _Intro extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          InfoNote(paragraphs: [...routine.notes, routine.footnote]),
+          InfoNote.label('Sources and safety', paragraphs: [...routine.notes, routine.footnote]),
         ],
       ],
     );

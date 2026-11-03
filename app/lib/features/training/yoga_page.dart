@@ -11,6 +11,7 @@ import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/cached_view.dart' show ErrorBlock;
@@ -21,7 +22,6 @@ import '../../widgets/skeletons.dart';
 import 'exercises_page.dart';
 import 'guided_page.dart';
 import 'guided_session.dart';
-import 'info_note.dart';
 import 'training_copy.dart';
 import 'yoga_flows.dart';
 
@@ -133,7 +133,10 @@ class _YogaPageState extends ConsumerState<YogaPage> {
           ),
         ),
         const SizedBox(height: 12),
-        const InfoNote(paragraphs: [kYogaOrderNote, kYogaCitation, kYogaSafety]),
+        InfoNote.label(
+          'Sources and safety',
+          paragraphs: [kYogaOrderNote, kYogaCitation, kYogaSafety],
+        ),
       ],
     );
   }
@@ -270,8 +273,8 @@ class _PlanSection extends StatelessWidget {
                 spokenLabel: (m) => '$m minutes',
               ),
               const SizedBox(height: 12),
-              InfoNote(
-                label: 'Why these numbers',
+              InfoNote.label(
+                'Why these numbers',
                 paragraphs: [state.citation.isEmpty ? kYogaCitation : state.citation],
               ),
               if (state.avoidedDays.isNotEmpty) ...[

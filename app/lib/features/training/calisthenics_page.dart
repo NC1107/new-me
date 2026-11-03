@@ -8,12 +8,12 @@ import '../../api/models.dart';
 import '../../state/training.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/page_scaffold.dart';
 import 'calisthenics_routines.dart';
 import 'guided_page.dart';
-import 'info_note.dart';
 
 /// Calisthenics: four fixed bodyweight routines from beginner to intense on the guided runner.
 class CalisthenicsPage extends ConsumerWidget {
@@ -40,7 +40,8 @@ class CalisthenicsPage extends ConsumerWidget {
           _LevelCard(level: level, catalog: catalog, onTap: () => _open(context, level)),
           const SizedBox(height: 10),
         ],
-        const InfoNote(
+        InfoNote.label(
+          'Sources and safety',
           paragraphs: [
             'Rep exercises are at your own pace: tap Done when you finish. Holds count down.',
             kCalOrderNote,

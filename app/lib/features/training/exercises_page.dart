@@ -14,6 +14,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/cached_view.dart';
@@ -28,7 +29,6 @@ import '../log/log_chip.dart';
 import 'how_to_sheet.dart';
 import 'set_form.dart';
 import 'strength_chart.dart';
-import 'info_note.dart';
 import 'training_copy.dart';
 import '../../widgets/units_scope.dart';
 
@@ -358,8 +358,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                 style: AppText.headline,
               ),
               if (e.best?.e1rmKg != null) ...[
-                const InfoNote(
-                  label: 'About this estimate',
+                InfoNote.label(
+                  'About this estimate',
                   paragraphs: [
                     'Estimated by the Epley formula, load x (1 + reps / 30); less accurate past about 10 reps.',
                   ],

@@ -1,5 +1,3 @@
-import 'info_note.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +9,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/choice_card.dart';
 import '../../widgets/chunky_button.dart';
@@ -170,8 +169,8 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
             ],
           ],
         ),
-        const InfoNote(
-          label: 'Why 2 days or more',
+        InfoNote.label(
+          'Why 2 days or more',
           paragraphs: ['At least 2 days of muscle-strengthening work a week (WHO 2020).'],
         ),
         const SizedBox(height: 24),

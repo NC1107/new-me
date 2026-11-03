@@ -8,6 +8,9 @@ const kFreezeFill = Color(0xFF4DA3E0);
 const kFreezeWash = Color(0xFFE3F1FC);
 const kFreezeText = Color(0xFF2468A0);
 
+/// The two-person streak, apart from the personal flame so the two never read as one figure.
+const kTogetherStreakIcon = Icons.group_rounded;
+
 /// What a day in a streak strip stands for. Precedence runs from the top: a counted day is
 /// always a counted day, whatever else the server also flagged.
 enum DayStatus { counted, repaired, frozen, away, rest, none }

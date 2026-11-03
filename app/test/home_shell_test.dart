@@ -205,6 +205,6 @@ void main() {
 
     gate.complete();
     await app.settle();
-    expect(find.textContaining('979 of'), findsOneWidget);
+    expect(find.text('979'), findsOneWidget);
   });
 }

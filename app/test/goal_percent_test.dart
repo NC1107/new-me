@@ -27,7 +27,9 @@ void main() {
     expect(BoardDay.fromJson({'points': 1, 'percent': 35, 'counted': false}).goalPercent, 50);
   });
 
-  testWidgets('the day card is full at the goal and shows the extra as a bonus', (tester) async {
+  testWidgets("the day card counts gems of the day's maximum and flags the streak line", (
+    tester,
+  ) async {
     Widget card(DayScore day) => MaterialApp(
       home: Scaffold(
         body: DayCard(
@@ -37,13 +39,31 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(card(_day(base: 280, goalPercent: 100)));
-    expect(find.text('100%'), findsOneWidget);
-    expect(find.textContaining('bonus'), findsNothing);
-    expect(find.byIcon(Icons.flag_rounded), findsNothing);
+    await tester.pumpWidget(card(_day(base: 120, goalPercent: 43)));
+    expect(find.text('120'), findsOneWidget);
+    expect(find.text('of 400 gems'), findsOneWidget);
+    expect(find.text('Streak at 280'), findsOneWidget);
+    expect(find.byIcon(Icons.flag_rounded), findsOneWidget);
+    expect(find.textContaining('%'), findsNothing);
 
-    await tester.pumpWidget(card(_day(base: 400, goalPercent: 142)));
-    expect(find.text('142%'), findsOneWidget);
-    expect(find.text('+42% bonus'), findsOneWidget);
+    await tester.pumpWidget(card(_day(base: 320, goalPercent: 114)));
+    expect(find.text('320'), findsOneWidget);
+    expect(find.text('of 400 gems'), findsOneWidget);
+  });
+
+  testWidgets('bonus gems are named, not shown as extra percent', (tester) async {
+    final day = DayScore.fromJson({...dayJson(), 'basePoints': 300, 'bonusPoints': 40});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DayCard(
+            day: day,
+            streak: const Streak(current: 1, restAvailable: false),
+            onEntries: () {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('+40 bonus'), findsOneWidget);
   });
 }

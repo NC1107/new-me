@@ -288,7 +288,7 @@ void main() {
     test('the next freeze reads as progress, or why it waits', () {
       expect(
         freezeProgressLabel(const Freezes(held: 1, earnedTowardNext: 4)),
-        '4 of 7 counted days to your next freeze, 3 to go',
+        '3 more days to your next freeze',
       );
       expect(
         freezeProgressLabel(const Freezes(held: 2, earnedTowardNext: 6)),

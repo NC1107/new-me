@@ -131,14 +131,20 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
                 ),
               ),
               if (_yesterdayOpen)
-                TextButton(
-                  onPressed: () => showYesterdayHabits(context, today: today),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    foregroundColor: context.accentPalette.lip,
-                    textStyle: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                Flexible(
+                  child: TextButton(
+                    onPressed: () => showYesterdayHabits(context, today: today),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                      foregroundColor: context.accentPalette.lip,
+                      textStyle: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    child: const Text(
+                      'See yesterday',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  child: const Text('Yesterday'),
                 ),
             ],
           ),

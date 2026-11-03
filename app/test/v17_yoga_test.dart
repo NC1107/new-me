@@ -494,7 +494,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(seen, {'Left side', 'Right side'});
       expect(find.text('Nice work'), findsOneWidget);
-      expect(find.text('Logged 10 minutes to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 10 minutes to your yoga goal.'), findsOneWidget);
       expect(find.text('10 minutes of yoga.'), findsOneWidget);
       expect(server.to('POST /api/logs'), hasLength(1));
       final body = app.body('POST /api/logs');

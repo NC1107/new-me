@@ -61,10 +61,10 @@ class Reminder {
 /// The line for an evening when the day has not counted yet.
 String reminderCopy({required int questsLeft, required int percent}) {
   final shown = percent.clamp(0, 99);
-  if (questsLeft == 1) return '1 quest left to save your streak';
-  if (questsLeft == 2) return '2 quests left to save your streak';
-  if (shown <= 0) return 'Your day has not started. One quest gets you going.';
-  if (shown < _kNearLinePercent) return 'You are at $shown%. One quest gets you moving.';
+  if (questsLeft == 1) return '1 goal left to save your streak';
+  if (questsLeft == 2) return '2 goals left to save your streak';
+  if (shown <= 0) return 'Your day has not started. One goal gets you going.';
+  if (shown < _kNearLinePercent) return 'You are at $shown%. One goal gets you moving.';
   return 'You are at $shown%. A short walk gets you there.';
 }
 

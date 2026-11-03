@@ -12,7 +12,7 @@ The MET value comes from the 2024 Adult Compendium of Physical Activities (Herrm
 The result is rounded to the nearest 5 and kept between 20 and 100.
 
 The floor of 20, the cap of 100, the rounding step of 5, the 30 minute default strength session and the least a seated minute counts for are game design choices.
-They are not research, and the quest sheet says so ("Worth 20, the game's minimum", "Worth 100, the game's maximum").
+They are not research, and the quest sheet says so ("Worth 20, the least any goal earns", "Worth 100, the most any goal earns").
 The MET values and the cadence below are published.
 
 | Quest | Minutes it asks | MET used | Source |
@@ -49,9 +49,9 @@ They are worth the floor of 20.
 ## What shows it
 
 - The quest sheet keeps "+N points, X% of today" and adds one line under it, for example "Worth 85: about 30 min of moderate effort."
-  For strength: "Worth 75: priced as your 30 min strength session, which this quest also accepts."
-  Without a plan: "Worth 75: priced as a 30 min strength session (a game default), which this quest also accepts."
-  At the floor or cap it says so: "Worth 100, the game's maximum: about 70 min of walking at a moderate pace."
+  For strength: "Worth 75: priced as your 30 min strength session, which this goal also accepts."
+  Without a plan: "Worth 75: priced as a 30 min strength session (a game default), which this goal also accepts."
+  At the floor or cap it says so: "Worth 100, the most any goal earns: about 70 min of walking at a moderate pace."
 - The chip on a card shows the same number as before, `+N`.
 - The coach reads each quest as "Worth N points: ..." and is told the rule, including that the floor, the cap and the default session are game choices.
 - The partner cheer prompt counted a "hard" quest as one worth 100 points.

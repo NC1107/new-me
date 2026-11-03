@@ -308,7 +308,7 @@ class _GoalsPageState extends ConsumerState<GoalsPage> with MeSaving {
     return [
       if (_applyError != null) SaveError(_applyError!),
       if (usableTargets.isNotEmpty)
-        ChunkyButton(
+        ChunkyButton.secondary(
           label: 'Use all recommended (${usableTargets.length})',
           busy: _applying.length > 1,
           onPressed: enabled && _applying.isEmpty ? () => _apply(usableTargets) : null,
@@ -488,8 +488,8 @@ class _QuestGoalCard extends StatelessWidget {
                 enabled ? label : 'Off',
                 style: AppText.tabular(
                   AppText.caption.copyWith(
-                    color: enabled ? palette.lip : kInkMuted,
-                    fontWeight: FontWeight.w800,
+                    color: enabled ? kInkSecondary : kInkMuted,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

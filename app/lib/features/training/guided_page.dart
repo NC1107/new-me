@@ -71,7 +71,7 @@ class GuidedRoutine {
     this.outline,
     this.voice = const GuidedVoice(),
     this.activityType = 'yoga',
-    this.loggedTo = 'your yoga quest',
+    this.loggedTo = 'your yoga goal',
     this.subtitleLead = '',
     this.logsReps = false,
     this.strengthCreditMinutes,
@@ -1371,7 +1371,7 @@ class _Finished extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Under $kGuidedMinLogSeconds seconds of ${routine.activity}, so nothing was added to '
-            'your ${routine.activityType == 'yoga' ? 'yoga quest' : 'exercise minutes'}.',
+            'your ${routine.activityType == 'yoga' ? 'yoga goal' : 'exercise minutes'}.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
         ] else ...[

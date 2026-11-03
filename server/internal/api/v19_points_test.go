@@ -21,9 +21,9 @@ func TestQuestsCarryTheirEffortWorthAndWhy(t *testing.T) {
 	}
 	why := map[string]string{
 		"exercise": "Worth 85: about 30 min of moderate effort.",
-		"water":    "Worth 20, the game's minimum: no measured effort.",
-		"steps":    "Worth 100, the game's maximum: about 80 min of walking at a moderate pace.",
-		"pushups":  "Worth 75: priced as a 30 min strength session (a game default), which this quest also accepts.",
+		"water":    "Worth 20, the least any goal earns: no measured effort.",
+		"steps":    "Worth 100, the most any goal earns: about 80 min of walking at a moderate pace.",
+		"pushups":  "Worth 75: priced as a 30 min strength session (a game default), which this goal also accepts.",
 	}
 	for i := range got.length("quests") {
 		p := "quests." + itoa(i)
@@ -78,7 +78,7 @@ func TestPlanningAStrengthSessionRepricesTheStrengthQuest(t *testing.T) {
 	for i := range today.length("quests") {
 		p := "quests." + itoa(i)
 		if today.str(p+".key") == "pushups" &&
-			today.str(p+".pointsWhy") != "Worth 50: priced as your 20 min strength session, which this quest also accepts." {
+			today.str(p+".pointsWhy") != "Worth 50: priced as your 20 min strength session, which this goal also accepts." {
 			t.Fatalf("pointsWhy = %q", today.str(p+".pointsWhy"))
 		}
 	}

@@ -251,7 +251,7 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets("the streak sheet's Can't today? button", (tester) async {
+    testWidgets("the streak sheet's Away today button", (tester) async {
       final handle = tester.ensureSemantics();
       final server = _busyServer()
         ..on(
@@ -266,11 +266,11 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await app.pump(const TodayScreen(), tall: false, key: UniqueKey(), now: _morning);
-      expect(find.text("Can't today?"), findsNothing, reason: 'Today no longer carries the link');
+      expect(find.text('Away today'), findsNothing, reason: 'Today no longer carries the link');
 
       await app.tap(find.bySemanticsLabel(RegExp('day streak')));
       final button = find.ancestor(
-        of: find.text("CAN'T TODAY?"),
+        of: find.text('AWAY TODAY'),
         matching: find.byType(ChunkyButton),
       );
       expect(tester.getSize(button.first).height, greaterThanOrEqualTo(44));

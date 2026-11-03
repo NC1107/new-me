@@ -67,10 +67,10 @@ bool entryFeedsQuest(String questKey, LogEntry entry) => switch (entry) {
   },
 };
 
-/// "+100 points, 24% of today", or "Earned ..." once the quest is done.
+/// "+100 gems, 24% of the day's gems", or "Earned ..." once the quest is done.
 String questWorthLine(Quest q, int dayMax) {
   final share = dayMax > 0 && q.points <= dayMax
-      ? ', ${(q.points * 100 / dayMax).round()}% of today'
+      ? ", ${(q.points * 100 / dayMax).round()}% of the day's gems"
       : '';
   return q.done ? 'Earned +${q.points} gems$share' : '+${q.points} gems$share';
 }
@@ -250,10 +250,8 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
 
   Widget _entries(Quest quest, String date) {
     if (isAutomaticQuest(quest.key) && quest.key != 'exercise') {
-      return Text(
-        'Nothing to log here. ${questSourceLine(quest.key)}.',
-        style: AppText.body.copyWith(color: kInkSecondary),
-      );
+      // The header already says where the number comes from.
+      return Text('Nothing to log here.', style: AppText.body.copyWith(color: kInkSecondary));
     }
     final list = EntryList(
       date: date,
@@ -361,6 +359,26 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// What the quest is worth, with the effort it is priced on behind an info icon.
+class _WorthLine extends StatelessWidget {
+  const _WorthLine({required this.text, required this.why, required this.style});
+
+  final String text;
+  final String? why;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = why;
+    if (detail == null) return Text(text, style: style);
+    return InfoNote(
+      text,
+      style: style,
+      info: InfoContent(title: 'What this is worth', paragraphs: [detail]),
+    );
+  }
+}
+
 class _ProgressBlock extends StatelessWidget {
   const _ProgressBlock({required this.quest, required this.dayMax, required this.units});
 
@@ -395,8 +413,9 @@ class _ProgressBlock extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                questWorthLine(quest, dayMax),
+              child: _WorthLine(
+                text: questWorthLine(quest, dayMax),
+                why: quest.pointsWhy,
                 style: AppText.label.copyWith(
                   color: quest.done ? ink : kInkSecondary,
                   fontWeight: FontWeight.w700,
@@ -405,15 +424,6 @@ class _ProgressBlock extends StatelessWidget {
             ),
           ],
         ),
-        if (quest.pointsWhy != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 24),
-            child: Text(
-              quest.pointsWhy!,
-              key: const Key('quest-points-why'),
-              style: AppText.caption.copyWith(color: kInkSecondary),
-            ),
-          ),
         if (quest.bonusPoints > 0)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 24),

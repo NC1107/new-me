@@ -43,6 +43,15 @@ String relativeTime(DateTime then, DateTime now) {
 /// The server numbers the first, unscored stretch "Season 0"; people see it as the warm-up it is.
 String seasonLabel(String name) => name == 'Season 0' ? 'Preseason' : name;
 
+/// True while there is no real season yet, when the season total would only repeat the balance.
+bool isPreseason(String name) => name == 'Season 0';
+
+/// The one name for the spendable balance, wherever it appears.
+const kGemsToSpend = 'Gems to spend';
+
+/// "1,929 gems to spend": the balance in a sentence-style stat.
+String gemsToSpendLine(int balance) => '${balance.formatted} ${kGemsToSpend.toLowerCase()}';
+
 /// "just now", "3 min ago", "2 h ago" or "2 d ago", for lines that have room to spell it out.
 String agoLabel(DateTime then, DateTime now) {
   final elapsed = now.difference(then);

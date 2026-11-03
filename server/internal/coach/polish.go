@@ -20,7 +20,7 @@ import (
 const (
 	polishTimeout = 8 * time.Second
 	varyTimeout   = 5 * time.Second
-	maxPolishLen  = 600
+	maxPolishLen  = 200
 )
 
 const varySystem = `You reword one short push notification for a personal habit app, so it does not read the same every time.
@@ -51,9 +51,10 @@ func (p *Polisher) Vary(ctx context.Context, text string, fits func(string) bool
 }
 
 const polishSystem = `You reword a daily plan for a personal habit app. You are given facts about one person's day.
-Write 2 to 4 short, friendly sentences addressed to the person as "you".
+Write exactly one short, plain sentence of at most 20 words, addressed to the person as "you".
+The app already shows the full list below your sentence, so never repeat or summarise the list. Pick the single most useful thing and say only that.
 Use only the facts given. Do not add numbers, times, advice, medical claims or any other fact that is not in the list.
-Plain text only: no lists, no headings, no emoji.`
+No exclamation marks, no cheering, no emoji, no lists, no headings. Reply with the sentence only.`
 
 // polishRetryAfter is how long a failed call keeps the day from being tried again, so a
 // provider outage costs one attempt per window and not one per request.
@@ -215,7 +216,7 @@ func (p *Polisher) polish(ctx context.Context, user db.User, date score.Date, da
 	defer cancel()
 	facts := factsText(day)
 	text, err := p.Client.Text(callCtx, anthropic.Request{
-		System: polishSystem, MaxTokens: 300, User: []anthropic.Block{{Text: facts}}})
+		System: polishSystem, MaxTokens: 80, User: []anthropic.Block{{Text: facts}}})
 	if err != nil {
 		log.Printf("[NEWME] plan polish for user %d: %v", user.ID, err)
 		return "", false

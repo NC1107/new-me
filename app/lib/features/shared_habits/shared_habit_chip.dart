@@ -66,7 +66,7 @@ class SharedHabitChip extends ConsumerWidget {
                   children: [
                     Text(
                       h.name,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.label.copyWith(fontWeight: FontWeight.w800, height: 1.15),
                     ),

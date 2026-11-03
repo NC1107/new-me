@@ -68,11 +68,11 @@ func TestEffortReason(t *testing.T) {
 		want     string
 	}{
 		{"exercise", 30, 0, "Worth 85: about 30 min of moderate effort."},
-		{"steps", 7000, 0, "Worth 100, the game's maximum: about 70 min of walking at a moderate pace."},
-		{"pushups", 30, 0, "Worth 75: priced as a 30 min strength session (a game default), which this quest also accepts."},
-		{"pushups", 30, 30, "Worth 75: priced as your 30 min strength session, which this quest also accepts."},
-		{"pushups", 30, 60, "Worth 100, the game's maximum: priced as your 60 min strength session, which this quest also accepts."},
-		{"water", 2200, 0, "Worth 20, the game's minimum: no measured effort."},
+		{"steps", 7000, 0, "Worth 100, the most any goal earns: about 70 min of walking at a moderate pace."},
+		{"pushups", 30, 0, "Worth 75: priced as a 30 min strength session (a game default), which this goal also accepts."},
+		{"pushups", 30, 30, "Worth 75: priced as your 30 min strength session, which this goal also accepts."},
+		{"pushups", 30, 60, "Worth 100, the most any goal earns: priced as your 60 min strength session, which this goal also accepts."},
+		{"water", 2200, 0, "Worth 20, the least any goal earns: no measured effort."},
 	} {
 		if got := EffortPoints(tc.key, tc.target, tc.strength).Reason(); got != tc.want {
 			t.Errorf("%s reason = %q, want %q", tc.key, got, tc.want)

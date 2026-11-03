@@ -12,9 +12,9 @@ Today _today({bool counted = false, int percent = 62, String localToday = '2026-
 
 void main() {
   group('reminderCopy', () {
-    test('names the quests left when one or two remain', () {
-      expect(reminderCopy(questsLeft: 1, percent: 90), '1 quest left to save your streak');
-      expect(reminderCopy(questsLeft: 2, percent: 30), '2 quests left to save your streak');
+    test('names the goals left when one or two remain', () {
+      expect(reminderCopy(questsLeft: 1, percent: 90), '1 goal left to save your streak');
+      expect(reminderCopy(questsLeft: 2, percent: 30), '2 goals left to save your streak');
     });
 
     test('talks about the percent when many quests remain', () {
@@ -22,16 +22,13 @@ void main() {
         reminderCopy(questsLeft: 4, percent: 54),
         'You are at 54%. A short walk gets you there.',
       );
-      expect(
-        reminderCopy(questsLeft: 5, percent: 12),
-        'You are at 12%. One quest gets you moving.',
-      );
+      expect(reminderCopy(questsLeft: 5, percent: 12), 'You are at 12%. One goal gets you moving.');
     });
 
     test('has a line for a day that has not started', () {
       expect(
         reminderCopy(questsLeft: 5, percent: 0),
-        'Your day has not started. One quest gets you going.',
+        'Your day has not started. One goal gets you going.',
       );
     });
 

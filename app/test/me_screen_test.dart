@@ -67,6 +67,21 @@ Map<String, dynamic> _targets() =>
 StubAdapter _server({bool admin = false}) => fullServer()
   ..on('GET /api/targets', StubResponse(200, _targets()))
   ..on('GET /api/me', StubResponse(200, _me(admin: admin)))
+  ..on(
+    'GET /api/rewards',
+    const StubResponse(200, {
+      'reward': null,
+      'rewards': <Object>[],
+      'history': <Object>[],
+      'bank': 1929,
+      'priceHelp': null,
+      'treats': <Object>[],
+      'treatHistory': <Object>[],
+      'balances': [
+        {'userId': 2, 'name': 'Sam', 'earned': 1929, 'paid': 0, 'tasks': 0, 'balance': 1929},
+      ],
+    }),
+  )
   ..on('PATCH /api/me', StubResponse(200, _me(admin: admin)));
 
 TestApp _app(WidgetTester tester, StubAdapter adapter) =>
@@ -89,6 +104,22 @@ void main() {
   });
 
   group('the Me tab', () {
+    testWidgets('a real season adds what was earned in it beside the wallet', (tester) async {
+      final server = _server()
+        ..on(
+          'GET /api/board',
+          StubResponse(200, {
+            ...board([boardUser(2, 'Sam', 'violet')]),
+            'season': {'name': 'Season 1', 'startsOn': '2027-01-01', 'endsOn': null},
+          }),
+        );
+      final app = _app(tester, server);
+      await app.pump(const MeScreen());
+
+      expect(find.text('1,929 gems to spend'), findsOneWidget);
+      expect(find.text('900 earned this season'), findsOneWidget);
+    });
+
     testWidgets('shows the person header and a row for every page', (tester) async {
       final app = _app(tester, _server());
       await app.pump(const MeScreen());
@@ -96,7 +127,8 @@ void main() {
       expect(find.text('Sam'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
       expect(find.text('4 day streak'), findsOneWidget);
-      expect(find.text('900 season gems'), findsOneWidget);
+      expect(find.text('1,929 gems to spend'), findsOneWidget);
+      expect(find.textContaining('season'), findsNothing, reason: 'the preseason has no season');
       for (final row in ['Goals', 'About you', 'Schedule', 'Apple Health']) {
         expect(find.text(row), findsOneWidget);
       }

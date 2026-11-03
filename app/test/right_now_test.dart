@@ -133,14 +133,14 @@ void main() {
       final s = dayCardSentence(_day(base: 0), const Streak(current: 0, restAvailable: false), [
         _q('steps'),
       ]);
-      expect(s, 'Fill the bar today to start your streak.');
+      expect(s, 'Reach the flag to start a streak.');
     });
 
     test('a running streak is kept', () {
       final s = dayCardSentence(_day(base: 0), const Streak(current: 3, restAvailable: false), [
         _q('steps'),
       ]);
-      expect(s, 'Fill the bar to keep your streak going.');
+      expect(s, 'Reach the flag to keep your streak.');
     });
 
     test('one quest away reads as one more', () {

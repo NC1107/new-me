@@ -78,7 +78,7 @@ func TestBehindPaceNudgesOncePerWindowAndOnlyWhenBehind(t *testing.T) {
 
 	// Done means no nudge in any window.
 	if len(push.of(together.EventBehindPaceEvening, nadia.ID)) != 0 {
-		t.Fatal("never after the steps quest is done")
+		t.Fatal("never after the steps goal is done")
 	}
 }
 
@@ -149,7 +149,7 @@ func TestMorningPlanPushCarriesReadinessAndThePlan(t *testing.T) {
 	got := push.of(together.EventMorningPlan, nick.ID)
 	if len(got) != 1 || got[0].Title != "Take it easy today" ||
 		// The night record also fills the sleep quest, so it is among the quests counted.
-		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 5 quests done.") {
+		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 5 goals done.") {
 		t.Fatalf("morning plan = %+v", got)
 	}
 	h.runNudges(ny(2026, time.November, 2, 8, 5))

@@ -125,22 +125,22 @@ func (e Effort) Reason() string {
 		what = fmt.Sprintf("about %d min of moderate effort", e.Minutes)
 	case BasisStrength:
 		if e.Planned {
-			what = fmt.Sprintf("priced as your %d min strength session, which this quest also accepts", e.Minutes)
+			what = fmt.Sprintf("priced as your %d min strength session, which this goal also accepts", e.Minutes)
 		} else {
-			what = fmt.Sprintf("priced as a %d min strength session (a game default), which this quest also accepts", e.Minutes)
+			what = fmt.Sprintf("priced as a %d min strength session (a game default), which this goal also accepts", e.Minutes)
 		}
 	case BasisYoga:
 		what = fmt.Sprintf("about %d min of yoga", e.Minutes)
 	case BasisFocus:
 		what = fmt.Sprintf("about %d min of focused time", e.Minutes)
 	default:
-		return fmt.Sprintf("Worth %d, the game's minimum: no measured effort.", e.Points)
+		return fmt.Sprintf("Worth %d, the least any goal earns: no measured effort.", e.Points)
 	}
 	switch {
 	case e.Floored:
-		return fmt.Sprintf("Worth %d, the game's minimum: %s.", e.Points, what)
+		return fmt.Sprintf("Worth %d, the least any goal earns: %s.", e.Points, what)
 	case e.Capped:
-		return fmt.Sprintf("Worth %d, the game's maximum: %s.", e.Points, what)
+		return fmt.Sprintf("Worth %d, the most any goal earns: %s.", e.Points, what)
 	}
 	return fmt.Sprintf("Worth %d: %s.", e.Points, what)
 }

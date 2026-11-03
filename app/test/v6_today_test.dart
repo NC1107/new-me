@@ -212,7 +212,7 @@ void main() {
       await _open(tester, _server(readiness: _readiness(), habits: true));
       final order = [
         find.text('Good morning, Sam'),
-        find.text('88%'),
+        find.text('130'),
         find.text('Take it easy today'),
         find.text('Habits'),
         find.text('Get stronger'),
@@ -245,7 +245,7 @@ void main() {
       expect(find.text('Push-ups done'), findsOneWidget);
       expect(find.text('Still to do'), findsOneWidget);
       expect(find.textContaining('50-minute walk covers it'), findsOneWidget);
-      expect(find.text('Habits, by time'), findsOneWidget);
+      expect(find.text('Habits'), findsOneWidget);
       expect(find.text('Brush teeth at 22:00'), findsOneWidget);
     });
 

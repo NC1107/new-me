@@ -7,9 +7,13 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/info_note.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import 'readiness_card.dart';
+
+/// The reading rule the plan's "Reading" line leaves out; also used by the quest sheet.
+const kAudiobookHalfNote = 'An audiobook minute counts as half a reading minute.';
 
 Future<void> showPlanSheet(BuildContext context, {required Plan plan, Readiness? readiness}) =>
     showAppSheet<void>(
@@ -46,7 +50,7 @@ class PlanSheet extends StatelessWidget {
     final groups = [
       ('Already done', _of(PlanItemKind.done)),
       ('Still to do', _of(PlanItemKind.todo)),
-      ('Habits, by time', _of(PlanItemKind.habit)),
+      ('Habits', _of(PlanItemKind.habit)),
     ];
     final r = readiness;
     return SafeArea(
@@ -96,6 +100,11 @@ class PlanSheet extends StatelessWidget {
                         : null,
                   ),
               ],
+            if (_of(PlanItemKind.todo).any((i) => i.key == 'reading'))
+              const InfoNote(
+                'How reading counts',
+                info: InfoContent(title: 'How reading counts', paragraphs: [kAudiobookHalfNote]),
+              ),
           ],
         ),
       ),

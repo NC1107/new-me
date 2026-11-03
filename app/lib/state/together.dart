@@ -94,8 +94,18 @@ class RewardsNotifier extends AsyncNotifier<RewardList> {
   Future<RewardList> build() async {
     final client = ref.watch(apiClientProvider);
     if (client == null) return const RewardList();
+    // Every place that scores a day reloads the board, so a board showing different points is
+    // the one signal that the gem balances here went stale.
+    ref.listen(boardProvider, (before, after) {
+      final earned = _earned(after.value?.data);
+      if (earned != null && earned != _earned(before?.value?.data)) unawaited(refresh());
+    });
     return client.rewards();
   }
+
+  static String? _earned(Board? board) => board == null
+      ? null
+      : [for (final u in board.users) '${u.id}:${u.today.points}:${u.season}'].join(',');
 
   Future<void> refresh() async {
     final client = ref.read(apiClientProvider);

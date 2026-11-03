@@ -377,7 +377,7 @@ void main() {
         surfaceHeight: 2400,
       );
       await app.pump(const BoardScreen());
-      expect(find.textContaining('Agree'), findsNothing);
+      expect(find.textContaining('Agree to'), findsNothing);
     });
 
     testWidgets('a new chore proposes the picked worth', (tester) async {

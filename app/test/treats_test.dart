@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/board/board_screen.dart';
 import 'package:newme/features/together/reward_sheet.dart';
+import 'package:newme/state/board.dart';
 import 'package:newme/widgets/mascot.dart';
 
 import 'fixtures.dart';
@@ -108,6 +111,45 @@ void main() {
         tester.getTopLeft(find.text('Your gems')).dx,
         lessThan(tester.getTopLeft(find.text("Ana's gems")).dx),
       );
+    });
+
+    testWidgets('gems earned elsewhere reach the balances once the board reloads', (tester) async {
+      final server = _server();
+      final app = _app(tester, server);
+      await _openUs(app);
+      expect(find.text('400'), findsOneWidget);
+
+      // Ticking a habit or logging a meal reloads only the board, which now shows 25 more points.
+      server
+        ..on(
+          'GET /api/board',
+          StubResponse(200, {
+            ...board([
+              boardUser(2, 'Sam', 'violet', points: 125, season: 925),
+              boardUser(1, 'Ana', 'amber', points: 90, percent: 20),
+            ]),
+            'challenge': null,
+            'reward': null,
+          }),
+        )
+        ..on(
+          'GET /api/rewards',
+          StubResponse(200, {
+            'reward': null,
+            'rewards': <Object>[],
+            'history': <Object>[],
+            'bank': 1925,
+            'priceHelp': null,
+            'treats': <Object>[],
+            'treatHistory': <Object>[],
+            'balances': [_balance(1, 'Ana', 1500), _balance(2, 'Sam', 425)],
+          }),
+        );
+      unawaited(app.container.read(boardProvider.notifier).refresh());
+      await app.settle();
+
+      expect(find.text('425'), findsOneWidget);
+      expect(find.text('400'), findsNothing);
     });
 
     testWidgets('a solo reward says what is left and hides Redeem until it is covered', (

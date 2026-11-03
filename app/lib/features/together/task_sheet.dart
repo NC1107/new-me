@@ -19,9 +19,6 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/pill_chip.dart';
 import '../../widgets/segmented.dart';
 
-/// Round stakes to tap; any whole number up to [kTaskStakeMax] can be typed instead.
-const kTaskStakeChips = [10, 25, 50, 100];
-
 const kTaskIdeas = ['Call the vet', 'Book the dentist', 'Take out the bins'];
 
 /// Adds a task, or edits [task], which is one of my own proposals that is still unanswered.
@@ -219,25 +216,11 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
             ),
           ],
           const SizedBox(height: 20),
-          const FieldLabel('Gems at stake'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final n in kTaskStakeChips)
-                PillChip(
-                  label: n.formatted,
-                  selected: _stakeValue == n,
-                  palette: person,
-                  onTap: () => setState(() => _stake.text = '$n'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
+          const FieldLabel('What is it worth?'),
           AppTextField(
             controller: _stake,
-            hint: 'Or type a number',
-            semanticLabel: 'Gems at stake',
+            hint: 'Gems',
+            semanticLabel: 'Gems it is worth',
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -250,7 +233,7 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Won when it is done in time, lost when the deadline passes.',
+            'Earned when it is done in time, lost when the deadline passes.',
             style: AppText.caption,
           ),
           const SizedBox(height: 20),

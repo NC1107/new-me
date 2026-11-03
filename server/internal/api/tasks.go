@@ -171,7 +171,7 @@ func (q taskRequest) apply(t db.Task, view taskView, partner *db.User, self int6
 		t.Stake = *q.Stake
 	}
 	if t.Stake < 1 || t.Stake > tasks.MaxStake {
-		return t, invalid(fmt.Sprintf("stake must be between 1 and %d gems", tasks.MaxStake))
+		return t, invalid(fmt.Sprintf("a task is worth between 1 and %d gems", tasks.MaxStake))
 	}
 	if q.Deadline != nil {
 		d, err := score.ParseDate(*q.Deadline)
@@ -204,7 +204,7 @@ func cleanTaskTitle(raw string) (string, *httpError) {
 // notifyTaskProposal asks the other person to agree to a task, in the same style as a reward.
 func (s *Server) notifyTaskProposal(to, from db.User, t db.Task) {
 	due := t.Deadline.Time().Format("Mon Jan 2")
-	body := fmt.Sprintf("%s staked %d gems on %q by %s", from.Name, t.Stake, t.Title, due)
+	body := fmt.Sprintf("%s will %s for %d gems by %s", from.Name, t.Title, t.Stake, due)
 	if t.AssigneeID == to.ID {
 		body = fmt.Sprintf("%s asks you to do %q for %d gems by %s", from.Name, t.Title, t.Stake, due)
 	}
@@ -239,7 +239,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Title == nil || req.Stake == nil || req.Deadline == nil {
-		fail(w, r, invalid("title, stake and deadline are required"))
+		fail(w, r, invalid("title, gems and deadline are required"))
 		return
 	}
 	ctx := r.Context()
@@ -468,14 +468,14 @@ func (s *Server) handleFinishTask(w http.ResponseWriter, r *http.Request) {
 			return t, nil
 		}
 		if t.Status == tasks.Missed {
-			return t, taskStateErr("the deadline passed and the stake is lost")
+			return t, taskStateErr("the deadline passed, so the gems are lost")
 		}
 		today, err := view.today(t.AssigneeID)
 		if err != nil {
 			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
 		}
 		if t.Status == tasks.Agreed && tasks.Overdue(t.Deadline, today) {
-			return t, taskStateErr("the deadline passed, so the stake is lost")
+			return t, taskStateErr("the deadline passed, so the gems are lost")
 		}
 		if !tasks.CanFinish(t.Status, t.Deadline, today) {
 			return t, taskStateErr("only an agreed task can be marked done")

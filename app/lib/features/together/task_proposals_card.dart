@@ -79,7 +79,7 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
     final terms = '${t.stake.formatted} gems, ${dueLabel(t.daysLeft, t.deadline)}';
     return t.assignedTo(widget.userId)
         ? '$from asks you to ${t.title}: $terms'
-        : '$from stakes $terms on ${t.title}';
+        : '$from takes on ${t.title}: $terms';
   }
 
   @override

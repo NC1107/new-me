@@ -5,8 +5,9 @@
 Some things are not habits: call the vet for the cats, renew the car tag, book the dentist.
 Nobody logs them daily, so nothing nudges them, and they slip.
 A task puts gems on the line.
-The two of you agree on a chore, a stake and a deadline.
-Finish it in time and you win the stake; miss the deadline and you lose it.
+The two of you agree on a chore, what it is worth in gems, and a deadline.
+Finish it in time and you earn those gems; miss the deadline and you lose the same amount.
+The code calls that amount the stake; the app never shows the word.
 
 ## What a task is
 
@@ -83,7 +84,7 @@ The balances card on Us shows a debt in the danger colour with "In debt, gems yo
 
 ## Pushes
 
-A proposal reaches the other person as `task_proposal` ("Nick asks you to do "Call the vet" for 40 gems by Wed Nov 4", or "Nick staked 40 gems on ... by ..." when it is the creator's own task) and follows the Approvals switch, like habit and reward proposals.
+A proposal reaches the other person as `task_proposal` ("Nick asks you to do "Call the vet" for 40 gems by Wed Nov 4", or "Nick will Call the vet for 40 gems by Wed Nov 4" when it is the creator's own task) and follows the Approvals switch, like habit and reward proposals.
 Done and missed pushes are `task` and follow the Reward switch.
 Quiet hours and away days hold them like any other push.
 
@@ -106,12 +107,12 @@ Us gains a Tasks section below Treats.
 Agreed tasks of both people show with the assignee, the stake and "due Tue", "due today" or "overdue", and a Done button on my own tasks while they are on time.
 My proposals that wait or were declined are listed under them and open the same sheet for edit or withdraw.
 A proposal waiting for my answer appears with Agree and Decline in an approval card at the top of Together, next to the reward approvals.
-"Add a task" opens a sheet with the title, who does it (me or my partner), the stake as round chips or a typed number, and the deadline as Today, Tomorrow, In a week or a date picker.
+"Add a task" opens a sheet with the title, who does it (me or my partner), what it is worth as a typed number of gems, and the deadline as Today, Tomorrow, In a week or a date picker.
 "Tasks settled" lists the last five finished or missed tasks with "+40 gems" or "-40 gems".
 
 ## Not done
 
-There is no suggested stake.
+There are no suggested amounts, since the two of you agree the worth of each chore yourselves.
 The shared reward price helper multiplies the pair's daily pace by 7, 14 and 30 days, which prices a reward, not a chore, and no research prices a task, so the stake is a free choice.
 There is no undo for a finished task and no way to cancel an agreed one.
 There is no time of day on a deadline.

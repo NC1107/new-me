@@ -151,7 +151,7 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
         Semantics(header: true, child: const Text('Tasks', style: AppText.headline)),
         const SizedBox(height: 4),
         const Text(
-          'A chore with gems on it. Finish it by the deadline to earn them, or they come off.',
+          'Agree what a chore is worth. Finish it by the deadline to earn the gems, or lose them.',
           style: AppText.caption,
         ),
         const SizedBox(height: 10),

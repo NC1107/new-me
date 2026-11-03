@@ -186,7 +186,7 @@ void main() {
         ..on(
           'POST /api/tasks/5/done',
           const StubResponse(409, {
-            'error': 'the deadline passed, so the stake is lost',
+            'error': 'the deadline passed, so the gems are lost',
             'code': 'task_state',
           }),
         );
@@ -194,7 +194,7 @@ void main() {
       await _openUs(app);
 
       await app.tap(find.text('DONE'));
-      expect(find.textContaining('the stake is lost'), findsOneWidget);
+      expect(find.textContaining('the gems are lost'), findsOneWidget);
     });
 
     testWidgets('an overdue task is flagged and cannot be marked done', (tester) async {
@@ -223,7 +223,7 @@ void main() {
       final app = _app(tester, server);
       await _openUs(app);
 
-      expect(find.text('Ana stakes 40 gems, due Wed on Call the vet'), findsOneWidget);
+      expect(find.text('Ana takes on Call the vet: 40 gems, due Wed'), findsOneWidget);
       await app.tap(find.text('DECLINE'));
       expect(app.adapter.to('POST /api/tasks/5/decline'), hasLength(1));
     });
@@ -281,7 +281,7 @@ void main() {
   });
 
   group('add a task', () {
-    testWidgets('proposes title, who, stake and deadline', (tester) async {
+    testWidgets('proposes title, who, worth and deadline', (tester) async {
       final server = _server()
         ..on(
           'POST /api/tasks',
@@ -296,7 +296,8 @@ void main() {
 
       await app.tap(find.text('Call the vet').last);
       await app.tap(find.descendant(of: find.byType(TaskSheet), matching: find.text('Ana')));
-      await app.tap(find.text('50'));
+      await tester.enterText(fieldWith(''), '50');
+      await app.settle();
       await app.tap(find.text('Tomorrow'));
       await app.tap(find.text('PROPOSE TASK'));
 
@@ -308,7 +309,7 @@ void main() {
       });
     });
 
-    testWidgets('a typed stake is held to 1 to 100,000 gems', (tester) async {
+    testWidgets('what it is worth is held to 1 to 100,000 gems', (tester) async {
       final app = _app(tester, _server());
       await _openUs(app);
 
@@ -331,7 +332,8 @@ void main() {
       await _openUs(app);
 
       await app.tap(find.text('Call the vet'));
-      await app.tap(find.text('25'));
+      await tester.enterText(fieldWith('40'), '25');
+      await app.settle();
       await app.tap(find.text('SAVE'));
 
       expect(app.body('PATCH /api/tasks/5'), {'stake': 25});

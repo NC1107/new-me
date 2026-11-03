@@ -234,7 +234,7 @@ func TestProposalsAreEditedWithdrawnDeclinedAndLapse(t *testing.T) {
 	nick, nadia := h.pair()
 	id := h.proposeTask(nick, nick, "Book dentist", 30, "2026-11-05")
 
-	if got := n.of(together.EventTaskProposal, nadia.ID); len(got) != 1 || got[0].Body != `Nick staked 30 gems on "Book dentist" by Thu Nov 5` {
+	if got := n.of(together.EventTaskProposal, nadia.ID); len(got) != 1 || got[0].Body != `Nick will Book dentist for 30 gems by Thu Nov 5` {
 		t.Fatalf("pushes = %+v", n.msgs)
 	}
 	h.patch(taskPath(id, ""), nadia.Token, obj{"stake": 1}).expect(http.StatusForbidden)

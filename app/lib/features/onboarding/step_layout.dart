@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/speech_bubble.dart';
 
@@ -62,10 +63,13 @@ class MascotLine extends StatelessWidget {
 }
 
 class StepTitle extends StatelessWidget {
-  const StepTitle(this.title, {super.key, this.subtitle});
+  const StepTitle(this.title, {super.key, this.subtitle, this.more});
 
   final String title;
   final String? subtitle;
+
+  /// Longer detail behind the subtitle, opened by tapping it.
+  final InfoContent? more;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +81,14 @@ class StepTitle extends StatelessWidget {
           Semantics(header: true, child: Text(title, style: AppText.title)),
           if (subtitle != null) ...[
             const SizedBox(height: 6),
-            Text(subtitle!, style: AppText.body.copyWith(color: kInkSecondary)),
+            if (more == null)
+              Text(subtitle!, style: AppText.body.copyWith(color: kInkSecondary))
+            else
+              InfoNote(
+                subtitle!,
+                info: more!,
+                style: AppText.body.copyWith(color: kInkSecondary),
+              ),
           ],
         ],
       ),

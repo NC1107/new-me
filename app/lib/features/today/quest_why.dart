@@ -49,7 +49,7 @@ class QuestWhy {
   /// How the person's own goal compares with [recommended].
   final String? comparison;
 
-  /// "Source: Zourdos et al., J Strength Cond Res 2016".
+  /// "Source: Zourdos et al., J Strength Cond Res 2016", shown inside the expander.
   final String? citation;
 
   /// The precise working, kept out of the way behind a tap.
@@ -154,8 +154,8 @@ QuestWhy? questWhy(Quest quest, TargetsReport? report, Units units) {
   );
 }
 
-/// "Why this goal": the recommendation first, then the reason, how the goal compares, the
-/// source, and the working behind a tap.
+/// "Why this goal": the recommendation first, then the reason and how the goal compares, with
+/// the working and the source behind a tap.
 class QuestWhySection extends StatefulWidget {
   const QuestWhySection({super.key, required this.why});
 
@@ -173,6 +173,7 @@ class _QuestWhySectionState extends State<QuestWhySection> {
     final why = widget.why;
     final reduce = MediaQuery.disableAnimationsOf(context);
     final gap = const SizedBox(height: 8);
+    final toggleLabel = why.formula != null ? 'How this is worked out' : 'Where this comes from';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -187,16 +188,12 @@ class _QuestWhySectionState extends State<QuestWhySection> {
           gap,
           Text(why.comparison!, style: AppText.label.copyWith(color: kInkSecondary)),
         ],
-        if (why.citation != null) ...[
-          const SizedBox(height: 6),
-          Text(why.citation!, style: AppText.caption),
-        ],
-        if (why.formula != null) ...[
+        if (why.formula != null || why.citation != null) ...[
           const SizedBox(height: 4),
           Semantics(
             button: true,
             expanded: _open,
-            label: 'How this is worked out',
+            label: toggleLabel,
             excludeSemantics: true,
             onTap: () => setState(() => _open = !_open),
             child: Pressable(
@@ -207,10 +204,7 @@ class _QuestWhySectionState extends State<QuestWhySection> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'How this is worked out',
-                        style: AppText.label.copyWith(color: kInkSecondary),
-                      ),
+                      child: Text(toggleLabel, style: AppText.label.copyWith(color: kInkSecondary)),
                     ),
                     AnimatedRotation(
                       turns: _open ? 0.5 : 0,
@@ -228,9 +222,16 @@ class _QuestWhySectionState extends State<QuestWhySection> {
             child: _open
                 ? Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      why.formula!,
-                      style: AppText.caption.copyWith(color: kInkSecondary),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (why.formula != null)
+                          Text(why.formula!, style: AppText.caption.copyWith(color: kInkSecondary)),
+                        if (why.citation != null) ...[
+                          const SizedBox(height: 6),
+                          Text(why.citation!, style: AppText.caption),
+                        ],
+                      ],
                     ),
                   )
                 : const SizedBox(width: double.infinity),

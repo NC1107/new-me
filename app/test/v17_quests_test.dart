@@ -267,7 +267,8 @@ void main() {
           expect(find.text(line), findsOneWidget, reason: line);
         }
       }
-      expect(find.textContaining('NHS 5 A Day'), findsOneWidget);
+      expect(find.textContaining('NHS 5 A Day'), findsNothing);
+      expect(infoNoteWith('NHS 5 A Day'), findsOneWidget);
     });
 
     testWidgets('today so far shows servings and grams once Today is loaded', (tester) async {
@@ -521,7 +522,7 @@ void main() {
       expect(goals['sleep_regularity']!.value, 45);
       expect(goals['sleep_regularity']!.min, 15);
       expect(goals['sleep_regularity']!.label(45), 'within 45 min');
-      expect(goals['sleep_regularity']!.why, contains('does not name a window'));
+      expect(goals['sleep_regularity']!.why, contains('no research names a window'));
     });
 
     test('daily goal labels read in plain words', () {

@@ -269,7 +269,7 @@ void main() {
     await app.tapButton('Continue');
 
     expect(find.text('7,000 steps'), findsOneWidget);
-    expect(find.textContaining('Paluch'), findsOneWidget);
+    expect(infoNoteWith('Paluch'), findsOneWidget);
     expect(find.text('165 g'), findsOneWidget, reason: 'protein per kilogram for the goal');
     expect(find.text('2,350 kcal'), findsOneWidget);
     expect(find.text('3 meals'), findsOneWidget);

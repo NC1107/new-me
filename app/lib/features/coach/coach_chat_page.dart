@@ -9,6 +9,7 @@ import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/pressable.dart';
 import '../me/coach_knows_page.dart';
@@ -24,10 +25,16 @@ const kCoachStarters = [
   'Why did I miss my sleep goal?',
 ];
 
-const _kDisclaimer =
-    'Answers come only from your own numbers and the research behind your targets. '
-    'The coach can suggest changes to your targets and remember what you tell it, '
-    'and nothing changes until you tap Apply. General guidance, not medical advice.';
+const _kDisclaimer = 'Nothing changes until you tap Apply. General guidance, not medical advice.';
+
+const _kDisclaimerMore = InfoContent(
+  title: 'How the coach works',
+  paragraphs: [
+    'Answers come only from your own numbers and the research behind your targets.',
+    'The coach can suggest changes to your targets and remember what you tell it, and nothing changes until you tap Apply.',
+    'General guidance, not medical advice.',
+  ],
+);
 
 /// A chat with the coach: plain text in and out, the thread kept on the phone for the day.
 class CoachChatPage extends ConsumerStatefulWidget {
@@ -191,7 +198,7 @@ class _Disclaimer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.only(bottom: 12),
-    child: Text(_kDisclaimer, style: AppText.caption),
+    child: InfoNote(_kDisclaimer, info: _kDisclaimerMore),
   );
 }
 
@@ -216,7 +223,7 @@ class _Intro extends StatelessWidget {
         const SizedBox(height: 16),
         const Text('Ask about your days', style: AppText.headline),
         const SizedBox(height: 6),
-        const Text(_kDisclaimer, style: AppText.caption),
+        const InfoNote(_kDisclaimer, info: _kDisclaimerMore),
         const SizedBox(height: 20),
         for (final q in kCoachStarters) ...[
           _Starter(text: q, onTap: () => onPick(q)),

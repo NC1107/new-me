@@ -19,6 +19,7 @@ import '../../util/errors.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/quest_copy.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../log/log_kind.dart';
@@ -273,7 +274,10 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       children: [
         Text(split, style: AppText.label.copyWith(color: kInkSecondary)),
         const SizedBox(height: 4),
-        const Text(kProduceMealsNote, style: AppText.caption),
+        const InfoNote(
+          'Meals count by weight, 80 g to a serving.',
+          info: InfoContent(title: 'How meals count', paragraphs: [kProduceMealsNote]),
+        ),
         const SizedBox(height: 8),
         list,
       ],

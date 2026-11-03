@@ -16,6 +16,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/choice_card.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../log/log_chip.dart';
@@ -274,12 +275,17 @@ class _DailyRepsPageState extends ConsumerState<DailyRepsPage> {
       children: [
         AppCard(
           color: kSunken,
-          child: Text(
-            'We do not pick a starting number for you. No published research gives one that is '
-            'safe for everyone, and a guess that is too high is how people quit. Choose a number '
-            'you can do with good form and plenty left, a low one is fine. Test your max in the '
-            'first few days and the target is sized from it.',
+          child: InfoNote(
+            'We do not pick a starting number for you. Choose one you can do with good form and '
+            'plenty left, a low one is fine.',
             style: AppText.body.copyWith(fontSize: 14, color: kInkSecondary),
+            info: const InfoContent(
+              title: 'Why we do not pick a number',
+              paragraphs: [
+                'No published research gives a starting number that is safe for everyone, and a guess that is too high is how people quit.',
+                'Test your max in the first few days and the target is sized from it.',
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -415,17 +421,18 @@ class _PreviewCard extends StatelessWidget {
           style: AppText.body.copyWith(fontSize: 14, color: kInkSecondary),
         ),
         const SizedBox(height: 10),
-        Text(
-          'A derivation from reps-in-reserve and progression guidance, not a published constant. '
+        InfoNote(
           'After 5 of 7 days with every set done, each set grows by 5%.',
           style: AppText.caption.copyWith(color: kInkSecondary),
-        ),
-        const SizedBox(height: 8),
-        for (final s in preview.sources)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(s.text, style: AppText.caption.copyWith(color: kInkMuted)),
+          info: InfoContent(
+            title: 'How the target is worked out',
+            paragraphs: const [
+              'A derivation from reps-in-reserve and progression guidance, not a published constant.',
+              'After 5 of 7 days with every set done, each set grows by 5%.',
+            ],
+            source: preview.sources.isEmpty ? null : preview.sources.map((s) => s.text).join('\n'),
           ),
+        ),
       ],
     ),
   );

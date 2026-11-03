@@ -251,7 +251,7 @@ void main() {
       expect(find.text('Recommended for you'), findsOneWidget);
       expect(find.text('7,000 steps'), findsOneWidget);
       expect(find.textContaining('benefit of walking starts to level off'), findsOneWidget);
-      expect(find.text('Source: Paluch 2022, Ding 2025'), findsOneWidget);
+      expect(infoNoteWith('Paluch 2022, Ding 2025'), findsOneWidget);
       expect(find.text('Other published figures'), findsOneWidget);
       expect(find.text('10,000 steps'), findsOneWidget);
       // No made-up tiers.

@@ -166,6 +166,9 @@ void main() {
       expect(find.textContaining('Nothing to log here'), findsOneWidget);
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);
       expect(find.text('Recommended: 7,000 steps a day'), findsOneWidget);
+      expect(find.textContaining('Ding D et al.'), findsNothing);
+      await tester.tap(find.text('How this is worked out'));
+      await tester.pumpAndSettle();
       expect(find.text('Source: Ding D et al., Lancet Public Health 2025;10:e668'), findsOneWidget);
       expect(find.text('Log water'), findsNothing);
     });
@@ -179,6 +182,9 @@ void main() {
       // A day frozen before points followed effort sends no reason.
       expect(find.byKey(const Key('quest-points-why')), findsNothing);
       expect(find.textContaining('An audiobook minute counts as half'), findsOneWidget);
+      expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsNothing);
+      await tester.tap(find.text('How this is worked out'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsOneWidget);
       // The fixture's pages goal is the old 15.
       expect(find.text('Your goal is 15 pages, below the recommendation.'), findsOneWidget);

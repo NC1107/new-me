@@ -19,6 +19,7 @@ import '../me/targets_logic.dart';
 import '../onboarding/step_layout.dart';
 import 'about_you.dart';
 import '../../widgets/height_input.dart';
+import '../../widgets/info_note.dart';
 
 /// One "About you" screen. [onNext] moves the host (onboarding or the standalone page) on, and
 /// is called after a save, a skip or the final choice.
@@ -39,9 +40,14 @@ class AboutYouStep extends ConsumerWidget {
         onNext: onNext,
         mascot: 'Only for the maths.',
         title: 'What year were you born?',
-        why:
-            'Used by the Mifflin-St Jeor equation for your resting energy, and for the step and '
-            'fiber guides for your age. It is never shown to anyone else.',
+        why: 'Sets your step and fiber guides. Never shown to anyone else.',
+        more: const InfoContent(
+          title: 'How your birth year is used',
+          paragraphs: [
+            'Your age goes into the Mifflin-St Jeor equation for your resting energy, and into the step and fiber guides for your age.',
+            'It is never shown to anyone else.',
+          ],
+        ),
         hint: 'For example 1990',
         semanticLabel: 'Birth year',
         digitsOnly: true,
@@ -54,9 +60,14 @@ class AboutYouStep extends ConsumerWidget {
         onNext: onNext,
         mascot: 'Just a number, no judging.',
         title: 'What do you weigh?',
-        why:
-            'Used by the Mifflin-St Jeor equation for your resting energy and to set protein for '
-            'your weight. A new weigh-in later keeps it current.',
+        why: 'Sets your protein. A new weigh-in later keeps it current.',
+        more: const InfoContent(
+          title: 'How your weight is used',
+          paragraphs: [
+            'Your weight goes into the Mifflin-St Jeor equation for your resting energy, and sets protein for your weight.',
+            'A new weigh-in later keeps both current.',
+          ],
+        ),
         hint: units.isImperial ? 'For example 160' : 'For example 72.5',
         semanticLabel: units.isImperial ? 'Weight in pounds' : 'Weight in kilograms',
         unit: units.weightUnit,
@@ -112,6 +123,7 @@ class _NumberQuestion extends ConsumerStatefulWidget {
     required this.mascot,
     required this.title,
     required this.why,
+    required this.more,
     required this.hint,
     required this.semanticLabel,
     required this.maxLength,
@@ -124,6 +136,7 @@ class _NumberQuestion extends ConsumerStatefulWidget {
   final String mascot;
   final String title;
   final String why;
+  final InfoContent more;
   final String hint;
   final String semanticLabel;
   final int maxLength;
@@ -188,7 +201,7 @@ class _NumberQuestionState extends ConsumerState<_NumberQuestion> {
       ),
       children: [
         MascotLine(line: widget.mascot, state: MascotState.thinking),
-        StepTitle(widget.title, subtitle: widget.why),
+        StepTitle(widget.title, subtitle: widget.why, more: widget.more),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -248,9 +261,13 @@ class _HeightQuestion extends ConsumerWidget {
         const MascotLine(line: 'Your tallest self, please.', state: MascotState.thinking),
         const StepTitle(
           'How tall are you?',
-          subtitle:
-              'Used by the Mifflin-St Jeor equation for your resting energy, and to keep protein '
-              'in range for your height.',
+          subtitle: 'Keeps your protein in range for your height.',
+          more: InfoContent(
+            title: 'How your height is used',
+            paragraphs: [
+              'Your height goes into the Mifflin-St Jeor equation for your resting energy, and keeps protein in range for your height.',
+            ],
+          ),
         ),
         HeightInput(
           units: s.units,
@@ -335,8 +352,14 @@ class _AboutYouBodyStepState extends ConsumerState<AboutYouBodyStep> {
         const StepTitle(
           'About you',
           subtitle:
-              'New Me works out your calories, protein and more from these with published '
-              'formulas. Never shown to anyone else.',
+              'New Me works out your calories and protein from these. Never shown to anyone else.',
+          more: InfoContent(
+            title: 'How these are used',
+            paragraphs: [
+              'New Me works out your calories, protein and more from these with published formulas, such as Mifflin-St Jeor for resting energy.',
+              'They are never shown to anyone else.',
+            ],
+          ),
         ),
         const FieldLabel('Year you were born'),
         AppTextField(
@@ -411,9 +434,13 @@ class _SexQuestion extends ConsumerWidget {
         const MascotLine(line: 'Two choices, as the tables go.', state: MascotState.thinking),
         const StepTitle(
           'What is your sex?',
-          subtitle:
-              'Used by the Mifflin-St Jeor equation for your resting energy, and by the fiber and '
-              'calorie floor tables, which differ by sex.',
+          subtitle: 'Some of the tables New Me uses differ by sex.',
+          more: InfoContent(
+            title: 'How this is used',
+            paragraphs: [
+              'It goes into the Mifflin-St Jeor equation for your resting energy, and into the fiber and calorie floor tables, which differ by sex.',
+            ],
+          ),
         ),
         for (final (i, (value, label, icon)) in const [
           ('male', 'Male', Icons.male_rounded),

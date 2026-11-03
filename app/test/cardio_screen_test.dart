@@ -89,7 +89,14 @@ void main() {
     expect(find.textContaining('Among men aged 40-49'), findsOneWidget);
     expect(find.textContaining('35.3 ml/kg/min'), findsOneWidget);
     expect(find.textContaining('75 minutes of exercise'), findsOneWidget);
+    expect(find.textContaining('150 to 300 minutes'), findsNothing);
+    expect(find.textContaining('Kaminsky'), findsNothing);
+    await tester.tap(infoNoteWith('150 to 300 minutes'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('150 to 300 minutes'), findsOneWidget);
+    expect(find.text('WHO guidelines, Br J Sports Med 2020.'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
     expect(find.textContaining('13 to 16 percent'), findsOneWidget);
     expect(
       find.bySemanticsLabel(RegExp(r'VO2 max, last 3 months\. Latest 41\.9 ml/kg/min on Oct 26')),

@@ -6,6 +6,7 @@ import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../board/person_card.dart' show kSuccessText;
 import '../progress/progress_logic.dart';
@@ -188,8 +189,17 @@ class ActivitySummaryCard extends StatelessWidget {
               ],
             ),
             const Padding(
-              padding: EdgeInsets.only(top: 2, left: 52),
-              child: Text('WHO guideline, last 7 days', style: AppText.caption),
+              padding: EdgeInsets.only(left: 52),
+              child: InfoNote(
+                'Last 7 days',
+                info: InfoContent(
+                  title: 'Where the activity target comes from',
+                  paragraphs: [
+                    'The target follows the WHO guideline of 150 to 300 minutes of moderate activity a week, or 75 to 150 minutes of vigorous activity.',
+                  ],
+                  source: 'WHO guidelines, Br J Sports Med 2020.',
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             _Measure(

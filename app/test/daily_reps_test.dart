@@ -134,7 +134,7 @@ void main() {
     expect(find.text('3 sets of 15 squats'), findsOneWidget);
     expect(find.textContaining('45 a day'), findsOneWidget);
     expect(find.textContaining('14 to 16 a set'), findsOneWidget);
-    expect(find.textContaining('Zourdos'), findsOneWidget);
+    expect(infoNoteWith('Zourdos'), findsOneWidget);
     expect(find.text('Test now'), findsOneWidget);
     final preview = adapter.to('GET /api/daily-reps/preview').last;
     expect(preview.queryParameters, {'exercise': 'air_squat', 'max': 20});

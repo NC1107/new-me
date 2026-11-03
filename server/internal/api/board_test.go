@@ -134,3 +134,17 @@ func TestBoardMarksTheFrozenDay(t *testing.T) {
 		t.Fatalf("frozen marks = %v; the missed Wednesday is the frozen day", marks)
 	}
 }
+
+func TestBoardScoresTodayEvenWhenNothingStoredItYet(t *testing.T) {
+	h := newHarness(t)
+	_, nadia := h.pair()
+	// A write that skipped scoring, as at the start of a day before anyone opened Today.
+	h.sql(`INSERT INTO activity_logs (user_id, local_date, type, quantity, client_op_id)
+		SELECT id, '2026-11-02', 'pushups', 15, gen_random_uuid() FROM users WHERE name = 'Nadia'`)
+
+	got := h.get("/api/board", nadia.Token).expect(http.StatusOK)
+	if got.num("users.0.today.points") != 38 || got.num("users.0.today.goalPercent") != 40 ||
+		got.num("users.0.last7.6.percent") != 28 {
+		t.Fatalf("Nadia's unscored day = %s", got.Body)
+	}
+}

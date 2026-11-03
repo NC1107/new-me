@@ -56,6 +56,29 @@ void main() {
   });
 
   group('ChunkyButton', () {
+    testWidgets('a disabled button is an outlined white face with a label above 3:1', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_host(const ChunkyButton(label: 'Save', onPressed: null)));
+      final text = tester.widget<Text>(find.text('SAVE'));
+      final label = text.style!.color!;
+      double lum(Color c) => c.computeLuminance();
+      double ratio(Color a, Color b) {
+        final hi = lum(a) > lum(b) ? a : b;
+        final lo = identical(hi, a) ? b : a;
+        return (lum(hi) + 0.05) / (lum(lo) + 0.05);
+      }
+
+      expect(ratio(label, kSurface), greaterThan(3));
+      expect(ratio(label, kCanvas), greaterThan(3));
+      final face = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.color == kSurface && d.border != null);
+      expect(face, isNotEmpty);
+    });
+
     testWidgets('fires on tap, shows the label in capitals and is 56 tall with its lip', (
       tester,
     ) async {

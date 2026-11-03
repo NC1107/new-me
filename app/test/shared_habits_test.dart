@@ -173,7 +173,7 @@ void main() {
         surfaceHeight: 2400,
       );
       await app.pump(const BoardScreen());
-      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Chores'), findsOneWidget);
       expect(find.text('Do the laundry'), findsOneWidget);
       expect(find.text('Overdue by 2 days'), findsOneWidget);
       expect(find.text('Every week · 25 gems'), findsNWidgets(2));
@@ -377,7 +377,7 @@ void main() {
         surfaceHeight: 2400,
       );
       await app.pump(const BoardScreen());
-      expect(find.textContaining('Agree'), findsNothing);
+      expect(find.textContaining('Agree to'), findsNothing);
     });
 
     testWidgets('a new chore proposes the picked worth', (tester) async {
@@ -446,12 +446,12 @@ void main() {
   });
 
   group('Us order', () {
-    testWidgets('Home sits above the recap links, so a first chore is on the first screen', (
+    testWidgets('Chores sit above the recap links, so a first chore is on the first screen', (
       tester,
     ) async {
       final app = TestApp(tester, _server([]), surfaceHeight: 2400);
       await app.pump(const BoardScreen());
-      final home = tester.getTopLeft(find.text('Home')).dy;
+      final home = tester.getTopLeft(find.text('Chores')).dy;
       final recap = tester.getTopLeft(find.text('Weekly recap')).dy;
       expect(home, lessThan(recap));
       expect(find.text('Add your first chore'), findsOneWidget);

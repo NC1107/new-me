@@ -288,7 +288,7 @@ void main() {
     test('the next freeze reads as progress, or why it waits', () {
       expect(
         freezeProgressLabel(const Freezes(held: 1, earnedTowardNext: 4)),
-        '4 of 7 counted days to your next freeze, 3 to go',
+        '3 more days to your next freeze',
       );
       expect(
         freezeProgressLabel(const Freezes(held: 2, earnedTowardNext: 6)),
@@ -333,7 +333,7 @@ void main() {
       expect(repairCopy(repair, 36).title, 'Repair yesterday');
       expect(
         repairCopy(repair, 36).body,
-        startsWith('You missed Monday. Earn every point today before'),
+        startsWith('You missed Monday. Earn every gem today before'),
       );
       expect(repairCopy(repair, 100).title, 'Yesterday is repaired');
       expect(weekdayLong('2026-10-26'), 'Monday');
@@ -577,14 +577,14 @@ void main() {
           const ProteinHitRate(targetG: 100, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
           Units.metric,
         ),
-        'Target 100 g. At 1.6 g per kg and 82.4\u00a0kg the default would be 130 g.',
+        'Goal 100 g. At 1.6 g per kg and 82.4\u00a0kg the default would be 130 g.',
       );
       expect(
         proteinBasis(
           const ProteinHitRate(targetG: 130, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
           Units.metric,
         ),
-        'Target 130 g a day.',
+        'Goal 130 g a day.',
       );
       expect(proteinBasis(const ProteinHitRate(), Units.metric), isNull);
     });

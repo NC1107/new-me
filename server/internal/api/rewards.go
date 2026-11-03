@@ -101,18 +101,20 @@ func (v rewardView) json(r db.Reward) rewardJSON {
 }
 
 type balanceJSON struct {
-	UserID  int64  `json:"userId"`
-	Name    string `json:"name"`
-	Earned  int    `json:"earned"`
-	Paid    int    `json:"paid"`
-	Balance int    `json:"balance"`
+	UserID int64  `json:"userId"`
+	Name   string `json:"name"`
+	Earned int    `json:"earned"`
+	Paid   int    `json:"paid"`
+	// Tasks is the net of won and lost task stakes, already inside Balance.
+	Tasks   int `json:"tasks"`
+	Balance int `json:"balance"`
 }
 
 // balances is each person's own gems, the figures treats are paid from.
 func (v rewardView) balances() []balanceJSON {
 	out := make([]balanceJSON, len(v.people))
 	for i, p := range v.people {
-		out[i] = balanceJSON{UserID: p.UserID, Name: p.Name, Earned: p.Earned, Paid: p.Paid, Balance: p.Balance()}
+		out[i] = balanceJSON{UserID: p.UserID, Name: p.Name, Earned: p.Earned, Paid: p.Paid, Tasks: p.Tasks, Balance: p.Balance()}
 	}
 	return out
 }
@@ -283,7 +285,7 @@ func rewardStateErr(msg string) *httpError {
 func (s *Server) notifyRewardProposal(to, from db.User, r db.Reward) {
 	title, body := "Reward to approve", fmt.Sprintf("%s wants %s for %d gems", from.Name, r.Name, r.Price)
 	if r.OwnerID != nil {
-		title, body = "Treat to approve", fmt.Sprintf("%s wants %s as a treat for %d gems", from.Name, r.Name, r.Price)
+		title, body = "Reward to approve", fmt.Sprintf("%s wants a solo reward: %s for %d gems", from.Name, r.Name, r.Price)
 	}
 	s.together.Notify(to, push.Message{Kind: together.EventRewardProposal, Title: title, Body: body})
 }
@@ -346,7 +348,7 @@ func (s *Server) handleCreateReward(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			if n >= gems.MaxTreatsPerPerson {
-				return newErr(http.StatusConflict, codeTreatsFull, "you have too many treats")
+				return newErr(http.StatusConflict, codeTreatsFull, "you have too many solo rewards")
 			}
 		} else {
 			n, err := db.CountOpenRewards(ctx, tx)
@@ -444,7 +446,7 @@ func (s *Server) handlePatchReward(w http.ResponseWriter, r *http.Request) {
 	s.changeReward(w, r, func(_ pgx.Tx, rw db.Reward, partner *db.User) (db.Reward, bool, *httpError) {
 		if req.Name != nil {
 			if rw.OwnerID != nil && *rw.OwnerID != c.user.ID {
-				return rw, false, newErr(http.StatusForbidden, codeForbidden, "only the owner renames a treat")
+				return rw, false, newErr(http.StatusForbidden, codeForbidden, "only its owner renames a solo reward")
 			}
 			name, herr := cleanName(*req.Name)
 			if herr != nil {
@@ -569,7 +571,7 @@ func (s *Server) handleCancelReward(w http.ResponseWriter, r *http.Request) {
 	c := callerFrom(r)
 	s.changeReward(w, r, func(_ pgx.Tx, rw db.Reward, _ *db.User) (db.Reward, bool, *httpError) {
 		if rw.OwnerID != nil && *rw.OwnerID != c.user.ID {
-			return rw, false, newErr(http.StatusForbidden, codeForbidden, "only the owner removes a treat")
+			return rw, false, newErr(http.StatusForbidden, codeForbidden, "only its owner removes a solo reward")
 		}
 		if rw.Status != db.RewardApproved {
 			return rw, false, rewardStateErr("only an approved reward can be cancelled")
@@ -675,13 +677,13 @@ func (s *Server) handleRedeemTreat(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, errNoReward)
 		return
 	case errors.Is(err, db.ErrNotTreatOwner):
-		fail(w, r, newErr(http.StatusForbidden, codeForbidden, "that treat belongs to the other person"))
+		fail(w, r, newErr(http.StatusForbidden, codeForbidden, "that reward belongs to the other person"))
 		return
 	case errors.Is(err, db.ErrInsufficientGems):
-		fail(w, r, newErr(http.StatusConflict, codeInsufficient, "your own gems do not cover that treat yet"))
+		fail(w, r, newErr(http.StatusConflict, codeInsufficient, "your own gems do not cover that reward yet"))
 		return
 	case errors.Is(err, db.ErrRewardState):
-		fail(w, r, rewardStateErr("only an approved treat can be redeemed"))
+		fail(w, r, rewardStateErr("only an approved reward can be redeemed"))
 		return
 	case err != nil:
 		fail(w, r, err)
@@ -689,7 +691,7 @@ func (s *Server) handleRedeemTreat(w http.ResponseWriter, r *http.Request) {
 	}
 	if created {
 		if partner, err := s.partnerOf(ctx, s.db.Pool, c.user.ID); err == nil && partner != nil {
-			s.together.Notify(*partner, push.Message{Kind: together.EventTreat, Title: "Treat redeemed",
+			s.together.Notify(*partner, push.Message{Kind: together.EventTreat, Title: "Reward redeemed",
 				Body: fmt.Sprintf("%s redeemed %s", c.user.Name, red.Name)})
 		}
 	}

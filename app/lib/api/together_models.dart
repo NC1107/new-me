@@ -244,6 +244,7 @@ class GemBalance {
     required this.earned,
     required this.paid,
     required this.balance,
+    this.tasks = 0,
   });
 
   static GemBalance? tryParse(Object? v) {
@@ -255,6 +256,7 @@ class GemBalance {
       earned: _int(j['earned']),
       paid: _int(j['paid']),
       balance: _int(j['balance']),
+      tasks: _int(j['tasks']),
     );
   }
 
@@ -262,7 +264,12 @@ class GemBalance {
   final String name;
   final int earned;
   final int paid;
+
+  /// Earned plus tasks minus paid, never below zero.
   final int balance;
+
+  /// Gems won and lost on tasks, already inside [balance].
+  final int tasks;
 }
 
 /// One treat bought with its owner's gems, at the name and price it had then.

@@ -14,6 +14,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_icon_button.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/skeletons.dart';
 import '../../api/daily_reps_models.dart';
 import '../../util/reps_exercises.dart';
@@ -73,6 +74,7 @@ class PlanGoal {
     required this.label,
     this.min = 1,
     this.extra = const [],
+    this.more,
   });
 
   /// A quest key, or `calories` for the food target.
@@ -90,6 +92,9 @@ class PlanGoal {
   /// More lines under [why], such as what one serving of fruit and vegetables looks like.
   final List<String> extra;
 
+  /// The citation or longer reason behind [why], opened from an info icon.
+  final InfoContent? more;
+
   PlanGoal withValue(int v) => PlanGoal(
     key: key,
     name: name,
@@ -99,6 +104,7 @@ class PlanGoal {
     label: label,
     min: min,
     extra: extra,
+    more: more,
   );
 }
 
@@ -117,12 +123,17 @@ List<PlanGoal> planGoals(
     final target = spec?.targetKey == null ? null : report?.target(spec!.targetKey!);
     final recommended = target?.value;
     final why = switch (target) {
-      final t? when recommended != null && t.why.isNotEmpty =>
-        t.cite.isEmpty ? t.why : '${t.why} (${t.cite})',
+      final t? when recommended != null && t.why.isNotEmpty => t.why,
       _ when spec?.noResearch != null => spec!.noResearch!,
       _ when spec?.targetKey != null => 'A starting point. Add what is missing in Me > Targets.',
       _ => 'A starting point. Change it any time in Me.',
     };
+    final cite = recommended != null && target != null ? target.cite : '';
+    final more = cite.isNotEmpty
+        ? InfoContent(title: 'Where this comes from', paragraphs: const [], source: cite)
+        : recommended == null
+        ? spec?.noResearchMore
+        : null;
     final examples = target?.details['servingExamples'];
     return PlanGoal(
       key: key,
@@ -131,6 +142,7 @@ List<PlanGoal> planGoals(
       step: step,
       min: min,
       why: why,
+      more: more,
       label: (v) => spec?.describe(v, units) ?? '$v',
       extra: [
         if (recommended != null && examples is List && examples.isNotEmpty)
@@ -163,7 +175,13 @@ List<PlanGoal> planGoals(
         value: _value(report, 'calories')!,
         step: 50,
         min: 1000,
-        why: 'Mifflin-St Jeor resting energy, your activity and your weight goal.',
+        why: 'From your resting energy, your activity and your weight goal.',
+        more: const InfoContent(
+          title: 'How calories are worked out',
+          paragraphs: [
+            'Resting energy comes from the Mifflin-St Jeor equation, then your activity and your weight goal move it.',
+          ],
+        ),
         label: (v) => '${v.formatted} kcal',
       ),
   ];
@@ -264,7 +282,14 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
         const MascotLine(line: 'Worked out from your answers.', state: MascotState.cheer),
         const StepTitle(
           'Your daily goals',
-          subtitle: 'From published guidelines where one applies. Change any of them here or later in Me.',
+          subtitle: 'Change any of them here or later in Me.',
+          more: InfoContent(
+            title: 'Where the goals come from',
+            paragraphs: [
+              'From published guidelines where one applies. Where none does, the number is your call.',
+              'Change any of them here or later in Me.',
+            ],
+          ),
         ),
         if (goals == null)
           const SkeletonBlock(height: 200, radius: 16)
@@ -284,15 +309,13 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
               color: kSunken,
               child: Text(
                 'Calories are worked out once Apple Health has about five days of steps, from '
-                'your resting energy and how active you are. They appear in Me > Targets.',
+                'your resting energy and how active you are. They appear in Me > Goals.',
                 style: AppText.caption.copyWith(color: kInkSecondary),
               ),
             ),
           ],
         ],
         if (s.error != null) StepError(s.error!),
-        const SizedBox(height: 12),
-        const Text('General guidance, not medical advice.', style: AppText.caption),
       ],
     );
   }
@@ -320,7 +343,14 @@ class _GoalRow extends StatelessWidget {
               Text(goal.name, style: AppText.caption.copyWith(color: kInkMuted)),
               Text(goal.label(goal.value), style: AppText.tabular(AppText.headline)),
               const SizedBox(height: 2),
-              Text(goal.why, style: AppText.caption.copyWith(color: kInkSecondary)),
+              if (goal.more == null)
+                Text(goal.why, style: AppText.caption.copyWith(color: kInkSecondary))
+              else
+                InfoNote(
+                  goal.why,
+                  info: goal.more!,
+                  style: AppText.caption.copyWith(color: kInkSecondary),
+                ),
               for (final line in goal.extra)
                 Text(line, style: AppText.caption.copyWith(color: kInkSecondary)),
               if (onChoose != null) ...[

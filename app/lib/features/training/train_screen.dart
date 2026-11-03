@@ -15,14 +15,14 @@ import '../../widgets/app_widgets.dart';
 import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../../state/today.dart';
 import '../me/settings_row.dart';
-import 'calisthenics_page.dart';
 import 'exercises_page.dart';
-import 'mobility_page.dart';
-import 'yoga_page.dart';
+import 'start_sheet.dart';
+import 'session_page.dart';
 import 'training_card.dart';
 import 'training_history_page.dart';
 import 'training_progress_page.dart';
@@ -32,9 +32,8 @@ import '../../widgets/units_scope.dart';
 
 /// The sources every plan is checked against (docs/design-v9.md).
 const kTrainingSources =
-    'Plans are checked against the WHO 2020 activity guidelines (2 or more strength days), weekly '
-    'sets per muscle from Schoenfeld, Ogborn and Krieger 2017, and reps in reserve from Zourdos '
-    'et al. 2016. Day-to-day progression follows the ACSM 2009 position stand, without AI.';
+    'Based on WHO 2020, Schoenfeld 2017, Zourdos 2016 and ACSM 2009. Progression is rule based, '
+    'not AI.';
 
 /// The Train tab: today's session, the setup plans are built for, the active plan, changes to it,
 /// and the exercise log and weekly sets.
@@ -111,6 +110,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
     final setup = ref.watch(trainingSetupProvider);
     final catalog = ref.watch(exercisesProvider).value?.data;
     final localToday = ref.watch(todayProvider.select((v) => v.value?.data.localToday));
+    final session = ref.watch(trainingTodayProvider.select((v) => v.value?.data.session));
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
@@ -127,27 +127,25 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             Semantics(header: true, child: const Text('Train', style: AppText.display)),
             const SizedBox(height: 16),
             if (localToday != null) TrainingSlot(localToday: localToday, onTrainTab: true),
-            const _RoutineCard(
-              title: 'Yoga',
-              blurb: 'Guided flows of 10, 20 or 30 minutes and a pose library. Plan your week.',
-              icon: Icons.spa_rounded,
-              colorId: 'violet',
-              page: YogaPage(),
+            ChunkyButton(
+              label: 'Start a workout',
+              icon: Icons.play_arrow_rounded,
+              onPressed: () => session != null && !session.completed
+                  ? pushPage(context, const SessionPage())
+                  : showStartSheet(context, session: session),
             ),
-            const _RoutineCard(
-              title: 'Calisthenics',
-              blurb: 'No equipment, beginner to intense. Reps at your own pace.',
-              icon: Icons.sports_gymnastics_rounded,
-              colorId: 'amber',
-              page: CalisthenicsPage(),
-            ),
-            const _RoutineCard(
-              title: 'Mobility',
-              blurb: '10 guided stretches, about 11 minutes. Counts toward yoga.',
-              icon: Icons.self_improvement_rounded,
-              colorId: 'rose',
-              page: MobilityPage(),
-            ),
+            if (session != null && !session.completed)
+              TextButton(
+                onPressed: () => showStartSheet(context, session: session),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  foregroundColor: kInkSecondary,
+                ),
+                child: const Text('Something else', style: TextStyle(fontWeight: FontWeight.w700)),
+              )
+            else
+              const SizedBox(height: 4),
+            const SizedBox(height: 16),
             switch (setup) {
               AsyncValue(:final value?) => _body(value, catalog),
               AsyncValue(:final error?) => ErrorBlock(
@@ -177,12 +175,11 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
       children: [
         if (profile == null) ...[
           Text(
-            'Tell New Me what you have and how much time you can give, and Claude designs a plan '
-            'inside published limits. Progression from session to session follows fixed rules.',
+            'Tell New Me your equipment and time, and get a strength plan made for you.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
           const SizedBox(height: 16),
-          ChunkyButton(label: 'Set up training', onPressed: () => _editProfile(null)),
+          ChunkyButton.secondary(label: 'Set up training', onPressed: () => _editProfile(null)),
         ] else ...[
           _ProfileSummary(profile: profile, onEdit: () => _editProfile(profile)),
           const SizedBox(height: 20),
@@ -216,7 +213,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
         ],
         if (profile != null && plan != null) ...[
           const SizedBox(height: 16),
-          ChunkyButton(
+          ChunkyButton.secondary(
             label: _designing ? 'Updating your plan' : 'Change plan',
             icon: Icons.tune_rounded,
             busy: _designing,
@@ -240,128 +237,31 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
               icon: Icons.list_alt_rounded,
               palette: accentById('rose'),
               title: 'Exercises',
-              subtitle: 'Library and your sets',
+              subtitle: 'Library and your own',
               onTap: () => pushPage(context, const ExercisesPage()),
             ),
             SettingsRow(
               icon: Icons.bar_chart_rounded,
               palette: accentById('rose'),
               title: 'Weekly sets',
-              subtitle: 'Sets per muscle against the target range',
+              subtitle: 'Sets per muscle each week',
               onTap: () => pushPage(context, const TrainingProgressPage()),
             ),
             SettingsRow(
               icon: Icons.calendar_month_rounded,
               palette: accentById('rose'),
               title: 'History',
-              subtitle: 'Sessions and sets by day',
+              subtitle: 'Past sessions',
               onTap: () => pushPage(context, const TrainingHistoryPage()),
             ),
           ],
         ),
         const SizedBox(height: 20),
-        const _SourcesNote(),
-      ],
-    );
-  }
-}
-
-/// One line that the plans follow published limits, with the sources behind an info button.
-class _SourcesNote extends StatelessWidget {
-  const _SourcesNote();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Plans follow published training guidelines.',
-            style: AppText.caption.copyWith(color: kInkMuted),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.info_outline_rounded, size: 20),
-          color: kInkMuted,
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          tooltip: 'Sources for plans and progression',
-          onPressed: () => showAppSheet<void>(context, builder: (_) => const _SourcesSheet()),
+        const InfoNote(
+          'Plans follow published training guidelines.',
+          info: InfoContent(title: 'Sources', paragraphs: [kTrainingSources]),
         ),
       ],
-    );
-  }
-}
-
-class _SourcesSheet extends StatelessWidget {
-  const _SourcesSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(header: true, child: const Text('Sources', style: AppText.title)),
-          const SizedBox(height: 12),
-          const Text(kTrainingSources, style: AppText.body),
-        ],
-      ),
-    );
-  }
-}
-
-/// A way into a guided routine, which needs no training plan.
-class _RoutineCard extends StatelessWidget {
-  const _RoutineCard({
-    required this.title,
-    required this.blurb,
-    required this.icon,
-    required this.colorId,
-    required this.page,
-  });
-
-  final String title;
-  final String blurb;
-  final IconData icon;
-  final String colorId;
-  final Widget page;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = accentById(colorId);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: AppCard(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          pushPage(context, page);
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.tint,
-                borderRadius: BorderRadius.circular(kRadiusField),
-              ),
-              child: Icon(icon, color: accent.lip, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppText.headline),
-                  Text(blurb, style: AppText.caption.copyWith(color: kInkSecondary)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -427,9 +327,9 @@ class _PlanView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FieldLabel('Plan · ${plan.weeks} weeks, until $ends'),
+        FieldLabel('${plan.weeks} week plan, to $ends'),
         if (plan.notes.isNotEmpty) ...[
-          Text(plan.notes, style: AppText.body.copyWith(color: kInkSecondary)),
+          Text(firstSentence(plan.notes), style: AppText.body.copyWith(color: kInkSecondary)),
           const SizedBox(height: 12),
         ],
         for (final day in days) ...[

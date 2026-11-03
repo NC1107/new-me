@@ -5,7 +5,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 
-/// The row on Insights that opens the coach chat.
+/// The coach's one front door, at the top of Insights.
 class CoachEntryCard extends StatelessWidget {
   const CoachEntryCard({super.key, required this.onTap});
 
@@ -16,7 +16,7 @@ class CoachEntryCard extends StatelessWidget {
     final palette = accentById('violet');
     return AppCard(
       onTap: onTap,
-      semanticLabel: 'Coach, ask about your days and what to improve',
+      semanticLabel: 'Ask your coach',
       padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
       child: ExcludeSemantics(
         child: ConstrainedBox(
@@ -34,8 +34,10 @@ class CoachEntryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Coach', style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
-                    const Text('Ask about your days and what to improve', style: AppText.caption),
+                    Text(
+                      'Ask your coach',
+                      style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+                    ),
                   ],
                 ),
               ),

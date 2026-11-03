@@ -31,8 +31,8 @@ func TestATreatIsPricedByBothAndStaysOffTheSharedWishlist(t *testing.T) {
 	nick, nadia := h.pair()
 
 	id := h.proposeTreat(nick, "Monster energy drink", 1000)
-	if got := n.of(together.EventRewardProposal, nadia.ID); len(got) != 1 || got[0].Title != "Treat to approve" ||
-		got[0].Body != "Nick wants Monster energy drink as a treat for 1000 gems" {
+	if got := n.of(together.EventRewardProposal, nadia.ID); len(got) != 1 || got[0].Title != "Reward to approve" ||
+		got[0].Body != "Nick wants a solo reward: Monster energy drink for 1000 gems" {
 		t.Fatalf("pushes = %+v", n.msgs)
 	}
 	list := h.get("/api/rewards", nick.Token).expect(http.StatusOK)

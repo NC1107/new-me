@@ -94,6 +94,7 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
             : 'Continue',
         onTap: () => pushPage(context, const SessionPage()),
         done: session.completed,
+        quiet: tab,
         footer: session.eased && !session.completed ? EasedNote(session: session) : null,
       );
     } else {
@@ -104,7 +105,8 @@ class _TrainingSlotState extends ConsumerState<TrainingSlot> {
         subtitle: next == null
             ? 'Recovery is part of the plan.'
             : 'Next: ${next.label}, ${weekdayLabel(next.weekday)}',
-        action: tab ? 'Train' : null,
+        action: tab ? 'Train anyway' : null,
+        quiet: true,
         onTap: tab ? () => showPullDaySheet(context, plan: plan, date: training.date) : openPlan,
       );
     }
@@ -123,6 +125,7 @@ class _TrainingCard extends StatelessWidget {
     required this.onTap,
     this.action,
     this.done = false,
+    this.quiet = false,
     this.footer,
   });
 
@@ -133,12 +136,16 @@ class _TrainingCard extends StatelessWidget {
   final String? action;
   final bool done;
 
+  /// Tonal action chip, for a card that sits above the screen's own primary button.
+  final bool quiet;
+
   /// A line under the row, such as why the session is eased.
   final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
     final accent = context.accentPalette;
+    final tonal = done || quiet;
     final row = ExcludeSemantics(
       child: Row(
         children: [
@@ -166,13 +173,13 @@ class _TrainingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: done ? accent.tint : accent.fill,
+                color: tonal ? accent.tint : accent.fill,
                 borderRadius: BorderRadius.circular(kRadiusButton),
               ),
               child: Text(
                 label,
                 style: AppText.label.copyWith(
-                  color: done ? accent.lip : accent.onFill,
+                  color: tonal ? accent.lip : accent.onFill,
                   fontWeight: FontWeight.w800,
                 ),
               ),

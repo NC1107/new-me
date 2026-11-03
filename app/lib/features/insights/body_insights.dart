@@ -6,6 +6,7 @@ import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../board/person_card.dart' show kSuccessText;
 import '../progress/progress_logic.dart';
@@ -64,12 +65,12 @@ String? proteinBasis(ProteinHitRate p, Units units) {
   if (target == null) return null;
   final suggested = p.suggestedG;
   if (suggested == null || suggested == target || p.weightKg == null || p.perKg == null) {
-    return 'Target $target g a day.';
+    return 'Goal $target g a day.';
   }
   final rate = units.isImperial
       ? '${(p.perKg! * kKgPerLb * 100).round() / 100} g per lb'
       : '${p.perKg} g per kg';
-  return 'Target $target g. At $rate and ${weightLabel(p.weightKg!, units)} the default '
+  return 'Goal $target g. At $rate and ${weightLabel(p.weightKg!, units)} the default '
       'would be $suggested g.';
 }
 
@@ -147,8 +148,7 @@ class WeightInsightCard extends StatelessWidget {
               ],
               if (showLatest)
                 Text(
-                  'Latest reading ${weightLabel(latest, context.units)}. A single weigh-in moves with water and '
-                  'meals, so the trend is the number to follow.',
+                  'Latest weigh-in ${weightLabel(latest, context.units)}',
                   style: AppText.caption,
                 ),
             ],
@@ -188,8 +188,17 @@ class ActivitySummaryCard extends StatelessWidget {
               ],
             ),
             const Padding(
-              padding: EdgeInsets.only(top: 2, left: 52),
-              child: Text('WHO guideline, last 7 days', style: AppText.caption),
+              padding: EdgeInsets.only(left: 52),
+              child: InfoNote(
+                'Last 7 days',
+                info: InfoContent(
+                  title: 'Where the activity target comes from',
+                  paragraphs: [
+                    'The target follows the WHO guideline of 150 to 300 minutes of moderate activity a week, or 75 to 150 minutes of vigorous activity.',
+                  ],
+                  source: 'WHO guidelines, Br J Sports Med 2020.',
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             _Measure(
@@ -214,8 +223,7 @@ class ActivitySummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Hard minutes count double. ${a.moderateMin} moderate and ${a.vigorousMin} hard '
-              'minutes this week.',
+              '${a.moderateMin} moderate, ${a.vigorousMin} hard minutes. Hard minutes count double.',
               style: AppText.caption,
             ),
           ],
@@ -301,7 +309,7 @@ class ProteinHitCard extends StatelessWidget {
         container: true,
         label: p.days7 == 0
             ? 'Protein, nothing logged in the last 7 days'
-            : 'Protein, target hit on ${proteinHitLabel(p)}',
+            : 'Protein, goal hit on ${proteinHitLabel(p)}',
         excludeSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,7 +328,7 @@ class ProteinHitCard extends StatelessWidget {
                 style: AppText.label.copyWith(color: kInkSecondary),
               )
             else ...[
-              Text('Target hit on', style: AppText.caption.copyWith(color: kInkSecondary)),
+              Text('Goal hit on', style: AppText.caption.copyWith(color: kInkSecondary)),
               Text(
                 proteinHitLabel(p),
                 style: AppText.tabular(AppText.title.copyWith(fontWeight: FontWeight.w900)),

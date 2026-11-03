@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/log/log_sheet.dart';
-import 'package:newme/features/me/food_targets_page.dart';
+import 'package:newme/features/me/goals_page.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
@@ -55,9 +55,8 @@ void main() {
     await app.tap(_save());
     await app.settle(30);
 
-    expect(find.text('170'), findsOneWidget);
-    expect(find.text('100%'), findsOneWidget);
-    expect(find.text('Streak saved for today!'), findsOneWidget);
+    expect(find.text('150'), findsOneWidget);
+    expect(find.textContaining('Streak counted today'), findsOneWidget);
     expect(find.text('4'), findsWidgets, reason: 'the flame follows the counted day');
     expect(
       find.byType(DayCountedSheet),
@@ -95,8 +94,7 @@ void main() {
     await app.tap(_logPushups());
     await app.tap(_save());
 
-    expect(find.text('160'), findsOneWidget);
-    expect(find.text('94%'), findsOneWidget);
+    expect(find.text('140'), findsOneWidget);
     expect(adapter.to('GET /api/today'), hasLength(loads));
   });
 
@@ -115,7 +113,6 @@ void main() {
     expect(find.text('1,850 of 2,200 kcal'), findsOneWidget);
 
     await app.tap(_chunky('Add'));
-    await app.tap(find.text('Meal'));
     await app.tap(find.descendant(of: find.byType(LogSheet), matching: find.text('Chicken bowl')));
 
     expect(find.text('2,450 of 2,200 kcal'), findsOneWidget);
@@ -129,7 +126,7 @@ void main() {
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
     expect(find.text("Today's entries"), findsOneWidget);
     expect(find.text('20 reps'), findsOneWidget);
     expect(find.text('600 kcal'), findsOneWidget);
@@ -160,7 +157,7 @@ void main() {
     final adapter = _server();
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
 
     final row = find.ancestor(of: find.text('20 reps'), matching: find.byType(Semantics)).first;
     final node = tester.getSemantics(row);
@@ -182,20 +179,20 @@ void main() {
     final app = TestApp(tester, adapter, surfaceHeight: 2800);
     await app.pump(const HomeShell());
 
-    await app.tap(find.text('What I logged today'));
+    await app.tap(find.text('What I logged'));
     await tester.drag(find.text('20 reps'), const Offset(-500, 0));
     await app.settle(20);
     expect(find.text('20 reps'), findsOneWidget);
     expect(find.textContaining('You are offline'), findsOneWidget);
   });
 
-  testWidgets('the Food tab opens the food targets', (tester) async {
+  testWidgets('the Food tab opens the goals', (tester) async {
     final app = TestApp(tester, _server(), surfaceHeight: 2800);
     await app.pump(const HomeShell());
     await app.tap(find.byKey(const Key('nav-food')));
 
-    await app.tap(find.text('Food targets'));
-    expect(find.byType(FoodTargetsPage), findsOneWidget);
+    await app.tap(find.text('Food goals'));
+    expect(find.byType(GoalsPage), findsOneWidget);
     expect(app.container.read(homeTabProvider), HomeTab.food);
   });
 

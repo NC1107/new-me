@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/action_needed.dart';
 import '../../state/board.dart';
 import '../../state/companion.dart';
 import '../../state/habit_reminders.dart';
@@ -124,6 +125,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     final tab = ref.watch(homeTabProvider);
     final usBadge = ref.watch(usBadgeProvider);
+    final usWaiting = ref.watch(actionNeededProvider.select((a) => a.count));
     ref.listen(homeTabProvider, (_, _) => _refreshOffline());
     return Scaffold(
       body: IndexedStack(
@@ -156,6 +158,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                           label: _tabs[i].label,
                           selected: tab.index == i,
                           badge: _tabs[i].label == 'Us' && usBadge,
+                          waiting: _tabs[i].label == 'Us' ? usWaiting : 0,
                           onTap: () => ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
                         ),
                       ),
@@ -180,6 +183,7 @@ class _NavItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.badge = false,
+    this.waiting = 0,
   });
 
   final IconData icon;
@@ -190,6 +194,9 @@ class _NavItem extends StatelessWidget {
   /// A dot on the icon: something new is waiting behind this tab.
   final bool badge;
 
+  /// How many answers my partner is waiting on; shown as a count on the icon, in place of the dot.
+  final int waiting;
+
   @override
   Widget build(BuildContext context) {
     final person = context.accentPalette;
@@ -198,7 +205,11 @@ class _NavItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: badge ? '$label, something new' : label,
+      label: waiting > 0
+          ? '$label, $waiting waiting for you'
+          : badge
+          ? '$label, something new'
+          : label,
       excludeSemantics: true,
       onTap: onTap,
       child: Pressable(
@@ -229,7 +240,32 @@ class _NavItem extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Icon(icon, size: kBottomNavIconSize, color: color),
-                    if (badge)
+                    if (waiting > 0)
+                      Positioned(
+                        right: -10,
+                        top: -6,
+                        child: Container(
+                          key: const Key('nav-badge'),
+                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: kDangerText,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: kSurface, width: 2),
+                          ),
+                          child: Text(
+                            waiting > 9 ? '9+' : '$waiting',
+                            style: const TextStyle(
+                              color: kSurface,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (badge)
                       Positioned(
                         right: -3,
                         top: -2,

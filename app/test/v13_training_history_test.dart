@@ -63,6 +63,15 @@ const _october = {
       'workoutTypes': ['running', 'yoga'],
       'logged': <Map<String, dynamic>>[],
     },
+    {
+      'date': '2026-10-22',
+      'sets': 0,
+      'sessionCompleted': false,
+      'yogaMinutes': 0,
+      'calisthenicsMinutes': 24,
+      'workoutTypes': <String>[],
+      'logged': <Map<String, dynamic>>[],
+    },
   ],
 };
 
@@ -126,6 +135,7 @@ void main() {
   test('Apple Health workouts other than yoga get their own mark', () {
     expect(const HistoryDay(date: '2026-10-22', workoutTypes: ['running']).otherWorkouts, isTrue);
     expect(const HistoryDay(date: '2026-10-22', workoutTypes: ['yoga']).otherWorkouts, isFalse);
+    expect(const HistoryDay(date: '2026-10-22', calisthenicsMinutes: 20).otherWorkouts, isTrue);
     expect(const HistoryDay(date: '2026-10-22').otherWorkouts, isFalse);
   });
 
@@ -158,6 +168,7 @@ void main() {
         _day('Tuesday, Oct 20, 25 minutes of yoga or mobility, workouts: Running, Yoga'),
         findsOneWidget,
       );
+      expect(_day('Thursday, Oct 22, 24 minutes of calisthenics'), findsOneWidget);
       expect(_day('Monday, Oct 26, today'), findsOneWidget);
       expect(_day('Tuesday, Oct 6, nothing logged'), findsOneWidget);
       expect(find.text('Session completed'), findsOneWidget);
@@ -195,6 +206,12 @@ void main() {
       expect(find.text('Yoga and mobility'), findsOneWidget);
       expect(find.text('25 minutes'), findsOneWidget);
       expect(find.text('Running, Yoga'), findsOneWidget);
+      await app.closeSheet();
+
+      await app.tap(_day('Thursday, Oct 22'));
+      expect(find.text('Calisthenics'), findsOneWidget);
+      expect(find.text('24 minutes'), findsOneWidget);
+      expect(find.text('Nothing was logged this day.'), findsNothing);
       await app.closeSheet();
 
       await app.tap(_day('Tuesday, Oct 6'));

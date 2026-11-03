@@ -259,7 +259,7 @@ void main() {
       expect(find.text('down 0.4 kg a week'), findsOneWidget);
       expect(find.byType(Sparkline), findsOneWidget);
       expect(
-        find.textContaining('Latest reading 82.4\u00a0kg'),
+        find.textContaining('Latest weigh-in 82.4\u00a0kg'),
         findsOneWidget,
         reason: 'the raw reading is secondary, after the trend',
       );
@@ -283,7 +283,7 @@ void main() {
       expect(find.text('82.4\u00a0kg'), findsOneWidget);
       expect(find.textContaining('A weekly rate shows after a week'), findsOneWidget);
       expect(find.byType(Sparkline), findsNothing);
-      expect(find.textContaining('Latest reading 82.6\u00a0kg'), findsOneWidget);
+      expect(find.textContaining('Latest weigh-in 82.6\u00a0kg'), findsOneWidget);
     });
 
     testWidgets('no weigh-ins at all says so', (tester) async {
@@ -339,7 +339,7 @@ void main() {
       await open(tester);
       expect(find.text('5 of the last 7 days'), findsOneWidget);
       expect(find.text('71% of days'), findsOneWidget);
-      expect(find.text('Target 130 g a day.'), findsOneWidget);
+      expect(find.text('Goal 130 g a day.'), findsOneWidget);
     });
 
     testWidgets('protein with nothing logged says so', (tester) async {
@@ -512,14 +512,14 @@ void main() {
     ) async {
       final fresh = _fixture('progress');
       await open(tester, server: _server()..on('GET /api/progress', StubResponse(200, fresh)));
-      expect(find.textContaining('Trends show after a second week'), findsOneWidget);
+      expect(find.textContaining('Trends need two weeks of data'), findsOneWidget);
       expect(find.text('A trend shows after a second week.'), findsNothing);
       expect(find.textContaining('Comparisons appear once'), findsNothing);
     });
 
     testWidgets('a full history shows no sparse note', (tester) async {
       await open(tester);
-      expect(find.textContaining('Trends show after a second week'), findsNothing);
+      expect(find.textContaining('Trends need two weeks of data'), findsNothing);
     });
 
     testWidgets('a failure offers Try again', (tester) async {
@@ -590,8 +590,8 @@ void main() {
       expect(find.text('Workouts: 3.3 a week, up from 2.6'), findsOneWidget);
       expect(find.text('Push-ups: 40 a day, up from 32'), findsOneWidget);
       expect(find.text('+25%'), findsOneWidget);
-      expect(find.text('8,000 points, both counted on 19 days'), findsOneWidget);
-      expect(find.text('4,120 points, 24 days counted'), findsOneWidget);
+      expect(find.text('8,000 gems, both counted on 19 days'), findsOneWidget);
+      expect(find.text('4,120 gems, 24 days counted'), findsOneWidget);
     });
 
     testWidgets('moves to the month before and back', (tester) async {

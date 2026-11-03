@@ -105,7 +105,7 @@ void _layoutSuite(double textScale) {
     await tester.drag(find.byType(ListView).first, const Offset(0, 4000));
     await app.settle();
 
-    await _tapOnToday(tester, app, find.text('What I logged today'));
+    await _tapOnToday(tester, app, find.text('What I logged'));
     noOverflow('day detail sheet');
     await app.closeSheet();
 
@@ -127,8 +127,6 @@ void _layoutSuite(double textScale) {
     noOverflow('Food');
     await tester.scrollUntilVisible(_chunky('Add'), 300, scrollable: find.byType(Scrollable).first);
     await app.tap(_chunky('Add'));
-    noOverflow('add sheet');
-    await app.tap(find.text('Meal'));
     noOverflow('log meal');
     await app.tap(find.text('More'));
     noOverflow('log meal more');

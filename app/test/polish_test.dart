@@ -10,8 +10,7 @@ import 'package:newme/features/log/log_kind.dart';
 import 'package:newme/features/log/log_sheet.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_detail_sheet.dart';
-import 'package:newme/features/me/daily_goals_page.dart';
-import 'package:newme/features/me/targets_page.dart';
+import 'package:newme/features/me/goals_page.dart';
 import 'package:newme/features/training/training_profile_page.dart';
 import 'package:newme/features/together/notifications_page.dart';
 import 'package:newme/theme/accent.dart';
@@ -65,8 +64,8 @@ void main() {
         return app;
       }
 
-      testWidgets('the Targets page', (tester) async {
-        await open(tester, const TargetsPage());
+      testWidgets('the Goals page', (tester) async {
+        await open(tester, const GoalsPage());
         expect(find.textContaining('USE ALL RECOMMENDED'), findsOneWidget);
         expect(smallTargets(tester), isEmpty);
       });
@@ -92,9 +91,7 @@ void main() {
         expect(smallTargets(tester), isEmpty);
       });
 
-      testWidgets('the daily goals and the notifications', (tester) async {
-        await open(tester, const DailyGoalsPage());
-        expect(smallTargets(tester), isEmpty);
+      testWidgets('the notifications', (tester) async {
         await open(tester, const NotificationsPage());
         expect(smallTargets(tester), isEmpty);
       });

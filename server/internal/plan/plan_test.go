@@ -20,7 +20,6 @@ func texts(p Plan) []string {
 
 func TestBuildFullDay(t *testing.T) {
 	p := Build(Input{
-		NowMinute: 9 * 60,
 		Quests: []Quest{
 			{Key: "steps", Target: 8000, Actual: 4800},
 			{Key: "pushups", Target: 30, Actual: 30, Done: true, DoneBy: &score.DoneBy{Kind: "workout", Type: "strength", Minutes: 42}},
@@ -38,8 +37,8 @@ func TestBuildFullDay(t *testing.T) {
 	want := []string{
 		"done|pushups|Push-ups done by your Strength workout, 42 min",
 		"done|meals_logged|Meals done",
-		"todo|steps|Steps: 3,200 to go. A 30-minute walk around midday covers it.",
-		"todo|reading|Reading: 14 more minutes. An audiobook minute counts as half.",
+		"todo|steps|Steps: 3,200 to go (about 30 min).",
+		"todo|reading|Reading: 14 more minutes.",
 		"habit|habit:3|Vitamins at 18:00",
 		"habit|habit:7|Stretch at 21:00",
 		"habit|habit:9|Water: 3 of 8 so far",
@@ -48,44 +47,43 @@ func TestBuildFullDay(t *testing.T) {
 		t.Fatalf("items:\n got %q\nwant %q", got, want)
 	}
 	// Reading is 30% done (6 of 20 minutes), steps 60%: steps is the closer finish.
-	wantSummary := "2 of 5 quests done. Easiest next: Steps: 3,200 to go. A 30-minute walk around midday covers it. 3 habits are still due, starting with Vitamins at 18:00."
+	wantSummary := "2 of 5 goals done. Easiest next: Steps: 3,200 to go (about 30 min). 3 habits are still due, starting with Vitamins at 18:00."
 	if p.Summary != wantSummary {
 		t.Fatalf("summary = %q", p.Summary)
 	}
 }
 
-func TestStepsAdviceFollowsTheClockAndSplitsLongWalks(t *testing.T) {
+func TestStepsLineGivesTheWalkInMinutesWithoutRepeatingAdvice(t *testing.T) {
 	cases := []struct {
-		minute, actual int
-		want           string
+		actual int
+		want   string
 	}{
-		{8 * 60, 7000, "Steps: 1,000 to go. A 10-minute walk around midday covers it."},
-		{13 * 60, 7000, "Steps: 1,000 to go. A 10-minute walk this afternoon covers it."},
-		{19 * 60, 7901, "Steps: 99 to go. A 5-minute walk this evening covers it."},
-		{9 * 60, 0, "Steps: 8,000 to go. That is about 80 minutes of walking: split it into two walks."},
+		{7000, "Steps: 1,000 to go (about 10 min)."},
+		{7901, "Steps: 99 to go (about 5 min)."},
+		{0, "Steps: 8,000 to go (about 80 min)."},
 	}
 	for _, tc := range cases {
-		p := Build(Input{NowMinute: tc.minute, Quests: []Quest{{Key: "steps", Target: 8000, Actual: tc.actual}}})
+		p := Build(Input{Quests: []Quest{{Key: "steps", Target: 8000, Actual: tc.actual}}})
 		if p.Items[0].Text != tc.want {
-			t.Errorf("minute %d: %q, want %q", tc.minute, p.Items[0].Text, tc.want)
+			t.Errorf("actual %d: %q, want %q", tc.actual, p.Items[0].Text, tc.want)
 		}
 	}
 }
 
 func TestAllDoneAndEmpty(t *testing.T) {
 	p := Build(Input{Quests: []Quest{{Key: "steps", Target: 8000, Actual: 8412, Done: true}, {Key: "reading", Target: 20, Actual: 25, Done: true}}})
-	if p.Summary != "All 2 quests are done. Nice work." || p.Items[0].Text != "Steps done: 8,412" || p.Items[1].Text != "Reading done: 25 min" {
+	if p.Summary != "All 2 goals are done. Nice work." || p.Items[0].Text != "Steps done: 8,412" || p.Items[1].Text != "Reading done: 25 min" {
 		t.Fatalf("plan = %+v", p)
 	}
 	empty := Build(Input{})
-	if empty.Items == nil || len(empty.Items) != 0 || empty.Summary != "No quests are set for today." {
+	if empty.Items == nil || len(empty.Items) != 0 || empty.Summary != "No goals are set for today." {
 		t.Fatalf("empty = %+v", empty)
 	}
 }
 
 func TestSleepAndUnknownQuestsGetNoSuggestion(t *testing.T) {
 	p := Build(Input{Quests: []Quest{{Key: "sleep", Target: 420, Actual: 300}}})
-	if len(p.Items) != 0 || p.Summary != "0 of 1 quest done." {
+	if len(p.Items) != 0 || p.Summary != "0 of 1 goal done." {
 		t.Fatalf("plan = %+v", p)
 	}
 }

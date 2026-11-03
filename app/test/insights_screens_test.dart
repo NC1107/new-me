@@ -193,11 +193,11 @@ void main() {
       };
       final off = TestApp(tester, _server());
       await off.pump(const InsightsScreen());
-      expect(find.text('Coach'), findsNothing);
+      expect(find.text('Ask your coach'), findsNothing);
 
       final on = TestApp(tester, _server()..on('GET /api/me', StubResponse(200, me(true))));
       await on.pump(const InsightsScreen(), key: UniqueKey());
-      await on.tap(find.text('Coach'));
+      await on.tap(find.text('Ask your coach'));
       expect(find.byType(CoachChatPage), findsOneWidget);
     });
 
@@ -250,13 +250,12 @@ void main() {
       expect(find.text('Try 8,500 a day'), findsOneWidget);
       expect(
         find.textContaining(
-          'You have averaged 7,400 over two weeks, and most of the benefit for adults comes by '
-          '8,000 to 10,000.',
+          'Averaging 7,400. Most of the benefit for adults comes by 8,000 to 10,000.',
         ),
         findsOneWidget,
       );
       expect(find.text('ADD BIRTH YEAR'), findsOneWidget);
-      expect(find.text('General guidance, not medical advice.'), findsWidgets);
+      expect(find.text('General guidance, not medical advice.'), findsNothing);
     });
 
     testWidgets('a known age says "for your age" and hides the invite', (tester) async {
@@ -379,8 +378,8 @@ void main() {
       await app.pump(const SleepInsightScreen());
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -2000));
       await app.settle();
-      expect(find.text('Gentle tips'), findsOneWidget);
-      expect(find.textContaining('50 min less'), findsOneWidget);
+      expect(find.text('Tip'), findsOneWidget);
+      expect(find.textContaining('50 min short'), findsOneWidget);
       expect(find.text('Nicely done'), findsNothing);
     });
 
@@ -473,11 +472,12 @@ void main() {
       expect(find.text('Body'), findsOneWidget);
     });
 
-    testWidgets('Me: an Insights row opens the hub', (tester) async {
+    testWidgets('Me no longer lists Insights, which live behind the Body row on Today', (
+      tester,
+    ) async {
       final app = TestApp(tester, _server());
       await app.pump(const MeScreen());
-      await app.tap(find.text('Insights'));
-      expect(find.byType(InsightsScreen), findsOneWidget);
+      expect(find.text('Insights'), findsNothing);
     });
 
     testWidgets('Us: workouts this week shows when known and hides when null', (tester) async {

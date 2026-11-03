@@ -39,7 +39,7 @@ class SleepTip {
   final bool positive;
 }
 
-/// Up to two gentle tips from the sleep numbers, most useful first. With nothing to improve it is a
+/// One tip from the sleep numbers, the most useful. With nothing to improve it is a
 /// single positive note; with no sleep data at all it is empty.
 List<SleepTip> sleepTips(SleepInsights s) {
   final average = s.avg7Min ?? s.avg30Min;
@@ -48,40 +48,25 @@ List<SleepTip> sleepTips(SleepInsights s) {
 
   final tips = <SleepTip>[];
   if (bed != null && bed > 0 && bed < _lateBedtimeCutoff) {
-    tips.add(
-      const SleepTip(
-        'You usually fall asleep after midnight. Moving bedtime 15 minutes earlier each night '
-        'is an easy way to start.',
-      ),
-    );
+    tips.add(const SleepTip('Try going to bed 15 minutes earlier.'));
   }
   if (average != null && average <= s.targetMin - _shortSleepGapMin) {
     final gap = (s.targetMin - average).round();
     tips.add(
       SleepTip(
-        'You are averaging ${durationLabel(gap)} less than your ${durationLabel(s.targetMin)} '
-        'target. An earlier wind-down is the simplest fix.',
+        'You are ${durationLabel(gap)} short of your ${durationLabel(s.targetMin)} goal. '
+        'Try winding down earlier.',
       ),
     );
   }
   final spread = s.bedtimeSpreadMin;
   if (spread != null && spread > _wideSpreadMin) {
-    tips.add(
-      const SleepTip(
-        'Your bedtime moves around a lot. A steadier time, even at weekends, helps you fall '
-        'asleep faster.',
-      ),
-    );
+    tips.add(const SleepTip('Try a steadier bedtime, even at weekends.'));
   }
   if (tips.isEmpty) {
-    return const [
-      SleepTip(
-        'Your sleep looks steady and on target. Keep doing what you are doing.',
-        positive: true,
-      ),
-    ];
+    return const [SleepTip('Your sleep looks steady and on goal.', positive: true)];
   }
-  return tips.take(2).toList();
+  return tips.take(1).toList();
 }
 
 /// "Your bedtime varies by about 40 minutes"; steady below five minutes of spread.
@@ -129,24 +114,20 @@ StepSuggestionCopy stepSuggestionCopy(StepSuggestion s, {int? goal}) {
   if (s.target == goal) {
     return StepSuggestionCopy(
       headline: 'Stay at $target a day',
-      reason:
-          'You have averaged ${median.formatted} over two weeks, and most of the benefit $who '
-          'comes by $range. Your goal already fits.',
+      reason: 'Averaging ${median.formatted}. Your goal already fits.',
     );
   }
   if (s.target > median) {
     return StepSuggestionCopy(
       headline: 'Try $target a day',
-      reason:
-          'You have averaged ${median.formatted} over two weeks, and most of the benefit $who '
-          'comes by $range.',
+      reason: 'Averaging ${median.formatted}. Most of the benefit $who comes by $range.',
     );
   }
   return StepSuggestionCopy(
     headline: 'Keep going at $target a day',
     reason:
-        'You have averaged ${median.formatted} over two weeks, which is already at or above the '
-        '$range range where most of the benefit $who comes. Keep doing what you do.',
+        'Averaging ${median.formatted}, already in the $range range where most of the benefit '
+        '$who comes.',
   );
 }
 

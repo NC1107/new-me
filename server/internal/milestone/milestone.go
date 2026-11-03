@@ -31,7 +31,7 @@ func Title(m db.Milestone) string {
 	case db.MilestoneFirst10K:
 		return "First 10,000-step day"
 	case db.MilestoneFirstAll:
-		return "First day with every quest done"
+		return "First day with every goal done"
 	case db.MilestoneFirstWeek:
 		return "First fully counted week"
 	}

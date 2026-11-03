@@ -85,7 +85,7 @@ String questProgress(Quest q, {Units units = Units.metric}) {
   if (q.key == 'sleep_regularity') return steadyBedtimeProgress(q);
   if (q.key == 'sleep') {
     return q.actual == 0
-        ? 'No sleep recorded'
+        ? 'No night from Health yet'
         : '${durationLabel(q.actual)} of ${durationLabel(q.target)}';
   }
   return '${q.actual.formatted} of ${q.target.formatted} ${_unitWord(q, q.target)}';
@@ -161,7 +161,7 @@ String steadyBedtimeProgress(Quest q) {
     final learned = (d?['baselineNights'] as num? ?? 0).round();
     return learned < kRegularityBaselineNights
         ? 'Learning your usual times: $learned of $kRegularityBaselineNights nights'
-        : 'No sleep recorded';
+        : 'No night from Health yet';
   }
   return switch (q.actual.round()) {
     2 => 'Bed and wake time both within $window min of usual',

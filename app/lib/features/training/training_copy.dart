@@ -92,3 +92,15 @@ String liftLine(Lift l, Units units) {
   if (l.value < first) return '$now, ${_liftValue(l, first, units)} in your first month';
   return '$now, same as your first month';
 }
+
+/// The plan generator's summary can run to several sentences; the plan card says the rest.
+String firstSentence(String text) {
+  final end = text.indexOf(RegExp(r'[.!?](\s|$)'));
+  return end < 0 ? text : text.substring(0, end + 1);
+}
+
+const _kFirstTimePrefix = 'First time in this plan';
+
+/// The server repeats this hint on every exercise that has no history yet; the session says it
+/// once, since each card's target already shows the starting number.
+bool isFirstTimeHint(String reason) => reason.startsWith(_kFirstTimePrefix);

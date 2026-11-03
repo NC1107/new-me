@@ -87,7 +87,6 @@ void main() {
     final adapter = habitsServer()..routes[_markBrushMorning] = (_) => answer.future;
     final app = await open(tester, adapter);
     expect(_check('h1s0'), findsNothing);
-    expect(find.text('150'), findsOneWidget);
 
     await tester.tap(_chipBox('h1s0'));
     await tester.pump();
@@ -99,7 +98,6 @@ void main() {
     answer.complete(StubResponse(200, markResponse(_afterBrushMorning(), points: 155)));
     await app.settle();
     expect(_check('h1s0'), findsOneWidget);
-    expect(find.text('155'), findsOneWidget, reason: 'the day points come from the answer');
     expect(app.container.read(todayProvider).value!.data.day.points, 155);
   });
 
@@ -225,7 +223,7 @@ void main() {
               ..['backdateUntil'] = '2026-10-26T15:00:00Z',
           );
     final app = await open(tester, adapter);
-    await app.tap(find.text('Yesterday'));
+    await app.tap(find.text('See yesterday'));
     expect(find.text('Nothing was due.'), findsNothing);
     final sheetChip = find.descendant(
       of: find.byKey(const ValueKey('h1s0')).last,
@@ -241,7 +239,7 @@ void main() {
       ..['habits'] = dueHabits()
       ..['backdateUntil'] = null;
     await open(tester, habitsServer()..on('GET /api/today', StubResponse(200, today)));
-    expect(find.text('Yesterday'), findsNothing);
+    expect(find.text('See yesterday'), findsNothing);
   });
 
   testWidgets('chips are at least 44 tall and the strip fits at text scale 2.0', (tester) async {
@@ -252,6 +250,13 @@ void main() {
       final size = tester.getSize(_chipBox(key));
       expect(size.height, greaterThanOrEqualTo(44), reason: key);
       expect(size.width, lessThanOrEqualTo(390 - 40), reason: key);
+    }
+    for (final key in ['h1s0', 'h2s0', 'h3s0']) {
+      final labels = tester.widgetList<Text>(
+        find.descendant(of: _chipBox(key), matching: find.byType(Text)),
+      );
+      expect(labels.first.maxLines, 2, reason: '$key: a label wraps at most once');
+      expect(labels.first.overflow, TextOverflow.ellipsis, reason: key);
     }
     expect(tester.takeException(), isNull);
   });

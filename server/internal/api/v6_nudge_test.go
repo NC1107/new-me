@@ -78,7 +78,7 @@ func TestBehindPaceNudgesOncePerWindowAndOnlyWhenBehind(t *testing.T) {
 
 	// Done means no nudge in any window.
 	if len(push.of(together.EventBehindPaceEvening, nadia.ID)) != 0 {
-		t.Fatal("never after the steps quest is done")
+		t.Fatal("never after the steps goal is done")
 	}
 }
 
@@ -149,7 +149,7 @@ func TestMorningPlanPushCarriesReadinessAndThePlan(t *testing.T) {
 	got := push.of(together.EventMorningPlan, nick.ID)
 	if len(got) != 1 || got[0].Title != "Take it easy today" ||
 		// The night record also fills the sleep quest, so it is among the quests counted.
-		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 5 quests done.") {
+		!strings.HasPrefix(got[0].Body, "Slept 5 h 30, 1 h 30 under your target. 0 of 5 goals done.") {
 		t.Fatalf("morning plan = %+v", got)
 	}
 	h.runNudges(ny(2026, time.November, 2, 8, 5))
@@ -298,10 +298,10 @@ func TestWeeklyRecapPushOnSundayEveningOnce(t *testing.T) {
 	if len(mine) != 1 || len(hers) != 1 || mine[0].Title != "Your week" {
 		t.Fatalf("pushes = %+v", push.msgs)
 	}
-	if !strings.HasPrefix(mine[0].Body, "340 points, 1 counted day, 36,000 steps.") || !strings.HasSuffix(mine[0].Body, "Together: 540 points.") {
+	if !strings.HasPrefix(mine[0].Body, "340 gems, 1 counted day, 36,000 steps.") || !strings.HasSuffix(mine[0].Body, "Together: 540 gems.") {
 		t.Fatalf("Nick's line = %q", mine[0].Body)
 	}
-	if !strings.HasPrefix(hers[0].Body, "200 points, 0 counted days, 0 steps.") {
+	if !strings.HasPrefix(hers[0].Body, "200 gems, 0 counted days, 0 steps.") {
 		t.Fatalf("Nadia's line = %q", hers[0].Body)
 	}
 

@@ -420,7 +420,7 @@ void main() {
       await endAfter(tester, 40);
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.text('End Yoga 10 early?'), findsOneWidget);
-      expect(find.text('You\'ve done 1 minute. Log it to your yoga quest?'), findsOneWidget);
+      expect(find.text('You\'ve done 1 minute. Log it to your yoga goal?'), findsOneWidget);
       expect(_button('Log 1 min and end'), findsOneWidget);
       expect(_button('End without logging'), findsOneWidget);
       expect(find.text('Keep going'), findsOneWidget);
@@ -429,13 +429,13 @@ void main() {
       }
       await tester.tap(_button('Log 1 min and end'));
       await tester.pumpAndSettle();
-      expect(find.text('Logged 1 minute to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 1 minute to your yoga goal.'), findsOneWidget);
     });
 
     testWidgets('several minutes reads "them"', (tester) async {
       await endAfter(tester, 6 * 60 + 12 * 3);
       expect(find.textContaining('You\'ve done'), findsOneWidget);
-      expect(find.textContaining('Log them to your yoga quest?'), findsOneWidget);
+      expect(find.textContaining('Log them to your yoga goal?'), findsOneWidget);
     });
 
     testWidgets('under 30 seconds offers only End and Keep going', (tester) async {

@@ -154,17 +154,28 @@ void main() {
       );
       await app.tap(find.bySemanticsLabel(RegExp('day streak')));
       expect(find.text('1 of 2 freezes'), findsOneWidget);
-      expect(find.text('4 of 7 counted days to your next freeze, 3 to go'), findsOneWidget);
-      expect(find.text('Earning and using freezes'), findsOneWidget);
-      expect(find.textContaining('earn 1 more for every 7 counted days'), findsOneWidget);
-      expect(find.text('Repair'), findsOneWidget);
-      expect(find.text('Away days'), findsOneWidget);
+      expect(find.text('3 more days to your next freeze'), findsOneWidget);
+      expect(
+        find.text('Freezes save a missed day. You earn one every 7 counted days, up to 2.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Missed yesterday?'), findsNothing, reason: 'no repair is open');
+      expect(find.text('Sick or away? Away days pause your streak.'), findsOneWidget);
+      expect(find.textContaining('start with 2 freezes'), findsNothing);
+      await app.tap(find.text('How streaks work'));
+      expect(find.textContaining('start with 2 freezes'), findsOneWidget);
+    });
+
+    testWidgets('the repair line shows only while a repair is open', (tester) async {
+      final app = await _openToday(tester, _server(today: _today(repair: _repair())));
+      await app.tap(find.bySemanticsLabel(RegExp('day streak')));
+      expect(find.textContaining('Missed yesterday? Earn every gem today before'), findsOneWidget);
     });
 
     testWidgets('the streak sheet links on to away days', (tester) async {
       final app = await _openToday(tester, _server());
       await app.tap(find.bySemanticsLabel(RegExp('day streak')));
-      await app.tap(find.text("CAN'T TODAY?"));
+      await app.tap(find.text('AWAY TODAY'));
       expect(find.byType(AwayPage), findsOneWidget);
     });
   });
@@ -229,7 +240,7 @@ void main() {
       await _openToday(tester, _server(today: _today(repair: _repair(), percent: 62)));
       expect(find.text('Repair yesterday'), findsOneWidget);
       expect(find.textContaining('You missed Sunday'), findsOneWidget);
-      expect(find.text('62% of today\'s points'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 gems$')), findsOneWidget);
     });
 
     testWidgets('follows today progress and says so at 100%', (tester) async {
@@ -238,7 +249,7 @@ void main() {
         _server(today: _today(repair: _repair(progress: 100), percent: 100)),
       );
       expect(find.text('Yesterday is repaired'), findsOneWidget);
-      expect(find.text('100% of today\'s points'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^[0-9,]+ of 400 gems$')), findsOneWidget);
     });
 
     testWidgets('is gone once its window has closed', (tester) async {
@@ -260,7 +271,6 @@ void main() {
       final picked = pickRightNow(
         now: _morning,
         repair: repair.withProgress(10),
-        percent: 10,
         cheers: const [Cheer(from: 1, fromName: 'Ana', kind: CheerKind.fire)],
         readiness: const Readiness(level: ReadinessLevel.ready),
       );
@@ -271,12 +281,12 @@ void main() {
   group("Can't today?", () {
     testWidgets('is not on Today; the streak sheet opens the Away page', (tester) async {
       final app = await _openToday(tester, _server());
-      expect(find.text("Can't today?"), findsNothing);
+      expect(find.text('Away today'), findsNothing);
       expect(find.byType(AwayLine), findsNothing, reason: "AwayLine only renders while away");
       expect(find.text('You are away'), findsNothing);
 
       await app.tap(find.bySemanticsLabel(RegExp('day streak')));
-      await app.tap(find.text("CAN'T TODAY?"));
+      await app.tap(find.text('AWAY TODAY'));
       expect(find.byType(AwayPage), findsOneWidget);
       expect(find.text('Away days'), findsWidgets);
     });
@@ -296,7 +306,7 @@ void main() {
       );
       expect(find.text('You are away'), findsOneWidget);
       expect(find.text('Your streak is paused until Wed, Oct 28.'), findsOneWidget);
-      expect(find.text("Can't today?"), findsNothing);
+      expect(find.text('Away today'), findsNothing);
       await app.tap(find.text('You are away'));
       expect(find.byType(AwayPage), findsOneWidget);
     });
@@ -335,8 +345,8 @@ void main() {
 
     testWidgets('says what away days do when there are none', (tester) async {
       await open(tester, away());
-      expect(find.textContaining('No away days set'), findsOneWidget);
-      expect(find.textContaining('neither break nor extend your streak'), findsOneWidget);
+      expect(find.textContaining('None set'), findsOneWidget);
+      expect(find.textContaining('No freeze used'), findsOneWidget);
     });
 
     testWidgets('creates a span from a preset and a note, then reloads Today and Us', (

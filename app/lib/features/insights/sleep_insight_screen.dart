@@ -225,7 +225,7 @@ class _NightsChart extends ConsumerWidget {
           Semantics(
             label:
                 'Hours asleep over the last 14 nights, ${sleep.nights.length} with data. '
-                'Target ${durationLabel(sleep.targetMin)}, reached on $met nights.',
+                'Goal ${durationLabel(sleep.targetMin)}, reached on $met nights.',
             image: true,
             excludeSemantics: true,
             child: DayBarChart(
@@ -235,11 +235,11 @@ class _NightsChart extends ConsumerWidget {
               startLabel: DateFormat.MMMd().format(start),
               endLabel: end == today ? 'Today' : DateFormat.MMMd().format(parseLocalDate(end)),
               goal: target,
-              goalLabel: 'Target ${durationLabel(sleep.targetMin)}',
+              goalLabel: 'Goal ${durationLabel(sleep.targetMin)}',
             ),
           ),
           const SizedBox(height: 6),
-          const Text('Solid bars reached your target.', style: AppText.caption),
+          const Text('Solid bars reached your goal.', style: AppText.caption),
         ],
       ),
     );
@@ -284,7 +284,7 @@ class RegularityCard extends StatelessWidget {
     final score = regularity.score;
     final title = score == null ? 'Sleep regularity' : 'Sleep regularity ${score.round()} of 100';
     final detail = score == null
-        ? 'Needs ${regularity.minNights} nights with sleep in the last ${regularity.windowDays} days, two of them back to back.'
+        ? 'Needs more nights.'
         : 'How alike your sleep and wake times are from one day to the next, over the last '
               '${regularity.windowDays} days. 100 is the same every day.';
     return AppCard(
@@ -323,7 +323,7 @@ class _Tips extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(positive ? 'Nicely done' : 'Gentle tips', style: AppText.headline),
+          Text(positive ? 'Nicely done' : 'Tip', style: AppText.headline),
           const SizedBox(height: 10),
           for (final (i, tip) in tips.indexed) ...[
             if (i > 0) const SizedBox(height: 12),

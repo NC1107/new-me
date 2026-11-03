@@ -207,9 +207,14 @@ void main() {
       await app.pump(const MobilityPage());
       await tester.pumpAndSettle();
       expect(find.text('Mobility'), findsOneWidget);
+      expect(find.textContaining('not from a trial'), findsNothing);
+      await tester.tap(find.text('Sources and safety'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('not from a trial'), findsOneWidget);
       expect(find.textContaining('Garber et al., ACSM position stand'), findsOneWidget);
       expect(find.textContaining('at least 2 days a week'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
       expect(find.text('Cat stretch'), findsOneWidget);
       expect(find.text('Triceps stretch'), findsOneWidget);
       expect(_button('Start'), findsOneWidget);
@@ -340,7 +345,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nice work'), findsOneWidget);
-      expect(find.text('Logged 11 minutes to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 11 minutes to your yoga goal.'), findsOneWidget);
       expect(server.to('POST /api/logs'), hasLength(1));
       final body = app.body('POST /api/logs');
       expect(body['kind'], 'activity');
@@ -367,7 +372,7 @@ void main() {
       fail = false;
       await tester.tap(_button('Try again'));
       await tester.pumpAndSettle();
-      expect(find.text('Logged 11 minutes to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 11 minutes to your yoga goal.'), findsOneWidget);
       final ids = [for (final r in server.to('POST /api/logs')) (r.data as Map)['clientOpId']];
       expect(ids, hasLength(2));
       expect(ids.toSet(), hasLength(1));
@@ -384,7 +389,7 @@ void main() {
       await tester.tap(_end());
       await tester.pumpAndSettle();
       expect(find.text('End Mobility early?'), findsOneWidget);
-      expect(find.text('You\'ve done 2 minutes. Log them to your yoga quest?'), findsOneWidget);
+      expect(find.text('You\'ve done 2 minutes. Log them to your yoga goal?'), findsOneWidget);
 
       await tester.tap(find.text('Keep going'));
       await tester.pumpAndSettle();
@@ -397,7 +402,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_button('Log 2 min and end'));
       await tester.pumpAndSettle();
-      expect(find.text('Logged 2 minutes to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 2 minutes to your yoga goal.'), findsOneWidget);
       expect(app.body('POST /api/logs')['quantity'], 2);
     });
 
@@ -534,7 +539,7 @@ void main() {
       fail = false;
       await tester.tap(_button('Try again'));
       await tester.pumpAndSettle();
-      expect(find.text('Logged 11 minutes to your yoga quest.'), findsOneWidget);
+      expect(find.text('Logged 11 minutes to your yoga goal.'), findsOneWidget);
       final ids = [for (final r in server.to('POST /api/logs')) (r.data as Map)['clientOpId']];
       expect(ids.toSet(), hasLength(1));
     });
@@ -578,11 +583,13 @@ void main() {
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
       await app.pump(const TrainScreen());
       await tester.pumpAndSettle();
+      expect(find.text('Mobility'), findsNothing);
+      await tester.tap(find.text('START A WORKOUT'));
+      await tester.pumpAndSettle();
       expect(find.text('Mobility'), findsOneWidget);
       await tester.tap(find.text('Mobility'));
       await tester.pumpAndSettle();
       expect(find.byType(MobilityPage), findsOneWidget);
-      expect(find.textContaining('not from a trial'), findsOneWidget);
     });
   });
 }

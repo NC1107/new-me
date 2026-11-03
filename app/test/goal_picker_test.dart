@@ -63,6 +63,9 @@ void main() {
       expect(find.text('Recommended for you'), findsOneWidget);
       expect(find.text('3.0 L'), findsOneWidget);
       expect(find.textContaining('enough drinks a day for men'), findsOneWidget);
+      expect(find.textContaining('National Academies'), findsNothing);
+      await tester.tap(find.text('Where this comes from'));
+      await tester.pumpAndSettle();
       expect(find.text('Source: National Academies 2005'), findsOneWidget);
       // Another published figure says what it is.
       expect(find.text('EFSA: 2.5 L of total water for men, the drinks part'), findsOneWidget);
@@ -112,6 +115,8 @@ void main() {
       expect(find.text('One serving is 80 g, for example:'), findsOneWidget);
       expect(find.text('- 3 heaped tablespoons of cooked vegetables'), findsOneWidget);
       expect(find.text('- 1 cereal bowl of salad'), findsOneWidget);
+      await tester.tap(find.text('Where this comes from'));
+      await tester.pumpAndSettle();
       expect(find.text('Source: WHO, NHS 5 A Day'), findsOneWidget);
     });
 
@@ -206,7 +211,8 @@ void main() {
 
     testWidgets('the steady bedtime window says the research names none', (tester) async {
       await _open(tester, _quest('sleep_regularity', 'min', 45));
-      expect(find.textContaining('does not name a window'), findsOneWidget);
+      expect(find.textContaining('no research names a window'), findsOneWidget);
+      expect(infoNoteWith('Windred'), findsOneWidget);
       expect(find.text('within 60 min'), findsOneWidget);
     });
 
@@ -274,11 +280,11 @@ void main() {
           g.key: g,
       };
       expect(goals['water']!.value, 3000);
-      expect(goals['water']!.why, contains('National Academies 2005'));
+      expect(goals['water']!.more!.source, contains('National Academies 2005'));
       expect(goals['produce']!.label(goals['produce']!.value), '5 servings (400 g)');
       expect(goals['produce']!.extra.single, contains('3 heaped tablespoons of cooked vegetables'));
       expect(goals['exercise']!.value, 22);
-      expect(goals['exercise']!.why, contains('WHO 2020'));
+      expect(goals['exercise']!.more!.source, contains('WHO 2020'));
       expect(goals['reading']!.why, contains('no research figure'));
       expect(goals['reading']!.extra, isEmpty);
     });

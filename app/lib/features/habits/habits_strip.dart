@@ -27,9 +27,13 @@ const _kChipGap = 8.0;
 /// Today's due habit slots as chips near the top of Today. One tap marks a slot, with no sheet
 /// and no confirmation, because friction is what makes a habit not get done.
 class HabitsStrip extends ConsumerStatefulWidget {
-  const HabitsStrip({super.key, required this.today});
+  const HabitsStrip({super.key, required this.today, this.emptyPrompt = false});
 
   final Today today;
+
+  /// Shows only the invitation to add a first habit, which Today places below the quests so an
+  /// empty strip never pushes them down; the strip itself then shows nothing.
+  final bool emptyPrompt;
 
   @override
   ConsumerState<HabitsStrip> createState() => _HabitsStripState();
@@ -93,12 +97,14 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
     ];
     if (today.habits.isEmpty && shared.isEmpty) {
       final all = ref.watch(habitsProvider).value?.data.habits;
-      if (all == null || all.isNotEmpty) return const SizedBox.shrink();
+      if (!widget.emptyPrompt || all == null || all.isNotEmpty) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(top: 16),
         child: _EmptyCard(onTap: () => pushPage(context, const HabitEditorPage())),
       );
     }
+
+    if (widget.emptyPrompt) return const SizedBox.shrink();
 
     final now = ref.watch(clockProvider)();
     final items = stripItems(today.habits, nowMinutes: now.hour * 60 + now.minute);
@@ -125,14 +131,20 @@ class _HabitsStripState extends ConsumerState<HabitsStrip> {
                 ),
               ),
               if (_yesterdayOpen)
-                TextButton(
-                  onPressed: () => showYesterdayHabits(context, today: today),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    foregroundColor: context.accentPalette.lip,
-                    textStyle: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                Flexible(
+                  child: TextButton(
+                    onPressed: () => showYesterdayHabits(context, today: today),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                      foregroundColor: context.accentPalette.lip,
+                      textStyle: AppText.label.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    child: const Text(
+                      'See yesterday',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  child: const Text('Yesterday'),
                 ),
             ],
           ),

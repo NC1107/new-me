@@ -40,13 +40,15 @@ func (p PersonGems) Find(userID int64) (PersonGem, bool) {
 }
 
 // ReadPersonGems reads each live person's earned and paid gems: paid is their treat redemptions
-// plus their payments toward claimed shared rewards.
+// plus their payments toward claimed shared rewards. Tasks is the net of their settled tasks.
 func ReadPersonGems(ctx context.Context, q Querier) (PersonGems, error) {
 	rows, err := q.Query(ctx, `
 		SELECT u.id, u.name,
 		       COALESCE((SELECT sum(s.base_points + s.bonus_points) FROM day_scores s WHERE s.user_id = u.id), 0)::int,
 		       (COALESCE((SELECT sum(p.amount) FROM reward_payments p WHERE p.user_id = u.id), 0)
-		      + COALESCE((SELECT sum(t.price) FROM treat_redemptions t WHERE t.user_id = u.id), 0))::int
+		      + COALESCE((SELECT sum(t.price) FROM treat_redemptions t WHERE t.user_id = u.id), 0))::int,
+		       COALESCE((SELECT sum(CASE k.status WHEN 'done' THEN k.stake ELSE -k.lost END) FROM tasks k
+		                 WHERE k.assignee_id = u.id AND k.status IN ('done', 'missed')), 0)::int
 		FROM users u WHERE u.deleted_at IS NULL ORDER BY u.id`)
 	if err != nil {
 		return nil, err
@@ -55,7 +57,7 @@ func ReadPersonGems(ctx context.Context, q Querier) (PersonGems, error) {
 	out := PersonGems{}
 	for rows.Next() {
 		var g PersonGem
-		if err := rows.Scan(&g.UserID, &g.Name, &g.Earned, &g.Paid); err != nil {
+		if err := rows.Scan(&g.UserID, &g.Name, &g.Earned, &g.Paid, &g.Tasks); err != nil {
 			return nil, err
 		}
 		out = append(out, g)

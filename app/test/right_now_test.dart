@@ -133,14 +133,14 @@ void main() {
       final s = dayCardSentence(_day(base: 0), const Streak(current: 0, restAvailable: false), [
         _q('steps'),
       ]);
-      expect(s, 'Reach 100% today to start your streak.');
+      expect(s, 'Reach the flag to start a streak.');
     });
 
     test('a running streak is kept', () {
       final s = dayCardSentence(_day(base: 0), const Streak(current: 3, restAvailable: false), [
         _q('steps'),
       ]);
-      expect(s, 'Reach 100% to keep your streak going.');
+      expect(s, 'Reach the flag to keep your streak.');
     });
 
     test('one quest away reads as one more', () {
@@ -236,10 +236,10 @@ void main() {
         recapHeadline(_recap(now: 100, before: 200)),
         contains('100 fewer than the week before'),
       );
-      expect(recapHeadline(_recap(now: 100, before: 0)), 'Together you earned 100 points.');
+      expect(recapHeadline(_recap(now: 100, before: 0)), 'Together you earned 100 gems.');
       expect(
         recapHeadline(_recap(now: 150, complete: false, before: 0)),
-        'Together you have 150 points so far.',
+        'Together you have 150 gems so far.',
       );
     });
 

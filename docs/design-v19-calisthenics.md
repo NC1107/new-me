@@ -161,6 +161,7 @@ Regenerating is as for yoga: edit the manifest, run `render.py --models <dir>` (
     Reps of other exercises are not logged, because they would not count toward the quest anyway.
     The quest's exercise is read when the session ends, since logging the minutes refreshes Today.
 - The minutes and each reps log carry their own client operation id made once per session, so a retry after a dropped reply cannot count twice.
+- The Training history calendar marks a calisthenics day with the "Other workout" dot, and the day's sheet lists the minutes under Calisthenics (`calisthenicsMinutes` on `GET /api/training/history`).
 - The last screen lists the reps done, says where the minutes went, and says whether the session counted as a strength session.
 
 ## Catalog additions
@@ -176,7 +177,7 @@ The migration also widens the activity type check for `calisthenics_minutes`.
   The page recommends 2 to 3 days a week in words only.
 - Per-exercise rep history and progression for the circuit.
   The daily reps quest keeps its own progression.
-- Photos or video for the new exercises.
-- The Training history screen does not list calisthenics sessions yet.
+- Photos for jumping jacks, wall sits and pike push-ups, which free-exercise-db does not have, and video for any exercise.
+  Mountain climbers and jump squats got its photos in migration `0038_v20_calisthenics_photos.sql`.
 - A server-side voice parameter for live lines.
   Rendering the coach offline worked, so the app does not need it.

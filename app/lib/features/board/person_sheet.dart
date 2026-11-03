@@ -67,14 +67,14 @@ class PersonSheet extends StatelessWidget {
             PartnerDay(palette: accentById(user.color)),
             const SizedBox(height: 18),
           ],
-          _Row(label: 'Week', value: '${user.week.formatted} points'),
+          _Row(label: 'Week', value: '${user.week.formatted} gems'),
           if (user.workoutsThisWeek case final n?)
             _Row(
               label: 'Workouts',
               value: workoutCountLabel(n),
               semantics: '${workoutCountLabel(n)} this week',
             ),
-          _Row(label: 'Season', value: '${user.season.formatted} points'),
+          _Row(label: 'Season', value: '${user.season.formatted} gems'),
           _Row(
             label: 'Freezes',
             value: '$held',

@@ -54,14 +54,14 @@ Map<String, dynamic> _measuredDetail({int bedOffset = 30, int wakeOffset = -15})
   'wakeOk': wakeOffset.abs() <= 45,
 };
 
-Quest _steady({int actual = 2, Map<String, dynamic>? detail, bool done = false}) => Quest.fromJson(
+Quest _steady({int actual = 2, Map<String, dynamic>? detail, bool? done}) => Quest.fromJson(
   quest('sleep_regularity', 'Steady bedtime', {
     'unit': 'min',
     'target': 45,
     'actual': actual,
     'points': 50,
     'basePoints': 25 * actual,
-    'done': done,
+    'done': done ?? actual == 2,
     'detail': detail ?? _measuredDetail(),
   }),
 );
@@ -168,7 +168,7 @@ void main() {
         actual: 0,
         detail: {'measurable': false, 'baselineNights': 5, 'minBaseline': 3},
       );
-      expect(steadyBedtimeProgress(noNight), 'No sleep recorded');
+      expect(steadyBedtimeProgress(noNight), 'No night from Health yet');
     });
 
     test('each quest has its own colour and icon', () {
@@ -267,7 +267,8 @@ void main() {
           expect(find.text(line), findsOneWidget, reason: line);
         }
       }
-      expect(find.textContaining('NHS 5 A Day'), findsOneWidget);
+      expect(find.textContaining('NHS 5 A Day'), findsNothing);
+      expect(infoNoteWith('NHS 5 A Day'), findsOneWidget);
     });
 
     testWidgets('today so far shows servings and grams once Today is loaded', (tester) async {
@@ -521,7 +522,7 @@ void main() {
       expect(goals['sleep_regularity']!.value, 45);
       expect(goals['sleep_regularity']!.min, 15);
       expect(goals['sleep_regularity']!.label(45), 'within 45 min');
-      expect(goals['sleep_regularity']!.why, contains('does not name a window'));
+      expect(goals['sleep_regularity']!.why, contains('no research names a window'));
     });
 
     test('daily goal labels read in plain words', () {
@@ -550,7 +551,7 @@ void main() {
         ),
       );
       expect(find.text('Sleep regularity'), findsOneWidget);
-      expect(find.textContaining('Needs 5 nights'), findsOneWidget);
+      expect(find.text('Needs more nights.'), findsOneWidget);
     });
 
     test('the model reads the server answer', () {

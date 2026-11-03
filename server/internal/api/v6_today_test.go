@@ -95,8 +95,8 @@ func TestTodayPlanNamesWhatIsDoneAndWhatIsLeft(t *testing.T) {
 	}
 	want := []string{
 		"done|Push-ups done by your Strength workout, 42 min",
-		"todo|Steps: 3,200 to go. A 30-minute walk this afternoon covers it.",
-		"todo|Reading: 14 more minutes. An audiobook minute counts as half.",
+		"todo|Steps: 3,200 to go (about 30 min).",
+		"todo|Reading: 14 more minutes.",
 		"todo|Meals: log 2 more meals.",
 		"todo|Protein: 100 g to go.",
 		"habit|Vitamins at 18:00",
@@ -104,7 +104,7 @@ func TestTodayPlanNamesWhatIsDoneAndWhatIsLeft(t *testing.T) {
 	if strings.Join(texts, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("plan items:\n%s\nwant:\n%s", strings.Join(texts, "\n"), strings.Join(want, "\n"))
 	}
-	if !strings.HasPrefix(got.str("plan.summary"), "1 of 5 quests done. Easiest next: Steps: 3,200 to go.") {
+	if !strings.HasPrefix(got.str("plan.summary"), "1 of 5 goals done. Easiest next: Steps: 3,200 to go (about 30 min).") {
 		t.Fatalf("summary = %q", got.str("plan.summary"))
 	}
 }
@@ -138,7 +138,7 @@ func TestPlanSummaryIsPolishedOnceADayFromTheSameFacts(t *testing.T) {
 
 	// The first read answers at once with the deterministic summary and asks for the wording.
 	first := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if !strings.HasPrefix(first.str("plan.summary"), "0 of 4 quests done.") {
+	if !strings.HasPrefix(first.str("plan.summary"), "0 of 4 goals done.") {
 		t.Fatalf("first summary = %q", first.str("plan.summary"))
 	}
 	h.settlePolish()
@@ -155,7 +155,7 @@ func TestPlanSummaryIsPolishedOnceADayFromTheSameFacts(t *testing.T) {
 		t.Fatalf("the instructions must forbid new facts: %q", system)
 	}
 	facts := req["messages"].([]any)[0].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string)
-	if !strings.Contains(facts, "Reading: 20 more minutes. An audiobook minute counts as half.") {
+	if !strings.Contains(facts, "Reading: 20 more minutes.") {
 		t.Fatalf("facts = %q", facts)
 	}
 
@@ -197,7 +197,7 @@ func TestTodayDoesNotWaitForClaude(t *testing.T) {
 	select {
 	case got := <-done:
 		got.expect(http.StatusOK)
-		if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 quests done.") {
+		if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 goals done.") {
 			t.Fatalf("summary = %q", got.str("plan.summary"))
 		}
 	case <-time.After(5 * time.Second):
@@ -218,7 +218,7 @@ func TestPolishFallsBackWhenClaudeFailsOrInventsNumbers(t *testing.T) {
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	h.settlePolish()
-	if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 quests done.") {
+	if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 goals done.") {
 		t.Fatalf("summary = %q", got.str("plan.summary"))
 	}
 	// The failed call gave its claim back, but is not repeated on every read.
@@ -254,7 +254,7 @@ func TestPolishFallsBackWhenClaudeFailsOrInventsNumbers(t *testing.T) {
 	h.get("/api/today", nadia.Token).expect(http.StatusOK)
 	h.settlePolish()
 	other := h.get("/api/today", nadia.Token).expect(http.StatusOK)
-	if !strings.HasPrefix(other.str("plan.summary"), "0 of 4 quests done.") {
+	if !strings.HasPrefix(other.str("plan.summary"), "0 of 4 goals done.") {
 		t.Fatalf("a made-up number must be rejected: %q", other.str("plan.summary"))
 	}
 }

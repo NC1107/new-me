@@ -72,10 +72,12 @@ class _ChunkyButtonState extends State<ChunkyButton> {
     final Color text;
     final Color? border;
     if (disabled) {
-      face = kSunken;
+      // An outlined white face, not a sand fill: a filled grey bar on the sand canvas reads as an
+      // empty slot, and the muted label still clears 3:1.
+      face = kSurface;
       lip = kBorder;
       text = kInkMuted;
-      border = null;
+      border = kLip;
     } else if (primary) {
       face = palette.fill;
       lip = palette.lip;

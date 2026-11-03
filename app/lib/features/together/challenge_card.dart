@@ -126,8 +126,6 @@ class ChallengeCard extends StatelessWidget {
                     children: [
                       Text(c.missed ? 'Last week' : 'Weekly challenge', style: AppText.caption),
                       Text(c.title, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
-                      if (c.reason.isNotEmpty && !c.done && !c.missed)
-                        Text(c.reason, style: AppText.caption.copyWith(color: kInkSecondary)),
                     ],
                   ),
                 ),
@@ -138,7 +136,7 @@ class ChallengeCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (c.missed)
               Text(
-                'Missed, with nothing lost. ${challengeProgressText(c)}.',
+                'Missed. ${challengeProgressText(c)}.',
                 style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w700),
               )
             else if (c.done)
@@ -148,7 +146,7 @@ class ChallengeCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Done! +$kChallengeBonus points each',
+                      'Done! +$kChallengeBonus gems each',
                       style: AppText.label.copyWith(
                         color: kSuccessText,
                         fontWeight: FontWeight.w800,

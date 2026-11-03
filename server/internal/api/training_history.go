@@ -27,16 +27,17 @@ type historySetJSON struct {
 }
 
 type historyDayJSON struct {
-	Date             score.Date       `json:"date"`
-	Sets             int              `json:"sets"`
-	SessionCompleted bool             `json:"sessionCompleted"`
-	YogaMinutes      int              `json:"yogaMinutes"`
-	WorkoutTypes     []string         `json:"workoutTypes"`
-	Logged           []historySetJSON `json:"logged"`
+	Date                score.Date       `json:"date"`
+	Sets                int              `json:"sets"`
+	SessionCompleted    bool             `json:"sessionCompleted"`
+	YogaMinutes         int              `json:"yogaMinutes"`
+	CalisthenicsMinutes int              `json:"calisthenicsMinutes"`
+	WorkoutTypes        []string         `json:"workoutTypes"`
+	Logged              []historySetJSON `json:"logged"`
 }
 
 // handleTrainingHistory returns the caller's training days of one month: sets, whether the
-// planned session was completed, yoga and mobility minutes, and the Health workout types.
+// planned session was completed, yoga and mobility minutes, calisthenics minutes, and the Health workout types.
 func (s *Server) handleTrainingHistory(w http.ResponseWriter, r *http.Request) {
 	c := callerFrom(r)
 	first, err := time.Parse("2006-01", r.URL.Query().Get("month"))
@@ -58,7 +59,7 @@ func (s *Server) handleTrainingHistory(w http.ResponseWriter, r *http.Request) {
 			logged = append(logged, historySetJSON(set))
 		}
 		out = append(out, historyDayJSON{Date: d.Date, Sets: d.SetCount, SessionCompleted: d.SessionCompleted,
-			YogaMinutes: d.YogaMinutes, WorkoutTypes: d.WorkoutTypes, Logged: logged})
+			YogaMinutes: d.YogaMinutes, CalisthenicsMinutes: d.CalisthenicsMinutes, WorkoutTypes: d.WorkoutTypes, Logged: logged})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"month": first.Format("2006-01"), "days": out})
 }

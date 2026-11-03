@@ -378,7 +378,7 @@ class _HabitEditorPageState extends ConsumerState<HabitEditorPage> {
         ],
         const SizedBox(height: 20),
         if (isCount) ...[
-          const FieldLabel('Daily target'),
+          const FieldLabel('Daily goal'),
           _TargetStepper(
             value: _target,
             onChanged: (v) {
@@ -689,7 +689,7 @@ class _TargetStepper extends StatelessWidget {
       children: [
         ChunkyIconButton(
           icon: Icons.remove_rounded,
-          semanticLabel: 'Lower target',
+          semanticLabel: 'Lower goal',
           size: 52,
           kind: ChunkyKind.secondary,
           onPressed: value > 1 ? () => onChanged(value - 1) : null,
@@ -704,7 +704,7 @@ class _TargetStepper extends StatelessWidget {
         ),
         ChunkyIconButton(
           icon: Icons.add_rounded,
-          semanticLabel: 'Raise target',
+          semanticLabel: 'Raise goal',
           size: 52,
           onPressed: value < kMaxHabitTarget ? () => onChanged(value + 1) : null,
         ),

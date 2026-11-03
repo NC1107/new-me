@@ -42,7 +42,7 @@ The split is stored per claim in `reward_payments`, so balances are exact and ne
 Rewards claimed before this migration were split by what each person had earned and stored the same way.
 A claim still needs the bank to cover the price; the bank already excludes treat spending.
 
-If a later re-score lowers someone's earned gems below what they paid out, their balance reads zero and the bank is clamped at zero.
+Superseded by v21: a balance below zero now shows as a debt, see docs/design-v21-tasks.md.
 In that case the balances can add up to more than the bank; the bank is the figure shared rewards are checked against.
 
 ## Redeeming
@@ -66,13 +66,16 @@ A person keeps at most 30 open treats.
 
 ## App
 
-Us now has two halves under the weekly challenge.
-"Together" holds the shared reward bar, the wishlist and the rewards earned, as before.
-"Treats" shows both balances (mine first), then my treats with progress toward the cheapest one, the price of each, and Redeem once my own gems cover it.
-Redeem asks for confirmation, then deducts the gems.
-My own proposals that wait or were declined sit under my treats, and a row adds another treat.
-My partner's agreed treats are listed read-only, and their price proposals show up in the same approval card as shared rewards.
-Treats redeemed by either person are listed at the bottom.
+v20 folds the two halves into one Rewards section on Us, because two lists, two add buttons and two histories were more than the idea needed.
+In the app a treat is a "solo" reward and a shared one is "shared"; the API keeps its names.
+
+- One balances card: your gems, your partner's and the shared bank.
+- The shared focus reward keeps its card with the bar and "We did it".
+- One list holds everything else: shared rewards waiting their turn, my solo rewards (Redeem once my own gems cover one, otherwise how many gems to go), my partner's solo rewards read-only, and my proposals that wait or were declined, each marked Shared or Solo.
+- One "Add a reward" sheet with a Shared or Solo switch at the top; Shared offers prices from the pair's pace, Solo does not.
+- Answers my partner waits on stay in the approval card, worded "Nadia wants a solo reward: Latte for 300 gems".
+- "Rewards earned" lists shared rewards reached or enjoyed and solo rewards redeemed by either person, newest first.
+- Pushes say "Reward to approve" and "Reward redeemed".
 
 ## Not done
 

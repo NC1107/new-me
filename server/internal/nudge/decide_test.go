@@ -61,7 +61,7 @@ func TestBehindPaceWindows(t *testing.T) {
 		{"on pace at 18:30", at(18, 30), 5440, nil, nil},
 		{"afternoon already sent", at(14, 5), 100, func(f *Facts) { f.Sent = map[string]bool{together.EventBehindPaceAfternoon: true} }, nil},
 		{"evening still allowed after the afternoon one", at(18, 40), 100, func(f *Facts) { f.Sent = map[string]bool{together.EventBehindPaceAfternoon: true} }, []string{together.EventBehindPaceEvening}},
-		{"never after the quest is done", at(14, 0), 8100, func(f *Facts) { f.StepsDone = true }, nil},
+		{"never after the goal is done", at(14, 0), 8100, func(f *Facts) { f.StepsDone = true }, nil},
 		{"preference off", at(14, 0), 100, func(f *Facts) { f.Prefs.BehindPace = false }, nil},
 		{"steps never synced", at(14, 0), 0, func(f *Facts) { f.StepsTracked = false }, nil},
 		{"no steps quest today", at(14, 0), 0, func(f *Facts) { f.StepsGoal = 0 }, nil},

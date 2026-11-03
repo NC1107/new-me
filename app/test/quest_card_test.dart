@@ -63,6 +63,54 @@ void main() {
     expect(find.text('0'), findsNothing);
   });
 
+  testWidgets(
+    'every card shares one structure: a title of at most two lines, reserved subtitle, fixed reward',
+    (tester) async {
+      Quest q(String key, Map<String, Object?> extra) =>
+          Quest.fromJson(quest(key, key, {'points': 100, ...extra}));
+      final cards = [
+        q('steps', {'unit': 'steps', 'target': 4500, 'actual': 9}),
+        q('pushups', {'target': 30, 'actual': 0}),
+        q('reading', {
+          'unit': 'min',
+          'target': 30,
+          'unitAlt': 'pages',
+          'targetAlt': 30,
+          'actual': 0,
+          'actualAlt': 0,
+        }),
+        q('pushups', {'target': 30, 'actual': 12, 'basePoints': 40}),
+      ];
+      final sizes = <Size>[];
+      final rewardRights = <double>[];
+      for (final card in cards) {
+        await tester.pumpWidget(_host(card, withAdd: card.key != 'steps'));
+        final title = tester.widget<Text>(find.text(questTitle(card)));
+        expect(title.maxLines, 2, reason: card.key);
+        expect(title.overflow, TextOverflow.ellipsis, reason: card.key);
+        sizes.add(tester.getSize(find.byType(QuestCard)));
+        rewardRights.add(tester.getTopRight(find.byType(PointsChip)).dx);
+      }
+      expect(sizes.map((s) => s.height).toSet(), hasLength(1), reason: 'same height: $sizes');
+      expect(
+        rewardRights.toSet(),
+        hasLength(1),
+        reason: 'the reward pill never moves: $rewardRights',
+      );
+    },
+  );
+
+  testWidgets('the subtitle says only progress; a fresh quest leaves the line empty', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(_quest(completed: false)));
+    expect(find.text('12 of 30 push-ups, or a strength workout'), findsOneWidget);
+    final fresh = Quest.fromJson(quest('pushups', 'Push-ups', {'target': 30, 'actual': 0}));
+    await tester.pumpWidget(_host(fresh));
+    expect(find.textContaining('A strength session or'), findsNothing);
+    expect(find.text('Not started'), findsNothing);
+  });
+
   testWidgets('the add button is a 44pt touch target', (tester) async {
     await tester.pumpWidget(_host(_quest(completed: false)));
     final size = tester.getSize(find.bySemanticsLabel('Add entry for Get stronger'));
@@ -161,7 +209,7 @@ void main() {
         questProgress(q('protein', {'unit': 'g', 'target': 130, 'actual': 82})),
         '82 of 130 g',
       );
-      expect(questProgress(q('sleep', {'unit': 'min', 'target': 420})), 'No sleep recorded');
+      expect(questProgress(q('sleep', {'unit': 'min', 'target': 420})), 'No night from Health yet');
       expect(
         questProgress(
           q('reading', {'unit': 'minutes', 'unitAlt': 'pages', 'target': 20, 'targetAlt': 15}),

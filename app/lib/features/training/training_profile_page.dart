@@ -9,6 +9,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/choice_card.dart';
 import '../../widgets/chunky_button.dart';
@@ -110,7 +111,6 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
   Widget build(BuildContext context) {
     return PageScaffold(
       title: 'Training setup',
-      subtitle: 'Plans are designed around this.',
       footer: ChunkyButton(label: 'Save', busy: _saving, onPressed: _dumbbellValid ? _save : null),
       children: [
         const FieldLabel('Equipment you have'),
@@ -127,12 +127,11 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
           ],
         ),
         const SizedBox(height: 6),
-        Text(
-          _equipment.isEmpty
-              ? 'None selected: bodyweight exercises only.'
-              : 'Full gym covers everything.',
-          style: AppText.caption.copyWith(color: kInkMuted),
-        ),
+        if (_equipment.isEmpty)
+          Text(
+            'None selected: bodyweight exercises only.',
+            style: AppText.caption.copyWith(color: kInkMuted),
+          ),
         if (_equipment.contains('dumbbells')) ...[
           const SizedBox(height: 16),
           NumberField(
@@ -168,10 +167,9 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
             ],
           ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          'At least 2 days of muscle-strengthening work a week (WHO 2020).',
-          style: AppText.caption.copyWith(color: kInkMuted),
+        InfoNote.label(
+          'Why 2 days or more',
+          paragraphs: ['At least 2 days of muscle-strengthening work a week (WHO 2020).'],
         ),
         const SizedBox(height: 24),
         const FieldLabel('Minutes a session'),
@@ -193,7 +191,7 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
           ChoiceCard(
             title: e.label,
             subtitle: switch (e) {
-              Experience.newcomer => 'New to strength training, or back after a long break',
+              Experience.newcomer => 'New, or back after a break',
               Experience.some => 'Trained on and off for a few months',
               Experience.experienced => 'Trained consistently for a year or more',
             },

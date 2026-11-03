@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models.dart';
+import '../../state/clock.dart';
 import '../../state/today.dart';
 import '../../state/training.dart';
 import '../../theme/accent.dart';
@@ -67,6 +68,7 @@ String dayLabel(DateTime date, HistoryDay? day, {required bool isToday, bool pla
     ?sets,
     if (day != null && !day.hasSets && day.sessionCompleted) 'session completed',
     if (day != null && day.hasYoga) '${day.yogaMinutes} minutes of yoga or mobility',
+    if (day != null && day.hasCalisthenics) '${day.calisthenicsMinutes} minutes of calisthenics',
     if (day != null && day.workoutTypes.isNotEmpty)
       'workouts: ${day.workoutTypes.map(workoutTypeLabel).join(', ')}',
   ];
@@ -107,7 +109,7 @@ class _TrainingHistoryPageState extends ConsumerState<TrainingHistoryPage> {
   Widget build(BuildContext context) {
     final today =
         ref.watch(todayProvider.select((v) => v.value?.data.localToday)) ??
-        formatDateKey(DateTime.now());
+        formatDateKey(ref.watch(clockProvider)());
     final now = _current(today);
     final shown = _shown ?? now;
     final key = monthKey(shown.year, shown.month);
@@ -404,7 +406,8 @@ class _DaySheet extends StatelessWidget {
     for (final set in d?.logged ?? const <HistorySet>[]) {
       byExercise.putIfAbsent(set.exercise, () => []).add(set);
     }
-    final nothing = d == null || (!d.hasSets && !d.hasYoga && d.workoutTypes.isEmpty);
+    final nothing =
+        d == null || (!d.hasSets && !d.hasYoga && !d.hasCalisthenics && d.workoutTypes.isEmpty);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(kGutter, 0, kGutter, 24),
@@ -447,6 +450,14 @@ class _DaySheet extends StatelessWidget {
             if (d != null && d.hasYoga) ...[
               const Text('Yoga and mobility', style: AppText.label),
               Text('${d.yogaMinutes} minutes', style: AppText.body.copyWith(color: kInkSecondary)),
+              const SizedBox(height: 10),
+            ],
+            if (d != null && d.hasCalisthenics) ...[
+              const Text('Calisthenics', style: AppText.label),
+              Text(
+                '${d.calisthenicsMinutes} minutes',
+                style: AppText.body.copyWith(color: kInkSecondary),
+              ),
               const SizedBox(height: 10),
             ],
             if (d != null && d.workoutTypes.isNotEmpty) ...[

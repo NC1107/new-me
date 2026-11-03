@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/api_client.dart';
 import 'package:newme/state/session.dart';
+import 'package:newme/widgets/info_note.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StubResponse {
@@ -251,3 +252,8 @@ Object? canonicalInstants(Object? json) => switch (json) {
   final String s when _instant.hasMatch(s) => DateTime.parse(s).toUtc().toIso8601String(),
   _ => json,
 };
+
+/// The info affordance whose sheet carries [text] in its explanation or its citation.
+Finder infoNoteWith(String text) => find.byWidgetPredicate(
+  (w) => w is InfoNote && [...w.info.paragraphs, w.info.source ?? ''].any((p) => p.contains(text)),
+);

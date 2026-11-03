@@ -35,10 +35,9 @@ sealed class RightNow {
 }
 
 class RightNowRepair extends RightNow {
-  const RightNowRepair(this.repair, this.percent);
+  const RightNowRepair(this.repair);
 
   final Repair repair;
-  final int percent;
 }
 
 /// The partner's missed yesterday, which one of my freezes can cover.
@@ -96,7 +95,6 @@ class RightNowRecap extends RightNow {
 RightNow? pickRightNow({
   required DateTime now,
   Repair? repair,
-  int percent = 0,
   ({BoardUser partner, String date})? cover,
   Lookback? lookback,
   bool lookbackDismissed = false,
@@ -110,7 +108,7 @@ RightNow? pickRightNow({
   bool recapDismissed = false,
 }) {
   if (repair != null && !(repair.until?.isBefore(now) ?? false)) {
-    return RightNowRepair(repair, percent);
+    return RightNowRepair(repair);
   }
   if (cover != null) return RightNowCover(cover.partner, cover.date);
   if (cheers.isNotEmpty) return RightNowCheers(cheers);
@@ -148,7 +146,6 @@ class RightNowSlot extends ConsumerWidget {
     final picked = pickRightNow(
       now: now,
       repair: today.repair,
-      percent: today.day.percent,
       cover: partner == null || coverDate == null ? null : (partner: partner, date: coverDate),
       lookback: lookback,
       lookbackDismissed:
@@ -169,7 +166,7 @@ class RightNowSlot extends ConsumerWidget {
     );
     if (picked == null) return const SizedBox.shrink();
     final card = switch (picked) {
-      RightNowRepair(:final repair, :final percent) => RepairCard(repair: repair, percent: percent),
+      RightNowRepair(:final repair) => RepairCard(repair: repair, day: today.day),
       RightNowCover(:final partner, :final date) => CoverCard(partner: partner, date: date),
       RightNowLookback(:final lookback) => LookbackNowCard(
         lookback: lookback,

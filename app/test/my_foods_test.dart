@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:newme/features/food/add_sheet.dart';
-import 'package:newme/features/food/food_screen.dart';
 import 'package:newme/features/me/food_edit_page.dart';
 import 'package:newme/features/me/my_foods_page.dart';
 import 'package:newme/widgets/chunky_button.dart';
@@ -170,15 +168,13 @@ void main() {
     expect(find.text('1 medium (182 g) · 95 kcal'), findsOneWidget);
   });
 
-  testWidgets('Add then Food on the Food tab opens New food, and a search result fills it in', (
+  testWidgets('New food on My foods opens the form, and a search result fills it in', (
     tester,
   ) async {
     final server = _server()..on('POST /api/foods', const StubResponse(201, _apple));
-    final app = TestApp(tester, server, surfaceHeight: 3200);
-    await app.pump(const FoodScreen());
+    final app = await _open(tester, server);
 
-    await app.tap(find.text('ADD'));
-    await app.tap(find.descendant(of: find.byType(AddFoodSheet), matching: find.text('Food')));
+    await app.tap(find.text('NEW FOOD'));
     expect(find.text('New food'), findsOneWidget);
     expect(find.text('Search or scan to fill it in, or type it from the label.'), findsOneWidget);
 
@@ -193,7 +189,7 @@ void main() {
     );
 
     await app.tap(find.byTooltip('Back'));
-    expect(find.byType(FoodScreen), findsOneWidget);
+    expect(find.byType(MyFoodsPage), findsOneWidget);
     expect(find.byType(FoodEditPage), findsNothing);
   });
 

@@ -19,12 +19,12 @@ import '../../util/errors.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/quest_copy.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../me/goal_picker_page.dart';
-import '../../widgets/page_scaffold.dart';
 import 'day_detail_sheet.dart';
 import 'quest_why.dart';
 
@@ -67,12 +67,12 @@ bool entryFeedsQuest(String questKey, LogEntry entry) => switch (entry) {
   },
 };
 
-/// "+100 points, 24% of today", or "Earned ..." once the quest is done.
+/// "+100 gems, 24% of the day's gems", or "Earned ..." once the quest is done.
 String questWorthLine(Quest q, int dayMax) {
   final share = dayMax > 0 && q.points <= dayMax
-      ? ', ${(q.points * 100 / dayMax).round()}% of today'
+      ? ", ${(q.points * 100 / dayMax).round()}% of the day's gems"
       : '';
-  return q.done ? 'Earned +${q.points} points$share' : '+${q.points} points$share';
+  return q.done ? 'Earned +${q.points} gems$share' : '+${q.points} gems$share';
 }
 
 /// What the sheet hands back, so the caller can offer Undo on the page behind it.
@@ -142,14 +142,12 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
   Future<void> _changeGoal() async {
     final t = _template;
     if (t == null) return;
-    final choice = await pushPage<GoalChoice>(
+    final choice = await editGoal(
       context,
-      GoalPickerPage(
-        quest: t,
-        target: t.target.round(),
-        targetAlt: t.targetAlt?.round(),
-        units: ref.read(unitsProvider),
-      ),
+      ref,
+      t,
+      target: t.target.round(),
+      targetAlt: t.targetAlt?.round(),
     );
     if (choice == null || !mounted) return;
     final targetChanged = choice.target != t.target.round();
@@ -170,7 +168,7 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       title: 'Turn off ${q.title}?',
       message:
           'It leaves today and your daily total right away. '
-          'You can turn it back on from Me, Daily goals.',
+          'You can turn it back on from Me, Goals.',
       confirmLabel: 'Turn off',
       destructive: true,
     );
@@ -238,7 +236,7 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
                     minimumSize: const Size(48, 48),
                   ),
                   child: const Text(
-                    'Turn off this quest',
+                    'Turn off this goal',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -252,10 +250,8 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
 
   Widget _entries(Quest quest, String date) {
     if (isAutomaticQuest(quest.key) && quest.key != 'exercise') {
-      return Text(
-        'Nothing to log here. ${questSourceLine(quest.key)}.',
-        style: AppText.body.copyWith(color: kInkSecondary),
-      );
+      // The header already says where the number comes from.
+      return Text('Nothing to log here.', style: AppText.body.copyWith(color: kInkSecondary));
     }
     final list = EntryList(
       date: date,
@@ -273,7 +269,10 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       children: [
         Text(split, style: AppText.label.copyWith(color: kInkSecondary)),
         const SizedBox(height: 4),
-        const Text(kProduceMealsNote, style: AppText.caption),
+        const InfoNote(
+          'Meals count by weight, 80 g to a serving.',
+          info: InfoContent(title: 'How meals count', paragraphs: [kProduceMealsNote]),
+        ),
         const SizedBox(height: 8),
         list,
       ],
@@ -360,6 +359,26 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// What the quest is worth, with the effort it is priced on behind an info icon.
+class _WorthLine extends StatelessWidget {
+  const _WorthLine({required this.text, required this.why, required this.style});
+
+  final String text;
+  final String? why;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = why;
+    if (detail == null) return Text(text, style: style);
+    return InfoNote(
+      text,
+      style: style,
+      info: InfoContent(title: 'What this is worth', paragraphs: [detail]),
+    );
+  }
+}
+
 class _ProgressBlock extends StatelessWidget {
   const _ProgressBlock({required this.quest, required this.dayMax, required this.units});
 
@@ -394,8 +413,9 @@ class _ProgressBlock extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                questWorthLine(quest, dayMax),
+              child: _WorthLine(
+                text: questWorthLine(quest, dayMax),
+                why: quest.pointsWhy,
                 style: AppText.label.copyWith(
                   color: quest.done ? ink : kInkSecondary,
                   fontWeight: FontWeight.w700,
@@ -404,15 +424,6 @@ class _ProgressBlock extends StatelessWidget {
             ),
           ],
         ),
-        if (quest.pointsWhy != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 24),
-            child: Text(
-              quest.pointsWhy!,
-              key: const Key('quest-points-why'),
-              style: AppText.caption.copyWith(color: kInkSecondary),
-            ),
-          ),
         if (quest.bonusPoints > 0)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 24),

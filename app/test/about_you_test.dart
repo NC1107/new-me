@@ -111,15 +111,18 @@ void main() {
     ) async {
       final app = await _open(tester, _server());
       const questions = [
-        ('What year were you born?', 'Used by the Mifflin-St Jeor equation for your resting'),
-        ('What is your sex?', 'Used by the Mifflin-St Jeor equation for your resting energy, and'),
-        ('How tall are you?', 'Used by the Mifflin-St Jeor equation for your resting energy, and'),
-        ('What do you weigh?', 'Used by the Mifflin-St Jeor equation for your resting energy and'),
+        ('What year were you born?', 'Sets your step and fiber guides'),
+        ('What is your sex?', 'Some of the tables New Me uses differ by sex'),
+        ('How tall are you?', 'Keeps your protein in range for your height'),
+        ('What do you weigh?', 'Sets your protein.'),
         ('What is your weight goal?', 'Sets how far your calories sit from maintenance'),
       ];
       for (final (title, why) in questions) {
         expect(find.text(title), findsOneWidget);
         expect(find.textContaining(why), findsOneWidget, reason: title);
+        if (title != 'What is your weight goal?') {
+          expect(infoNoteWith('Mifflin-St Jeor'), findsOneWidget, reason: title);
+        }
         expect(find.text('SKIP'), findsOneWidget);
         await _tapButton(app, 'Skip');
       }

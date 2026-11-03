@@ -109,13 +109,13 @@ void main() {
     testWidgets('shows what the quest is worth, quiet while open', (tester) async {
       await tester.pumpWidget(host(const PointsChip(points: 100, done: false)));
       expect(find.text('+100'), findsOneWidget);
-      expect(find.bySemanticsLabel('Worth 100 points'), findsOneWidget);
+      expect(find.bySemanticsLabel('Worth 100 gems'), findsOneWidget);
     });
 
     testWidgets('says the points are earned once the quest is done', (tester) async {
       await tester.pumpWidget(host(const PointsChip(points: 50, done: true)));
       expect(find.text('+50'), findsOneWidget);
-      expect(find.bySemanticsLabel('50 points earned'), findsOneWidget);
+      expect(find.bySemanticsLabel('50 gems earned'), findsOneWidget);
     });
 
     testWidgets('sits on every quest card', (tester) async {
@@ -129,9 +129,9 @@ void main() {
     test('the worth line is the share of the day, and says earned once done', () {
       final open = Quest.fromJson(quest('steps', 'Steps', {'points': 100}));
       final done = Quest.fromJson(quest('steps', 'Steps', {'points': 100, 'done': true}));
-      expect(questWorthLine(open, 420), '+100 points, 24% of today');
-      expect(questWorthLine(done, 420), 'Earned +100 points, 24% of today');
-      expect(questWorthLine(open, 0), '+100 points');
+      expect(questWorthLine(open, 420), "+100 gems, 24% of the day's gems");
+      expect(questWorthLine(done, 420), "Earned +100 gems, 24% of the day's gems");
+      expect(questWorthLine(open, 0), '+100 gems');
     });
 
     test('a quest lists only the entries that feed it', () {
@@ -161,13 +161,24 @@ void main() {
       expect(find.text('Walk 8,000 steps'), findsOneWidget);
       expect(find.text('Counted by Apple Health'), findsWidgets);
       // maxBase is 400 in the fixture.
-      expect(find.text('+100 points, 25% of today'), findsOneWidget);
-      expect(find.text('Worth 100: about 80 min of walking at a moderate pace.'), findsOneWidget);
-      expect(find.textContaining('Nothing to log here'), findsOneWidget);
+      expect(find.text("+100 gems, 25% of the day's gems"), findsOneWidget);
+      expect(find.textContaining('Worth 100: about 80 min'), findsNothing);
+      expect(find.text('Nothing to log here.'), findsOneWidget);
       expect(find.text('Done on 1 of 3 days'), findsOneWidget);
-      expect(find.text('Recommended: 7,000 steps a day'), findsOneWidget);
+      expect(find.text('Recommended: 7,000 steps a day. Yours is 8,000 steps.'), findsOneWidget);
+      expect(find.textContaining('Ding D et al.'), findsNothing);
+      await tester.tap(find.text('How this is worked out'));
+      await tester.pumpAndSettle();
       expect(find.text('Source: Ding D et al., Lancet Public Health 2025;10:e668'), findsOneWidget);
       expect(find.text('Log water'), findsNothing);
+    });
+
+    testWidgets('what the quest is priced on sits behind the worth line', (tester) async {
+      await _open(tester, _server(), 'steps');
+      expect(find.textContaining('Worth 100: about 80 min'), findsNothing);
+      await tester.tap(find.text("+100 gems, 25% of the day's gems"));
+      await tester.pumpAndSettle();
+      expect(find.text('Worth 100: about 80 min of walking at a moderate pace.'), findsOneWidget);
     });
 
     testWidgets('the reading sheet explains the pages figure and the audiobook credit', (
@@ -175,9 +186,14 @@ void main() {
     ) async {
       await _open(tester, _server(), 'reading');
 
-      expect(find.text('Recommended: 20 pages for your 20 minutes'), findsOneWidget);
-      // A day frozen before points followed effort sends no reason.
-      expect(find.byKey(const Key('quest-points-why')), findsNothing);
+      expect(
+        find.text('Recommended: 20 pages for your 20 minutes. Yours is 15 pages.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('An audiobook minute counts as half'), findsNothing);
+      expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsNothing);
+      await tester.tap(find.text('How this is worked out'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('An audiobook minute counts as half'), findsOneWidget);
       expect(find.textContaining('Brysbaert, J Mem Lang 2019'), findsOneWidget);
       // The fixture's pages goal is the old 15.
@@ -218,12 +234,12 @@ void main() {
     testWidgets('Turn off asks first, then sends the switch and closes the sheet', (tester) async {
       final app = await _open(tester, _server(), 'steps');
 
-      await app.tap(find.text('Turn off this quest'));
+      await app.tap(find.text('Turn off this goal'));
       expect(find.text('Turn off Steps?'), findsOneWidget);
       await app.tap(find.text('Cancel'));
       expect(app.adapter.to('PATCH /api/me'), isEmpty);
 
-      await app.tap(find.text('Turn off this quest'));
+      await app.tap(find.text('Turn off this goal'));
       await app.tap(find.widgetWithText(TextButton, 'Turn off'));
 
       expect(app.body('PATCH /api/me'), {

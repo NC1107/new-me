@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../api/daily_reps_models.dart';
 import '../../api/models.dart';
 import '../../state/targets.dart';
+import '../../state/units.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
@@ -11,11 +13,13 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/preset_list.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../onboarding/goal_catalog.dart';
+import 'daily_reps_page.dart';
 import 'goal_advice.dart';
 import 'number_field.dart';
 import 'reading_pages.dart';
@@ -26,6 +30,30 @@ class GoalChoice {
 
   final int target;
   final int? targetAlt;
+}
+
+/// The one editor for a quest's goal, whether it is opened from Goals or from the quest sheet.
+/// Push-ups are sized on their own page, which saves itself, so they hand back no choice.
+Future<GoalChoice?> editGoal(
+  BuildContext context,
+  WidgetRef ref,
+  QuestTemplate quest, {
+  required int target,
+  required int? targetAlt,
+}) async {
+  if (quest.key == 'pushups') {
+    await pushPage<DailyReps>(context, const DailyRepsPage());
+    return null;
+  }
+  return pushPage<GoalChoice>(
+    context,
+    GoalPickerPage(
+      quest: quest,
+      target: target,
+      targetAlt: targetAlt,
+      units: ref.read(unitsProvider),
+    ),
+  );
 }
 
 /// The goals the server accepts for quests with a narrower range than "above zero", in the
@@ -196,10 +224,13 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
             'Your recommendation is not available yet. Add what is missing in Me > Targets.',
           )
         else if (spec.noResearch != null)
-          _Note(spec.noResearch!),
+          _Note(spec.noResearch!, more: spec.noResearchMore),
         if (spec.note != null) ...[
           const SizedBox(height: 6),
-          Text(spec.note!, style: AppText.caption),
+          if (spec.noteMore == null)
+            Text(spec.note!, style: AppText.caption)
+          else
+            InfoNote(spec.note!, info: spec.noteMore!),
         ],
         const SizedBox(height: 14),
         PresetList<int>(
@@ -259,15 +290,17 @@ class _GoalPickerPageState extends ConsumerState<GoalPickerPage> {
 }
 
 class _Note extends StatelessWidget {
-  const _Note(this.text);
+  const _Note(this.text, {this.more});
 
   final String text;
+  final InfoContent? more;
 
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
-  );
+  Widget build(BuildContext context) {
+    final style = AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600);
+    final more = this.more;
+    return more == null ? Text(text, style: style) : InfoNote(text, info: more, style: style);
+  }
 }
 
 /// The figure for this person, with the one line that says where it comes from.
@@ -338,10 +371,15 @@ class _RecommendedCard extends StatelessWidget {
                 ),
                 for (final e in examples) Text('- $e', style: AppText.caption),
               ],
-              if (advice.cite.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('Source: ${advice.cite}', style: AppText.caption.copyWith(color: kInkMuted)),
-              ],
+              if (advice.cite.isNotEmpty)
+                InfoNote(
+                  'Where this comes from',
+                  info: InfoContent(
+                    title: 'Where this comes from',
+                    paragraphs: const [],
+                    source: 'Source: ${advice.cite}',
+                  ),
+                ),
             ],
           ),
         ),

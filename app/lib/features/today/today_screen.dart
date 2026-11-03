@@ -7,7 +7,6 @@ import '../../state/health_sync.dart';
 import '../../state/insights.dart';
 import '../../state/listening_sync.dart';
 import '../../state/local_prefs.dart';
-import '../../state/me.dart';
 import '../../state/right_now.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
@@ -21,7 +20,6 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
 import '../../widgets/quest_copy.dart';
-import '../coach/coach_chat_page.dart';
 import '../habits/habits_strip.dart';
 import '../insights/insights_screen.dart';
 import '../log/log_kind.dart';
@@ -40,8 +38,8 @@ import 'plan_sheet.dart';
 import 'quest_sheet.dart';
 import 'right_now.dart';
 import 'streak_sheet.dart';
+import 'last_night.dart';
 import 'turned_off_quests.dart';
-import 'today_header.dart';
 import 'today_providers.dart';
 import 'today_skeleton.dart';
 import 'today_top_bar.dart';
@@ -197,9 +195,9 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final syncedAt = today.health.syncedAt ?? lastSynced;
     final now = ref.watch(clockProvider)();
     final partner = ref.watch(partnerProvider);
+    final ownBoard = ref.watch(ownBoardUserProvider);
     final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
-    final coachOn = ref.watch(meProvider.select((m) => m.value?.data.features.coachChat ?? false));
 
     return RefreshIndicator(
       color: context.accent,
@@ -211,27 +209,19 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
         children: [
           TodayTopBar(
             name: name,
-            palette: context.accentPalette,
+            now: now,
+            localToday: today.localToday,
             streak: today.streak.current,
-            points: today.day.points,
             partner: partner,
-            onOpenMe: () => tabs.select(HomeTab.me),
             onOpenUs: () => tabs.select(HomeTab.board),
             onStreak: () => showStreakSheet(
               context,
               streak: today.streak,
               line: today.day.streakLine,
               freezes: today.freezes,
+              repair: today.repair,
               onAway: _openAway,
             ),
-          ),
-          const SizedBox(height: 12),
-          TodayHeader(
-            today: today,
-            name: name,
-            now: now,
-            onPlan: today.plan == null ? null : _openPlan,
-            onCoach: coachOn ? () => openCoachChat(context) : null,
           ),
           const SizedBox(height: 16),
           DayCard(
@@ -239,6 +229,15 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             streak: today.streak,
             quests: today.quests,
             onEntries: _openEntries,
+            onPlan: today.plan == null ? null : _openPlan,
+            yesterday: yesterdayStatusLine(
+              localToday: today.localToday,
+              last7: ownBoard?.last7 ?? const [],
+              freezes: today.freezes,
+              repair: today.repair,
+              now: now,
+            ),
+            firstStep: firstStepOf(today.day, today.plan),
           ),
           RightNowSlot(today: today),
           if (today.away.today) ...[
@@ -248,6 +247,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           HabitsStrip(today: today),
           TrainingSlot(localToday: today.localToday, onTrainTab: false),
           ..._questCards(prompted, now),
+          HabitsStrip(today: today, emptyPrompt: true),
           const SizedBox(height: kCardGap),
           BodyRow(
             summary: bodySummary(today.health, insights),
@@ -274,7 +274,8 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       onConnect: () => ref.read(healthSyncProvider.notifier).connect(),
     );
 
-    for (final q in today.quests) {
+    final ordered = orderQuests(today.quests);
+    for (final q in ordered.list) {
       cards.add(const SizedBox(height: kCardGap));
       if (q.key == 'steps' && !today.health.stepsEverSynced) {
         cards.add(connect());
@@ -295,6 +296,10 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
           ),
         );
       }
+    }
+    if (ordered.missed.isNotEmpty) {
+      cards.add(const SizedBox(height: kCardGap));
+      cards.add(LastNightCard(missed: ordered.missed, onOpen: _openQuest));
     }
     if (today.quests.any((q) => isAutomaticQuest(q.key))) {
       cards.add(const SizedBox(height: 12));

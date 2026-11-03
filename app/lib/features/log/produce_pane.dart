@@ -6,6 +6,7 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/info_note.dart';
 import 'log_chip.dart';
 import 'log_panes.dart';
 
@@ -161,9 +162,14 @@ class _ServingGuide extends StatelessWidget {
             ),
         ],
         const SizedBox(height: 8),
-        Text(kServingFootnote, style: AppText.caption.copyWith(color: kInkSecondary)),
-        const SizedBox(height: 4),
-        const Text('From the NHS 5 A Day portion guide.', style: AppText.caption),
+        const InfoNote(
+          'Beans, juice and potatoes have their own rules.',
+          info: InfoContent(
+            title: 'How servings are counted',
+            paragraphs: [kServingFootnote],
+            source: 'NHS 5 A Day portion guide.',
+          ),
+        ),
       ],
     ),
   );

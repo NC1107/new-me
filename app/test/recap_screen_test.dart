@@ -187,7 +187,7 @@ void main() {
       );
       expect(find.text('A first week, so nothing to compare yet.'), findsOneWidget);
       expect(find.text('+50,400'), findsNothing);
-      expect(find.text('356 points'), findsOneWidget);
+      expect(find.text('356 gems'), findsOneWidget);
     });
 
     testWidgets('a person with nothing logged gets one line, not a grid of zeros', (tester) async {
@@ -320,7 +320,7 @@ void main() {
         const RecapStats(points: 200, steps: 50000, workouts: 1),
         const RecapStats(points: 100, steps: 60000, workouts: 1),
       );
-      expect([for (final r in recapGains(rows)) r.label], ['Points']);
+      expect([for (final r in recapGains(rows)) r.label], ['Gems']);
     });
 
     test('statsEmpty is true only when nothing was recorded', () {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -77,59 +78,68 @@ func (s *Server) handlePutTrainingProfile(w http.ResponseWriter, r *http.Request
 		fail(w, r, err)
 		return
 	}
-	for _, e := range req.Equipment {
-		if !slices.Contains(db.Equipment, e) {
-			fail(w, r, invalid("unknown equipment "+strconv.Quote(e)))
-			return
-		}
-	}
-	switch {
-	case req.DaysPerWeek < 2 || req.DaysPerWeek > 6:
-		fail(w, r, invalid("daysPerWeek must be between 2 and 6"))
-		return
-	case req.SessionMinutes < 20 || req.SessionMinutes > 90:
-		fail(w, r, invalid("sessionMinutes must be between 20 and 90"))
-		return
-	case !slices.Contains([]string{training.ExperienceNew, training.ExperienceSome, training.ExperienceExperienced}, req.Experience):
-		fail(w, r, invalid("experience must be new, some or experienced"))
-		return
-	case req.DumbbellMaxKg != nil && (*req.DumbbellMaxKg <= 0 || *req.DumbbellMaxKg > 200):
-		fail(w, r, invalid("dumbbellMaxKg must be above 0 and at most 200"))
-		return
-	}
-	focus := strings.TrimSpace(req.Focus)
-	if utf8.RuneCountInString(focus) > 300 || hasControlChars(focus) {
-		fail(w, r, invalid("focus must be at most 300 characters without control characters"))
-		return
-	}
-	c := callerFrom(r)
-	var p db.TrainingProfile
-	// The session length prices the strength quest, so a change reprices it and applies today
-	// like any other goal edit; still-open days are scored first so they keep their points.
-	err := s.db.WithTx(r.Context(), func(tx pgx.Tx) error {
-		for _, date := range s.openDates(c.user, c.loc) {
-			if _, err := engine.RecomputeDayAt(r.Context(), tx, c.user.ID, date, c.loc, s.now()); err != nil {
-				return err
-			}
-		}
-		var err error
-		p, err = db.PutTrainingProfile(r.Context(), tx, c.user.ID, db.TrainingProfile{
-			Equipment: nonNil(req.Equipment), DumbbellMaxKg: req.DumbbellMaxKg, DaysPerWeek: req.DaysPerWeek,
-			SessionMinutes: req.SessionMinutes, Experience: req.Experience, Focus: focus})
-		if err != nil {
-			return err
-		}
-		changed, err := db.RepriceStrength(r.Context(), tx, c.user.ID)
-		if err != nil || !changed {
-			return err
-		}
-		return s.resnapshotToday(r.Context(), tx, c, c.user, patchMeRequest{Targets: &targetsPatch{}})
-	})
+	p, err := s.putTrainingProfile(r.Context(), callerFrom(r), req)
 	if err != nil {
 		fail(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"profile": toTrainingProfileJSON(p)})
+}
+
+// validTrainingProfile checks a profile against the same bounds the settings page is held to.
+func validTrainingProfile(req trainingProfileJSON) (focus string, herr *httpError) {
+	for _, e := range req.Equipment {
+		if !slices.Contains(db.Equipment, e) {
+			return "", invalid("unknown equipment " + strconv.Quote(e))
+		}
+	}
+	switch {
+	case req.DaysPerWeek < 2 || req.DaysPerWeek > 6:
+		return "", invalid("daysPerWeek must be between 2 and 6")
+	case req.SessionMinutes < 20 || req.SessionMinutes > 90:
+		return "", invalid("sessionMinutes must be between 20 and 90")
+	case !slices.Contains([]string{training.ExperienceNew, training.ExperienceSome, training.ExperienceExperienced}, req.Experience):
+		return "", invalid("experience must be new, some or experienced")
+	case req.DumbbellMaxKg != nil && (*req.DumbbellMaxKg <= 0 || *req.DumbbellMaxKg > 200):
+		return "", invalid("dumbbellMaxKg must be above 0 and at most 200")
+	}
+	focus = strings.TrimSpace(req.Focus)
+	if utf8.RuneCountInString(focus) > 300 || hasControlChars(focus) {
+		return "", invalid("focus must be at most 300 characters without control characters")
+	}
+	return focus, nil
+}
+
+// putTrainingProfile is the one write path of the training profile, shared by the settings page
+// and the coach.
+func (s *Server) putTrainingProfile(ctx context.Context, c caller, req trainingProfileJSON) (db.TrainingProfile, error) {
+	focus, herr := validTrainingProfile(req)
+	if herr != nil {
+		return db.TrainingProfile{}, herr
+	}
+	var p db.TrainingProfile
+	// The session length prices the strength quest, so a change reprices it and applies today
+	// like any other goal edit; still-open days are scored first so they keep their points.
+	err := s.db.WithTx(ctx, func(tx pgx.Tx) error {
+		for _, date := range s.openDates(c.user, c.loc) {
+			if _, err := engine.RecomputeDayAt(ctx, tx, c.user.ID, date, c.loc, s.now()); err != nil {
+				return err
+			}
+		}
+		var err error
+		p, err = db.PutTrainingProfile(ctx, tx, c.user.ID, db.TrainingProfile{
+			Equipment: nonNil(req.Equipment), DumbbellMaxKg: req.DumbbellMaxKg, DaysPerWeek: req.DaysPerWeek,
+			SessionMinutes: req.SessionMinutes, Experience: req.Experience, Focus: focus})
+		if err != nil {
+			return err
+		}
+		changed, err := db.RepriceStrength(ctx, tx, c.user.ID)
+		if err != nil || !changed {
+			return err
+		}
+		return s.resnapshotToday(ctx, tx, c, c.user, patchMeRequest{Targets: &targetsPatch{}})
+	})
+	return p, err
 }
 
 type prescriptionJSON struct {

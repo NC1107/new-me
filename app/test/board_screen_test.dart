@@ -83,7 +83,7 @@ void main() {
     expect(find.text('Preseason, ends Dec 31'), findsOneWidget);
     expect(find.textContaining('Together:'), findsNothing);
     expect(find.text('Weekly recap'), findsOneWidget);
-    expect(find.text('Progress'), findsOneWidget);
+    expect(find.text('Progress'), findsNothing);
     expect(find.textContaining('Nobody has moved yet'), findsNothing);
     expect(find.textContaining(RegExp('win|lead|behind|rank', caseSensitive: false)), findsNothing);
 
@@ -191,9 +191,9 @@ void main() {
     await app.pump(const BoardScreen());
     await app.tap(find.byType(PersonCard).at(1));
     expect(find.text('Week'), findsOneWidget);
-    expect(find.text('1,200 points'), findsOneWidget);
+    expect(find.text('1,200 gems'), findsOneWidget);
     expect(find.text('Season'), findsOneWidget);
-    expect(find.text('8,000 points'), findsOneWidget);
+    expect(find.text('8,000 gems'), findsOneWidget);
     expect(find.text('Freezes'), findsOneWidget);
     expect(find.text('Synced 3h ago'), findsOneWidget);
   });

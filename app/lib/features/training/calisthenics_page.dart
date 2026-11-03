@@ -8,6 +8,7 @@ import '../../api/models.dart';
 import '../../state/training.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/page_scaffold.dart';
@@ -30,8 +31,7 @@ class CalisthenicsPage extends ConsumerWidget {
       title: 'Calisthenics',
       children: [
         Text(
-          'Bodyweight workouts with no equipment. Rep exercises are at your own pace: tap Done '
-          'when you finish. Holds count down. Do one on 2 to 3 days a week with a day off between.',
+          'No equipment. Do one 2 to 3 days a week.',
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 16),
@@ -40,18 +40,17 @@ class CalisthenicsPage extends ConsumerWidget {
           _LevelCard(level: level, catalog: catalog, onTap: () => _open(context, level)),
           const SizedBox(height: 10),
         ],
-        const SizedBox(height: 4),
-        for (final note in const [
-          kCalOrderNote,
-          kCalCitation,
-          kCalIntervalNote,
-          kCalSizingNote,
-        ]) ...[
-          Text(note, style: AppText.caption.copyWith(color: kInkMuted)),
-          const SizedBox(height: 4),
-        ],
-        const SizedBox(height: 8),
-        Text(kCalSafety, style: AppText.caption.copyWith(color: kInkMuted)),
+        InfoNote.label(
+          'Sources and safety',
+          paragraphs: [
+            'Rep exercises are at your own pace: tap Done when you finish. Holds count down.',
+            kCalOrderNote,
+            kCalCitation,
+            kCalIntervalNote,
+            kCalSizingNote,
+            kCalSafety,
+          ],
+        ),
       ],
     );
   }
@@ -69,10 +68,10 @@ class _LevelCard extends StatelessWidget {
     final c = catalog;
     final holds = c == null ? null : buildCalisthenicsHolds(level, c);
     final ready = holds != null && holds.isNotEmpty;
-    final sized = ready && _usesYourMax(level, c!);
-    final facts =
-        '${ready ? 'About ${calMinutes(holds)} minutes: ' : ''}warm-up, ${level.rounds} rounds of '
-        '${level.circuit.length} exercises, cool-down.';
+    final facts = [
+      if (ready) 'About ${calMinutes(holds)} min',
+      '${level.rounds} rounds',
+    ].join(', ');
     return AppCard(
       onTap: onTap,
       child: Row(
@@ -84,15 +83,6 @@ class _LevelCard extends StatelessWidget {
                 Text(level.name, style: AppText.headline),
                 const SizedBox(height: 2),
                 Text(facts, style: AppText.caption.copyWith(color: kInkSecondary)),
-                const SizedBox(height: 2),
-                Text(level.blurb, style: AppText.caption.copyWith(color: kInkSecondary)),
-                if (sized) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Reps use ${level.maxPercent}% of your max where you have one.',
-                    style: AppText.caption.copyWith(color: kInkMuted),
-                  ),
-                ],
               ],
             ),
           ),
@@ -101,7 +91,4 @@ class _LevelCard extends StatelessWidget {
       ),
     );
   }
-
-  bool _usesYourMax(CalLevel level, ExerciseCatalog catalog) =>
-      level.circuit.any((s) => s.sized && (catalog.byKey(s.key)?.maxTest?.reps ?? 0) > 0);
 }

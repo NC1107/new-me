@@ -6,11 +6,11 @@ import '../../api/api_client.dart';
 import '../../api/models.dart';
 import '../../state/board.dart';
 import '../../state/clock.dart';
-import '../../state/habits.dart';
 import '../../state/health_sync.dart';
 import '../../state/me.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
+import '../../state/together.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -24,18 +24,16 @@ import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
-import '../habits/habits_page.dart';
-import '../insights/insights_screen.dart';
 import 'apple_health_page.dart';
 import 'audiobookshelf_page.dart';
-import 'daily_goals_page.dart';
+import 'goals_page.dart';
 import '../streaks/away_page.dart';
 import 'pairing_page.dart';
+import 'coach_knows_page.dart';
 import 'profile_page.dart';
 import 'schedule_page.dart';
 import '../together/notifications_page.dart';
 import 'settings_row.dart';
-import 'targets_page.dart';
 
 class MeScreen extends ConsumerWidget {
   const MeScreen({super.key});
@@ -73,7 +71,6 @@ class _MeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(healthSyncProvider);
-    final habitCount = ref.watch(habitsProvider.select((h) => h.value?.data.habits.length));
     final now = ref.watch(clockProvider)();
     final enabled = me.questTemplates.where((q) => q.enabled).length;
     final away = ref.watch(todayProvider.select((t) => t.value?.data.away)) ?? const AwayState();
@@ -86,43 +83,6 @@ class _MeBody extends ConsumerWidget {
         Semantics(header: true, child: const Text('Me', style: AppText.display)),
         const SizedBox(height: 16),
         _Header(me: me),
-        Semantics(header: true, child: const SectionLabel('Plan')),
-        SettingsGroup(
-          rows: [
-            SettingsRow(
-              icon: Icons.flag_rounded,
-              palette: accentById('amber'),
-              title: 'Daily goals',
-              subtitle: '$enabled of ${me.questTemplates.length} on',
-              onTap: () => pushPage(context, const DailyGoalsPage()),
-            ),
-            SettingsRow(
-              icon: Icons.checklist_rounded,
-              palette: accentById('teal'),
-              title: 'Habits',
-              subtitle: habitCount == null
-                  ? 'Daily routines'
-                  : habitCount == 1
-                  ? '1 habit'
-                  : '$habitCount habits',
-              onTap: () => pushPage(context, const HabitsPage()),
-            ),
-            SettingsRow(
-              icon: Icons.science_rounded,
-              palette: accentById('green'),
-              title: 'Targets',
-              subtitle: 'Calories, macros, sleep and more, with sources',
-              onTap: () => pushPage(context, const TargetsPage()),
-            ),
-            SettingsRow(
-              icon: Icons.insights_rounded,
-              palette: accentById('sky'),
-              title: 'Insights',
-              subtitle: 'Steps, sleep and workouts',
-              onTap: () => openInsights(context),
-            ),
-          ],
-        ),
         Semantics(header: true, child: const SectionLabel('You')),
         SettingsGroup(
           rows: [
@@ -134,12 +94,27 @@ class _MeBody extends ConsumerWidget {
               onTap: () => pushPage(context, const ProfilePage()),
             ),
             SettingsRow(
+              icon: Icons.flag_rounded,
+              palette: accentById('amber'),
+              title: 'Goals',
+              subtitle: '$enabled of ${me.questTemplates.length} on',
+              onTap: () => pushPage(context, const GoalsPage()),
+            ),
+            SettingsRow(
               icon: Icons.schedule_rounded,
               palette: accentById('amber'),
               title: 'Schedule',
               subtitle: scheduleSummary(me.schedule),
               onTap: () => pushPage(context, const SchedulePage()),
             ),
+            if (me.features.coachChat)
+              SettingsRow(
+                icon: Icons.psychology_alt_rounded,
+                palette: accentById('violet'),
+                title: 'What the coach knows',
+                subtitle: 'Facts you told your coach',
+                onTap: () => pushPage(context, const CoachKnowsPage()),
+              ),
             SettingsRow(
               icon: Icons.pause_circle_rounded,
               palette: accentById('sky'),
@@ -213,7 +188,7 @@ String awaySummary(AwayState away) {
   if (away.upcoming.isNotEmpty) {
     return 'Next: ${awayRangeLabel(away.upcoming.first.from, away.upcoming.first.to)}';
   }
-  return 'Pause streaks when sick or traveling';
+  return 'Pause your streak when away';
 }
 
 String _audiobookshelfSubtitle(AudiobookshelfLink link, DateTime now) {
@@ -234,6 +209,9 @@ class _Header extends ConsumerWidget {
     final accent = accentById(me.user.color);
     final users = ref.watch(boardProvider).value?.data.users ?? const <BoardUser>[];
     final mine = users.where((u) => u.id == me.user.id).firstOrNull;
+    final seasonName = ref.watch(boardProvider).value?.data.season.name;
+    final preseason = seasonName == null || isPreseason(seasonName);
+    final balance = ref.watch(rewardsProvider).value?.balanceOf(me.user.id)?.balance;
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Row(
@@ -263,11 +241,19 @@ class _Header extends ConsumerWidget {
                             ? 'Start a streak today'
                             : '${mine.streak} day streak',
                       ),
-                      _Stat(
-                        icon: Icons.diamond_rounded,
-                        color: accentById('sky').fill,
-                        text: '${mine.season.formatted} season points',
-                      ),
+                      if (balance != null)
+                        _Stat(
+                          icon: Icons.diamond_rounded,
+                          color: accentById('sky').fill,
+                          text: gemsToSpendLine(balance),
+                        ),
+                      // In the preseason the season total is the same figure as the balance.
+                      if (!preseason)
+                        _Stat(
+                          icon: Icons.emoji_events_rounded,
+                          color: accentById('sky').fill,
+                          text: '${mine.season.formatted} earned this season',
+                        ),
                     ],
                   ),
                 ],

@@ -8,34 +8,45 @@ import "slices"
 const MaxTreatsPerPerson = 30
 
 // Person is one person's lifetime gems: earned from scored days, and paid out on their own
-// treats and on their share of shared rewards.
+// treats and on their share of shared rewards. Tasks is the net of their settled tasks (gems won
+// by finishing, minus what a miss took when they had put the gems on the line); it is a ledger of
+// its own, never day points.
 type Person struct {
 	Earned int
 	Paid   int
+	Tasks  int
 }
 
-// Balance is what the person can spend on a treat. It never reads below zero; a later re-score
-// can lower Earned below Paid.
-func (p Person) Balance() int { return max(p.Earned-p.Paid, 0) }
+// Balance is what the person holds, never below zero: a task loss is capped at what they held at
+// the deadline, and a re-score below what was paid reads zero rather than a debt.
+// See docs/design-v21-tasks.md.
+func (p Person) Balance() int { return max(p.Earned+p.Tasks-p.Paid, 0) }
 
-// Bank is the shared bank: both people's earnings minus all spending, shared rewards and treats
-// alike. It equals the sum of the balances unless a re-score pushed someone below zero.
+// Bank is the shared bank: both people's balances added up.
 func Bank(people []Person) int {
-	earned, paid := 0, 0
+	total := 0
 	for _, p := range people {
-		earned += p.Earned
-		paid += p.Paid
+		total += p.Balance()
 	}
-	return max(earned-paid, 0)
+	return total
 }
 
-// Balances lists each person's balance in order.
+// Balances lists what each person holds, in order.
 func Balances(people []Person) []int {
 	out := make([]int, len(people))
 	for i, p := range people {
 		out[i] = p.Balance()
 	}
 	return out
+}
+
+// TaskLoss is what a missed task takes: nothing unless its assignee put the gems on the line, and
+// never more than they hold when the deadline passes, so no loss leaves a hidden debt.
+func TaskLoss(loseIfMissed bool, stake, balance int) int {
+	if !loseIfMissed {
+		return 0
+	}
+	return min(stake, max(balance, 0))
 }
 
 // SplitPrice divides the price of a shared reward between people in proportion to the balance

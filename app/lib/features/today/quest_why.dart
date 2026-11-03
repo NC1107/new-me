@@ -5,7 +5,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../util/reps_exercises.dart';
-import '../../widgets/pressable.dart';
+import '../../widgets/info_note.dart';
 import '../me/targets_logic.dart';
 import '../onboarding/goal_catalog.dart';
 
@@ -34,6 +34,7 @@ class QuestWhy {
   const QuestWhy({
     this.recommended,
     this.reason,
+    this.yours,
     this.comparison,
     this.citation,
     this.formula,
@@ -46,10 +47,13 @@ class QuestWhy {
   /// One plain line on where the figure comes from.
   final String? reason;
 
+  /// "Yours is 4,500 steps.": the person's own goal, shown beside [recommended].
+  final String? yours;
+
   /// How the person's own goal compares with [recommended].
   final String? comparison;
 
-  /// "Source: Zourdos et al., J Strength Cond Res 2016".
+  /// "Source: Zourdos et al., J Strength Cond Res 2016", shown inside the expander.
   final String? citation;
 
   /// The precise working, kept out of the way behind a tap.
@@ -104,6 +108,9 @@ String _compare(Quest quest, int goal, int recommended, Units units) {
   return 'Your goal is $amount, ${near ? 'a little ' : ''}$side the recommendation.';
 }
 
+String _yours(Quest quest, int goal, Units units) =>
+    'Yours is ${_amount(quest, quest.key, goal, units)}.';
+
 /// The goal in plain words for quests that have no recommendation, or null where a single
 /// number does not say it (reading counts minutes or pages).
 String? _ownGoal(Quest quest, Units units) {
@@ -144,6 +151,11 @@ QuestWhy? questWhy(Quest quest, TargetsReport? report, Units units) {
   return QuestWhy(
     recommended: _recommendedLine(quest, target, units),
     reason: why.isEmpty ? null : why,
+    yours: pagesGoal != null
+        ? _yours(quest, pagesGoal, units)
+        : sameUnit
+        ? _yours(quest, quest.target.round(), units)
+        : null,
     comparison: pagesGoal != null
         ? _compare(quest, pagesGoal, target.value!, units)
         : sameUnit
@@ -154,88 +166,32 @@ QuestWhy? questWhy(Quest quest, TargetsReport? report, Units units) {
   );
 }
 
-/// "Why this goal": the recommendation first, then the reason, how the goal compares, the
-/// source, and the working behind a tap.
-class QuestWhySection extends StatefulWidget {
+/// "Why this goal": the recommendation and the person's own number in one line, with the reason,
+/// the working and the source behind an info row.
+class QuestWhySection extends StatelessWidget {
   const QuestWhySection({super.key, required this.why});
 
   final QuestWhy why;
 
   @override
-  State<QuestWhySection> createState() => _QuestWhySectionState();
-}
-
-class _QuestWhySectionState extends State<QuestWhySection> {
-  bool _open = false;
-
-  @override
   Widget build(BuildContext context) {
-    final why = widget.why;
-    final reduce = MediaQuery.disableAnimationsOf(context);
-    final gap = const SizedBox(height: 8);
+    final label = why.formula != null ? 'How this is worked out' : 'Where this comes from';
+    final detail = [?why.reason, ?why.comparison, ?why.formula];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (why.recommended != null)
-          Text(why.recommended!, style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            why.yours == null ? why.recommended! : '${why.recommended!}. ${why.yours!}',
+            style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+          ),
         if (why.note != null) Text(why.note!, style: AppText.body),
-        if (why.reason != null) ...[
-          const SizedBox(height: 4),
-          Text(why.reason!, style: AppText.body),
-        ],
-        if (why.comparison != null) ...[
-          gap,
-          Text(why.comparison!, style: AppText.label.copyWith(color: kInkSecondary)),
-        ],
-        if (why.citation != null) ...[
-          const SizedBox(height: 6),
-          Text(why.citation!, style: AppText.caption),
-        ],
-        if (why.formula != null) ...[
-          const SizedBox(height: 4),
-          Semantics(
-            button: true,
-            expanded: _open,
-            label: 'How this is worked out',
-            excludeSemantics: true,
-            onTap: () => setState(() => _open = !_open),
-            child: Pressable(
-              scale: 0.98,
-              onTap: () => setState(() => _open = !_open),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'How this is worked out',
-                        style: AppText.label.copyWith(color: kInkSecondary),
-                      ),
-                    ),
-                    AnimatedRotation(
-                      turns: _open ? 0.5 : 0,
-                      duration: reduce ? Duration.zero : kMotionDuration,
-                      child: const Icon(Icons.expand_more_rounded, size: 24, color: kInkSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        if (detail.isNotEmpty || why.citation != null)
+          InfoNote(
+            label,
+            style: AppText.label.copyWith(color: kInkSecondary),
+            info: InfoContent(title: 'Why this goal', paragraphs: detail, source: why.citation),
           ),
-          AnimatedSize(
-            duration: reduce ? Duration.zero : kMotionDuration,
-            alignment: Alignment.topCenter,
-            child: _open
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      why.formula!,
-                      style: AppText.caption.copyWith(color: kInkSecondary),
-                    ),
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-        ],
       ],
     );
   }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nc1107/new-me/server/internal/score"
 	"github.com/nc1107/new-me/server/internal/together"
 )
 
@@ -174,6 +175,31 @@ func TestPartnerKindsCountAgainstTheSeparateBudget(t *testing.T) {
 			if kind == auto {
 				t.Errorf("%s must not share the automatic push budget", kind)
 			}
+		}
+	}
+}
+
+func TestHardMeansHalfAnHourOfModerateEffort(t *testing.T) {
+	if HardQuestPoints != 60 {
+		t.Fatalf("HardQuestPoints = %d, want 60", HardQuestPoints)
+	}
+	for _, c := range []struct {
+		name            string
+		key             string
+		target, minutes int
+		hard            bool
+	}{
+		{"a 30 min strength session", "pushups", 0, 30, true},
+		{"a 20 min strength session", "pushups", 0, 20, false},
+		{"30 min of exercise", "exercise", 30, 0, true},
+		{"20 min of exercise", "exercise", 20, 0, false},
+		{"7,000 steps", "steps", 7000, 0, true},
+		{"30 min of yoga", "yoga", 30, 0, false},
+		{"30 min of reading", "reading", 30, 0, false},
+		{"water", "water", 3000, 0, false},
+	} {
+		if got := score.EffortPoints(c.key, c.target, c.minutes).Points >= HardQuestPoints; got != c.hard {
+			t.Errorf("%s: hard = %v, want %v", c.name, got, c.hard)
 		}
 	}
 }

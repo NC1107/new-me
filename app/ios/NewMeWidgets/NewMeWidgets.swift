@@ -51,7 +51,7 @@ struct TodayWidget: Widget {
       TodayWidgetView(entry: entry)
     }
     .configurationDisplayName("Today")
-    .description("Your ring, points, streak and the habits still due.")
+    .description("Your ring, gems, streak and the habits still due.")
     .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
   }
 }

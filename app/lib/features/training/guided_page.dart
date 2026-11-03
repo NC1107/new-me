@@ -20,6 +20,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/reps_exercises.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
@@ -70,7 +71,7 @@ class GuidedRoutine {
     this.outline,
     this.voice = const GuidedVoice(),
     this.activityType = 'yoga',
-    this.loggedTo = 'your yoga quest',
+    this.loggedTo = 'your yoga goal',
     this.subtitleLead = '',
     this.logsReps = false,
     this.strengthCreditMinutes,
@@ -612,11 +613,6 @@ class _Intro extends StatelessWidget {
               : routine.introFor(stretches.length, minutes),
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
-        const SizedBox(height: 8),
-        for (final (i, note) in routine.notes.indexed) ...[
-          if (i > 0) const SizedBox(height: 4),
-          Text(note, style: i == 0 ? AppText.caption : AppText.caption.copyWith(color: kInkMuted)),
-        ],
         const SizedBox(height: 16),
         if (list == null)
           const SkeletonBlock(height: 240, radius: kRadiusCard)
@@ -644,7 +640,7 @@ class _Intro extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          Text(routine.footnote, style: AppText.caption.copyWith(color: kInkMuted)),
+          InfoNote.label('Sources and safety', paragraphs: [...routine.notes, routine.footnote]),
         ] else ...[
           const FieldLabel('In this order'),
           AppCard(
@@ -673,7 +669,7 @@ class _Intro extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text(routine.footnote, style: AppText.caption.copyWith(color: kInkMuted)),
+          InfoNote.label('Sources and safety', paragraphs: [...routine.notes, routine.footnote]),
         ],
       ],
     );
@@ -1375,7 +1371,7 @@ class _Finished extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Under $kGuidedMinLogSeconds seconds of ${routine.activity}, so nothing was added to '
-            'your ${routine.activityType == 'yoga' ? 'yoga quest' : 'exercise minutes'}.',
+            'your ${routine.activityType == 'yoga' ? 'yoga goal' : 'exercise minutes'}.',
             style: AppText.body.copyWith(color: kInkSecondary),
           ),
         ] else ...[

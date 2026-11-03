@@ -11,6 +11,7 @@ import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/cached_view.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/mascot.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/segmented.dart';
@@ -333,11 +334,16 @@ class _Placement extends StatelessWidget {
           const SizedBox(height: 12),
           _PercentileBar(low: low, color: palette.fill, label: headline),
           const SizedBox(height: 12),
-          const Text(
-            'From treadmill lab tests of healthy US adults in the FRIEND registry (Kaminsky et '
-            'al., Mayo Clinic Proceedings 2022). A watch estimate is not a lab test, so read the '
-            'band as a rough guide.',
-            style: AppText.caption,
+          const InfoNote(
+            'Compared with lab-tested adults. A rough guide.',
+            info: InfoContent(
+              title: 'Where the comparison comes from',
+              paragraphs: [
+                'The bands come from treadmill lab tests of healthy US adults in the FRIEND registry.',
+                'A watch estimate is not a lab test, so read the band as a rough guide.',
+              ],
+              source: 'Kaminsky et al., Mayo Clinic Proceedings 2022.',
+            ),
           ),
         ],
       ),
@@ -394,12 +400,17 @@ class _WhatMovesIt extends ConsumerWidget {
         children: [
           const Text('What moves it', style: AppText.headline),
           const SizedBox(height: 4),
-          Text(
-            'Regular aerobic activity. The World Health Organization advises 150 to 300 minutes '
-            'of moderate or 75 to 150 minutes of vigorous activity a week, and the American '
-            'College of Sports Medicine gives similar targets (WHO guidelines, Br J Sports Med '
-            '2020).',
-            style: AppText.body.copyWith(color: kInkSecondary),
+          const InfoNote(
+            'Regular aerobic activity, 150 minutes or more a week.',
+            style: AppText.body,
+            info: InfoContent(
+              title: 'How much activity',
+              paragraphs: [
+                'The World Health Organization advises 150 to 300 minutes of moderate or 75 to 150 minutes of vigorous activity a week.',
+                'The American College of Sports Medicine gives similar targets.',
+              ],
+              source: 'WHO guidelines, Br J Sports Med 2020.',
+            ),
           ),
           if (minutes != null) ...[
             const SizedBox(height: 8),
@@ -410,10 +421,15 @@ class _WhatMovesIt extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 8),
-          const Text(
-            'Fitness is worth building: each 1 MET higher (3.5 ml/kg/min) goes with about 13% '
-            'lower risk of death from any cause (Kodama et al., JAMA 2009).',
-            style: AppText.caption,
+          const InfoNote(
+            'Fitness is worth building. Each 1 MET higher goes with about 13% lower risk of death.',
+            info: InfoContent(
+              title: 'Fitness and long-term health',
+              paragraphs: [
+                'Each 1 MET higher (3.5 ml/kg/min) goes with about 13% lower risk of death from any cause.',
+              ],
+              source: 'Kodama et al., JAMA 2009.',
+            ),
           ),
         ],
       ),
@@ -425,18 +441,24 @@ class _Estimate extends StatelessWidget {
   const _Estimate();
 
   @override
-  Widget build(BuildContext context) => AppCard(
+  Widget build(BuildContext context) => const AppCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('An estimate, not a lab test', style: AppText.headline),
-        const SizedBox(height: 4),
-        Text(
-          'Apple Watch infers VO2 max from heart rate and pace. Independent tests against a '
-          'lab gas analyzer found a typical error of 13 to 16 percent (Lambe et al., PLOS ONE '
-          '2025, 28 adults; Caserman et al., JMIR Biomedical Engineering 2024, 19 adults). '
-          'Changes of a point or two are noise, so watch the direction over months.',
-          style: AppText.body.copyWith(color: kInkSecondary),
+        Text('An estimate, not a lab test', style: AppText.headline),
+        SizedBox(height: 4),
+        InfoNote(
+          'Typical error is 13 to 16 percent, so watch the direction over months.',
+          style: AppText.body,
+          info: InfoContent(
+            title: 'How accurate is the estimate',
+            paragraphs: [
+              'Apple Watch infers VO2 max from heart rate and pace.',
+              'Independent tests against a lab gas analyzer found a typical error of 13 to 16 percent.',
+              'Changes of a point or two are noise, so watch the direction over months.',
+            ],
+            source: 'Lambe et al., PLOS ONE 2025 (28 adults); Caserman et al., JMIR Biomedical Engineering 2024 (19 adults).',
+          ),
         ),
       ],
     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../util/format.dart';
 import '../../util/units.dart';
+import '../../widgets/info_note.dart';
 
 /// One plain number a person can pick on a goal screen. It carries no name: a figure is only
 /// described when a published source gives it a meaning.
@@ -27,6 +28,8 @@ class GoalSpec {
     this.targetKey,
     this.noResearch,
     this.note,
+    this.noResearchMore,
+    this.noteMore,
     this.labelIn,
   });
 
@@ -42,6 +45,10 @@ class GoalSpec {
 
   /// One extra line under the recommendation, for goals with something worth knowing up front.
   final String? note;
+
+  /// The detail and citation behind [noResearch] and [note], opened from an info icon.
+  final InfoContent? noResearchMore;
+  final InfoContent? noteMore;
 
   /// Plain numbers to pick from when there is no recommendation to lead with.
   final List<GoalOption> options;
@@ -143,8 +150,14 @@ final Map<String, GoalSpec> kGoalSpecs = {
       question: 'How close to your usual times?',
       // Research shows regular timing matters (Windred et al. 2024) but gives no window to aim for.
       noResearch:
-          'Regular timing matters (Windred 2024), but the research does not name a window, '
-          'so the number is your call.',
+          'Regular timing matters, but no research names a window, so the number is your call.',
+      noResearchMore: const InfoContent(
+        title: 'Regular sleep timing',
+        paragraphs: [
+          'Regular timing matters, but the research does not name a window, so the number is your call.',
+        ],
+        source: 'Windred et al. 2024.',
+      ),
       note: 'Your usual bed and wake times are the median of your last 7 nights.',
       options: _plain([30, 45, 60, 90]),
       defaultValue: 45,
@@ -154,9 +167,15 @@ final Map<String, GoalSpec> kGoalSpecs = {
       questKey: 'produce',
       question: 'How many servings of fruit and vegetables?',
       targetKey: 'produce',
-      note:
-          'One serving is 80 g, for example a medium apple or banana, 3 heaped tablespoons of '
-          'cooked vegetables or a cereal bowl of salad (NHS 5 A Day). Potatoes do not count.',
+      note: 'One serving is 80 g, like a medium apple or banana. Potatoes do not count.',
+      noteMore: const InfoContent(
+        title: 'What counts as a serving',
+        paragraphs: [
+          'One serving is 80 g, for example a medium apple or banana, 3 heaped tablespoons of cooked vegetables or a cereal bowl of salad.',
+          'Potatoes do not count.',
+        ],
+        source: 'NHS 5 A Day portion guide.',
+      ),
       options: _plain([3, 5, 7, 10]),
       defaultValue: 5,
       label: (v) => '$v ${v == 1 ? 'serving' : 'servings'} (${v * kProduceServingGrams} g)',

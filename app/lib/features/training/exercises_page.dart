@@ -14,6 +14,7 @@ import '../../theme/typography.dart';
 import '../../util/client_op_id.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/cached_view.dart';
@@ -357,10 +358,11 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                 style: AppText.headline,
               ),
               if (e.best?.e1rmKg != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Estimated by the Epley formula, load x (1 + reps / 30); less accurate past about 10 reps.',
-                  style: AppText.caption.copyWith(color: kInkMuted),
+                InfoNote.label(
+                  'About this estimate',
+                  paragraphs: [
+                    'Estimated by the Epley formula, load x (1 + reps / 30); less accurate past about 10 reps.',
+                  ],
                 ),
               ],
               if (e.maxTest != null || e.best != null) ...[

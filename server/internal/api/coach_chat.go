@@ -43,6 +43,8 @@ type coachChatRequest struct {
 
 type coachChatResponse struct {
 	Reply string `json:"reply"`
+	// Actions are the cards and notes the coach produced while answering.
+	Actions []coachAction `json:"actions"`
 }
 
 // handleCoachChat answers one message of a conversation about the caller's own data. The
@@ -72,7 +74,8 @@ func (s *Server) handleCoachChat(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
-	reply, err := s.chatter.Reply(r.Context(), facts, req.Messages)
+	tools := &coachTools{s: s, c: c, turns: req.Messages}
+	reply, err := s.chatter.ReplyWithTools(r.Context(), facts, req.Messages, tools)
 	if err != nil {
 		if r.Context().Err() == nil {
 			log.Printf("[NEWME] coach chat for user %d: %v", c.user.ID, err)
@@ -80,7 +83,7 @@ func (s *Server) handleCoachChat(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, errCoachFailed)
 		return
 	}
-	writeJSON(w, http.StatusOK, coachChatResponse{Reply: reply})
+	writeJSON(w, http.StatusOK, coachChatResponse{Reply: reply, Actions: append([]coachAction{}, tools.actions...)})
 }
 
 // loadChatFacts gathers the caller's own data, and nobody else's, for the coach.
@@ -177,7 +180,7 @@ func (s *Server) loadChatFacts(ctx context.Context, c caller) (coach.ChatFacts, 
 	for _, t := range computeTargets(data).Targets {
 		facts.Targets = append(facts.Targets, toChatTarget(c.user, t))
 	}
-	return facts, nil
+	return facts, s.addCoachContext(ctx, c, &facts)
 }
 
 func pointMap(points []db.HealthPoint) map[score.Date]float64 {
@@ -212,7 +215,7 @@ func questLine(u db.User, q questJSON) string {
 	if q.PointsWhy != "" {
 		return line + ". " + q.PointsWhy
 	}
-	return fmt.Sprintf("%s. Worth %d points.", line, q.Points)
+	return fmt.Sprintf("%s. Worth %d gems.", line, q.Points)
 }
 
 func questProgress(u db.User, q questJSON) string {
@@ -241,7 +244,7 @@ func dayLine(d score.Date, row db.DayScoreRow, series map[string]map[score.Date]
 		if !row.Counted {
 			verdict = "does not count toward the streak"
 		}
-		parts = append(parts, fmt.Sprintf("%d points, %d%% of base points, %s", row.Points(), row.Percent, verdict))
+		parts = append(parts, fmt.Sprintf("%d gems, %d%% of base gems, %s", row.Points(), row.Percent, verdict))
 		var done, missed []string
 		var results []score.QuestScore
 		if json.Unmarshal(row.Detail, &results) == nil {
@@ -463,5 +466,13 @@ func toChatTarget(u db.User, t targetJSON) coach.ChatTarget {
 			value += fmt.Sprintf(" (currently set to %s)", amount(*t.Current))
 		}
 	}
-	return coach.ChatTarget{Key: t.Key, Value: value, Formula: t.Formula, Label: t.Label, Sources: t.Sources}
+	var alternatives []string
+	for _, a := range t.Alternatives {
+		alt := amount(a.Value)
+		if t.Unit != "ml" {
+			alt += " " + t.Unit
+		}
+		alternatives = append(alternatives, alt+" ("+a.Label+")")
+	}
+	return coach.ChatTarget{Key: t.Key, Value: value, Formula: t.Formula, Label: t.Label, Sources: t.Sources, Alternatives: alternatives}
 }

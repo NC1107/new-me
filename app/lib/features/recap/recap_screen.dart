@@ -171,7 +171,7 @@ class _HeadlineCard extends StatelessWidget {
             const SizedBox(height: 8),
             Semantics(
               container: true,
-              label: '${points.formatted} ${points == 1 ? 'point' : 'points'}',
+              label: '${points.formatted} ${points == 1 ? 'gem' : 'gems'}',
               excludeSemantics: true,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -180,7 +180,7 @@ class _HeadlineCard extends StatelessWidget {
                   Flexible(child: Text(points.formatted, style: AppText.tabular(AppText.display))),
                   const SizedBox(width: 8),
                   Text(
-                    points == 1 ? 'point' : 'points',
+                    points == 1 ? 'gem' : 'gems',
                     style: AppText.body.copyWith(color: kInkSecondary),
                   ),
                 ],
@@ -210,7 +210,7 @@ class _HeadlineCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${best.points.formatted} points',
+                    '${best.points.formatted} gems',
                     style: AppText.tabular(AppText.label.copyWith(fontWeight: FontWeight.w800)),
                   ),
                 ],
@@ -353,7 +353,7 @@ class _ChallengeLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
-    label: 'Challenge done, ${challenge.title}, plus $kChallengeBonus points each',
+    label: 'Challenge done, ${challenge.title}, plus $kChallengeBonus gems each',
     excludeSemantics: true,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -487,7 +487,7 @@ class _PersonCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${points.value} points',
+                            '${points.value} gems',
                             textAlign: TextAlign.end,
                             style: AppText.tabular(
                               AppText.body.copyWith(fontWeight: FontWeight.w800),
@@ -520,10 +520,10 @@ class _PersonCard extends StatelessWidget {
                   _Tile(
                     label: 'Best day',
                     value: DateFormat.E().format(parseLocalDate(best.date)),
-                    change: '${best.points.formatted} points',
+                    change: '${best.points.formatted} gems',
                     spoken:
                         'Best day ${DateFormat.EEEE().format(parseLocalDate(best.date))}, '
-                        '${best.points.formatted} points',
+                        '${best.points.formatted} gems',
                   ),
               ],
             ),

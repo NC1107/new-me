@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../theme/accent.dart';
@@ -47,9 +46,9 @@ class RewardCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Shared reward', style: AppText.caption),
+                      const Text('Rewards', style: AppText.caption),
                       Text(
-                        'Earn something together',
+                        'Something to work toward',
                         style: AppText.body.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ],
@@ -59,7 +58,8 @@ class RewardCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Pick a reward and a price in gems. Every gem either of you earns goes into the shared bank.',
+              'Pick a reward and a price in gems. Share it and earn it together, or keep it solo '
+              'and redeem it from your own gems.',
               style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),
@@ -158,70 +158,4 @@ class _Bubble extends StatelessWidget {
     decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
     child: Icon(icon, size: 24, color: palette.lip),
   );
-}
-
-/// Rewards already earned, newest first, so there is a record of what you won together.
-class RewardHistory extends StatelessWidget {
-  const RewardHistory({super.key, required this.rewards});
-
-  final List<Reward> rewards;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        children: [
-          for (final (i, r) in rewards.indexed) ...[
-            if (i > 0) const Divider(height: 2, thickness: 2, color: kBorder),
-            _HistoryRow(reward: r),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.reward});
-
-  final Reward reward;
-
-  @override
-  Widget build(BuildContext context) {
-    final at = reward.claimedAt ?? reward.reachedAt;
-    final when = at == null ? null : DateFormat.MMMd().format(at.toLocal());
-    final detail =
-        '${reward.price.formatted} gems${when == null ? '' : ', ${reward.claimed ? 'enjoyed' : 'reached'} $when'}';
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Semantics(
-        container: true,
-        label: '${reward.name}, $detail',
-        excludeSemantics: true,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Icon(
-                reward.claimed ? Icons.check_circle_rounded : Icons.emoji_events_rounded,
-                size: 22,
-                color: reward.claimed ? kSuccess : kFlame,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(reward.name, style: AppText.label.copyWith(fontWeight: FontWeight.w800)),
-                    Text(detail, style: AppText.caption),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -5,7 +5,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 
-/// The row on Us (and Insights) that opens Progress.
+/// The row on Insights that opens Progress.
 class ProgressEntryCard extends StatelessWidget {
   const ProgressEntryCard({super.key, required this.onTap});
 
@@ -16,7 +16,7 @@ class ProgressEntryCard extends StatelessWidget {
     final palette = accentById('teal');
     return AppCard(
       onTap: onTap,
-      semanticLabel: 'Progress, months of change, you and your partner',
+      semanticLabel: 'Progress, trends, you and your partner',
       padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
       // The label already says what the text says, so the text is not read a second time.
       child: ExcludeSemantics(
@@ -36,7 +36,7 @@ class ProgressEntryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Progress', style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
-                    const Text('Months of change, you and your partner', style: AppText.caption),
+                    const Text('Trends, you and your partner', style: AppText.caption),
                   ],
                 ),
               ),

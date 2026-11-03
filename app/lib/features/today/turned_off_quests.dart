@@ -44,7 +44,7 @@ class TurnedOffRow extends ConsumerWidget {
           onPressed: () => showAppSheet<void>(context, builder: (_) => const TurnedOffSheet()),
           icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
           label: Text(
-            off.length == 1 ? '1 quest is off' : '${off.length} quests are off',
+            off.length == 1 ? '1 goal is off' : '${off.length} goals are off',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           style: TextButton.styleFrom(
@@ -103,7 +103,7 @@ class _TurnedOffSheetState extends ConsumerState<TurnedOffSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(header: true, child: const Text('Quests that are off', style: AppText.title)),
+          Semantics(header: true, child: const Text('Goals that are off', style: AppText.title)),
           const SizedBox(height: 4),
           Text(
             'Turning one on adds it to today.',

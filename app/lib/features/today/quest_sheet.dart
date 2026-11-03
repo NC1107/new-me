@@ -24,7 +24,6 @@ import '../../widgets/thick_progress_bar.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
 import '../me/goal_picker_page.dart';
-import '../../widgets/page_scaffold.dart';
 import 'day_detail_sheet.dart';
 import 'quest_why.dart';
 
@@ -142,14 +141,12 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
   Future<void> _changeGoal() async {
     final t = _template;
     if (t == null) return;
-    final choice = await pushPage<GoalChoice>(
+    final choice = await editGoal(
       context,
-      GoalPickerPage(
-        quest: t,
-        target: t.target.round(),
-        targetAlt: t.targetAlt?.round(),
-        units: ref.read(unitsProvider),
-      ),
+      ref,
+      t,
+      target: t.target.round(),
+      targetAlt: t.targetAlt?.round(),
     );
     if (choice == null || !mounted) return;
     final targetChanged = choice.target != t.target.round();
@@ -170,7 +167,7 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
       title: 'Turn off ${q.title}?',
       message:
           'It leaves today and your daily total right away. '
-          'You can turn it back on from Me, Daily goals.',
+          'You can turn it back on from Me, Goals.',
       confirmLabel: 'Turn off',
       destructive: true,
     );
@@ -238,7 +235,7 @@ class _QuestSheetState extends ConsumerState<QuestSheet> {
                     minimumSize: const Size(48, 48),
                   ),
                   child: const Text(
-                    'Turn off this quest',
+                    'Turn off this goal',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),

@@ -108,8 +108,9 @@ void _suite(double scale) {
 
     Future<void> scrollAll(WidgetTester tester, TestApp app, String where) async {
       // A lazy list learns its length as it builds, so one drag can stop short of the end.
+      // The page on top is the last scrollable; earlier ones belong to the pages under it.
       for (var i = 0; i < 3; i++) {
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));
+        await tester.drag(find.byType(Scrollable).last, const Offset(0, -3000));
         await app.settle();
       }
       noOverflow(tester, '$where scrolled');
@@ -134,10 +135,10 @@ void _suite(double scale) {
       await app.pump(const MeScreen(), tall: false);
       noOverflow(tester, 'Me');
 
-      for (final row in ['Daily goals', 'About you', 'Schedule', 'Apple Health', 'Pairing code']) {
+      for (final row in ['About you', 'Goals', 'Schedule', 'Apple Health', 'Pairing code']) {
         await app.tap(find.text(row));
         noOverflow(tester, row);
-        if (row == 'Daily goals') {
+        if (row == 'Goals') {
           await app.tap(find.text('Steps'));
           noOverflow(tester, 'goal picker');
           await app.tap(find.byTooltip('Back'));
@@ -161,7 +162,7 @@ void _suite(double scale) {
       noOverflow(tester, 'Food');
       await scrollAll(tester, app, 'Food');
 
-      for (final row in ['Food targets', 'My foods']) {
+      for (final row in ['Food goals', 'My foods']) {
         await app.tap(find.text(row));
         noOverflow(tester, row);
         await app.tap(find.byTooltip('Back'));

@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:newme/api/habit_models.dart';
+import 'package:newme/features/habits/habits_page.dart';
 
 import 'fixtures.dart';
 import 'test_support.dart';
@@ -122,3 +124,13 @@ StubAdapter habitsServer({List<Map<String, dynamic>>? due, List<Map<String, dyna
 }
 
 HabitState stateOf(Map<String, dynamic> json) => HabitState.fromJson(json);
+
+/// The Habits section of Goals on a page of its own, so habit tests need not load every goal.
+class HabitsHost extends StatelessWidget {
+  const HabitsHost({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    body: SafeArea(child: SingleChildScrollView(child: HabitsSection())),
+  );
+}

@@ -577,14 +577,14 @@ void main() {
           const ProteinHitRate(targetG: 100, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
           Units.metric,
         ),
-        'Target 100 g. At 1.6 g per kg and 82.4\u00a0kg the default would be 130 g.',
+        'Goal 100 g. At 1.6 g per kg and 82.4\u00a0kg the default would be 130 g.',
       );
       expect(
         proteinBasis(
           const ProteinHitRate(targetG: 130, suggestedG: 130, perKg: 1.6, weightKg: 82.4),
           Units.metric,
         ),
-        'Target 130 g a day.',
+        'Goal 130 g a day.',
       );
       expect(proteinBasis(const ProteinHitRate(), Units.metric), isNull);
     });

@@ -23,10 +23,10 @@ import 'sleep_insight_screen.dart';
 import 'steps_insight_screen.dart';
 import 'workouts_screen.dart';
 
-/// Opens the Insights hub from Today or Me.
+/// Opens the Insights hub from Today.
 Future<void> openInsights(BuildContext context) => pushPage(context, const InsightsScreen());
 
-/// Three big cards, one for each insight, each with its headline number.
+/// The coach and Progress rows, then one card for each insight with its headline number.
 class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
 
@@ -35,7 +35,6 @@ class InsightsScreen extends ConsumerWidget {
     final insights = ref.watch(insightsProvider);
     return InsightsFrame(
       title: 'Insights',
-      subtitle: 'What your steps, sleep and workouts add up to',
       sources: [insights],
       onRetry: ref.read(insightsProvider.notifier).refresh,
       builder: (context) {
@@ -143,7 +142,7 @@ class _HubCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (headline == null)
-              Text('No data yet', style: AppText.title.copyWith(color: kInkMuted))
+              Text('No data yet', style: AppText.body.copyWith(color: kInkSecondary))
             else ...[
               FittedBox(
                 fit: BoxFit.scaleDown,

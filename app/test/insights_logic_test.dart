@@ -37,34 +37,33 @@ void main() {
     });
 
     test('a bedtime after midnight is called late, but midnight itself and evenings are not', () {
-      expect(sleepTips(_sleep(bed: '00:40')).single.text, contains('after midnight'));
-      expect(sleepTips(_sleep(bed: '02:15')).single.text, contains('after midnight'));
+      expect(sleepTips(_sleep(bed: '00:40')).single.text, contains('bed 15 minutes earlier'));
+      expect(sleepTips(_sleep(bed: '02:15')).single.text, contains('bed 15 minutes earlier'));
       expect(sleepTips(_sleep(bed: '00:00')).single.positive, isTrue);
       expect(sleepTips(_sleep(bed: '23:59')).single.positive, isTrue);
     });
 
     test('sleep 30 minutes or more under target is short, 29 is not', () {
       final short = sleepTips(_sleep(avg7: 420)).single;
-      expect(short.text, contains('30 min less than your 7 h 30 min target'));
+      expect(short.text, contains('30 min short of your 7 h 30 min goal'));
       expect(sleepTips(_sleep(avg7: 421)).single.positive, isTrue);
     });
 
     test('the 7 night average is preferred and the 30 night one is the fallback', () {
       expect(sleepTips(_sleep(avg7: 450, avg30: 300)).single.positive, isTrue);
-      expect(sleepTips(_sleep(avg7: null, avg30: 300)).single.text, contains('less than'));
+      expect(sleepTips(_sleep(avg7: null, avg30: 300)).single.text, contains('short of'));
     });
 
     test('a spread over 45 minutes is flagged, 45 is not', () {
-      expect(sleepTips(_sleep(spread: 46)).single.text, contains('moves around'));
+      expect(sleepTips(_sleep(spread: 46)).single.text, contains('steadier bedtime'));
       expect(sleepTips(_sleep(spread: 45)).single.positive, isTrue);
     });
 
-    test('never more than two tips, most useful first', () {
+    test('one tip only, the most useful first', () {
       final tips = sleepTips(_sleep(bed: '01:00', avg7: 300, spread: 90));
-      expect(tips, hasLength(2));
-      expect(tips.first.text, contains('after midnight'));
-      expect(tips.last.text, contains('less than'));
-      expect(tips.every((t) => !t.positive), isTrue);
+      expect(tips, hasLength(1));
+      expect(tips.single.text, contains('bed 15 minutes earlier'));
+      expect(tips.single.positive, isFalse);
     });
   });
 
@@ -97,8 +96,7 @@ void main() {
       expect(copy.headline, 'Try 8,500 a day');
       expect(
         copy.reason,
-        'You have averaged 7,400 over two weeks, and most of the benefit for your age comes by '
-        '8,000 to 10,000.',
+        'Averaging 7,400. Most of the benefit for your age comes by 8,000 to 10,000.',
       );
     });
 

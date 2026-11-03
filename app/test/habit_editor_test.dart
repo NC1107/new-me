@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/habit_models.dart';
 import 'package:newme/features/habits/habit_editor_page.dart';
-import 'package:newme/features/habits/habits_page.dart';
 import 'package:newme/state/habits.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/time_presets.dart';
@@ -88,7 +87,7 @@ void main() {
         );
       final app = await open(tester, adapter);
       await app.tap(_pill('Water'));
-      expect(find.text('Daily target'), findsOneWidget);
+      expect(find.text('Daily goal'), findsOneWidget);
       await app.tap(_button('Save'));
       final body = app.body('POST /api/habits');
       expect(body['kind'], 'count');
@@ -234,7 +233,7 @@ void main() {
 
   group('list', () {
     testWidgets('shows each habit with its schedule and the count in order', (tester) async {
-      await open(tester, habitsServer(), page: const HabitsPage());
+      await open(tester, habitsServer(), page: const HabitsHost());
       expect(find.text('Brush teeth'), findsOneWidget);
       expect(find.text('Every day · 7:30 AM, 10:00 PM · 25 gems'), findsOneWidget);
       expect(find.text('Weekdays · 12:00 PM · 25 gems'), findsOneWidget);
@@ -243,7 +242,7 @@ void main() {
     });
 
     testWidgets('an empty list says so', (tester) async {
-      await open(tester, habitsServer(all: []), page: const HabitsPage());
+      await open(tester, habitsServer(all: []), page: const HabitsHost());
       expect(find.text('No habits yet'), findsOneWidget);
     });
 
@@ -256,7 +255,7 @@ void main() {
             'habit': habitJson(2, 'Huel', paused: true, weekdays: [1, 2, 3, 4, 5]),
           }),
         );
-      final app = await open(tester, adapter, page: const HabitsPage());
+      final app = await open(tester, adapter, page: const HabitsHost());
       await app.tap(find.bySemanticsLabel('More for Huel'));
       await app.tap(_button('Pause'));
       expect(app.body('PATCH /api/habits/2'), {'paused': true});
@@ -267,7 +266,7 @@ void main() {
     testWidgets('delete asks first and then removes the row', (tester) async {
       final handle = tester.ensureSemantics();
       final adapter = habitsServer()..on('DELETE /api/habits/3', const StubResponse(204));
-      final app = await open(tester, adapter, page: const HabitsPage());
+      final app = await open(tester, adapter, page: const HabitsHost());
       await app.tap(find.bySemanticsLabel('More for Floss'));
       await app.tap(_button('Delete'));
       expect(find.text('Delete Floss?'), findsOneWidget);
@@ -281,7 +280,7 @@ void main() {
     testWidgets('cancelling the confirm deletes nothing', (tester) async {
       final handle = tester.ensureSemantics();
       final adapter = habitsServer();
-      final app = await open(tester, adapter, page: const HabitsPage());
+      final app = await open(tester, adapter, page: const HabitsHost());
       await app.tap(find.bySemanticsLabel('More for Floss'));
       await app.tap(_button('Delete'));
       await app.tap(find.text('Cancel'));
@@ -298,7 +297,7 @@ void main() {
             'habits': [allHabits()[1], allHabits()[0], allHabits()[2], allHabits()[3]],
           }),
         );
-      final app = await open(tester, adapter, page: const HabitsPage());
+      final app = await open(tester, adapter, page: const HabitsHost());
       final handles = find.byIcon(Icons.drag_handle_rounded);
       final gesture = await tester.startGesture(tester.getCenter(handles.at(1)));
       for (var i = 0; i < 12; i++) {
@@ -315,13 +314,13 @@ void main() {
 
     testWidgets('the container keeps the order the server answered', (tester) async {
       final adapter = habitsServer();
-      final app = await open(tester, adapter, page: const HabitsPage());
+      final app = await open(tester, adapter, page: const HabitsHost());
       final list = app.container.read(habitsProvider).value!.data.habits;
       expect(list.map((h) => h.id), [1, 2, 3, 4]);
     });
 
     testWidgets('the add button opens the editor', (tester) async {
-      final app = await open(tester, habitsServer(), page: const HabitsPage());
+      final app = await open(tester, habitsServer(), page: const HabitsHost());
       await app.tap(_button('Add a habit'));
       expect(find.text('New habit'), findsOneWidget);
     });
@@ -329,7 +328,7 @@ void main() {
     testWidgets('rows are at least 44pt wide and tall to tap at text scale 2.0', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await open(tester, habitsServer(), page: const HabitsPage());
+      await open(tester, habitsServer(), page: const HabitsHost());
       expect(tester.takeException(), isNull);
       for (final icon in [Icons.more_horiz_rounded, Icons.drag_handle_rounded]) {
         final size = tester.getSize(

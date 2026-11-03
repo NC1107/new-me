@@ -10,7 +10,7 @@ import 'package:newme/features/me/daily_reps_page.dart';
 import 'package:newme/features/me/me_screen.dart';
 import 'package:newme/features/me/target_row.dart';
 import 'package:newme/features/me/profile_page.dart';
-import 'package:newme/features/me/targets_page.dart';
+import 'package:newme/features/me/goals_page.dart';
 import 'package:newme/features/setup/about_you_page.dart';
 import 'package:newme/features/food/food_card.dart';
 import 'package:newme/widgets/chunky_button.dart';
@@ -37,7 +37,7 @@ Future<TestApp> _open(WidgetTester tester, StubAdapter server, {double scale = 1
   tester.platformDispatcher.textScaleFactorTestValue = scale;
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   final app = TestApp(tester, server, surfaceHeight: 6000);
-  await app.pump(const TargetsPage());
+  await app.pump(const GoalsPage());
   return app;
 }
 
@@ -65,32 +65,40 @@ void main() {
     Mascot.idleMotion = false;
   });
 
-  group('Targets page', () {
-    testWidgets('lists each group with value and own setting, the working behind info', (
+  group('Goals page', () {
+    testWidgets('lists the daily goals, the food numbers, the habits and the body figures', (
       tester,
     ) async {
       await _open(tester, _server());
 
-      for (final group in ['Your body', 'Food', 'Move and rest', 'Habits']) {
-        expect(find.text(group), findsOneWidget, reason: group);
+      for (final section in ['Daily goals', 'Food', 'Habits', 'Recommended figures']) {
+        expect(find.text(section), findsOneWidget, reason: section);
       }
-      expect(find.text('This is general guidance, not medical advice.'), findsOneWidget);
-
-      // Yours and Recommended sit side by side under one heading each.
-      expect(find.text('Yours'), findsNWidgets(3));
-      expect(find.text('Recommended'), findsNWidgets(3));
-      expect(find.text('2,350 kcal'), findsOneWidget);
-      expect(find.text('2,200 kcal'), findsOneWidget);
-      expect(find.text('7 h 30 min'), findsOneWidget);
-      expect(find.text('7 h'), findsOneWidget);
-      // Fruit and vegetables read in grams as well as servings.
-      expect(find.text('5 servings (400 g)'), findsNWidgets(2));
-      expect(find.text('3.0 L'), findsOneWidget);
+      expect(find.text('This is general guidance, not medical advice.'), findsNothing);
+      // Figures with a goal of their own are not repeated as a second list.
+      expect(find.text('Yours'), findsNothing);
+      expect(find.text('Estimate'), findsOneWidget);
       // Formulas, labels and sources wait behind a tap on the row.
       expect(find.textContaining('Mifflin-St Jeor'), findsNothing);
       expect(find.text('Guideline'), findsNothing);
-      expect(find.textContaining('Sources'), findsNothing);
-      expect(find.text('Add these to work out your targets'), findsNothing);
+      expect(find.text('Add these to work out your goals'), findsNothing);
+    });
+
+    testWidgets('the food numbers are edited here and Save appears only once one changes', (
+      tester,
+    ) async {
+      final server = _server()..on('PATCH /api/me', StubResponse(200, meJson()));
+      final app = await _open(tester, server);
+      expect(_button('Save'), findsNothing);
+      expect(_button('Try again'), findsNothing);
+
+      await tester.enterText(find.widgetWithText(TextField, '2200').first, '2300');
+      await app.settle(2);
+      expect(_button('Save'), findsOneWidget);
+      await app.tap(_button('Save'));
+      expect(app.body('PATCH /api/me'), {
+        'targets': {'kcal': 2300},
+      });
     });
 
     testWidgets('tapping a row explains the formula, its label and full citations', (tester) async {
@@ -113,65 +121,6 @@ void main() {
       expect(find.textContaining('logged intake is commonly under-reported'), findsOneWidget);
     });
 
-    testWidgets('extra detail lines show bedtime, shortfall and the push-up max', (tester) async {
-      final app = await _open(tester, _server());
-      Future<void> info(String name) async {
-        await app.tap(_row(name));
-      }
-
-      Future<void> close() async {
-        Navigator.of(tester.element(find.text('Sources').last)).pop();
-        await app.settle(4);
-      }
-
-      await info('Sleep');
-      expect(find.text('Bedtime 11:15 PM (11:45 PM on days off)'), findsOneWidget);
-      expect(find.text('Last 7 nights: 5 h short of your target'), findsOneWidget);
-      expect(find.text('Sleep Regularity Index 82 of 100'), findsOneWidget);
-      await close();
-      await info('Push-ups');
-      expect(find.text('Latest max test: 24 reps (70 to 80% is 17 to 19)'), findsOneWidget);
-      await close();
-      await info('Protein');
-      expect(find.text('About 0.4 g/kg a meal, 33 g, across 4 meals.'), findsOneWidget);
-    });
-
-    testWidgets('Use in a row sheet applies one target and the toast says it applies today', (
-      tester,
-    ) async {
-      final server = _server();
-      final app = await _open(tester, server);
-
-      await app.tap(_row('Calories'));
-      await app.tap(_button('Use 2,350 kcal'));
-      expect(app.body('POST /api/targets/apply'), {
-        'keys': ['calories'],
-      });
-      expect(find.text('Applied today: Calories 2,350 kcal'), findsOneWidget);
-    });
-
-    testWidgets('a row that matches its recommendation offers no Use', (tester) async {
-      final app = await _open(tester, _server());
-
-      await app.tap(_row('Fruit and vegetables'));
-      expect(find.text('Recommended'), findsWidgets);
-      expect(_button('Use 5 servings (400 g)'), findsNothing);
-      // What one serving looks like comes from the cited guide.
-      expect(find.textContaining('3 heaped tablespoons of cooked vegetables'), findsOneWidget);
-      expect(find.textContaining('NHS, 5 A Day portion sizes'), findsOneWidget);
-    });
-
-    testWidgets('a row sheet shows the plain why and the other published figures', (tester) async {
-      final app = await _open(tester, _server());
-
-      await app.tap(_row('Water'));
-      expect(find.textContaining('enough drinks a day for men'), findsOneWidget);
-      expect(
-        find.text('2.0 L: EFSA: 2.5 L of total water for men, the drinks part'),
-        findsOneWidget,
-      );
-    });
-
     testWidgets('Use all applies every target that differs, in one request', (tester) async {
       final server = _server();
       final app = await _open(tester, server);
@@ -192,6 +141,7 @@ void main() {
         'pushups',
         'water',
       ]);
+      expect(find.textContaining('Applied today:'), findsOneWidget);
     });
 
     testWidgets('a rejected apply shows the server message and keeps the page', (tester) async {
@@ -202,16 +152,15 @@ void main() {
         );
       final app = await _open(tester, server);
 
-      await app.tap(_row('Calories'));
-      await app.tap(_button('Use 2,350 kcal'));
+      await app.tap(find.textContaining('USE ALL RECOMMENDED'));
       expect(find.textContaining('calories has no value yet'), findsOneWidget);
-      expect(find.text('Calories'), findsOneWidget);
+      expect(find.text('Daily goals'), findsOneWidget);
     });
 
     testWidgets('missing inputs lead the page with links to fix them', (tester) async {
       final app = await _open(tester, _server(targets: 'targets_missing'));
 
-      expect(find.text('Add these to work out your targets'), findsOneWidget);
+      expect(find.text('Add these to work out your goals'), findsOneWidget);
       expect(find.text('Height'), findsOneWidget);
       expect(find.text('Sex'), findsOneWidget);
       expect(find.text('Daily reps max test'), findsOneWidget);
@@ -255,17 +204,14 @@ void main() {
       final server = _server()..on('GET /api/targets', StubResponse(200, body));
       await _open(tester, server);
       expect(find.textContaining('Use all'), findsNothing);
-      expect(find.textContaining('Changes apply today'), findsNothing);
     });
 
-    testWidgets('a failed first load says so and can retry', (tester) async {
+    testWidgets('without recommendations the goals still load and can be edited', (tester) async {
       final server = _server()
         ..on('GET /api/targets', const StubResponse(404, {'error': 'not found'}));
-      final app = await _open(tester, server);
-      expect(find.text('Could not load your targets'), findsOneWidget);
-      server.on('GET /api/targets', StubResponse(200, _fixture('targets')));
-      await app.tap(find.text('Try again'));
-      expect(find.text('2,350 kcal'), findsOneWidget);
+      await _open(tester, server);
+      expect(find.text('Daily goals'), findsOneWidget);
+      expect(find.text('Recommended figures'), findsNothing);
     });
   });
 
@@ -280,7 +226,7 @@ void main() {
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         final app = TestApp(tester, _server(targets: 'targets_missing'));
-        await app.pump(const TargetsPage(), tall: false, key: UniqueKey());
+        await app.pump(const GoalsPage(), tall: false, key: UniqueKey());
         await app.settle(20);
 
         _expectTapTargets(tester, [
@@ -314,16 +260,17 @@ void main() {
   });
 
   group('Me', () {
-    testWidgets('Targets is always listed and opens the page; food rows moved to Food', (
+    testWidgets('Goals is the one row for goals, habits and insights are not listed', (
       tester,
     ) async {
       final app = TestApp(tester, _server(), surfaceHeight: 2400);
       await app.pump(const MeScreen());
       expect(find.text('My foods'), findsNothing);
-      expect(find.text('Targets'), findsOneWidget);
-      await app.tap(find.text('Targets'));
-      expect(find.byType(TargetsPage), findsOneWidget);
-      expect(find.text('2,350 kcal'), findsOneWidget);
+      for (final gone in ['Targets', 'Habits', 'Insights', 'Daily goals']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      await app.tap(find.text('Goals'));
+      expect(find.byType(GoalsPage), findsOneWidget);
     });
   });
 

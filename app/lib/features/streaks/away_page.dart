@@ -168,8 +168,8 @@ class _AwayPageState extends ConsumerState<AwayPage> {
       title: 'Away days',
       children: [
         Text(
-          'Sick or traveling? Away days neither break nor extend your streak, use no freeze and '
-          'keep the nudges quiet. Your partner sees you as away.',
+          'Pause your streak while sick or away. No freeze used, no reminders. Your partner sees '
+          'you as away.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),
@@ -233,8 +233,7 @@ class _AwayPageState extends ConsumerState<AwayPage> {
         const SizedBox(height: 10),
         if (spans.isEmpty)
           Text(
-            'No away days set. Starting today or up to $kMaxAwayDays days ahead, for at most '
-            '$kMaxAwayDays days at a time.',
+            'None set. Up to $kMaxAwayDays days at a time.',
             style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
           )
         else

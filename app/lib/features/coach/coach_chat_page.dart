@@ -22,7 +22,7 @@ const kCoachStarters = [
 ];
 
 const _kDisclaimer =
-    'Answers come only from your own numbers and the research behind your targets. '
+    'Answers come only from your own numbers and the research behind your goals. '
     'General guidance, not medical advice.';
 
 /// A chat with the coach: plain text in and out, the thread kept on the phone for the day.

@@ -436,8 +436,8 @@ class _SexQuestion extends ConsumerWidget {
 String paceCaps(GoalKind kind) => switch (kind) {
   GoalKind.lose => 'Losing is capped at 1% of your body weight a week, whatever pace you pick.',
   GoalKind.gain =>
-    'Gaining is held to 0.5% of your body weight a week when your target is worked out.',
-  GoalKind.maintain => 'Your calorie target keeps your weight where it is.',
+    'Gaining is held to 0.5% of your body weight a week when your goal is worked out.',
+  GoalKind.maintain => 'Calories to stay at this weight.',
 };
 
 class _GoalQuestion extends ConsumerWidget {
@@ -518,7 +518,7 @@ class _ReviewStep extends ConsumerWidget {
         children: const [
           MascotLine(line: 'Your answers are saved.', state: MascotState.sad),
           StepTitle(
-            'Could not load your targets',
+            'Could not load your goals',
             subtitle: 'They are on Me > Targets whenever you are back online.',
           ),
         ],
@@ -573,10 +573,7 @@ class _ReviewStep extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          stillNeeded.isEmpty
-              ? 'Changes apply today. This is general guidance, not medical advice.'
-              : 'Still needed: ${stillNeeded.join(', ')}. This is general guidance, not medical '
-                    'advice.',
+          stillNeeded.isEmpty ? 'Changes apply today.' : 'Still needed: ${stillNeeded.join(', ')}.',
           style: AppText.caption,
         ),
         if (s.applyError != null) StepError(s.applyError!),

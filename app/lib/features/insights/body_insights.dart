@@ -64,12 +64,12 @@ String? proteinBasis(ProteinHitRate p, Units units) {
   if (target == null) return null;
   final suggested = p.suggestedG;
   if (suggested == null || suggested == target || p.weightKg == null || p.perKg == null) {
-    return 'Target $target g a day.';
+    return 'Goal $target g a day.';
   }
   final rate = units.isImperial
       ? '${(p.perKg! * kKgPerLb * 100).round() / 100} g per lb'
       : '${p.perKg} g per kg';
-  return 'Target $target g. At $rate and ${weightLabel(p.weightKg!, units)} the default '
+  return 'Goal $target g. At $rate and ${weightLabel(p.weightKg!, units)} the default '
       'would be $suggested g.';
 }
 
@@ -147,8 +147,7 @@ class WeightInsightCard extends StatelessWidget {
               ],
               if (showLatest)
                 Text(
-                  'Latest reading ${weightLabel(latest, context.units)}. A single weigh-in moves with water and '
-                  'meals, so the trend is the number to follow.',
+                  'Latest weigh-in ${weightLabel(latest, context.units)}',
                   style: AppText.caption,
                 ),
             ],
@@ -214,8 +213,7 @@ class ActivitySummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Hard minutes count double. ${a.moderateMin} moderate and ${a.vigorousMin} hard '
-              'minutes this week.',
+              '${a.moderateMin} moderate, ${a.vigorousMin} hard minutes. Hard minutes count double.',
               style: AppText.caption,
             ),
           ],
@@ -301,7 +299,7 @@ class ProteinHitCard extends StatelessWidget {
         container: true,
         label: p.days7 == 0
             ? 'Protein, nothing logged in the last 7 days'
-            : 'Protein, target hit on ${proteinHitLabel(p)}',
+            : 'Protein, goal hit on ${proteinHitLabel(p)}',
         excludeSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,7 +318,7 @@ class ProteinHitCard extends StatelessWidget {
                 style: AppText.label.copyWith(color: kInkSecondary),
               )
             else ...[
-              Text('Target hit on', style: AppText.caption.copyWith(color: kInkSecondary)),
+              Text('Goal hit on', style: AppText.caption.copyWith(color: kInkSecondary)),
               Text(
                 proteinHitLabel(p),
                 style: AppText.tabular(AppText.title.copyWith(fontWeight: FontWeight.w900)),

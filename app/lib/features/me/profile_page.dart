@@ -126,7 +126,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
   }
 
   String get _weightCaption {
-    if (_weightChanged) return 'Saved as today\'s weigh-in, and your targets follow it.';
+    if (_weightChanged) return 'Saved as today\'s weigh-in, and your goals follow it.';
     const tail = 'A new weight is saved for today.';
     final input = _weightInput;
     if (input == null || input.isMissing) return tail;
@@ -314,10 +314,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           child: _BirthYearRow(year: _birthYear, onTap: _pickBirthYear),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Only used to suggest a step range for your age. It is never shown to anyone else.',
-          style: AppText.caption,
-        ),
+        const Text('Only used for your step goal.', style: AppText.caption),
         const SizedBox(height: 24),
         const FieldLabel('Units'),
         IgnorePointer(
@@ -351,10 +348,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           }),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Used for your targets. Left empty, the height in Apple Health is used.',
-          style: AppText.caption,
-        ),
+        const Text('Left empty, we use Apple Health.', style: AppText.caption),
         const SizedBox(height: 24),
         FieldLabel('Weight in ${_shownUnits.weightUnit} (optional)'),
         IgnorePointer(
@@ -398,10 +392,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Used in the calorie formulas, which differ by sex. Tap again to clear.',
-          style: AppText.caption,
-        ),
+        const Text('Used for calorie goals. Tap again to clear.', style: AppText.caption),
         const SizedBox(height: 24),
         const FieldLabel('Weight goal'),
         IgnorePointer(
@@ -442,8 +433,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with MeSaving {
         const SizedBox(height: 6),
         Text(switch (_goalKind) {
           GoalKind.lose => 'Never more than 1% of your body weight a week.',
-          GoalKind.gain => 'Held to 0.5% of your body weight a week when the target is worked out.',
-          GoalKind.maintain => 'Your calorie target keeps your weight where it is.',
+          GoalKind.gain => 'Held to 0.5% of your body weight a week when the goal is worked out.',
+          GoalKind.maintain => 'Calories to stay at this weight.',
         }, style: AppText.caption),
       ],
     );

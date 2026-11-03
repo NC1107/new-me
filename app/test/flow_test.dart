@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/log/log_sheet.dart';
-import 'package:newme/features/me/food_targets_page.dart';
+import 'package:newme/features/me/goals_page.dart';
 import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
@@ -189,13 +189,13 @@ void main() {
     expect(find.textContaining('You are offline'), findsOneWidget);
   });
 
-  testWidgets('the Food tab opens the food targets', (tester) async {
+  testWidgets('the Food tab opens the goals', (tester) async {
     final app = TestApp(tester, _server(), surfaceHeight: 2800);
     await app.pump(const HomeShell());
     await app.tap(find.byKey(const Key('nav-food')));
 
-    await app.tap(find.text('Food targets'));
-    expect(find.byType(FoodTargetsPage), findsOneWidget);
+    await app.tap(find.text('Food goals'));
+    expect(find.byType(GoalsPage), findsOneWidget);
     expect(app.container.read(homeTabProvider), HomeTab.food);
   });
 

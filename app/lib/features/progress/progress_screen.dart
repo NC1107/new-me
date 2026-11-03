@@ -72,7 +72,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               icon: Icons.fitness_center_rounded,
               palette: accentById('rose'),
               title: 'Weekly sets',
-              subtitle: 'Training volume per muscle against the evidence',
+              subtitle: 'Sets per muscle',
               onTap: () => pushPage(context, const TrainingProgressPage()),
             ),
             SettingsRow(
@@ -112,10 +112,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       if (metrics.isEmpty)
         Text('Nothing to show yet.', style: AppText.body.copyWith(color: kInkSecondary))
       else if (metrics.any(metricIsSparse)) ...[
-        const Text(
-          'Trends show after a second week, and comparisons once there is a full month.',
-          style: AppText.caption,
-        ),
+        const Text('Trends need two weeks of data.', style: AppText.caption),
         const SizedBox(height: 12),
       ],
       for (final (i, m) in metrics.indexed) ...[

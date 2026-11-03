@@ -284,15 +284,13 @@ class _TargetsStepState extends ConsumerState<TargetsStep> {
               color: kSunken,
               child: Text(
                 'Calories are worked out once Apple Health has about five days of steps, from '
-                'your resting energy and how active you are. They appear in Me > Targets.',
+                'your resting energy and how active you are. They appear in Me > Goals.',
                 style: AppText.caption.copyWith(color: kInkSecondary),
               ),
             ),
           ],
         ],
         if (s.error != null) StepError(s.error!),
-        const SizedBox(height: 12),
-        const Text('General guidance, not medical advice.', style: AppText.caption),
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/accent.dart';
 import '../theme/tokens.dart';
+import '../theme/typography.dart';
 
 /// A 16 tall rounded bar with a lighter highlight stripe along the top third.
 /// The fill eases to a new value; the first build shows its value without animating unless
@@ -15,6 +16,7 @@ class ThickProgressBar extends StatelessWidget {
     required this.value,
     this.color,
     this.markerAt,
+    this.markerLabel,
     this.bonusValue = 0,
     this.animateFromZero = false,
     this.semanticLabel,
@@ -31,6 +33,9 @@ class ThickProgressBar extends StatelessWidget {
 
   /// A fraction of the track in 0..1 where a flag is planted.
   final double? markerAt;
+
+  /// A short caption for the flag, drawn to its left so it stays inside the track's width.
+  final String? markerLabel;
 
   /// A fraction of the track in 0..1 that follows the fill as a lighter segment.
   final double bonusValue;
@@ -72,6 +77,27 @@ class ThickProgressBar extends StatelessWidget {
                         CustomPaint(painter: _BarPainter(v, fill, bonusValue.clamp(0.0, 1.0))),
                   ),
                 ),
+                if (marker != null && markerLabel != null)
+                  Positioned(
+                    left: 0,
+                    width: (width * marker - 6).clamp(0.0, width),
+                    top: 0,
+                    height: markerHeadroom,
+                    child: ExcludeSemantics(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          markerLabel!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption.copyWith(
+                            color: target >= marker ? fill : kInkSecondary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (marker != null)
                   Positioned(
                     left: (width * marker - 1).clamp(0.0, width - 2),

@@ -11,6 +11,7 @@ import '../../state/health_sync.dart';
 import '../../state/me.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
+import '../../state/together.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -243,6 +244,9 @@ class _Header extends ConsumerWidget {
     final accent = accentById(me.user.color);
     final users = ref.watch(boardProvider).value?.data.users ?? const <BoardUser>[];
     final mine = users.where((u) => u.id == me.user.id).firstOrNull;
+    final seasonName = ref.watch(boardProvider).value?.data.season.name;
+    final preseason = seasonName == null || isPreseason(seasonName);
+    final balance = ref.watch(rewardsProvider).value?.balanceOf(me.user.id)?.balance;
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Row(
@@ -272,11 +276,19 @@ class _Header extends ConsumerWidget {
                             ? 'Start a streak today'
                             : '${mine.streak} day streak',
                       ),
-                      _Stat(
-                        icon: Icons.diamond_rounded,
-                        color: accentById('sky').fill,
-                        text: '${mine.season.formatted} season gems',
-                      ),
+                      if (balance != null)
+                        _Stat(
+                          icon: Icons.diamond_rounded,
+                          color: accentById('sky').fill,
+                          text: gemsToSpendLine(balance),
+                        ),
+                      // In the preseason the season total is the same figure as the balance.
+                      if (!preseason)
+                        _Stat(
+                          icon: Icons.emoji_events_rounded,
+                          color: accentById('sky').fill,
+                          text: '${mine.season.formatted} earned this season',
+                        ),
                     ],
                   ),
                 ],

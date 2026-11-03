@@ -197,6 +197,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final syncedAt = today.health.syncedAt ?? lastSynced;
     final now = ref.watch(clockProvider)();
     final partner = ref.watch(partnerProvider);
+    final ownBoard = ref.watch(ownBoardUserProvider);
     final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
     final coachOn = ref.watch(meProvider.select((m) => m.value?.data.features.coachChat ?? false));
@@ -221,6 +222,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
               streak: today.streak,
               line: today.day.streakLine,
               freezes: today.freezes,
+              repair: today.repair,
               onAway: _openAway,
             ),
             onCoach: coachOn ? () => openCoachChat(context) : null,
@@ -232,6 +234,14 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             quests: today.quests,
             onEntries: _openEntries,
             onPlan: today.plan == null ? null : _openPlan,
+            yesterday: yesterdayStatusLine(
+              localToday: today.localToday,
+              last7: ownBoard?.last7 ?? const [],
+              freezes: today.freezes,
+              repair: today.repair,
+              now: now,
+            ),
+            firstStep: firstStepOf(today.day, today.plan),
           ),
           RightNowSlot(today: today),
           if (today.away.today) ...[

@@ -39,7 +39,9 @@ class TurnedOffRow extends ConsumerWidget {
     if (off.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 4),
-      child: Center(
+      // Left-aligned with the Health note above, so the two read as one footnote group.
+      child: Align(
+        alignment: Alignment.centerLeft,
         child: TextButton.icon(
           onPressed: () => showAppSheet<void>(context, builder: (_) => const TurnedOffSheet()),
           icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
@@ -50,6 +52,8 @@ class TurnedOffRow extends ConsumerWidget {
           style: TextButton.styleFrom(
             foregroundColor: kInkSecondary,
             minimumSize: const Size(48, 48),
+            padding: EdgeInsets.zero,
+            alignment: Alignment.centerLeft,
           ),
         ),
       ),

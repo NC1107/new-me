@@ -1,12 +1,12 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../api/models.dart';
 import '../../theme/accent.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
+import '../../util/time_format.dart';
 import '../../widgets/accent_text.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/mascot.dart';
@@ -25,19 +25,60 @@ bool oneQuestAway(DayScore day, List<Quest> quests) {
 /// fresh morning at 0% is not a test already failed.
 String dayCardSentence(DayScore day, Streak streak, List<Quest> quests) {
   if (day.counted) {
-    return 'Goal reached. Anything extra still earns bonus gems.';
+    return 'Streak counted today. Extra gems still earn a bonus.';
   }
   if (oneQuestAway(day, quests)) return 'One more and you count today.';
-  if (streak.current < 1) return 'Fill the bar today to start your streak.';
-  final base = 'Fill the bar to keep your streak going.';
+  if (streak.current < 1) return 'Reach the flag to start a streak.';
+  const base = 'Reach the flag to keep your streak.';
   return streak.restAvailable && streak.restUsedOn == null
       ? '$base A freeze is ready if you need it.'
       : base;
 }
 
-/// Progress towards the day's goal: the mascot, a thick bar that is full at the goal with any
-/// extra shown as a bonus segment, the points, one plain sentence about what keeps the streak,
-/// and the way to today's plan and entries.
+/// What to do first while nothing is earned yet: the plan's first open item, or null once the
+/// day has any progress or the plan has nothing left to do.
+String? firstStepOf(DayScore day, Plan? plan) {
+  if (day.basePoints > 0 || day.counted || plan == null) return null;
+  for (final item in plan.items) {
+    if (item.kind == PlanItemKind.todo) return item.text.replaceAll(RegExp(r'\.$'), '');
+  }
+  return null;
+}
+
+/// One line about yesterday for the top of the day: counted, covered by a freeze, repairable
+/// until a time, or missed. Null when the board has no mark for that date.
+String? yesterdayStatusLine({
+  required String localToday,
+  required List<DayMark> last7,
+  required Freezes freezes,
+  required DateTime now,
+  Repair? repair,
+}) {
+  final day = parseLocalDate(localToday).subtract(const Duration(days: 1));
+  final date = DateFormat('yyyy-MM-dd').format(day);
+  final mark = last7.where((m) => m.date == date).firstOrNull;
+  if (mark == null) return null;
+  final until = repair?.until;
+  if (repair != null && repair.date == date && (until == null || until.isAfter(now))) {
+    final by = formatClock(until?.toLocal() ?? DateTime(2000, 1, 1, 22));
+    return 'Yesterday missed. You can repair it until $by.';
+  }
+  if (mark.counted) return 'Yesterday counted.';
+  if (mark.repaired) return 'Yesterday was repaired and counts as a frozen day.';
+  if (mark.frozen) {
+    final left = freezes.held == 0
+        ? 'no freezes left'
+        : '${freezes.held} ${freezes.held == 1 ? 'freeze' : 'freezes'} left';
+    return 'Yesterday missed. A freeze held your streak, $left.';
+  }
+  if (mark.away) return 'Yesterday was an away day.';
+  if (mark.rest) return null;
+  return 'Yesterday missed. Today starts a fresh streak.';
+}
+
+/// Progress through the day's gems: the gems earned of the day's maximum, a thick bar with the
+/// streak line flagged on it, one plain sentence about what keeps the streak, and the way to
+/// today's plan and entries. No percent, since the bar already shows it.
 class DayCard extends StatelessWidget {
   const DayCard({
     super.key,
@@ -46,6 +87,8 @@ class DayCard extends StatelessWidget {
     required this.onEntries,
     this.onPlan,
     this.quests = const [],
+    this.yesterday,
+    this.firstStep,
   });
 
   final DayScore day;
@@ -56,12 +99,16 @@ class DayCard extends StatelessWidget {
   /// Opens today's plan; null when the server has none.
   final VoidCallback? onPlan;
 
-  int get bonusPercent => math.max(0, day.goalPercent - 100);
+  /// How yesterday ended, from [yesterdayStatusLine].
+  final String? yesterday;
 
-  String get _sentence => dayCardSentence(day, streak, quests);
+  /// The first open item of the plan, from [firstStepOf].
+  final String? firstStep;
 
   @override
   Widget build(BuildContext context) {
+    final max = day.maxBase;
+    final fraction = max == 0 ? 0.0 : day.basePoints / max;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,26 +122,29 @@ class DayCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      spacing: 6,
                       children: [
-                        Text('${day.goalPercent}%', style: AppText.tabular(AppText.display)),
-                        if (bonusPercent > 0)
-                          Text(
-                            '+$bonusPercent% bonus',
-                            style: AppText.tabular(
-                              AppText.label.copyWith(
-                                color: context.accentText,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                        Text(day.basePoints.formatted, style: AppText.tabular(AppText.display)),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            'of ${max.formatted} gems',
+                            style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
                           ),
+                        ),
                       ],
                     ),
-                    Text(
-                      '${day.basePoints.formatted} of ${day.goalPoints.formatted} gems',
-                      style: AppText.tabular(AppText.label.copyWith(color: kInkSecondary)),
-                    ),
+                    if (day.bonusPoints > 0)
+                      Text(
+                        '+${day.bonusPoints.formatted} bonus',
+                        style: AppText.tabular(
+                          AppText.label.copyWith(
+                            color: context.accentText,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -102,13 +152,27 @@ class DayCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           ThickProgressBar(
-            value: bonusPercent > 0 ? 100 / day.goalPercent : day.goalPercent / 100,
-            bonusValue: bonusPercent > 0 ? bonusPercent / day.goalPercent : 0,
+            value: fraction,
+            markerAt: max == 0 ? null : day.goalPoints / max,
+            markerLabel: 'Streak at ${day.goalPoints.formatted}',
             color: context.accent,
-            semanticLabel: 'Day progress toward the goal',
+            semanticLabel:
+                'Day progress, ${day.basePoints} of $max gems, streak counts at ${day.goalPoints}',
           ),
           const SizedBox(height: 10),
-          Text(_sentence, style: AppText.body.copyWith(fontSize: 15, color: kInkSecondary)),
+          if (yesterday case final line?) ...[
+            Text(line, style: AppText.label.copyWith(color: kInkSecondary)),
+            const SizedBox(height: 6),
+          ],
+          if (firstStep case final step?) ...[
+            Text('First step', style: AppText.label.copyWith(color: context.accentText)),
+            Text(step, style: AppText.body.copyWith(fontSize: 15)),
+            const SizedBox(height: 6),
+          ],
+          Text(
+            dayCardSentence(day, streak, quests),
+            style: AppText.body.copyWith(fontSize: 15, color: kInkSecondary),
+          ),
           const SizedBox(height: 4),
           Row(
             children: [

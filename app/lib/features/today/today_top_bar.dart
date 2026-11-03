@@ -79,7 +79,8 @@ class TodayTopBar extends StatelessWidget {
             iconColor: kFlame,
             textColor: _kFlameText,
             value: streak.formatted,
-            label: '$streak day streak',
+            caption: 'Your streak',
+            label: 'Your streak, $streak day streak',
             onTap: onStreak,
           ),
         ),
@@ -146,6 +147,7 @@ class _Stat extends StatelessWidget {
     required this.textColor,
     required this.value,
     required this.label,
+    required this.caption,
     this.onTap,
   });
 
@@ -154,6 +156,9 @@ class _Stat extends StatelessWidget {
   final Color textColor;
   final String value;
   final String label;
+
+  /// Names the figure, so it is never mistaken for the Together streak on Us.
+  final String caption;
   final VoidCallback? onTap;
 
   @override
@@ -167,15 +172,28 @@ class _Stat extends StatelessWidget {
           Icon(icon, size: 26, color: iconColor),
           const SizedBox(width: 3),
           Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.tabular(
-                AppText.headline.copyWith(color: textColor, fontWeight: FontWeight.w900),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.tabular(
+                    AppText.headline.copyWith(color: textColor, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption.copyWith(color: kInkSecondary, height: 1),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
     );

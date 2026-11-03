@@ -55,8 +55,8 @@ void main() {
     await app.tap(_save());
     await app.settle(30);
 
-    expect(find.text('100%'), findsOneWidget);
-    expect(find.textContaining('Goal reached'), findsOneWidget);
+    expect(find.text('150'), findsOneWidget);
+    expect(find.textContaining('Streak counted today'), findsOneWidget);
     expect(find.text('4'), findsWidgets, reason: 'the flame follows the counted day');
     expect(
       find.byType(DayCountedSheet),
@@ -94,7 +94,7 @@ void main() {
     await app.tap(_logPushups());
     await app.tap(_save());
 
-    expect(find.text('94%'), findsOneWidget);
+    expect(find.text('140'), findsOneWidget);
     expect(adapter.to('GET /api/today'), hasLength(loads));
   });
 

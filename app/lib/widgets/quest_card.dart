@@ -18,6 +18,14 @@ import 'thick_progress_bar.dart';
 
 const _kBurstLifetime = Duration(milliseconds: 1400);
 
+/// The trailing columns of every card: the reward chips, then the add button's 44pt target.
+const _kRewardSlot = 60.0;
+const _kAddSlot = 44.0;
+
+/// The height kept under the title whether or not there is a subtitle, so cards line up.
+const _kSubtitleHeight = 18.0;
+const _kBarRowHeight = 20.0;
+
 /// One quest: category icon, plain title, a thick bar, and on the right a chunky + for quests logged by
 /// hand. Progress is spoken, and written only when the title does not state the target. Completing it pops a check
 /// badge, throws confetti from the badge and gives a medium haptic.
@@ -95,6 +103,36 @@ class _QuestCardState extends State<QuestCard> {
     Timer(_kBurstLifetime, entry.remove);
   }
 
+  Widget _rewards(List<Widget> chips) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.end,
+    // Scaled down rather than clipped, since a four digit reward must still fit its slot.
+    children: [
+      for (final chip in chips)
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: chip),
+    ],
+  );
+
+  /// One reserved line: the progress, but only where it says something the title and bar do not.
+  /// Otherwise it stays empty and a screen reader still hears the progress.
+  Widget _subtitle(Quest q) {
+    final progress = questProgress(q, units: widget.units);
+    final says =
+        !titleStatesTarget(q) &&
+        (q.actual > 0 || (q.actualAlt ?? 0) > 0 || q.key == 'sleep_regularity');
+    return SizedBox(
+      height: _kSubtitleHeight,
+      child: says
+          ? Text(
+              progress,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
+            )
+          : Semantics(label: progress, child: const SizedBox.shrink()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final q = widget.quest;
@@ -103,7 +141,7 @@ class _QuestCardState extends State<QuestCard> {
     final automatic = isAutomaticQuest(q.key);
     final largeText = MediaQuery.textScalerOf(context).scale(10) > 13;
     final chips = [
-      PointsChip(points: q.points, done: q.done, leading: largeText ? 0 : 8),
+      PointsChip(points: q.points, done: q.done),
       if (q.bonusPoints > 0) _BonusChip(bonus: q.bonusPoints),
     ];
 
@@ -155,24 +193,26 @@ class _QuestCardState extends State<QuestCard> {
                       Expanded(
                         child: Text(
                           questTitle(q, units: widget.units),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.headline.copyWith(fontSize: 17),
                         ),
                       ),
-                      if (!largeText) ...chips,
-                      // Exercise is fed by Health but also takes a hand-logged activity.
-                      if (widget.onAdd != null && (!automatic || q.key == 'exercise'))
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: ChunkyIconButton(
-                            icon: Icons.add_rounded,
-                            semanticLabel: q.key == 'exercise'
-                                ? 'Log an activity'
-                                : 'Add entry for ${questTitle(q, units: widget.units)}',
-                            onPressed: widget.onAdd,
-                          ),
-                        ),
+                      // Fixed slots, so every card's reward and add button line up.
+                      if (!largeText) SizedBox(width: _kRewardSlot, child: _rewards(chips)),
+                      SizedBox(
+                        width: _kAddSlot,
+                        // Exercise is fed by Health but also takes a hand-logged activity.
+                        child: widget.onAdd != null && (!automatic || q.key == 'exercise')
+                            ? ChunkyIconButton(
+                                icon: Icons.add_rounded,
+                                semanticLabel: q.key == 'exercise'
+                                    ? 'Log an activity'
+                                    : 'Add entry for ${questTitle(q, units: widget.units)}',
+                                onPressed: widget.onAdd,
+                              )
+                            : null,
+                      ),
                     ],
                   ),
                 ),
@@ -180,19 +220,9 @@ class _QuestCardState extends State<QuestCard> {
                 if (largeText)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(children: [...chips]),
+                    child: Wrap(spacing: 8, children: chips),
                   ),
-                if (titleStatesTarget(q))
-                  // Spoken only: the title and bar show the target, a screen reader still hears progress.
-                  Semantics(
-                    label: questProgress(q, units: widget.units),
-                    child: const SizedBox.shrink(),
-                  )
-                else
-                  Text(
-                    questProgress(q, units: widget.units),
-                    style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary)),
-                  ),
+                _subtitle(q),
                 for (final line in steadyBedtimeLines(q))
                   _NoteLine(
                     icon: line.ok ? Icons.check_circle_rounded : Icons.schedule_rounded,
@@ -261,7 +291,6 @@ class HealthNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Row(
-    mainAxisAlignment: MainAxisAlignment.center,
     children: [
       Icon(Icons.favorite_rounded, size: 13, color: kDanger),
       SizedBox(width: 6),
@@ -273,13 +302,10 @@ class HealthNote extends StatelessWidget {
 /// What a quest is worth towards the day, "+100". Quiet while open, in the person's colour once
 /// the points are earned.
 class PointsChip extends StatelessWidget {
-  const PointsChip({super.key, required this.points, required this.done, this.leading = 8});
+  const PointsChip({super.key, required this.points, required this.done});
 
   final int points;
   final bool done;
-
-  /// Space before the chip, none when it starts a line.
-  final double leading;
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +315,6 @@ class PointsChip extends StatelessWidget {
       label: done ? '$points gems earned' : 'Worth $points gems',
       excludeSemantics: true,
       child: Container(
-        margin: EdgeInsets.only(left: leading),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: done ? person.tint : kSunken,
@@ -316,7 +341,6 @@ class _BonusChip extends StatelessWidget {
     final person = context.accentPalette;
     final ink = context.accentText;
     return Container(
-      margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(color: person.tint, borderRadius: BorderRadius.circular(9999)),
       child: Row(
@@ -346,7 +370,12 @@ class _BarWithAmount extends StatelessWidget {
   Widget build(BuildContext context) {
     final bar = ThickProgressBar(value: value, color: color);
     final text = amount;
-    if (text == null) return bar;
+    if (text == null) {
+      return SizedBox(
+        height: _kBarRowHeight,
+        child: Center(child: bar),
+      );
+    }
     // The card's spoken label already carries the progress.
     final label = ExcludeSemantics(
       child: Text(text, style: AppText.tabular(AppText.caption.copyWith(color: kInkSecondary))),
@@ -357,12 +386,17 @@ class _BarWithAmount extends StatelessWidget {
         children: [bar, const SizedBox(height: 4), label],
       );
     }
-    return Row(
-      children: [
-        Expanded(child: bar),
-        const SizedBox(width: 10),
-        label,
-      ],
+    // A caption is taller than the bar; the fixed height keeps cards with and without an amount
+    // the same size.
+    return SizedBox(
+      height: _kBarRowHeight,
+      child: Row(
+        children: [
+          Expanded(child: bar),
+          const SizedBox(width: 10),
+          label,
+        ],
+      ),
     );
   }
 }

@@ -61,11 +61,10 @@ type Habit struct {
 	Count  int
 }
 
-// Input is everything the plan reads. NowMinute is the minute of the person's local day.
+// Input is everything the plan reads.
 type Input struct {
-	Quests    []Quest
-	Habits    []Habit
-	NowMinute int
+	Quests []Quest
+	Habits []Habit
 }
 
 // Item is one line of the plan.
@@ -91,7 +90,7 @@ func Build(in Input) Plan {
 			done = append(done, Item{KindDone, q.Key, doneText(q)})
 			continue
 		}
-		if c, ok := finishing(q, in.NowMinute); ok {
+		if c, ok := finishing(q); ok {
 			todo = append(todo, Item{KindTodo, q.Key, c.text})
 			next = append(next, c)
 		}
@@ -114,7 +113,7 @@ type candidate struct {
 
 // finishing words what is left of an unfinished quest and the easiest way to close it. Sleep
 // has no suggestion because last night cannot be changed, and unknown quests are left out.
-func finishing(q Quest, nowMinute int) (candidate, bool) {
+func finishing(q Quest) (candidate, bool) {
 	left := max(q.Target-q.Actual, 0)
 	frac := 0
 	if q.Target > 0 {
@@ -123,7 +122,7 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 	switch q.Key {
 	case db.QuestSteps:
 		walk := walkMinutes(left)
-		text := fmt.Sprintf("Steps: %s to go. %s", Thousands(left), walkAdvice(walk, nowMinute))
+		text := fmt.Sprintf("Steps: %s to go (about %d min).", Thousands(left), walk)
 		return candidate{text, Thousands(left) + " more steps", frac}, true
 	case db.QuestPushups:
 		title := db.QuestTitles[db.QuestPushups]
@@ -134,7 +133,7 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 			fmt.Sprintf("%d %s", left, db.RepsNoun(q.Exercise, left)), frac}, true
 	case db.QuestReading:
 		minutes := readingMinutesLeft(q)
-		return candidate{fmt.Sprintf("Reading: %d more %s. An audiobook minute counts as half.", minutes, plural(minutes, "minute", "minutes")),
+		return candidate{fmt.Sprintf("Reading: %d more %s.", minutes, plural(minutes, "minute", "minutes")),
 			fmt.Sprintf("%d minutes of reading", minutes), readingFraction(q)}, true
 	case db.QuestMealsLogged:
 		return candidate{fmt.Sprintf("Meals: log %d more %s.", left, plural(left, "meal", "meals")),
@@ -162,7 +161,7 @@ func finishing(q Quest, nowMinute int) (candidate, bool) {
 
 // FinishText is how to close an unfinished quest in a sentence like "<text> finishes your day".
 func FinishText(q Quest) (string, bool) {
-	c, ok := finishing(q, 0)
+	c, ok := finishing(q)
 	return c.short, ok
 }
 
@@ -173,22 +172,6 @@ func StepsNudge(left int) string {
 		return fmt.Sprintf("%s steps to go. Even a 30-minute walk gets you most of the way.", Thousands(left))
 	}
 	return fmt.Sprintf("%s steps to go. A %d-minute walk does it.", Thousands(left), walk)
-}
-
-// walkAdvice words the walk and, without an hourly pattern to go on, picks a generic moment
-// from the time of day.
-func walkAdvice(walkMin, nowMinute int) string {
-	if walkMin > longWalkMin {
-		return fmt.Sprintf("That is about %d minutes of walking: split it into two walks.", walkMin)
-	}
-	when := "around midday"
-	switch {
-	case nowMinute >= 17*60:
-		when = "this evening"
-	case nowMinute >= 11*60+30:
-		when = "this afternoon"
-	}
-	return fmt.Sprintf("A %d-minute walk %s covers it.", walkMin, when)
 }
 
 func readingFraction(q Quest) int {

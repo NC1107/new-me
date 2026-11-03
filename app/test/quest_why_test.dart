@@ -61,6 +61,7 @@ void main() {
       expect(why.recommended, 'Recommended: 27 push-ups a day, 3\u00a0sets\u00a0of\u00a09');
       expect(why.reason, startsWith('About three quarters of your best set of 12'));
       expect(why.comparison, 'Your goal is 30 push-ups, a little above the recommendation.');
+      expect(why.yours, 'Yours is 30 push-ups.');
       expect(why.citation, 'Source: Zourdos et al., J Strength Cond Res 2016');
       expect(why.formula, contains('3 sets × 9 reps'));
     });

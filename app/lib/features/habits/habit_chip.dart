@@ -55,7 +55,7 @@ class HabitChip extends StatelessWidget {
               children: [
                 Text(
                   item.title,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.label.copyWith(fontWeight: FontWeight.w800, height: 1.15),
                 ),

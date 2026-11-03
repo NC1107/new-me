@@ -8,6 +8,7 @@ import '../../util/time_format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/thick_progress_bar.dart';
 import '../streaks/streak_visuals.dart';
 
@@ -19,35 +20,51 @@ Future<void> showStreakSheet(
   required Streak streak,
   required int line,
   Freezes freezes = const Freezes(),
+  Repair? repair,
   VoidCallback? onAway,
 }) => showAppSheet<void>(
   context,
-  builder: (_) => StreakSheet(streak: streak, line: line, freezes: freezes, onAway: onAway),
+  builder: (_) =>
+      StreakSheet(streak: streak, line: line, freezes: freezes, repair: repair, onAway: onAway),
 );
 
-/// How the next freeze is going: "3 of 7 counted days to your next freeze", or why it waits.
+/// How the next freeze is going: "4 more days to your next freeze", or why it waits.
 String freezeProgressLabel(Freezes f) {
   if (f.held >= kMaxFreezes) {
     return 'You hold the most you can. The next one starts after you use one.';
   }
   final left = kDaysPerFreeze - f.earnedTowardNext;
-  return '${f.earnedTowardNext} of $kDaysPerFreeze counted days to your next freeze'
-      ', $left to go';
+  return '$left more ${left == 1 ? 'day' : 'days'} to your next freeze';
 }
 
-/// What the streak is, and how freezes, repairs and away days keep it alive.
+const _kHowStreaksWork = InfoContent(
+  title: 'How streaks work',
+  paragraphs: [
+    'You start with 2 freezes and earn 1 more for every 7 counted days, up to 2.',
+    'A freeze covers a missed day on its own. The streak holds, but the day adds nothing to it.',
+    'Missed yesterday with no freeze left? Earn every gem today to repair it.',
+    'A repaired day counts as a frozen day.',
+    'Away days neither break nor extend a streak and do not use a freeze.',
+  ],
+);
+
+/// Your streak, and the freezes, repair and away days that keep it alive.
 class StreakSheet extends StatelessWidget {
   const StreakSheet({
     super.key,
     required this.streak,
     required this.line,
     this.freezes = const Freezes(),
+    this.repair,
     this.onAway,
   });
 
   final Streak streak;
   final int line;
   final Freezes freezes;
+
+  /// The open window to repair a missed yesterday; the repair line shows only while it is set.
+  final Repair? repair;
 
   /// Opens the Away page; the sheet closes first.
   final VoidCallback? onAway;
@@ -68,13 +85,18 @@ class StreakSheet extends StatelessWidget {
               children: [
                 const Icon(Icons.local_fire_department_rounded, size: 36, color: kFlame),
                 const SizedBox(width: 8),
-                Expanded(child: Text('Day $days', style: AppText.title)),
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text('Your streak, day $days', style: AppText.title),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'A day counts toward your streak when you fill its bar, which is the day\'s goal. '
-              'The streak is how many counted days you have in a row.',
+              'A day counts when you reach the streak line at $line% of its gems. '
+              'The streak is counted days in a row.',
               style: body,
             ),
             const SizedBox(height: 16),
@@ -120,33 +142,25 @@ class StreakSheet extends StatelessWidget {
             const SizedBox(height: 16),
             const _Point(
               icon: Icons.ac_unit_rounded,
-              title: 'Earning and using freezes',
-              text:
-                  'You start with 2 and earn 1 more for every 7 counted days, up to 2. When you '
-                  'miss a day and hold a freeze, it covers the day on its own: the streak holds, '
-                  'but the day adds nothing to it.',
+              text: 'Freezes save a missed day. You earn one every 7 counted days, up to 2.',
             ),
-            const SizedBox(height: 12),
-            _Point(
-              icon: Icons.healing_rounded,
-              title: 'Repair',
-              text:
-                  'Missed yesterday with no freeze left? Until $_repairCloses today you can '
-                  'repair it by earning every gem today, not just the goal. A repaired day '
-                  'counts as a frozen day.',
-            ),
+            if (repair != null) ...[
+              const SizedBox(height: 12),
+              _Point(
+                icon: Icons.healing_rounded,
+                text: 'Missed yesterday? Earn every gem today before $_repairCloses to repair it.',
+              ),
+            ],
             const SizedBox(height: 12),
             const _Point(
               icon: Icons.pause_circle_rounded,
-              title: 'Away days',
-              text:
-                  'Sick or traveling? Away days neither break nor extend a streak and do not '
-                  'use a freeze.',
+              text: 'Sick or away? Away days pause your streak.',
             ),
+            const InfoNote('How streaks work', info: _kHowStreaksWork),
             if (onAway != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               ChunkyButton.secondary(
-                label: "Can't today?",
+                label: 'Away today',
                 icon: Icons.pause_circle_outline_rounded,
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -162,10 +176,9 @@ class StreakSheet extends StatelessWidget {
 }
 
 class _Point extends StatelessWidget {
-  const _Point({required this.icon, required this.title, required this.text});
+  const _Point({required this.icon, required this.text});
 
   final IconData icon;
-  final String title;
   final String text;
 
   @override
@@ -175,16 +188,9 @@ class _Point extends StatelessWidget {
       Icon(icon, size: 24, color: kFreezeText),
       const SizedBox(width: 12),
       Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: AppText.label.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 2),
-            Text(
-              text,
-              style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
-            ),
-          ],
+        child: Text(
+          text,
+          style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
       ),
     ],

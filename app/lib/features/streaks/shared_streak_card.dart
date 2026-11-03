@@ -5,6 +5,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/format.dart';
 import '../../widgets/app_card.dart';
+import 'streak_visuals.dart';
 
 /// The couple's streak, the first thing on Us: days on which both counted, froze or were away,
 /// with at least one of them counted.
@@ -37,7 +38,7 @@ class SharedStreakCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: const BoxDecoration(color: Color(0xFFFFF1DE), shape: BoxShape.circle),
-              child: const Icon(Icons.local_fire_department_rounded, size: 30, color: kFlame),
+              child: const Icon(kTogetherStreakIcon, size: 30, color: kFlame),
             ),
             const SizedBox(width: 14),
             Expanded(

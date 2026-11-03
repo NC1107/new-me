@@ -6,6 +6,7 @@ import 'package:newme/features/food/food_card.dart';
 import 'package:newme/features/insights/insights_screen.dart';
 import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
+import 'package:newme/features/today/day_card.dart';
 import 'package:newme/features/today/today_screen.dart';
 import 'package:newme/health/fake_health_source.dart';
 import 'package:newme/state/local_prefs.dart';
@@ -58,9 +59,11 @@ void main() {
     expect(find.text('Monday, Oct 26'), findsOneWidget);
     expect(find.textContaining('Sam'), findsWidgets);
     expect(find.text('3'), findsOneWidget, reason: 'the streak beside the flame');
-    expect(find.text('88%'), findsOneWidget);
-    expect(find.text('130 of 280 gems'), findsOneWidget);
-    expect(find.textContaining('Fill the bar to keep your streak going'), findsOneWidget);
+    expect(find.text('Your streak'), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
+    expect(find.text('of 400 gems'), findsOneWidget);
+    expect(find.text('Streak at 280'), findsOneWidget);
+    expect(find.textContaining('Reach the flag to keep your streak'), findsOneWidget);
 
     expect(find.text('Get stronger'), findsOneWidget);
     expect(find.text('+20'), findsOneWidget);
@@ -116,6 +119,22 @@ void main() {
     );
   });
 
+  testWidgets('the footnotes under the quests share one left edge', (tester) async {
+    final today = richTodayJson(stepsEverSynced: true);
+    today['quests'] = [
+      ...today['quests']! as List<dynamic>,
+      quest('sleep', 'Sleep', {'unit': 'min', 'target': 420}),
+    ];
+    final adapter = fullServer()..on('GET /api/today', StubResponse(200, today));
+    await _app(tester, adapter).pump(const TodayScreen());
+
+    final note = tester.getTopLeft(find.byIcon(Icons.favorite_rounded)).dx;
+    final off = tester.getTopLeft(find.byIcon(Icons.add_circle_outline_rounded)).dx;
+    final card = tester.getTopLeft(find.byType(DayCard)).dx;
+    expect(note, card, reason: 'the Health note starts at the page gutter');
+    expect(off, card, reason: 'the turned-off row starts at the page gutter');
+  });
+
   testWidgets('a short night leaves the quests for a note of what it earned', (tester) async {
     final today = richTodayJson(stepsEverSynced: true);
     today['quests'] = [
@@ -135,8 +154,8 @@ void main() {
       ..on('GET /api/today', StubResponse(200, richTodayJson(counted: true, percent: 75)));
     final app = _app(tester, adapter);
     await app.pump(const TodayScreen());
-    expect(find.textContaining('Goal reached'), findsOneWidget);
-    expect(find.textContaining('Fill the bar'), findsNothing);
+    expect(find.textContaining('Streak counted today'), findsOneWidget);
+    expect(find.textContaining('Reach the flag'), findsNothing);
     await app.closeSheet();
   });
 
@@ -146,9 +165,9 @@ void main() {
     await app.pump(const TodayScreen());
 
     await app.tap(find.bySemanticsLabel(RegExp(r'day streak')));
-    expect(find.text('Day 1'), findsOneWidget);
-    expect(find.textContaining('when you fill its bar'), findsOneWidget);
-    expect(find.text('Earning and using freezes'), findsOneWidget);
+    expect(find.text('Your streak, day 1'), findsOneWidget);
+    expect(find.textContaining('reach the streak line at 70%'), findsOneWidget);
+    expect(find.textContaining('Freezes save a missed day'), findsOneWidget);
     expect(find.text('0 of 2 freezes'), findsOneWidget);
   });
 
@@ -314,7 +333,7 @@ void main() {
 
     adapter.on('GET /api/today', StubResponse(200, richTodayJson()));
     await app.tap(find.text('Try again'));
-    expect(find.text('88%'), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
   });
 
   testWidgets('with a cache the screen stays up under the offline banner', (tester) async {
@@ -326,7 +345,7 @@ void main() {
     adapter.on('GET /api/today', const StubResponse.unreachable());
     await app.pump(const TodayScreen(), key: UniqueKey());
     expect(find.textContaining('Offline, updated'), findsOneWidget);
-    expect(find.text('88%'), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
   });
 
   testWidgets('a failed refresh keeps the day beneath the error', (tester) async {
@@ -338,7 +357,7 @@ void main() {
     unawaited(app.container.read(todayProvider.notifier).refresh());
     await app.settle();
     expect(find.text('Could not load today'), findsOneWidget);
-    expect(find.text('88%'), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
   });
 
   testWidgets('pull to refresh syncs Health and reloads the day', (tester) async {

@@ -110,7 +110,7 @@ func Load(ctx context.Context, q db.Querier, user db.User, loc *time.Location, s
 	if err := d.loadHistory(ctx, q, user, loc, scored, today); err != nil {
 		return d, err
 	}
-	d.Plan = plan.Build(plan.Input{Quests: d.Quests, Habits: d.Habits, NowMinute: minuteOfDay(now, loc)})
+	d.Plan = plan.Build(plan.Input{Quests: d.Quests, Habits: d.Habits})
 	return d, nil
 }
 
@@ -167,11 +167,6 @@ func planHabit(st db.HabitState) plan.Habit {
 		h.Slots = append(h.Slots, plan.Slot{Label: slot.Label, Time: slot.Time, Done: i < len(st.Done) && st.Done[i]})
 	}
 	return h
-}
-
-func minuteOfDay(t time.Time, loc *time.Location) int {
-	local := t.In(loc)
-	return local.Hour()*60 + local.Minute()
 }
 
 func clockMinutes(hhmm string) (int, bool) {

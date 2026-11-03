@@ -21,6 +21,7 @@ import '../../widgets/skeletons.dart';
 import 'exercises_page.dart';
 import 'guided_page.dart';
 import 'guided_session.dart';
+import 'info_note.dart';
 import 'training_copy.dart';
 import 'yoga_flows.dart';
 
@@ -106,7 +107,7 @@ class _YogaPageState extends ConsumerState<YogaPage> {
         ],
         const SizedBox(height: 4),
         Text(
-          '$kYogaOrderNote Finishing a flow adds its minutes to your yoga quest.',
+          'Finishing a flow counts toward your yoga quest.',
           style: AppText.caption.copyWith(color: kInkMuted),
         ),
         const SizedBox(height: 20),
@@ -123,7 +124,7 @@ class _YogaPageState extends ConsumerState<YogaPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Pose library', style: AppText.headline),
-                    Text('Photos, steps and cautions for every pose.', style: AppText.caption),
+                    Text('Photos and steps', style: AppText.caption),
                   ],
                 ),
               ),
@@ -132,7 +133,7 @@ class _YogaPageState extends ConsumerState<YogaPage> {
           ),
         ),
         const SizedBox(height: 12),
-        Text(kYogaSafety, style: AppText.caption.copyWith(color: kInkMuted)),
+        const InfoNote(paragraphs: [kYogaOrderNote, kYogaCitation, kYogaSafety]),
       ],
     );
   }
@@ -218,8 +219,7 @@ class _PlanSection extends StatelessWidget {
                   Text('Ready for ${offered.name}?', style: AppText.headline),
                   const SizedBox(height: 4),
                   Text(
-                    'You did your yoga days two weeks running. A ${offered.minutes} minute flow is '
-                    'up to you, and the plan stays as it is if you wait.',
+                    'Two weeks on plan. A ${offered.minutes} minute flow is up to you.',
                     style: AppText.body.copyWith(color: kInkSecondary),
                   ),
                   const SizedBox(height: 12),
@@ -270,9 +270,9 @@ class _PlanSection extends StatelessWidget {
                 spokenLabel: (m) => '$m minutes',
               ),
               const SizedBox(height: 12),
-              Text(
-                state.citation.isEmpty ? kYogaCitation : state.citation,
-                style: AppText.caption.copyWith(color: kInkMuted),
+              InfoNote(
+                label: 'Why these numbers',
+                paragraphs: [state.citation.isEmpty ? kYogaCitation : state.citation],
               ),
               if (state.avoidedDays.isNotEmpty) ...[
                 const SizedBox(height: 4),
@@ -361,7 +361,7 @@ class _FlowCard extends StatelessWidget {
     final holds = c == null ? null : buildYogaHolds(flow, c);
     final detail = holds == null || holds.isEmpty
         ? flow.blurb
-        : '${holds.last.stepIndex + 1} poses, about ${(guidedTotalSeconds(holds) / 60).round()} minutes. ${flow.blurb}';
+        : '${holds.last.stepIndex + 1} poses, about ${(guidedTotalSeconds(holds) / 60).round()} min';
     return AppCard(
       onTap: onTap,
       semanticLabel: flow.name,

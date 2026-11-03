@@ -505,6 +505,9 @@ void main() {
         find.text('Best 10 reps at 20\u00a0kg, estimated one-rep max 26.7\u00a0kg'),
         findsOneWidget,
       );
+      expect(find.textContaining('Epley'), findsNothing);
+      await tester.tap(find.text('About this estimate'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Epley'), findsOneWidget);
       expect(find.text('Could not load the strength chart'), findsNothing);
     });

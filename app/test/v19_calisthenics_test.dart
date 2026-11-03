@@ -469,6 +469,11 @@ void main() {
       }
       expect(find.textContaining('About '), findsNWidgets(4));
       expect(find.textContaining('rounds'), findsWidgets);
+      expect(find.textContaining('Tabata'), findsNothing);
+      expect(find.textContaining('Garber'), findsNothing);
+      expect(find.textContaining('not from a trial'), findsNothing);
+      await tester.tap(find.text('Sources and safety'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Tabata'), findsOneWidget);
       expect(find.textContaining('Garber'), findsOneWidget);
       expect(find.textContaining('own, not from a trial'), findsOneWidget);
@@ -702,6 +707,10 @@ void main() {
         );
       final app = TestApp(tester, stub, surfaceHeight: 1800);
       await app.pump(const TrainScreen());
+      await tester.pumpAndSettle();
+      expect(find.text('START A WORKOUT'), findsOneWidget);
+      expect(find.text('Calisthenics'), findsNothing);
+      await app.tap(find.text('START A WORKOUT'));
       await tester.pumpAndSettle();
       expect(find.text('Yoga'), findsOneWidget);
       expect(find.text('Calisthenics'), findsOneWidget);

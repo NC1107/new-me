@@ -28,6 +28,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import 'how_to_sheet.dart';
 import 'guided_session.dart';
+import 'info_note.dart';
 import 'guided_voice.dart';
 import 'set_assist.dart' show kHoldLeadInSeconds;
 
@@ -612,11 +613,6 @@ class _Intro extends StatelessWidget {
               : routine.introFor(stretches.length, minutes),
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
-        const SizedBox(height: 8),
-        for (final (i, note) in routine.notes.indexed) ...[
-          if (i > 0) const SizedBox(height: 4),
-          Text(note, style: i == 0 ? AppText.caption : AppText.caption.copyWith(color: kInkMuted)),
-        ],
         const SizedBox(height: 16),
         if (list == null)
           const SkeletonBlock(height: 240, radius: kRadiusCard)
@@ -644,7 +640,7 @@ class _Intro extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          Text(routine.footnote, style: AppText.caption.copyWith(color: kInkMuted)),
+          InfoNote(paragraphs: [...routine.notes, routine.footnote]),
         ] else ...[
           const FieldLabel('In this order'),
           AppCard(
@@ -673,7 +669,7 @@ class _Intro extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text(routine.footnote, style: AppText.caption.copyWith(color: kInkMuted)),
+          InfoNote(paragraphs: [...routine.notes, routine.footnote]),
         ],
       ],
     );

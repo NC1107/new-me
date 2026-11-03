@@ -313,8 +313,13 @@ void main() {
       expect(find.text('Yoga 10'), findsOneWidget);
       expect(find.text('Yoga 20'), findsOneWidget);
       expect(find.text('Yoga 30'), findsOneWidget);
+      expect(find.textContaining('not from a trial'), findsNothing);
+      await tester.tap(find.text('Sources and safety'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('not from a trial'), findsOneWidget);
-      expect(find.textContaining('Garber'), findsWidgets);
+      expect(find.textContaining('Garber'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Pose library'));
       await tester.pumpAndSettle();
       expect(find.text('Mountain'), findsOneWidget);
@@ -345,7 +350,12 @@ void main() {
             find.text('Plan your week').evaluate().isNotEmpty,
         isTrue,
       );
+      expect(find.textContaining('at least 2 to 3 days a week'), findsNothing);
+      await tester.tap(find.text('Why these numbers'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('at least 2 to 3 days a week'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('4 days a week'));
       await tester.pump();
       await tester.tap(find.text('20 min'));
@@ -456,7 +466,11 @@ void main() {
       await tester.tap(find.text('Yoga 10'));
       await tester.pumpAndSettle();
       expect(find.text('Yoga 10'), findsOneWidget);
+      await tester.tap(find.text('Sources and safety'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('not from a trial'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
       await tester.tap(_button('Start'));
       await tester.pump();
 
@@ -585,6 +599,9 @@ void main() {
     testWidgets('has a Yoga card beside Mobility that opens the yoga page', (tester) async {
       final app = TestApp(tester, _server(), surfaceHeight: 3000);
       await app.pump(const TrainScreen());
+      await tester.pumpAndSettle();
+      expect(find.text('Yoga'), findsNothing);
+      await tester.tap(find.text('START A WORKOUT'));
       await tester.pumpAndSettle();
       expect(find.text('Yoga'), findsOneWidget);
       expect(find.text('Mobility'), findsOneWidget);

@@ -19,10 +19,8 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../../state/today.dart';
 import '../me/settings_row.dart';
-import 'calisthenics_page.dart';
 import 'exercises_page.dart';
-import 'mobility_page.dart';
-import 'yoga_page.dart';
+import 'start_sheet.dart';
 import 'training_card.dart';
 import 'training_history_page.dart';
 import 'training_progress_page.dart';
@@ -111,6 +109,7 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
     final setup = ref.watch(trainingSetupProvider);
     final catalog = ref.watch(exercisesProvider).value?.data;
     final localToday = ref.watch(todayProvider.select((v) => v.value?.data.localToday));
+    final session = ref.watch(trainingTodayProvider.select((v) => v.value?.data.session));
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
@@ -127,26 +126,13 @@ class _TrainScreenState extends ConsumerState<TrainScreen> {
             Semantics(header: true, child: const Text('Train', style: AppText.display)),
             const SizedBox(height: 16),
             if (localToday != null) TrainingSlot(localToday: localToday, onTrainTab: true),
-            const _RoutineCard(
-              title: 'Yoga',
-              blurb: 'Guided flows of 10, 20 or 30 minutes and a pose library. Plan your week.',
-              icon: Icons.spa_rounded,
-              colorId: 'violet',
-              page: YogaPage(),
-            ),
-            const _RoutineCard(
-              title: 'Calisthenics',
-              blurb: 'No equipment, beginner to intense. Reps at your own pace.',
-              icon: Icons.sports_gymnastics_rounded,
-              colorId: 'amber',
-              page: CalisthenicsPage(),
-            ),
-            const _RoutineCard(
-              title: 'Mobility',
-              blurb: '10 guided stretches, about 11 minutes. Counts toward yoga.',
-              icon: Icons.self_improvement_rounded,
-              colorId: 'rose',
-              page: MobilityPage(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: ChunkyButton(
+                label: 'Start a workout',
+                icon: Icons.play_arrow_rounded,
+                onPressed: () => showStartSheet(context, session: session),
+              ),
             ),
             switch (setup) {
               AsyncValue(:final value?) => _body(value, catalog),
@@ -306,61 +292,6 @@ class _SourcesSheet extends StatelessWidget {
           const SizedBox(height: 12),
           const Text(kTrainingSources, style: AppText.body),
         ],
-      ),
-    );
-  }
-}
-
-/// A way into a guided routine, which needs no training plan.
-class _RoutineCard extends StatelessWidget {
-  const _RoutineCard({
-    required this.title,
-    required this.blurb,
-    required this.icon,
-    required this.colorId,
-    required this.page,
-  });
-
-  final String title;
-  final String blurb;
-  final IconData icon;
-  final String colorId;
-  final Widget page;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = accentById(colorId);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: AppCard(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          pushPage(context, page);
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.tint,
-                borderRadius: BorderRadius.circular(kRadiusField),
-              ),
-              child: Icon(icon, color: accent.lip, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppText.headline),
-                  Text(blurb, style: AppText.caption.copyWith(color: kInkSecondary)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: kInkMuted),
-          ],
-        ),
       ),
     );
   }

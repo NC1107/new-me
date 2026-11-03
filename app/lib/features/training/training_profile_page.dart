@@ -1,3 +1,5 @@
+import 'info_note.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -168,10 +170,9 @@ class _TrainingProfilePageState extends ConsumerState<TrainingProfilePage> {
             ],
           ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          'At least 2 days of muscle-strengthening work a week (WHO 2020).',
-          style: AppText.caption.copyWith(color: kInkMuted),
+        const InfoNote(
+          label: 'Why 2 days or more',
+          paragraphs: ['At least 2 days of muscle-strengthening work a week (WHO 2020).'],
         ),
         const SizedBox(height: 24),
         const FieldLabel('Minutes a session'),

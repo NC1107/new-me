@@ -26,7 +26,6 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
-import '../habits/habit_proposals_card.dart';
 import '../shared_habits/shared_habits_card.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
@@ -35,6 +34,7 @@ import '../recap/recap_screen.dart';
 import '../../state/session.dart';
 import '../streaks/cover_card.dart';
 import '../streaks/shared_streak_card.dart';
+import '../together/action_needed_card.dart';
 import '../together/cheer_sheet.dart';
 import '../together/together_section.dart';
 import '../../util/people.dart';
@@ -110,9 +110,9 @@ class _UsBody extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         if (paired) ...[
+          const ActionNeededCard(),
           SharedStreakCard(streak: board.sharedStreak, names: [for (final u in users) u.name]),
           const SizedBox(height: kCardGap),
-          const HabitProposalsCard(),
           if (coverDate != null) ...[
             CoverCard(partner: users[1], date: coverDate),
             const SizedBox(height: kCardGap),
@@ -506,8 +506,8 @@ class _SeasonLine extends StatelessWidget {
           Semantics(header: true, child: const Text('Preseason', style: AppText.title)),
           const SizedBox(height: 8),
           const Text(
-            'Season gems start from zero each season, while streaks and history carry on. This '
-            'is the preseason, the warm-up before Season 1.',
+            'Season gems restart each season. Streaks carry on. This is the warm-up before '
+            'Season 1.',
             style: AppText.body,
           ),
         ],

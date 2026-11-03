@@ -934,10 +934,17 @@ class ApiClient {
     required int assigneeId,
     required int stake,
     required String deadline,
+    bool loseIfMissed = false,
   }) => _send(
     () => _dio.post<dynamic>(
       '/api/tasks',
-      data: {'title': title, 'assigneeId': assigneeId, 'stake': stake, 'deadline': deadline},
+      data: {
+        'title': title,
+        'assigneeId': assigneeId,
+        'stake': stake,
+        'deadline': deadline,
+        if (loseIfMissed) 'loseIfMissed': true,
+      },
     ),
     _task,
   );
@@ -949,10 +956,17 @@ class ApiClient {
     int? assigneeId,
     int? stake,
     String? deadline,
+    bool? loseIfMissed,
   }) => _send(
     () => _dio.patch<dynamic>(
       '/api/tasks/$id',
-      data: {'title': ?title, 'assigneeId': ?assigneeId, 'stake': ?stake, 'deadline': ?deadline},
+      data: {
+        'title': ?title,
+        'assigneeId': ?assigneeId,
+        'stake': ?stake,
+        'deadline': ?deadline,
+        'loseIfMissed': ?loseIfMissed,
+      },
     ),
     _task,
   );
@@ -961,6 +975,10 @@ class ApiClient {
 
   Future<GemTask> answerTask(int id, {required bool agree}) =>
       _send(() => _dio.post<dynamic>('/api/tasks/$id/${agree ? 'agree' : 'decline'}'), _task);
+
+  /// Answers my partner's proposal with a different amount, which they then agree to or decline.
+  Future<GemTask> counterTask(int id, {required int stake}) =>
+      _send(() => _dio.post<dynamic>('/api/tasks/$id/counter', data: {'stake': stake}), _task);
 
   /// Marks my own task done. Throws code `task_state` (409) once the deadline has passed.
   Future<GemTask> finishTask(int id) =>

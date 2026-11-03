@@ -140,7 +140,7 @@ List<RecapRow> recapRows(
       complete: complete,
     ),
     _row(
-      'Sleep a night',
+      'Sleep',
       Icons.bedtime_rounded,
       hasSleep ? durationLabel(now.sleepAvgMin) : 'No data',
       now.sleepAvgMin,

@@ -1,5 +1,5 @@
-// Package tasks holds the pure rules of agreed tasks: a chore with a stake in gems that its
-// assignee wins by finishing before the deadline and loses by missing it. See
+// Package tasks holds the pure rules of agreed tasks: a chore worth gems that its assignee earns
+// by finishing before the deadline, and loses by missing it only if they chose to. See
 // docs/design-v21-tasks.md.
 package tasks
 
@@ -32,32 +32,20 @@ const (
 // due Tuesday is still on time at 23:59 Tuesday and missed from Wednesday 00:00.
 func Overdue(deadline, today score.Date) bool { return today.After(deadline) }
 
-// Delta is how a final task moves its assignee's gems: the stake won for done, lost for missed,
-// and nothing for anything else.
-func Delta(status string, stake int) int {
-	switch status {
-	case Done:
-		return stake
-	case Missed:
-		return -stake
-	}
-	return 0
-}
-
 // Verdict is what settling does with an open task on the assignee's current day.
 type Verdict int
 
 const (
 	// Keep leaves the task as it is.
 	Keep Verdict = iota
-	// MarkMissed turns an agreed task whose deadline passed into a missed one, costing the stake.
+	// MarkMissed turns an agreed task whose deadline passed into a missed one.
 	MarkMissed
 	// Lapse withdraws a proposal nobody agreed to before its deadline; no gems move.
 	Lapse
 )
 
 // Judge decides what settling does with a task on the assignee's day. Only an agreed task can
-// cost gems, so a proposal that goes stale is dropped rather than charged.
+// be missed, so a proposal that goes stale is dropped.
 func Judge(status string, deadline, today score.Date) Verdict {
 	if !Overdue(deadline, today) {
 		return Keep

@@ -9,33 +9,26 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../widgets/accent_text.dart';
-import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 import 'habit_icons.dart';
 import 'habits_page.dart';
 
-/// The partner's habit gems waiting for my answer, one row each. Shows nothing when there is
-/// nothing to answer, so Us stays quiet.
-class HabitProposalsCard extends ConsumerWidget {
-  const HabitProposalsCard({super.key});
+/// The partner's habit gems waiting for my answer, one row each, for the Action needed card.
+class HabitProposalRows extends ConsumerWidget {
+  const HabitProposalRows({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final proposals = ref.watch(habitProposalsProvider).value;
     if (proposals == null || proposals.items.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kCardGap),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (i, p) in proposals.items.indexed) ...[
-              if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
-              _ProposalRow(from: proposals.from, proposal: p),
-            ],
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, p) in proposals.items.indexed) ...[
+          if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
+          _ProposalRow(from: proposals.from, proposal: p),
+        ],
+      ],
     );
   }
 }

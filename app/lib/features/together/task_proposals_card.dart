@@ -11,32 +11,28 @@ import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../util/task_copy.dart';
-import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/pressable.dart';
+import 'task_sheet.dart';
 
-/// Tasks my partner proposed, one row each with Agree and Decline. Shows nothing when there is
-/// nothing to answer, so Us stays quiet.
-class TaskProposalsCard extends ConsumerWidget {
-  const TaskProposalsCard({super.key});
+/// Tasks my partner proposed, one row each with Agree, Change the amount and Not now, for the
+/// Action needed card.
+class TaskProposalRows extends ConsumerWidget {
+  const TaskProposalRows({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     final proposals = ref.watch(tasksProvider).value?.proposalsFor(userId) ?? const <GemTask>[];
     if (proposals.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kCardGap),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (i, t) in proposals.indexed) ...[
-              if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
-              _ProposalRow(key: ValueKey(t.id), task: t, userId: userId),
-            ],
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, t) in proposals.indexed) ...[
+          if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
+          _ProposalRow(key: ValueKey(t.id), task: t, userId: userId),
+        ],
+      ],
     );
   }
 }
@@ -77,9 +73,10 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
     final t = widget.task;
     final from = t.creatorName.isEmpty ? 'Your partner' : t.creatorName;
     final terms = '${t.stake.formatted} gems, ${dueLabel(t.daysLeft, t.deadline)}';
+    final atStake = t.loseIfMissed ? ', and loses them if missed' : '';
     return t.assignedTo(widget.userId)
         ? '$from asks you to ${t.title}: $terms'
-        : '$from takes on ${t.title}: $terms';
+        : '$from takes on ${t.title}: $terms$atStake';
   }
 
   @override
@@ -111,7 +108,7 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
           children: [
             Expanded(
               child: ChunkyButton.secondary(
-                label: 'Decline',
+                label: 'Not now',
                 busy: _agreeing == false,
                 onPressed: busy ? null : () => _answer(false),
               ),
@@ -126,8 +123,27 @@ class _ProposalRowState extends ConsumerState<_ProposalRow> {
             ),
           ],
         ),
+        const SizedBox(height: 4),
+        Semantics(
+          button: true,
+          label: 'Change the amount of ${widget.task.title}',
+          excludeSemantics: true,
+          onTap: busy ? null : () => showCounterSheet(context, task: widget.task),
+          child: Pressable(
+            onTap: busy ? null : () => showCounterSheet(context, task: widget.task),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Center(
+                child: Text(
+                  'Change the amount',
+                  style: AppText.label.copyWith(fontWeight: FontWeight.w800, color: kInk),
+                ),
+              ),
+            ),
+          ),
+        ),
         if (_error != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(_error!, style: AppText.label.copyWith(color: kDangerText)),
         ],
       ],

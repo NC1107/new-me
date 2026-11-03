@@ -13,6 +13,7 @@ import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
 import '../../util/task_copy.dart';
+import '../../widgets/app_switch.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/dialogs.dart';
@@ -25,8 +26,9 @@ const kTaskIdeas = ['Call the vet', 'Book the dentist', 'Take out the bins'];
 Future<void> showTaskSheet(BuildContext context, {GemTask? task}) =>
     showAppSheet<void>(context, builder: (_) => TaskSheet(task: task));
 
-/// Title, who it is for, the stake in gems and the deadline. The other person agrees before the
-/// task is live, so neither of you sets a stake on your own.
+/// Title, who it is for, what it is worth and the deadline, and for a task I take on myself an
+/// opt-in to lose the gems if I miss it. The other person agrees before the task is live, so
+/// neither of you sets the amount on your own.
 class TaskSheet extends ConsumerStatefulWidget {
   const TaskSheet({super.key, this.task});
 
@@ -42,6 +44,7 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
     text: widget.task == null ? '' : '${widget.task!.stake}',
   );
   int? _assigneeId;
+  bool _loseIfMissed = false;
   DateTime? _deadline;
   bool _busy = false;
   String? _error;
@@ -54,6 +57,7 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
     final t = _existing;
     if (t != null) {
       _assigneeId = t.assigneeId;
+      _loseIfMissed = t.loseIfMissed;
       final d = parseLocalDate(t.deadline);
       _deadline = DateTime(d.year, d.month, d.day);
     }
@@ -116,27 +120,30 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
     final assignee = _assigneeId ?? me;
     final deadline = isoDate(_deadline!);
     final existing = _existing;
+    final lose = assignee == me && _loseIfMissed;
     return _run(
       (tasks) => existing == null
-          ? tasks.propose(title: title, assigneeId: assignee, stake: stake, deadline: deadline)
+          ? tasks.propose(
+              title: title,
+              assigneeId: assignee,
+              stake: stake,
+              deadline: deadline,
+              loseIfMissed: lose,
+            )
           : tasks.edit(
               existing.id,
               title: title == existing.title ? null : title,
               assigneeId: assignee == existing.assigneeId ? null : assignee,
               stake: stake == existing.stake ? null : stake,
               deadline: deadline == existing.deadline ? null : deadline,
+              loseIfMissed: lose == existing.loseIfMissed ? null : lose,
             ),
     );
   }
 
-  String _caption(String? partner) {
+  String? _caption(String? partner) {
     final existing = _existing;
-    if (existing == null) {
-      return partner == null
-          ? 'Finish it by the deadline to win the gems. Miss it and you lose them.'
-          : '$partner agrees on it first. Finish by the deadline to win the gems; miss it and '
-                'the assignee loses them.';
-    }
+    if (existing == null) return partner == null ? null : '$partner agrees first.';
     if (existing.declined) {
       return '${partner ?? 'Your partner'} declined it. Change it or withdraw it.';
     }
@@ -153,6 +160,8 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
     final today = _today();
     final existing = _existing;
     final deadline = _deadline;
+    final caption = _caption(partner?.name);
+    final forMe = (_assigneeId ?? me) == me;
     final quick = <(String, DateTime)>[
       ('Today', today),
       ('Tomorrow', today.add(const Duration(days: 1))),
@@ -174,11 +183,13 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
             header: true,
             child: Text(existing == null ? 'Add a task' : 'Edit task', style: AppText.title),
           ),
-          const SizedBox(height: 4),
-          Text(
-            _caption(partner?.name),
-            style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
-          ),
+          if (caption != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              caption,
+              style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+            ),
+          ],
           const SizedBox(height: 18),
           const FieldLabel('What needs doing?'),
           AppTextField(
@@ -216,10 +227,10 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
             ),
           ],
           const SizedBox(height: 20),
-          const FieldLabel('What is it worth?'),
+          const FieldLabel('Gems'),
           AppTextField(
             controller: _stake,
-            hint: 'Gems',
+            hint: 'Gems it is worth',
             semanticLabel: 'Gems it is worth',
             keyboardType: TextInputType.number,
             inputFormatters: [
@@ -231,11 +242,10 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
                 : null,
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Earned when it is done in time, lost when the deadline passes.',
-            style: AppText.caption,
-          ),
+          if (forMe) ...[
+            const SizedBox(height: 12),
+            _LoseToggle(value: _loseIfMissed, onChanged: (v) => setState(() => _loseIfMissed = v)),
+          ],
           const SizedBox(height: 20),
           const FieldLabel('Due by the end of'),
           Wrap(
@@ -284,6 +294,143 @@ class _TaskSheetState extends ConsumerState<TaskSheet> {
               onPressed: _busy ? null : () => _run((t) => t.withdraw(existing.id)),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The one place gems can be lost: only on a task I take on myself, and only if I turn it on.
+class _LoseToggle extends StatelessWidget {
+  const _LoseToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => MergeSemantics(
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lose them if missed',
+                style: AppText.label.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const Text('Never more than you hold then.', style: AppText.caption),
+            ],
+          ),
+        ),
+        AppSwitch(value: value, onChanged: onChanged),
+      ],
+    ),
+  );
+}
+
+/// Answers a proposal with another amount of gems. The proposer is asked to agree to it.
+Future<void> showCounterSheet(BuildContext context, {required GemTask task}) =>
+    showAppSheet<void>(context, builder: (_) => _CounterSheet(task: task));
+
+class _CounterSheet extends ConsumerStatefulWidget {
+  const _CounterSheet({required this.task});
+
+  final GemTask task;
+
+  @override
+  ConsumerState<_CounterSheet> createState() => _CounterSheetState();
+}
+
+class _CounterSheetState extends ConsumerState<_CounterSheet> {
+  late final TextEditingController _stake = TextEditingController(text: '${widget.task.stake}');
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _stake.dispose();
+    super.dispose();
+  }
+
+  int? get _value {
+    final v = int.tryParse(_stake.text.trim());
+    return v == null || v < 1 || v > kTaskStakeMax ? null : v;
+  }
+
+  Future<void> _send() async {
+    final stake = _value;
+    if (stake == null || _busy) return;
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(tasksProvider.notifier).counter(widget.task.id, stake: stake);
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = errorCopy(e);
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final from = widget.task.creatorName.isEmpty ? 'Your partner' : widget.task.creatorName;
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        kGutter,
+        4,
+        kGutter,
+        kGutter + MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(header: true, child: const Text('Change the amount', style: AppText.title)),
+          const SizedBox(height: 4),
+          Text(
+            '${widget.task.title}. $from agrees to the new amount or says not now.',
+            style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 18),
+          const FieldLabel('Gems'),
+          AppTextField(
+            controller: _stake,
+            hint: 'Gems it is worth',
+            semanticLabel: 'Gems it is worth',
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            errorText: _stake.text.isNotEmpty && _value == null
+                ? 'Between 1 and ${kTaskStakeMax.formatted}'
+                : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: AppText.label.copyWith(color: kDangerText, fontWeight: FontWeight.w700),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Semantics(
+            container: true,
+            child: ChunkyButton(
+              label: 'Send',
+              busy: _busy,
+              onPressed: _value != null && !_busy ? _send : null,
+            ),
+          ),
         ],
       ),
     );

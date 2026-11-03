@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart' show Key, Switch;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
 import 'package:newme/features/board/board_screen.dart';
+import 'package:newme/features/shell/home_shell.dart';
 import 'package:newme/features/together/task_sheet.dart';
 import 'package:newme/util/task_copy.dart';
 import 'package:newme/widgets/chunky_button.dart';
@@ -21,6 +23,8 @@ Map<String, dynamic> _task({
   String status = 'agreed',
   String deadline = '2026-10-28',
   int daysLeft = 2,
+  bool loseIfMissed = false,
+  int lost = 0,
 }) => {
   'id': id,
   'title': title,
@@ -29,6 +33,8 @@ Map<String, dynamic> _task({
   'assigneeId': assignee,
   'assigneeName': assignee == 1 ? 'Ana' : 'Sam',
   'stake': stake,
+  'loseIfMissed': loseIfMissed,
+  'lost': lost,
   'deadline': deadline,
   'daysLeft': daysLeft,
   'status': status,
@@ -205,26 +211,88 @@ void main() {
       expect(find.text('DONE'), findsNothing);
     });
 
-    testWidgets('a proposal from my partner waits for Agree or Decline', (tester) async {
+    testWidgets('a proposal from my partner waits for Agree, a new amount or Not now', (
+      tester,
+    ) async {
       final server = _server(open: [_task(creator: 1, status: 'proposed')])
         ..on('POST /api/tasks/5/agree', StubResponse(200, {'task': _task(creator: 1)}));
       final app = _app(tester, server);
       await _openUs(app);
 
+      expect(find.text('Action needed'), findsOneWidget);
       expect(find.text('Ana asks you to Call the vet: 40 gems, due Wed'), findsOneWidget);
+      expect(find.text('Change the amount'), findsOneWidget);
       expect(find.text('DONE'), findsNothing);
       await app.tap(find.text('AGREE'));
       expect(app.adapter.to('POST /api/tasks/5/agree'), hasLength(1));
     });
 
-    testWidgets('declining sends the decline', (tester) async {
+    testWidgets('Change the amount sends a counter-offer', (tester) async {
+      final server = _server(open: [_task(creator: 1, status: 'proposed')])
+        ..on(
+          'POST /api/tasks/5/counter',
+          StubResponse(200, {'task': _task(status: 'proposed', stake: 25)}),
+        );
+      final app = _app(tester, server);
+      await _openUs(app);
+
+      await app.tap(find.text('Change the amount'));
+      await tester.enterText(fieldWith('40'), '25');
+      await app.settle();
+      await app.tap(find.text('SEND'));
+
+      expect(app.body('POST /api/tasks/5/counter'), {'stake': 25});
+    });
+
+    testWidgets('the Action needed card is first and the Us tab counts it', (tester) async {
+      final server = _server(
+        open: [
+          _task(creator: 1, status: 'proposed'),
+          _task(id: 6, title: 'Book the dentist', creator: 1, status: 'proposed'),
+        ],
+      );
+      final app = _app(tester, server);
+      await _openUs(app);
+
+      expect(find.text('Action needed'), findsOneWidget);
+      final actionTop = tester.getTopLeft(find.text('Action needed')).dy;
+      expect(actionTop, lessThan(tester.getTopLeft(find.text('Tasks')).dy));
+      expect(
+        tester.getTopLeft(find.text('Action needed')).dy,
+        lessThan(tester.getTopLeft(find.text('Your gems')).dy),
+      );
+    });
+
+    testWidgets('the Us tab shows how many answers wait on me', (tester) async {
+      final server = _server(
+        open: [
+          _task(creator: 1, status: 'proposed'),
+          _task(id: 6, title: 'Book the dentist', creator: 1, status: 'proposed'),
+        ],
+      );
+      await _app(tester, server).pump(const HomeShell());
+
+      expect(
+        find.descendant(of: find.byKey(const Key('nav-badge')), matching: find.text('2')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('nothing waiting on me means no Action needed card', (tester) async {
+      final app = _app(tester, _server(open: [_task()]));
+      await _openUs(app);
+
+      expect(find.text('Action needed'), findsNothing);
+    });
+
+    testWidgets('Not now sends the decline', (tester) async {
       final server = _server(open: [_task(creator: 1, assignee: 1, status: 'proposed')])
         ..on('POST /api/tasks/5/decline', StubResponse(200, {'task': _task(status: 'declined')}));
       final app = _app(tester, server);
       await _openUs(app);
 
       expect(find.text('Ana takes on Call the vet: 40 gems, due Wed'), findsOneWidget);
-      await app.tap(find.text('DECLINE'));
+      await app.tap(find.text('NOT NOW'));
       expect(app.adapter.to('POST /api/tasks/5/decline'), hasLength(1));
     });
 
@@ -239,13 +307,24 @@ void main() {
       expect(find.text('WITHDRAW'), findsOneWidget);
     });
 
-    testWidgets('the history lists what was won and lost', (tester) async {
+    testWidgets('the history lists what was earned, and a loss only when one was taken', (
+      tester,
+    ) async {
       final app = _app(
         tester,
         _server(
           history: [
             _task(id: 7, title: 'Pay the bill', status: 'done'),
             _task(id: 8, title: 'Fix the fence', assignee: 1, stake: 100, status: 'missed'),
+            _task(
+              id: 9,
+              title: 'Mow the lawn',
+              assignee: 1,
+              stake: 100,
+              status: 'missed',
+              loseIfMissed: true,
+              lost: 30,
+            ),
           ],
         ),
       );
@@ -253,15 +332,30 @@ void main() {
 
       expect(find.text('Tasks settled'), findsOneWidget);
       expect(find.text('You finished · +40 gems'), findsOneWidget);
-      expect(find.text('Ana missed · -100 gems'), findsOneWidget);
+      expect(find.text('Ana missed'), findsOneWidget);
+      expect(find.text('Ana missed · -30 gems'), findsOneWidget);
     });
 
-    testWidgets('a balance below zero reads as a debt', (tester) async {
-      final app = _app(tester, _server(mine: -70, mineTasks: -100));
+    testWidgets('there is no debt state on the balances', (tester) async {
+      final app = _app(tester, _server(mine: 0));
       await _openUs(app);
 
-      expect(find.text('-70'), findsOneWidget);
-      expect(find.text('In debt'), findsOneWidget);
+      expect(find.text('In debt'), findsNothing);
+    });
+
+    testWidgets('a task I put gems on the line for says so', (tester) async {
+      final app = _app(tester, _server(open: [_task(loseIfMissed: true)]));
+      await _openUs(app);
+
+      expect(find.text('You · 40 gems · due Wed · lost if missed'), findsOneWidget);
+    });
+
+    testWidgets('with no tasks it shows an empty state with one way in', (tester) async {
+      final app = _app(tester, _server());
+      await _openUs(app);
+
+      expect(find.text('No tasks yet'), findsOneWidget);
+      expect(find.text('ADD A TASK'), findsOneWidget);
     });
 
     testWidgets('the touch targets are 44pt', (tester) async {
@@ -290,7 +384,7 @@ void main() {
       final app = _app(tester, server);
       await _openUs(app);
 
-      await app.tap(find.text('Add a task'));
+      await app.tap(find.text('ADD A TASK'));
       expect(find.byType(TaskSheet), findsOneWidget);
       expect(_button(tester, 'Propose task').onPressed, isNull);
 
@@ -309,11 +403,38 @@ void main() {
       });
     });
 
+    testWidgets('losing gems is an opt-in offered only on a task for myself', (tester) async {
+      final server = _server()
+        ..on('POST /api/tasks', StubResponse(201, {'task': _task(loseIfMissed: true)}));
+      final app = _app(tester, server);
+      await _openUs(app);
+
+      await app.tap(find.text('ADD A TASK'));
+      expect(find.text('Lose them if missed'), findsOneWidget);
+      await app.tap(find.descendant(of: find.byType(TaskSheet), matching: find.text('Ana')));
+      expect(find.text('Lose them if missed'), findsNothing);
+      await app.tap(find.descendant(of: find.byType(TaskSheet), matching: find.text('Me')));
+      await app.tap(find.byType(Switch));
+      await app.tap(find.text('Call the vet').last);
+      await tester.enterText(fieldWith(''), '50');
+      await app.settle();
+      await app.tap(find.text('Tomorrow'));
+      await app.tap(find.text('PROPOSE TASK'));
+
+      expect(app.body('POST /api/tasks'), {
+        'title': 'Call the vet',
+        'assigneeId': 2,
+        'stake': 50,
+        'deadline': '2026-10-27',
+        'loseIfMissed': true,
+      });
+    });
+
     testWidgets('what it is worth is held to 1 to 100,000 gems', (tester) async {
       final app = _app(tester, _server());
       await _openUs(app);
 
-      await app.tap(find.text('Add a task'));
+      await app.tap(find.text('ADD A TASK'));
       await app.tap(find.text('Call the vet').last);
       await app.tap(find.text('Today'));
       await tester.enterText(fieldWith(''), '0');

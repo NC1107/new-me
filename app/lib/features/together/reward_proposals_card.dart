@@ -10,32 +10,26 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../util/errors.dart';
 import '../../util/format.dart';
-import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
 
-/// Rewards or new prices my partner proposed, one row each with Approve and Decline. Shows
-/// nothing when there is nothing to answer, so Us stays quiet.
-class RewardProposalsCard extends ConsumerWidget {
-  const RewardProposalsCard({super.key});
+/// Rewards or new prices my partner proposed, one row each with Approve and Decline, for the
+/// Action needed card.
+class RewardProposalRows extends ConsumerWidget {
+  const RewardProposalRows({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = ref.watch(sessionProvider.select((s) => s.session?.userId));
     final proposals = ref.watch(rewardsProvider).value?.proposalsFor(userId) ?? const <Reward>[];
     if (proposals.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kCardGap),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (i, p) in proposals.indexed) ...[
-              if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
-              _ProposalRow(key: ValueKey(p.id), reward: p),
-            ],
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, p) in proposals.indexed) ...[
+          if (i > 0) const Divider(height: 24, thickness: 2, color: kBorder),
+          _ProposalRow(key: ValueKey(p.id), reward: p),
+        ],
+      ],
     );
   }
 }

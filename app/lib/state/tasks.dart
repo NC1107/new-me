@@ -48,22 +48,45 @@ class TasksNotifier extends AsyncNotifier<TaskList> {
     required int assigneeId,
     required int stake,
     required String deadline,
+    bool loseIfMissed = false,
   }) => _change(
-    (c) => c.createTask(title: title, assigneeId: assigneeId, stake: stake, deadline: deadline),
+    (c) => c.createTask(
+      title: title,
+      assigneeId: assigneeId,
+      stake: stake,
+      deadline: deadline,
+      loseIfMissed: loseIfMissed,
+    ),
   );
 
-  Future<void> edit(int id, {String? title, int? assigneeId, int? stake, String? deadline}) =>
-      _change(
-        (c) =>
-            c.patchTask(id, title: title, assigneeId: assigneeId, stake: stake, deadline: deadline),
-      );
+  Future<void> edit(
+    int id, {
+    String? title,
+    int? assigneeId,
+    int? stake,
+    String? deadline,
+    bool? loseIfMissed,
+  }) => _change(
+    (c) => c.patchTask(
+      id,
+      title: title,
+      assigneeId: assigneeId,
+      stake: stake,
+      deadline: deadline,
+      loseIfMissed: loseIfMissed,
+    ),
+  );
+
+  /// Answers a proposal with another amount; the proposer is then the one asked.
+  Future<void> counter(int id, {required int stake}) =>
+      _change((c) => c.counterTask(id, stake: stake));
 
   Future<void> withdraw(int id) => _change((c) => c.withdrawTask(id));
 
   Future<void> answer(int id, {required bool agree}) =>
       _change((c) => c.answerTask(id, agree: agree));
 
-  /// Marks my task done, which wins its stake in gems.
+  /// Marks my task done, which earns its gems.
   Future<void> finish(int id) => _change((c) => c.finishTask(id));
 
   // Gems move with a task, so the balances on Us and the reward bar follow it.

@@ -13,10 +13,11 @@ import (
 	"github.com/nc1107/new-me/server/internal/tasks"
 )
 
-// SettleTasks charges the stake of every agreed task whose deadline day has ended on its
-// assignee's calendar, and withdraws proposals nobody answered in time. It runs from Settle, so
+// SettleTasks misses every agreed task whose deadline day has ended on its assignee's calendar,
+// taking gems only from those the assignee put on the line, and withdraws proposals nobody
+// answered in time. It runs from Settle, so
 // the scheduler does it with nobody in the app, and every task list read does it first. Each
-// task moves under its own lock and only from its open status, so a stake is charged once no
+// task moves under its own lock and only from its open status, so a loss is charged once no
 // matter how many passes or requests race.
 func (s *Service) SettleTasks(ctx context.Context) error {
 	users, err := db.ListUsers(ctx, s.DB.Pool)
@@ -65,14 +66,19 @@ func (s *Service) SettleTasks(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// announceMissed tells both people a stake was lost. The gems have already moved, so a push that
-// cannot be queued is only a missed notification and never retried into a second charge.
+// announceMissed tells both people a task was missed, and what it cost if it cost anything. The
+// gems have already moved, so a push that cannot be queued is only a missed notification and
+// never retried into a second charge.
 func (s *Service) announceMissed(t db.Task, users map[int64]db.User) {
 	assignee := users[t.AssigneeID]
+	cost := ""
+	if t.Lost > 0 {
+		cost = fmt.Sprintf(", -%d gems", t.Lost)
+	}
 	for _, u := range users {
-		body := fmt.Sprintf("%s missed %s, -%d gems", assignee.Name, t.Title, t.Stake)
+		body := fmt.Sprintf("%s missed %s%s", assignee.Name, t.Title, cost)
 		if u.ID == t.AssigneeID {
-			body = fmt.Sprintf("You missed %s, -%d gems", t.Title, t.Stake)
+			body = fmt.Sprintf("You missed %s%s", t.Title, cost)
 		}
 		s.Notify(u, push.Message{Kind: EventTask, Title: "Task missed", Body: body})
 	}

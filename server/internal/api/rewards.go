@@ -80,7 +80,7 @@ func (v rewardView) json(r db.Reward) rewardJSON {
 	funds := v.bank
 	if r.OwnerID != nil {
 		owner, _ := v.people.Find(*r.OwnerID)
-		funds = owner.Spendable()
+		funds = owner.Balance()
 	}
 	progress := together.RewardProgress(funds, r.Price)
 	if r.Status == db.RewardClaimed {

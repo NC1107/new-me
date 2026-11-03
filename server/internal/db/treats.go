@@ -47,7 +47,7 @@ func ReadPersonGems(ctx context.Context, q Querier) (PersonGems, error) {
 		       COALESCE((SELECT sum(s.base_points + s.bonus_points) FROM day_scores s WHERE s.user_id = u.id), 0)::int,
 		       (COALESCE((SELECT sum(p.amount) FROM reward_payments p WHERE p.user_id = u.id), 0)
 		      + COALESCE((SELECT sum(t.price) FROM treat_redemptions t WHERE t.user_id = u.id), 0))::int,
-		       COALESCE((SELECT sum(CASE k.status WHEN 'done' THEN k.stake ELSE -k.stake END) FROM tasks k
+		       COALESCE((SELECT sum(CASE k.status WHEN 'done' THEN k.stake ELSE -k.lost END) FROM tasks k
 		                 WHERE k.assignee_id = u.id AND k.status IN ('done', 'missed')), 0)::int
 		FROM users u WHERE u.deleted_at IS NULL ORDER BY u.id`)
 	if err != nil {
@@ -151,7 +151,7 @@ func RedeemTreat(ctx context.Context, tx pgx.Tx, userID, treatID int64, requestI
 		return Redemption{}, false, err
 	}
 	me, ok := people.Find(userID)
-	if !ok || !gems.TreatReady(me.Spendable(), treat.Price) {
+	if !ok || !gems.TreatReady(me.Balance(), treat.Price) {
 		return Redemption{}, false, ErrInsufficientGems
 	}
 	red, err = scanRedemption(tx.QueryRow(ctx, `

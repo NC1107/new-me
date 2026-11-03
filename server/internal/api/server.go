@@ -321,6 +321,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/api/tasks/{id}", s.handleWithdrawTask)
 		r.Post("/api/tasks/{id}/agree", s.handleAgreeTask)
 		r.Post("/api/tasks/{id}/decline", s.handleDeclineTask)
+		r.Post("/api/tasks/{id}/counter", s.handleCounterTask)
 		r.With(s.settleAfter).Post("/api/tasks/{id}/done", s.handleFinishTask)
 		r.Put("/api/devices/me/push", s.handlePutPushToken)
 		r.Delete("/api/devices/me/push", s.handleDeletePushToken)

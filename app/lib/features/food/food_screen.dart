@@ -16,10 +16,11 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/chunky_button.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
+import '../log/log_kind.dart';
+import '../log/log_sheet.dart';
 import '../me/food_targets_page.dart';
 import '../me/my_foods_page.dart';
 import '../me/settings_row.dart';
-import 'add_sheet.dart';
 import 'edit_meal_sheet.dart';
 import 'food_card.dart';
 import 'meal_actions.dart';
@@ -81,7 +82,7 @@ class _FoodBody extends ConsumerWidget {
           ChunkyButton(
             label: 'Add',
             icon: Icons.add_rounded,
-            onPressed: () => showAddFoodSheet(context),
+            onPressed: () => showLogSheet(context, kind: LogKind.meal, focusSearch: true),
           ),
           const SizedBox(height: 24),
           Semantics(header: true, child: const Text('Meals today', style: AppText.headline)),
@@ -102,7 +103,7 @@ class _FoodBody extends ConsumerWidget {
                 icon: Icons.bookmarks_rounded,
                 palette: accentById('green'),
                 title: 'My foods',
-                subtitle: 'Saved foods with exact numbers',
+                subtitle: 'Saved foods',
                 onTap: () => pushPage(context, const MyFoodsPage()),
               ),
             ],
@@ -120,7 +121,7 @@ class _MealsToday extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (ref.watch(mealsTodayProvider)) {
       AsyncValue(:final value?) when value.isEmpty => Text(
-        'Nothing logged yet today.',
+        'Nothing logged yet.',
         style: AppText.body.copyWith(color: kInkSecondary),
       ),
       AsyncValue(:final value?) => AppCard(

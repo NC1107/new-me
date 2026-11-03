@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/cached_view.dart';
+import '../../widgets/info_note.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 
@@ -33,7 +34,6 @@ class TrainingProgressPage extends ConsumerWidget {
     final value = ref.watch(trainingProgressProvider);
     return PageScaffold(
       title: 'Weekly sets',
-      subtitle: 'Hard sets per muscle, counted by primary muscle',
       children: [
         switch (value) {
           AsyncValue(:final value?) => _Body(progress: value),
@@ -66,8 +66,7 @@ class _Body extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Aim for ${p.rangeMin} to ${p.rangeMax} hard sets a week per muscle, the shaded band '
-          'on each bar.',
+          'Aim for ${p.rangeMin} to ${p.rangeMax} sets a week per muscle (the shaded band).',
           style: AppText.body.copyWith(color: kInkSecondary),
         ),
         const SizedBox(height: 16),
@@ -115,10 +114,16 @@ class _Body extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Target ${p.rangeMin} to ${p.rangeMax} sets a week per muscle: ${p.rangeLabel}. '
-          'Source: ${p.source}.',
-          style: AppText.caption.copyWith(color: kInkMuted),
+        InfoNote(
+          'Beginner range, from Schoenfeld 2017.',
+          info: InfoContent(
+            title: 'Weekly sets range',
+            paragraphs: [
+              'Hard sets are counted by primary muscle.',
+              'Target ${p.rangeMin} to ${p.rangeMax} sets a week per muscle: ${p.rangeLabel}.',
+            ],
+            source: 'Source: ${p.source}.',
+          ),
         ),
       ],
     );

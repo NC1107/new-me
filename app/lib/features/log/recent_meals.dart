@@ -107,7 +107,7 @@ class RecentMealTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.add_circle_outline_rounded, color: kInkSecondary),
+                const Icon(Icons.add_circle_outline_rounded, size: 28, color: kInkSecondary),
               ],
             ),
           ),

@@ -429,27 +429,34 @@ class _BackdateToggle extends StatelessWidget {
     final hour = until.toLocal();
     return Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Log for yesterday', style: AppText.label.copyWith(color: kInk)),
-                  Text('Open until ${formatClock(hour)}', style: AppText.caption),
-                ],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(kRadiusField),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(!value);
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Log for yesterday', style: AppText.label.copyWith(color: kInk)),
+                    Text('Open until ${formatClock(hour)}', style: AppText.caption),
+                  ],
+                ),
               ),
-            ),
-            AppSwitch(
-              value: value,
-              onChanged: (v) {
-                HapticFeedback.selectionClick();
-                onChanged(v);
-              },
-            ),
-          ],
+              AppSwitch(
+                value: value,
+                onChanged: (v) {
+                  HapticFeedback.selectionClick();
+                  onChanged(v);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

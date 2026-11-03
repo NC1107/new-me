@@ -106,10 +106,7 @@ class _YogaPageState extends ConsumerState<YogaPage> {
           const SizedBox(height: 10),
         ],
         const SizedBox(height: 4),
-        Text(
-          'Finishing a flow counts toward your yoga quest.',
-          style: AppText.caption.copyWith(color: kInkMuted),
-        ),
+        Text('Counts toward your yoga goal.', style: AppText.caption.copyWith(color: kInkMuted)),
         const SizedBox(height: 20),
         const FieldLabel('Poses'),
         AppCard(
@@ -275,15 +272,12 @@ class _PlanSection extends StatelessWidget {
               const SizedBox(height: 12),
               InfoNote.label(
                 'Why these numbers',
-                paragraphs: [state.citation.isEmpty ? kYogaCitation : state.citation],
+                paragraphs: [
+                  state.citation.isEmpty ? kYogaCitation : state.citation,
+                  if (state.avoidedDays.isNotEmpty)
+                    'Days are placed around your heavy leg days (${state.avoidedDays.map(weekdayLabel).join(', ')}).',
+                ],
               ),
-              if (state.avoidedDays.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Days are placed around your heavy leg days (${state.avoidedDays.map(weekdayLabel).join(', ')}).',
-                  style: AppText.caption.copyWith(color: kInkMuted),
-                ),
-              ],
               if (error != null) ...[
                 const SizedBox(height: 8),
                 Text(error!, style: AppText.label.copyWith(color: kDangerText)),

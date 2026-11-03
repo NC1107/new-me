@@ -412,6 +412,9 @@ void main() {
       final app = TestApp(tester, _server(plan: plan), surfaceHeight: 3000);
       await app.pump(const YogaPage());
       await tester.pumpAndSettle();
+      expect(find.textContaining('around your heavy leg days'), findsNothing);
+      await tester.tap(find.text('Why these numbers'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('around your heavy leg days (Mon, Thu)'), findsOneWidget);
     });
 

@@ -239,7 +239,7 @@ class PoseThumb extends ConsumerWidget {
               credit.label,
               style: const TextStyle(
                 fontFamily: kFontFamily,
-                fontSize: 11,
+                fontSize: 12,
                 height: 1.2,
                 fontWeight: FontWeight.w600,
                 color: kInkSecondary,

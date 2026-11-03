@@ -262,7 +262,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Rest day'), findsOneWidget);
       expect(find.text('Next: Full body B, Thu'), findsOneWidget);
-      expect(find.text('Train'), findsOneWidget);
+      expect(find.text('Train anyway'), findsOneWidget);
       expect(find.text('Training'), findsNothing, reason: 'the caption line is gone');
       await tester.tap(find.text('Rest day'));
       await tester.pumpAndSettle();
@@ -353,7 +353,7 @@ void main() {
 
       expect(find.text('Push-up'), findsOneWidget);
       expect(find.text('2 × 6'), findsNWidgets(3));
-      expect(find.textContaining('First time in this plan'), findsWidgets);
+      expect(find.textContaining('First time in this plan'), findsOneWidget, reason: 'said once');
       expect(find.text('10 reps at 20\u00a0kg · 2 RIR'), findsOneWidget);
 
       await tester.tap(_button('Log set 1 of 2').first);
@@ -410,7 +410,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_button('Set up training'), findsOneWidget);
       expect(find.textContaining('WHO 2020'), findsNothing, reason: 'the sources are one tap away');
-      await tester.tap(find.byTooltip('Sources for plans and progression'));
+      await tester.tap(find.text('Plans follow published training guidelines.'));
       await tester.pumpAndSettle();
       expect(find.textContaining('WHO 2020'), findsOneWidget);
     });
@@ -421,7 +421,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('2 days a week, 40 min'), findsOneWidget);
       expect(find.textContaining('Dumbbells to 30\u00a0kg'), findsOneWidget);
-      expect(find.text('Plan · 4 weeks, until Nov 29'), findsOneWidget);
+      expect(find.text('4 week plan, to Nov 29'), findsOneWidget);
       expect(find.text('Train'), findsOneWidget);
       expect(find.text('Full body A'), findsWidgets, reason: "today's card and the plan day");
       expect(find.text('Dumbbell row'), findsNWidgets(2));
@@ -471,6 +471,7 @@ void main() {
       await app.pump(const TrainingProfilePage());
       await tester.pumpAndSettle();
       await tester.tap(find.text('Pull-up bar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('4'));
       await tester.tap(find.text('30 min'));
       await tester.tap(find.text('Experienced'));
@@ -516,7 +517,10 @@ void main() {
       final app = TestApp(tester, _server());
       await app.pump(const TrainingProgressPage());
       await tester.pumpAndSettle();
-      expect(find.textContaining('Aim for 4 to 12 hard sets'), findsOneWidget);
+      expect(find.textContaining('Aim for 4 to 12 sets a week per muscle'), findsOneWidget);
+      expect(find.textContaining('Schoenfeld, Ogborn and Krieger'), findsNothing);
+      await tester.tap(find.text('Beginner range, from Schoenfeld 2017.'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Schoenfeld, Ogborn and Krieger'), findsOneWidget);
       expect(find.text('Back'), findsWidgets);
       expect(find.text('3 wk'), findsOneWidget);

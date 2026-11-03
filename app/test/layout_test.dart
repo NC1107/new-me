@@ -127,8 +127,6 @@ void _layoutSuite(double textScale) {
     noOverflow('Food');
     await tester.scrollUntilVisible(_chunky('Add'), 300, scrollable: find.byType(Scrollable).first);
     await app.tap(_chunky('Add'));
-    noOverflow('add sheet');
-    await app.tap(find.text('Meal'));
     noOverflow('log meal');
     await app.tap(find.text('More'));
     noOverflow('log meal more');

@@ -43,7 +43,7 @@ void main() {
     final app = TestApp(tester, _server('training_today'), surfaceHeight: 1800);
     await app.pump(const TrainScreen());
     await tester.pumpAndSettle();
-    await tester.tap(_start);
+    await tester.tap(find.text('Something else'));
     await tester.pumpAndSettle();
     expect(find.text('Start a workout'), findsOneWidget);
 
@@ -61,6 +61,29 @@ void main() {
     await tester.tap(find.text('Full body A').last);
     await tester.pumpAndSettle();
     expect(find.byType(SessionPage), findsOneWidget);
+  });
+
+  testWidgets('on a training day the start button opens the planned session in one tap', (
+    tester,
+  ) async {
+    final app = TestApp(tester, _server('training_today'), surfaceHeight: 1800);
+    await app.pump(const TrainScreen());
+    await tester.pumpAndSettle();
+    await tester.tap(_start);
+    await tester.pumpAndSettle();
+    expect(find.byType(SessionPage), findsOneWidget);
+    expect(find.text('Yoga'), findsNothing, reason: 'no sheet in between');
+  });
+
+  testWidgets('a rest day has no second control and the button opens the sheet', (tester) async {
+    final app = TestApp(tester, _server('training_today_none'), surfaceHeight: 1800);
+    await app.pump(const TrainScreen());
+    await tester.pumpAndSettle();
+    expect(find.text('Something else'), findsNothing);
+    await tester.tap(_start);
+    await tester.pumpAndSettle();
+    expect(find.text('Yoga'), findsOneWidget);
+    expect(find.byType(SessionPage), findsNothing);
   });
 
   testWidgets('the sheet leaves out a session on a day without one', (tester) async {

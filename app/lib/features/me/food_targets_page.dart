@@ -122,7 +122,7 @@ class _FoodTargetsPageState extends ConsumerState<FoodTargetsPage> with MeSaving
       ),
       children: [
         Text(
-          'Your food card tracks these. Leave one empty if you do not want a target for it.',
+          'Leave a box empty to skip it.',
           style: AppText.label.copyWith(color: kInkSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),

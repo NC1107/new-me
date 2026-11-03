@@ -147,6 +147,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           const SizedBox(height: 12),
         ],
         if (session.eased) ...[EasedNote(session: session), const SizedBox(height: kCardGap)],
+        if (!session.completed && session.exercises.any((e) => isFirstTimeHint(e.reason))) ...[
+          Text(
+            'First time in this plan: start each at the bottom of its range.',
+            style: AppText.caption.copyWith(color: kInkSecondary),
+          ),
+          const SizedBox(height: kCardGap),
+        ],
         for (final e in session.exercises) ...[
           _ExerciseCard(exercise: e, onLog: () => _log(session, e), onDelete: _delete),
           const SizedBox(height: kCardGap),
@@ -196,7 +203,7 @@ class _ExerciseCard extends StatelessWidget {
               style: AppText.caption,
             ),
           ],
-          if (e.reason.isNotEmpty) ...[
+          if (e.reason.isNotEmpty && !isFirstTimeHint(e.reason)) ...[
             const SizedBox(height: 6),
             Text(e.reason, style: AppText.caption.copyWith(color: kInkMuted)),
           ],

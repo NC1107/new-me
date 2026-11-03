@@ -193,7 +193,7 @@ class PillBadge extends StatelessWidget {
               style: AppText.caption.copyWith(
                 color: accent.lip,
                 fontWeight: FontWeight.w800,
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 0.6,
               ),
             ),

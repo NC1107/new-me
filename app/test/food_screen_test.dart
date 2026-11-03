@@ -118,16 +118,14 @@ void main() {
   testWidgets('with no meals it says so', (tester) async {
     final app = TestApp(tester, _server(logs: [logJson()]), surfaceHeight: 2000);
     await app.pump(const FoodScreen());
-    expect(find.text('Nothing logged yet today.'), findsOneWidget);
+    expect(find.text('Nothing logged yet.'), findsOneWidget);
   });
 
-  testWidgets('Add asks what is added, and Meal opens the meal form', (tester) async {
+  testWidgets('Add opens the meal form directly, with no chooser first', (tester) async {
     final app = TestApp(tester, _server(), surfaceHeight: 2000);
     await app.pump(const FoodScreen());
 
     await app.tap(_chunky('Add'));
-    expect(find.text('What are you adding?'), findsOneWidget);
-    await app.tap(find.text('Meal'));
     expect(find.text('What are you adding?'), findsNothing);
     expect(find.byType(LogSheet), findsOneWidget);
     expect(find.text('Portion'), findsOneWidget);
@@ -174,10 +172,7 @@ void main() {
     final delete = tester.getSize(find.byTooltip('Delete Chicken bowl'));
     expect(delete.width, greaterThanOrEqualTo(44));
     expect(delete.height, greaterThanOrEqualTo(44));
-    for (final label in [
-      'Food targets, 2,200 kcal, 150 g protein',
-      'My foods, Saved foods with exact numbers',
-    ]) {
+    for (final label in ['Food targets, 2,200 kcal, 150 g protein', 'My foods, Saved foods']) {
       final row = find.bySemanticsLabel(label);
       expect(row, findsOneWidget, reason: label);
       expect(tester.getSize(row).height, greaterThanOrEqualTo(44), reason: label);

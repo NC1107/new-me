@@ -113,7 +113,6 @@ void main() {
     expect(find.text('1,850 of 2,200 kcal'), findsOneWidget);
 
     await app.tap(_chunky('Add'));
-    await app.tap(find.text('Meal'));
     await app.tap(find.descendant(of: find.byType(LogSheet), matching: find.text('Chicken bowl')));
 
     expect(find.text('2,450 of 2,200 kcal'), findsOneWidget);

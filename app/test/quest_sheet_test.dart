@@ -224,12 +224,12 @@ void main() {
     testWidgets('Turn off asks first, then sends the switch and closes the sheet', (tester) async {
       final app = await _open(tester, _server(), 'steps');
 
-      await app.tap(find.text('Turn off this quest'));
+      await app.tap(find.text('Turn off this goal'));
       expect(find.text('Turn off Steps?'), findsOneWidget);
       await app.tap(find.text('Cancel'));
       expect(app.adapter.to('PATCH /api/me'), isEmpty);
 
-      await app.tap(find.text('Turn off this quest'));
+      await app.tap(find.text('Turn off this goal'));
       await app.tap(find.widgetWithText(TextButton, 'Turn off'));
 
       expect(app.body('PATCH /api/me'), {

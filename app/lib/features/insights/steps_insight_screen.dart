@@ -345,8 +345,6 @@ class _SuggestionCard extends StatelessWidget {
             ),
           ] else
             ..._suggestion(context, suggestion, palette),
-          const SizedBox(height: 10),
-          const Text('General guidance, not medical advice.', style: AppText.caption),
         ],
       ),
     );
@@ -482,10 +480,6 @@ class _ExplainerState extends State<_Explainer> {
                             Text(line, style: AppText.body.copyWith(color: kInkSecondary)),
                             const SizedBox(height: 10),
                           ],
-                          const Text(
-                            'General guidance, not medical advice.',
-                            style: AppText.caption,
-                          ),
                         ],
                       ),
                     ),
@@ -500,6 +494,6 @@ class _ExplainerState extends State<_Explainer> {
 
 const _evidence = [
   'Large pooled studies of adults (Paluch et al., The Lancet Public Health, 2022; Ding et al., The Lancet Public Health, 2025) find that the benefit of more steps levels off at roughly 6,000 to 8,000 a day from age 60, and 8,000 to 10,000 for younger adults. Most of the gain is already there around 7,000.',
-  'Age moves the target. Height changes your stride, so it changes how far you walk, not how many steps you take, and weight does not set the target either.',
+  'Age moves the goal. Height changes your stride, so it changes how far you walk, not how many steps you take, and weight does not set the goal either.',
   'So New Me starts from your own last two weeks and your age, and raises the goal about 1,000 steps at a time until you reach the range.',
 ];

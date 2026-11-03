@@ -335,7 +335,7 @@ void main() {
         'notifications': {'behindPace': true},
       });
       expect(
-        find.text('At most two of these a day. Quiet from 11:00 PM to 7:10 AM, and on away days.'),
+        find.text('Two a day at most. Quiet from 11:00 PM to 7:10 AM, and on away days.'),
         findsOneWidget,
       );
     });

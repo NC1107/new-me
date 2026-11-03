@@ -18,7 +18,7 @@ import '../../widgets/page_scaffold.dart';
 import '../../widgets/skeletons.dart';
 import '../log/log_kind.dart';
 import '../log/log_sheet.dart';
-import '../me/food_targets_page.dart';
+import '../me/goals_page.dart';
 import '../me/my_foods_page.dart';
 import '../me/settings_row.dart';
 import 'edit_meal_sheet.dart';
@@ -95,9 +95,9 @@ class _FoodBody extends ConsumerWidget {
               SettingsRow(
                 icon: Icons.restaurant_rounded,
                 palette: accentById('green'),
-                title: 'Food targets',
+                title: 'Food goals',
                 subtitle: foodTargetsSummary(today),
-                onTap: () => pushPage(context, const FoodTargetsPage()),
+                onTap: () => pushPage(context, const GoalsPage()),
               ),
               SettingsRow(
                 icon: Icons.bookmarks_rounded,

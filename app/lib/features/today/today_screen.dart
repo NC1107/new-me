@@ -7,7 +7,6 @@ import '../../state/health_sync.dart';
 import '../../state/insights.dart';
 import '../../state/listening_sync.dart';
 import '../../state/local_prefs.dart';
-import '../../state/me.dart';
 import '../../state/right_now.dart';
 import '../../state/session.dart';
 import '../../state/today.dart';
@@ -21,7 +20,6 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
 import '../../widgets/quest_copy.dart';
-import '../coach/coach_chat_page.dart';
 import '../habits/habits_strip.dart';
 import '../insights/insights_screen.dart';
 import '../log/log_kind.dart';
@@ -199,7 +197,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final partner = ref.watch(partnerProvider);
     final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
-    final coachOn = ref.watch(meProvider.select((m) => m.value?.data.features.coachChat ?? false));
 
     return RefreshIndicator(
       color: context.accent,
@@ -223,7 +220,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
               freezes: today.freezes,
               onAway: _openAway,
             ),
-            onCoach: coachOn ? () => openCoachChat(context) : null,
           ),
           const SizedBox(height: 16),
           DayCard(

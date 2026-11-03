@@ -97,11 +97,11 @@ void main() {
       expect(find.text('S'), findsOneWidget);
       expect(find.text('4 day streak'), findsOneWidget);
       expect(find.text('900 season gems'), findsOneWidget);
-      for (final row in ['Daily goals', 'About you', 'Schedule', 'Apple Health']) {
+      for (final row in ['Goals', 'About you', 'Schedule', 'Apple Health']) {
         expect(find.text(row), findsOneWidget);
       }
       expect(find.text('3 of 6 on'), findsOneWidget);
-      for (final moved in ['Training', 'Food targets', 'My foods']) {
+      for (final moved in ['Training', 'Food goals', 'My foods']) {
         expect(find.text(moved), findsNothing, reason: '$moved moved to its own tab');
       }
       for (final merged in ['Profile', 'Time zone']) {
@@ -118,7 +118,7 @@ void main() {
       await app.pump(const MeScreen());
       expect(find.text('Me'), findsOneWidget);
       var last = -1.0;
-      for (final label in ['Plan', 'You', 'Connections', 'App']) {
+      for (final label in ['You', 'Connections', 'App']) {
         final y = tester.getTopLeft(find.text(label)).dy;
         expect(y, greaterThan(last), reason: label);
         last = y;
@@ -139,7 +139,7 @@ void main() {
       await app.pump(const MeScreen());
 
       for (final label in [
-        'Daily goals, 3 of 6 on',
+        'Goals, 3 of 6 on',
         'About you, Sam, units and body',
         'Pairing code, Invite your partner',
       ]) {
@@ -159,7 +159,7 @@ void main() {
       await app.pump(const MeScreen(), key: UniqueKey());
       expect(find.textContaining('Offline, updated'), findsOneWidget);
 
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
       expect(find.textContaining('Offline, updated'), findsOneWidget);
       expect(
         tester.widgetList<Switch>(find.byType(Switch)).every((s) => s.onChanged == null),
@@ -171,26 +171,26 @@ void main() {
       final adapter = _server();
       final app = _foodApp(tester, adapter);
       await app.pump(const FoodScreen(), key: UniqueKey());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
       await _back(app, tester);
 
       adapter.on('GET /api/me', const StubResponse.unreachable());
       await app.pump(const FoodScreen(), key: UniqueKey());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
       final guard = find.ancestor(of: fieldWith('2200'), matching: find.byType(IgnorePointer));
       expect(tester.widget<IgnorePointer>(guard.first).ignoring, isTrue);
     });
   });
 
-  group('daily goals', () {
+  group('goals', () {
     testWidgets('lists every quest including exercise and sleep, with the today note', (
       tester,
     ) async {
       final app = _app(tester, _server());
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
 
-      expect(find.textContaining('Changes apply today'), findsOneWidget);
+      expect(find.text('Daily goals'), findsOneWidget);
       for (final title in ['Steps', 'Push-ups', 'Reading', 'Yoga', 'Exercise', 'Sleep']) {
         expect(find.text(title), findsOneWidget, reason: title);
       }
@@ -203,22 +203,22 @@ void main() {
       final handle = tester.ensureSemantics();
       final app = _app(tester, _server());
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
 
       expect(find.bySemanticsLabel('Sleep'), findsWidgets);
       expect(find.bySemanticsLabel('Exercise'), findsWidgets);
       handle.dispose();
     });
 
-    testWidgets('Save is off until something changes, then sends only the edits', (tester) async {
+    testWidgets('Save appears only once something changes, then sends only the edits', (
+      tester,
+    ) async {
       final adapter = _server();
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
 
-      expect(find.text('SAVE'), findsOneWidget);
-      await app.tap(find.text('SAVE'));
-      expect(adapter.to('PATCH /api/me'), isEmpty);
+      expect(find.text('SAVE'), findsNothing);
 
       await app.tap(find.byType(Switch).at(4));
       await app.tap(find.text('Steps'));
@@ -235,7 +235,7 @@ void main() {
         ],
       });
       expect(find.text('Saved'), findsOneWidget);
-      expect(find.text('Daily goals'), findsOneWidget);
+      expect(find.text('Goals'), findsOneWidget);
     });
 
     testWidgets('the picker leads with the recommendation and a number of your own', (
@@ -244,7 +244,7 @@ void main() {
       final adapter = _server();
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
       await app.tap(find.text('Steps'));
 
       expect(find.text('How many steps a day?'), findsOneWidget);
@@ -273,7 +273,7 @@ void main() {
       final adapter = _server();
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
 
       await app.tap(find.text('Sleep'));
       await app.tap(find.text('9 h'));
@@ -291,7 +291,7 @@ void main() {
         ..on('PATCH /api/me', const StubResponse(422, {'error': 'Goal is too high'}));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
 
       await app.tap(find.byType(Switch).at(5));
       await app.tap(find.text('SAVE'));
@@ -304,7 +304,7 @@ void main() {
       final adapter = _server()..on('PATCH /api/me', StubResponse(200, _me(color: 'amber')));
       final app = _app(tester, adapter);
       await app.pump(const MeScreen());
-      await app.tap(find.text('Daily goals'));
+      await app.tap(find.text('Goals'));
       await app.tap(find.byType(Switch).at(4));
 
       unawaited(app.container.read(meProvider.notifier).save(const MePatch(color: 'amber')));
@@ -319,7 +319,7 @@ void main() {
       final adapter = _server();
       final app = _foodApp(tester, adapter);
       await app.pump(const FoodScreen());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
 
       await app.enter(fieldWith('2200'), '2400');
       await app.tap(find.text('SAVE'));
@@ -333,7 +333,7 @@ void main() {
       final adapter = _server();
       final app = _foodApp(tester, adapter);
       await app.pump(const FoodScreen());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
 
       await app.tap(find.byTooltip('Clear Protein'));
       await app.tap(find.text('SAVE'));
@@ -346,7 +346,7 @@ void main() {
       final adapter = _server();
       final app = _foodApp(tester, adapter);
       await app.pump(const FoodScreen());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
 
       await app.enter(fieldWith('150'), '');
       await app.enter(find.byType(TextField).at(2), '250');
@@ -360,7 +360,7 @@ void main() {
       final handle = tester.ensureSemantics();
       final app = _foodApp(tester, _server());
       await app.pump(const FoodScreen());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
 
       expect(tester.getSemantics(fieldWith('2200')).label, contains('Calories, kcal'));
       handle.dispose();
@@ -370,7 +370,7 @@ void main() {
       final adapter = _server()..on('PATCH /api/me', StubResponse(200, _me(color: 'amber')));
       final app = _foodApp(tester, adapter);
       await app.pump(const FoodScreen());
-      await app.tap(find.text('Food targets'));
+      await app.tap(find.text('Food goals'));
       await app.enter(fieldWith('2200'), '2400');
 
       unawaited(app.container.read(meProvider.notifier).save(const MePatch(color: 'amber')));

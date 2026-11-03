@@ -34,7 +34,6 @@ class TodayTopBar extends StatelessWidget {
     required this.partner,
     required this.onOpenUs,
     required this.onStreak,
-    this.onCoach,
   });
 
   final String name;
@@ -45,13 +44,9 @@ class TodayTopBar extends StatelessWidget {
   final VoidCallback onOpenUs;
   final VoidCallback onStreak;
 
-  /// Opens the coach chat; null hides the button, as when the server has no Claude key.
-  final VoidCallback? onCoach;
-
   @override
   Widget build(BuildContext context) {
     final p = partner;
-    final coach = onCoach;
     return Row(
       children: [
         Expanded(
@@ -83,7 +78,6 @@ class TodayTopBar extends StatelessWidget {
             onTap: onStreak,
           ),
         ),
-        if (coach != null) _CoachButton(onTap: coach),
         if (p != null)
           Semantics(
             container: true,
@@ -101,40 +95,6 @@ class TodayTopBar extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// A round button that opens the coach chat.
-class _CoachButton extends StatelessWidget {
-  const _CoachButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.accentPalette;
-    return Semantics(
-      container: true,
-      button: true,
-      label: 'Ask your coach',
-      excludeSemantics: true,
-      onTap: onTap,
-      child: Pressable(
-        onTap: onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_rounded, size: 20, color: palette.lip),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -176,7 +176,7 @@ class _DailyRepsPageState extends ConsumerState<DailyRepsPage> {
     final palette = questPalette('pushups');
     return PageScaffold(
       title: 'Daily reps',
-      subtitle: 'Pick one exercise. Your daily target is sized from your own max.',
+      subtitle: 'Pick one exercise. Your daily goal is sized from your own max.',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -283,7 +283,7 @@ class _DailyRepsPageState extends ConsumerState<DailyRepsPage> {
               title: 'Why we do not pick a number',
               paragraphs: [
                 'No published research gives a starting number that is safe for everyone, and a guess that is too high is how people quit.',
-                'Test your max in the first few days and the target is sized from it.',
+                'Test your max in the first few days and the goal is sized from it.',
               ],
             ),
           ),
@@ -408,7 +408,7 @@ class _PreviewCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your daily target', style: AppText.caption.copyWith(color: kInkMuted)),
+        Text('Your daily goal', style: AppText.caption.copyWith(color: kInkMuted)),
         const SizedBox(height: 2),
         Text(
           '${preview.sets} sets of ${preview.repsPerSet} ${repsWord(option, preview.repsPerSet)}',

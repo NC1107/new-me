@@ -83,7 +83,7 @@ void main() {
     expect(find.text('Preseason, ends Dec 31'), findsOneWidget);
     expect(find.textContaining('Together:'), findsNothing);
     expect(find.text('Weekly recap'), findsOneWidget);
-    expect(find.text('Progress'), findsOneWidget);
+    expect(find.text('Progress'), findsNothing);
     expect(find.textContaining('Nobody has moved yet'), findsNothing);
     expect(find.textContaining(RegExp('win|lead|behind|rank', caseSensitive: false)), findsNothing);
 

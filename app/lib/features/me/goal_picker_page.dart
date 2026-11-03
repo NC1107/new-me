@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../api/daily_reps_models.dart';
 import '../../api/models.dart';
 import '../../state/targets.dart';
+import '../../state/units.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
 import '../../theme/tokens.dart';
@@ -17,6 +19,7 @@ import '../../widgets/preset_list.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeletons.dart';
 import '../onboarding/goal_catalog.dart';
+import 'daily_reps_page.dart';
 import 'goal_advice.dart';
 import 'number_field.dart';
 import 'reading_pages.dart';
@@ -27,6 +30,30 @@ class GoalChoice {
 
   final int target;
   final int? targetAlt;
+}
+
+/// The one editor for a quest's goal, whether it is opened from Goals or from the quest sheet.
+/// Push-ups are sized on their own page, which saves itself, so they hand back no choice.
+Future<GoalChoice?> editGoal(
+  BuildContext context,
+  WidgetRef ref,
+  QuestTemplate quest, {
+  required int target,
+  required int? targetAlt,
+}) async {
+  if (quest.key == 'pushups') {
+    await pushPage<DailyReps>(context, const DailyRepsPage());
+    return null;
+  }
+  return pushPage<GoalChoice>(
+    context,
+    GoalPickerPage(
+      quest: quest,
+      target: target,
+      targetAlt: targetAlt,
+      units: ref.read(unitsProvider),
+    ),
+  );
 }
 
 /// The goals the server accepts for quests with a narrower range than "above zero", in the

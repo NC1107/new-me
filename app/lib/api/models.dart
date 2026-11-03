@@ -441,8 +441,10 @@ class MePatch {
     this.units,
   });
 
-  /// Builds a targets-only patch where a null value clears that target on the server.
-  factory MePatch.targets(Map<String, int?> targets) => MePatch(
+  /// Builds a targets patch where a null value clears that target on the server, optionally with
+  /// quest edits in the same request.
+  factory MePatch.targets(Map<String, int?> targets, {List<QuestEdit>? questTemplates}) => MePatch(
+    questTemplates: questTemplates,
     kcalTarget: targets['kcal'],
     proteinTarget: targets['protein'],
     carbsTarget: targets['carbs'],

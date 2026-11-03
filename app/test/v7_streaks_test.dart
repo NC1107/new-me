@@ -334,8 +334,8 @@ void main() {
 
     testWidgets('says what away days do when there are none', (tester) async {
       await open(tester, away());
-      expect(find.textContaining('No away days set'), findsOneWidget);
-      expect(find.textContaining('neither break nor extend your streak'), findsOneWidget);
+      expect(find.textContaining('None set'), findsOneWidget);
+      expect(find.textContaining('No freeze used'), findsOneWidget);
     });
 
     testWidgets('creates a span from a preset and a note, then reloads Today and Us', (

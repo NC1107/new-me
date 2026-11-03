@@ -551,7 +551,7 @@ void main() {
         ),
       );
       expect(find.text('Sleep regularity'), findsOneWidget);
-      expect(find.textContaining('Needs 5 nights'), findsOneWidget);
+      expect(find.text('Needs more nights.'), findsOneWidget);
     });
 
     test('the model reads the server answer', () {

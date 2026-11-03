@@ -30,8 +30,8 @@ const _kDisclaimer = 'Nothing changes until you tap Apply. General guidance, not
 const _kDisclaimerMore = InfoContent(
   title: 'How the coach works',
   paragraphs: [
-    'Answers come only from your own numbers and the research behind your targets.',
-    'The coach can suggest changes to your targets and remember what you tell it, and nothing changes until you tap Apply.',
+    'Answers come only from your own numbers and the research behind your goals.',
+    'The coach can suggest changes to your goals and remember what you tell it, and nothing changes until you tap Apply.',
     'General guidance, not medical advice.',
   ],
 );

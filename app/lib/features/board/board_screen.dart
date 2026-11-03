@@ -30,7 +30,6 @@ import '../habits/habit_proposals_card.dart';
 import '../shared_habits/shared_habits_card.dart';
 import '../health/health_metrics.dart';
 import '../me/pairing_page.dart';
-import '../progress/progress_screen.dart';
 import '../recap/recap_screen.dart';
 import '../../state/session.dart';
 import '../streaks/cover_card.dart';
@@ -145,10 +144,7 @@ class _UsBody extends ConsumerWidget {
           // screen, and a first chore was easy to miss.
           const SharedHabitsCard(),
           const SizedBox(height: 28),
-          _ReviewCard(
-            onRecap: () => pushPage(context, const RecapScreen()),
-            onProgress: () => openProgress(context),
-          ),
+          _ReviewCard(onRecap: () => pushPage(context, const RecapScreen())),
           TogetherSection(board: board),
         ] else ...[
           const SizedBox(height: kCardGap),
@@ -187,37 +183,22 @@ class _SectionTitle extends StatelessWidget {
       Semantics(header: true, child: Text(text, style: AppText.headline));
 }
 
-/// Weekly recap and Progress in one card: two rows, one line each.
+/// Weekly recap, the one place Us links to for how the week went. Progress lives under Insights.
 class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.onRecap, required this.onProgress});
+  const _ReviewCard({required this.onRecap});
 
   final VoidCallback onRecap;
-  final VoidCallback onProgress;
 
   @override
   Widget build(BuildContext context) {
-    final recap = accentById('violet');
-    final progress = accentById('teal');
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Column(
-        children: [
-          _ReviewRow(
-            icon: Icons.insights_rounded,
-            palette: recap,
-            title: 'Weekly recap',
-            semanticLabel: 'Weekly recap, this week against last',
-            onTap: onRecap,
-          ),
-          const Divider(height: 2, thickness: 2, color: kBorder),
-          _ReviewRow(
-            icon: Icons.show_chart_rounded,
-            palette: progress,
-            title: 'Progress',
-            semanticLabel: 'Progress, months of change, you and your partner',
-            onTap: onProgress,
-          ),
-        ],
+      child: _ReviewRow(
+        icon: Icons.insights_rounded,
+        palette: accentById('violet'),
+        title: 'Weekly recap',
+        semanticLabel: 'Weekly recap, this week against last',
+        onTap: onRecap,
       ),
     );
   }

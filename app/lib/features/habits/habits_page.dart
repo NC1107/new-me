@@ -46,22 +46,17 @@ String habitSummary(Habit h) {
   return '${habitSchedule(h)} · ${h.points} gems$pending';
 }
 
-/// Every habit, in order: drag to reorder, tap to edit, and a menu to pause or delete.
-class HabitsPage extends ConsumerWidget {
-  const HabitsPage({super.key});
+/// Every habit, in order: drag to reorder, tap to edit, and a menu to pause or delete. It is the
+/// Habits section of the Goals page, so habits have one editor like every other goal.
+class HabitsSection extends ConsumerWidget {
+  const HabitsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(habitsProvider);
     final habits = value.value?.data.habits;
-    return PageScaffold(
-      title: 'Habits',
-      subtitle: 'Marked off from Today in one tap.',
-      footer: ChunkyButton(
-        label: 'Add a habit',
-        icon: Icons.add_rounded,
-        onPressed: () => pushPage(context, const HabitEditorPage()),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (habits == null && value.hasError)
           ErrorBlock(
@@ -81,6 +76,12 @@ class HabitsPage extends ConsumerWidget {
           const _NoHabits()
         else
           _List(habits: habits),
+        const SizedBox(height: 4),
+        ChunkyButton.secondary(
+          label: 'Add a habit',
+          icon: Icons.add_rounded,
+          onPressed: () => pushPage(context, const HabitEditorPage()),
+        ),
       ],
     );
   }

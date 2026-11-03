@@ -173,16 +173,8 @@ void main() {
   });
 
   group('Entries', () {
-    testWidgets('Today shows the coach button only when the server can answer', (tester) async {
-      final on = TestApp(tester, _server());
-      await on.pump(const TodayScreen());
-      expect(find.byIcon(Icons.chat_bubble_rounded), findsOneWidget);
-      await on.tap(find.byIcon(Icons.chat_bubble_rounded));
-      expect(find.byType(CoachChatPage), findsOneWidget);
-    });
-
-    testWidgets('Today has no coach button without the feature', (tester) async {
-      await TestApp(tester, _server(coach: false)).pump(const TodayScreen());
+    testWidgets('Today has no coach button, the coach lives behind Insights', (tester) async {
+      await TestApp(tester, _server()).pump(const TodayScreen());
       expect(find.byIcon(Icons.chat_bubble_rounded), findsNothing);
     });
   });

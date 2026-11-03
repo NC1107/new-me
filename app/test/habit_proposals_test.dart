@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/board/board_screen.dart';
 import 'package:newme/features/habits/habit_editor_page.dart';
-import 'package:newme/features/habits/habits_page.dart';
 import 'package:newme/api/habit_models.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
@@ -200,7 +199,7 @@ void main() {
           habitJson(2, 'Floss', points: 30, minutes: 10),
         ],
       );
-      await open(tester, adapter, const HabitsPage());
+      await open(tester, adapter, const HabitsHost());
       expect(find.text('Every day · Once a day · 0 gems (6 pending)'), findsOneWidget);
       expect(find.text('Every day · Once a day · 30 gems'), findsOneWidget);
     });

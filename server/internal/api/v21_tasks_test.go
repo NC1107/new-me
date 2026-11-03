@@ -19,6 +19,13 @@ func (h *harness) proposeTask(p, assignee person, title string, stake int, deadl
 		expect(http.StatusCreated).num("task.id")
 }
 
+// proposeRisky proposes a task the person takes on for themselves with the gems on the line.
+func (h *harness) proposeRisky(p person, title string, stake int, deadline string) int {
+	h.t.Helper()
+	return h.post("/api/tasks", p.Token, obj{"title": title, "assigneeId": p.ID, "stake": stake, "deadline": deadline,
+		"loseIfMissed": true}).expect(http.StatusCreated).num("task.id")
+}
+
 func (h *harness) settleAll() {
 	h.t.Helper()
 	if err := h.srv.together.Settle(context.Background()); err != nil {
@@ -117,13 +124,15 @@ func TestATaskNeedsTheOtherPersonsAgreementAndFinishingItWinsTheStake(t *testing
 	}
 }
 
-func TestAMissedTaskCostsTheStakeOnceEvenWithNobodyInTheApp(t *testing.T) {
+func TestAMissedTaskCostsNothingByDefaultAndTheOptedInLossOnlyOnce(t *testing.T) {
 	n := &capture{}
 	h := newHarness(t, withPush(n))
 	nick, nadia := h.pair()
 	h.gems(nadia, "2026-10-30", 100)
 	id := h.proposeTask(nick, nadia, "Call the vet", 40, "2026-11-03")
 	h.post(taskPath(id, "/agree"), nadia.Token, nil).expect(http.StatusOK)
+	risky := h.proposeRisky(nadia, "Renew the car tag", 40, "2026-11-03")
+	h.post(taskPath(risky, "/agree"), nick.Token, nil).expect(http.StatusOK)
 
 	// Late on the deadline day it is still on time.
 	h.clock.Set(ny(2026, time.November, 3, 23, 30))
@@ -132,7 +141,7 @@ func TestAMissedTaskCostsTheStakeOnceEvenWithNobodyInTheApp(t *testing.T) {
 		t.Fatalf("settled early: %+v", n.msgs)
 	}
 
-	// Once the day is over the scheduler's settle charges it, with no request from anyone. The
+	// Once the day is over the scheduler's settle misses it, with no request from anyone. The
 	// morning is outside quiet hours, so the pushes are sent rather than held.
 	h.clock.Set(ny(2026, time.November, 4, 9, 0))
 	h.settleAll()
@@ -145,22 +154,96 @@ func TestAMissedTaskCostsTheStakeOnceEvenWithNobodyInTheApp(t *testing.T) {
 	wg.Wait()
 
 	gotNadia, gotNick := n.of(together.EventTask, nadia.ID), n.of(together.EventTask, nick.ID)
-	if len(gotNadia) != 1 || gotNadia[0].Body != "You missed Call the vet, -40 gems" ||
-		len(gotNick) != 1 || gotNick[0].Body != "Nadia missed Call the vet, -40 gems" {
-		t.Fatalf("pushes = %+v", n.msgs)
+	if len(gotNadia) != 2 || len(gotNick) != 2 {
+		t.Fatalf("each miss is announced once to each person: %+v", n.msgs)
+	}
+	bodies := map[string]bool{}
+	for _, m := range append(gotNadia, gotNick...) {
+		bodies[m.Body] = true
+	}
+	for _, want := range []string{"You missed Call the vet", "Nadia missed Call the vet",
+		"You missed Renew the car tag, -40 gems", "Nadia missed Renew the car tag, -40 gems"} {
+		if !bodies[want] {
+			t.Fatalf("no push %q in %+v", want, n.msgs)
+		}
 	}
 	list := h.get("/api/tasks", nadia.Token).expect(http.StatusOK)
 	if earned, tasks, balance := balanceOf(list, nadia); earned != 100 || tasks != -40 || balance != 60 {
-		t.Fatalf("earned %d tasks %d balance %d: %s", earned, tasks, balance, list.Body)
+		t.Fatalf("only the opted-in miss costs: earned %d tasks %d balance %d: %s", earned, tasks, balance, list.Body)
 	}
 	if list.str("history.0.status") != "missed" || list.num("history.0.daysLeft") != -1 {
 		t.Fatalf("history = %s", list.Body)
 	}
-	// Too late to finish; the stake stays lost.
+	lost := map[int]int{}
+	for i := 0; i < list.length("history"); i++ {
+		lost[list.num(fmt.Sprintf("history.%d.id", i))] = list.num(fmt.Sprintf("history.%d.lost", i))
+	}
+	if lost[id] != 0 || lost[risky] != 40 {
+		t.Fatalf("lost = %v", lost)
+	}
+	// Too late to finish.
 	h.post(taskPath(id, "/done"), nadia.Token, nil).expect(http.StatusConflict).code("task_state")
-	if len(n.of(together.EventTask, nick.ID)) != 1 {
+}
+
+func TestALossIsOptInOnlyForYourOwnTaskAndCappedAtWhatYouHold(t *testing.T) {
+	h := newHarness(t)
+	nick, nadia := h.pair()
+	h.gems(nadia, "2026-10-30", 30)
+	h.gems(nick, "2026-10-30", 200)
+
+	// Asking the partner to put gems on the line is refused, and so is a stray flag on edit.
+	h.post("/api/tasks", nick.Token, obj{"title": "Fix the fence", "assigneeId": nadia.ID, "stake": 100,
+		"deadline": "2026-11-02", "loseIfMissed": true}).expect(http.StatusUnprocessableEntity).code("invalid_request")
+	own := h.proposeRisky(nadia, "Fix the fence", 100, "2026-11-02")
+	if h.patch(taskPath(own, ""), nadia.Token, obj{"assigneeId": nick.ID}).expect(http.StatusOK).flag("task.loseIfMissed") {
+		t.Fatal("handing a task to the partner drops the opt-in")
+	}
+	if !h.patch(taskPath(own, ""), nadia.Token, obj{"assigneeId": nadia.ID, "loseIfMissed": true}).expect(http.StatusOK).flag("task.loseIfMissed") {
+		t.Fatal("taking it back for yourself can opt in again")
+	}
+	h.post(taskPath(own, "/agree"), nick.Token, nil).expect(http.StatusOK)
+
+	h.clock.Set(ny(2026, time.November, 3, 9, 0))
+	h.settleAll()
+
+	list := h.get("/api/rewards", nadia.Token).expect(http.StatusOK)
+	if _, tasks, balance := balanceOf(list, nadia); tasks != -30 || balance != 0 {
+		t.Fatalf("a 100 gem loss takes the 30 held and leaves no debt: tasks %d balance %d: %s", tasks, balance, list.Body)
+	}
+	if list.num("bank") != 200 {
+		t.Fatalf("bank = %d, want only Nick's 200", list.num("bank"))
+	}
+	if hist := h.get("/api/tasks", nadia.Token).expect(http.StatusOK); hist.num("history.0.lost") != 30 || hist.num("history.0.stake") != 100 {
+		t.Fatalf("history = %s", hist.Body)
+	}
+
+	// Earning again is spendable at once; nothing is owed first.
+	h.gems(nadia, "2026-11-01", 100)
+	paid := h.get("/api/rewards", nadia.Token).expect(http.StatusOK)
+	if _, _, balance := balanceOf(paid, nadia); balance != 100 {
+		t.Fatalf("balance after earning = %d, want 100: %s", balance, paid.Body)
+	}
+}
+
+func TestCounteringAProposalPutsItBackToTheProposer(t *testing.T) {
+	n := &capture{}
+	h := newHarness(t, withPush(n))
+	nick, nadia := h.pair()
+	id := h.proposeTask(nick, nadia, "Call the vet", 60, "2026-11-05")
+
+	h.post(taskPath(id, "/counter"), nick.Token, obj{"stake": 30}).expect(http.StatusForbidden)
+	h.post(taskPath(id, "/counter"), nadia.Token, obj{"stake": 0}).expect(http.StatusUnprocessableEntity)
+	countered := h.post(taskPath(id, "/counter"), nadia.Token, obj{"stake": 30}).expect(http.StatusOK)
+	if countered.num("task.stake") != 30 || countered.str("task.status") != "proposed" || countered.str("task.creatorName") != "Nadia" {
+		t.Fatalf("countered = %s", countered.Body)
+	}
+	if got := n.of(together.EventTaskProposal, nick.ID); len(got) != 1 {
 		t.Fatalf("pushes = %+v", n.msgs)
 	}
+	// Now Nick is the one asked: Nadia can not agree to her own counter, Nick can.
+	h.post(taskPath(id, "/agree"), nadia.Token, nil).expect(http.StatusForbidden)
+	h.post(taskPath(id, "/agree"), nick.Token, nil).expect(http.StatusOK)
+	h.post(taskPath(id, "/counter"), nick.Token, obj{"stake": 10}).expect(http.StatusConflict).code("task_state")
 }
 
 func TestADeadlineEndsOnTheAssigneesCalendarNotTheCreators(t *testing.T) {
@@ -178,54 +261,6 @@ func TestADeadlineEndsOnTheAssigneesCalendarNotTheCreators(t *testing.T) {
 		t.Fatalf("open = %s", open.Body)
 	}
 	h.post(taskPath(id, "/done"), nadia.Token, nil).expect(http.StatusOK)
-}
-
-func TestAMissedStakeAboveTheBalanceIsADebtThatEarningsPayDown(t *testing.T) {
-	h := newHarness(t)
-	nick, nadia := h.pair()
-	h.gems(nadia, "2026-10-30", 30)
-	h.gems(nick, "2026-10-30", 200)
-	id := h.proposeTask(nick, nadia, "Fix the fence", 100, "2026-11-02")
-	h.post(taskPath(id, "/agree"), nadia.Token, nil).expect(http.StatusOK)
-	h.clock.Set(ny(2026, time.November, 3, 9, 0))
-	h.settleAll()
-
-	list := h.get("/api/rewards", nadia.Token).expect(http.StatusOK)
-	if _, tasks, balance := balanceOf(list, nadia); tasks != -100 || balance != -70 {
-		t.Fatalf("a debt must show: tasks %d balance %d: %s", tasks, balance, list.Body)
-	}
-	// The shared bank is the two balances added up, so Nick's gems cover Nadia's debt first.
-	if list.num("bank") != 130 {
-		t.Fatalf("bank = %d, want 200 - 70", list.num("bank"))
-	}
-
-	// A person in debt can not redeem a treat, even a cheap one; the owner's own balance decides.
-	treat := h.post("/api/rewards", nadia.Token, obj{"name": "Tea", "price": 10, "treat": true}).expect(http.StatusCreated).num("reward.id")
-	h.approve(nick, treat)
-	h.post(rewardPath(treat, "/redeem"), nadia.Token, obj{"requestId": "request-0001"}).expect(http.StatusConflict).code("insufficient_gems")
-
-	// A shared reward is checked against the bank and paid by Nick alone, who holds the gems.
-	shared := h.propose(nick, "Movie", 120)
-	h.approve(nadia, shared)
-	h.post(rewardPath(shared, "/claim"), nick.Token, nil).expect(http.StatusOK)
-	after := h.get("/api/rewards", nick.Token).expect(http.StatusOK)
-	if _, _, nickBalance := balanceOf(after, nick); nickBalance != 80 {
-		t.Fatalf("nick balance = %d: %s", nickBalance, after.Body)
-	}
-	if _, _, nadiaBalance := balanceOf(after, nadia); nadiaBalance != -70 || after.num("bank") != 10 {
-		t.Fatalf("after: %s", after.Body)
-	}
-	tooDear := h.propose(nick, "Trip", 11)
-	h.approve(nadia, tooDear)
-	h.post(rewardPath(tooDear, "/claim"), nick.Token, nil).expect(http.StatusConflict).code("reward_not_reached")
-
-	// Earning again pays the debt down before anything is spendable.
-	h.gems(nadia, "2026-11-01", 100)
-	paid := h.get("/api/rewards", nadia.Token).expect(http.StatusOK)
-	if _, _, balance := balanceOf(paid, nadia); balance != 30 {
-		t.Fatalf("balance after earning = %d, want 30: %s", balance, paid.Body)
-	}
-	h.post(rewardPath(treat, "/redeem"), nadia.Token, obj{"requestId": "request-0002"}).expect(http.StatusCreated)
 }
 
 func TestProposalsAreEditedWithdrawnDeclinedAndLapse(t *testing.T) {
@@ -293,8 +328,9 @@ func TestAloneATaskIsAgreedAtOnce(t *testing.T) {
 func TestRacingFinishAndSettlementDecideOnce(t *testing.T) {
 	h := newHarness(t)
 	nick, nadia := h.pair()
-	id := h.proposeTask(nick, nadia, "Edge case", 40, "2026-11-02")
-	h.post(taskPath(id, "/agree"), nadia.Token, nil).expect(http.StatusOK)
+	h.gems(nadia, "2026-10-30", 100)
+	id := h.proposeRisky(nadia, "Edge case", 40, "2026-11-02")
+	h.post(taskPath(id, "/agree"), nick.Token, nil).expect(http.StatusOK)
 	h.clock.Set(ny(2026, time.November, 3, 0, 1))
 
 	var wg sync.WaitGroup
@@ -306,6 +342,6 @@ func TestRacingFinishAndSettlementDecideOnce(t *testing.T) {
 	wg.Wait()
 	list := h.get("/api/tasks", nadia.Token).expect(http.StatusOK)
 	if _, tasks, _ := balanceOf(list, nadia); tasks != -40 || list.length("history") != 1 {
-		t.Fatalf("after the day ended the stake is lost exactly once: %s", list.Body)
+		t.Fatalf("after the day ended the loss is taken exactly once: %s", list.Body)
 	}
 }

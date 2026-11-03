@@ -302,7 +302,7 @@ void main() {
       expect(challengeIcon('something_new'), Icons.flag_rounded);
     });
 
-    testWidgets('a v13 kind shows its figures, unit and the reason it was picked', (tester) async {
+    testWidgets('a v13 kind shows its figures and unit, with no reason line', (tester) async {
       final app = TestApp(
         tester,
         _server(
@@ -318,7 +318,7 @@ void main() {
 
       expect(find.text('Sleep your target on 10 nights together'), findsOneWidget);
       expect(find.text('4 of 10 nights'), findsOneWidget);
-      expect(find.textContaining('lowest area'), findsOneWidget);
+      expect(find.textContaining('lowest area'), findsNothing);
       expect(find.byIcon(Icons.bedtime_rounded), findsWidgets);
     });
 
@@ -344,7 +344,7 @@ void main() {
 
       expect(find.text('Last week'), findsOneWidget);
       expect(find.text('Do 250 push-ups together'), findsOneWidget);
-      expect(find.textContaining('Missed, with nothing lost'), findsOneWidget);
+      expect(find.textContaining('Missed. '), findsOneWidget);
       expect(find.textContaining('180 of 250 push-ups'), findsWidgets);
       expect(
         find.textContaining('days left'),
@@ -493,8 +493,8 @@ void main() {
 
       expect(find.text('Movie night'), findsOneWidget);
       expect(find.text('Shared · 600 gems'), findsOneWidget);
-      expect(find.text('Shared · 4,000 gems · waiting for Ana'), findsOneWidget);
-      expect(find.text('Shared · 9,000 gems · declined'), findsOneWidget);
+      expect(find.text('Shared, 4,000 gems, Ana to approve'), findsOneWidget);
+      expect(find.text('Shared, 9,000 gems, declined'), findsOneWidget);
     });
 
     testWidgets('opening my pending proposal edits it and can withdraw it', (tester) async {

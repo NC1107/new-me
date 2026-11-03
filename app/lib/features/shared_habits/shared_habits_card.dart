@@ -70,9 +70,7 @@ class SharedHabitsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(header: true, child: const Text('Home', style: AppText.headline)),
-          const SizedBox(height: 2),
-          const Text('Chores for both of you.', style: AppText.caption),
+          Semantics(header: true, child: const Text('Chores', style: AppText.headline)),
           const SizedBox(height: 10),
           AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -344,7 +342,6 @@ class _AddRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.accentPalette;
     return Semantics(
       button: true,
       label: first ? 'Add your first chore' : 'Add a chore',
@@ -360,8 +357,8 @@ class _AddRow extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-                child: Icon(Icons.add_rounded, color: palette.lip),
+                decoration: const BoxDecoration(color: kSunken, shape: BoxShape.circle),
+                child: const Icon(Icons.add_rounded, color: kInk),
               ),
               const SizedBox(width: 12),
               Expanded(

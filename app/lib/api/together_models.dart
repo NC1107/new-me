@@ -265,13 +265,11 @@ class GemBalance {
   final int earned;
   final int paid;
 
-  /// Earned plus tasks minus paid. Below zero it is a debt that later gems pay down.
+  /// Earned plus tasks minus paid, never below zero.
   final int balance;
 
   /// Gems won and lost on tasks, already inside [balance].
   final int tasks;
-
-  bool get inDebt => balance < 0;
 }
 
 /// One treat bought with its owner's gems, at the name and price it had then.

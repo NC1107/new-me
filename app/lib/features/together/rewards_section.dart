@@ -138,8 +138,8 @@ class _RewardsSectionState extends ConsumerState<RewardsSection> {
             iconColor: r.declined ? kDangerText : kInkSecondary,
             name: r.name,
             detail:
-                '${r.isTreat ? 'Solo' : 'Shared'} · ${r.price.formatted} gems · '
-                '${r.declined ? 'declined' : 'waiting for ${partner ?? 'an answer'}'}',
+                '${r.isTreat ? 'Solo' : 'Shared'}, ${r.price.formatted} gems, '
+                '${r.declined ? 'declined' : '${partner ?? 'Your partner'} to approve'}',
             onTap: () => showRewardSheet(context, reward: r),
           ),
       ],
@@ -152,7 +152,7 @@ class _RewardsSectionState extends ConsumerState<RewardsSection> {
         Semantics(header: true, child: const Text('Rewards', style: AppText.headline)),
         const SizedBox(height: 4),
         const Text(
-          'Shared rewards come out of the bank you both fill, solo ones out of your own gems.',
+          'Shared rewards use the shared bank. Solo ones use your gems.',
           style: AppText.caption,
         ),
         const SizedBox(height: 10),
@@ -323,12 +323,7 @@ class _Figure extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Text(
-          value.formatted,
-          style: AppText.tabular(AppText.title.copyWith(color: value < 0 ? kDangerText : null)),
-        ),
-        // A missed task can take a balance below zero; the gems earned next pay it down first.
-        if (value < 0) const Text('In debt', style: AppText.caption),
+        Text(value.formatted, style: AppText.tabular(AppText.title)),
       ],
     ),
   );
@@ -446,15 +441,12 @@ class _AddRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 56),
         child: Row(
           children: [
-            Icon(Icons.add_rounded, size: 22, color: context.accentLip),
+            const Icon(Icons.add_rounded, size: 22, color: kInk),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Add a reward',
-                style: AppText.label.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: context.accentLip,
-                ),
+                style: AppText.label.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
           ],

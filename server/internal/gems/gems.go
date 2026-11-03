@@ -9,38 +9,44 @@ const MaxTreatsPerPerson = 30
 
 // Person is one person's lifetime gems: earned from scored days, and paid out on their own
 // treats and on their share of shared rewards. Tasks is the net of their settled tasks (gems won
-// by finishing, minus stakes lost by missing); it is a ledger of its own, never day points.
+// by finishing, minus what a miss took when they had put the gems on the line); it is a ledger of
+// its own, never day points.
 type Person struct {
 	Earned int
 	Paid   int
 	Tasks  int
 }
 
-// Balance is what the person holds. It reads below zero when missed tasks or a re-score took
-// more than they had, so a debt shows and later earnings pay it down. See docs/design-v21-tasks.md.
-func (p Person) Balance() int { return p.Earned + p.Tasks - p.Paid }
+// Balance is what the person holds, never below zero: a task loss is capped at what they held at
+// the deadline, and a re-score below what was paid reads zero rather than a debt.
+// See docs/design-v21-tasks.md.
+func (p Person) Balance() int { return max(p.Earned+p.Tasks-p.Paid, 0) }
 
-// Spendable is the balance a treat or a shared reward may draw on: a debt spends nothing.
-func (p Person) Spendable() int { return max(p.Balance(), 0) }
-
-// Bank is the shared bank: both people's balances added up, so one person's debt is covered by
-// the other's gems before anything is left to claim. It never reads below zero.
+// Bank is the shared bank: both people's balances added up.
 func Bank(people []Person) int {
 	total := 0
 	for _, p := range people {
 		total += p.Balance()
 	}
-	return max(total, 0)
+	return total
 }
 
-// Balances lists what each person can spend, in order. A person in debt contributes zero, which
-// keeps SplitPrice from asking them for gems they do not hold.
+// Balances lists what each person holds, in order.
 func Balances(people []Person) []int {
 	out := make([]int, len(people))
 	for i, p := range people {
-		out[i] = p.Spendable()
+		out[i] = p.Balance()
 	}
 	return out
+}
+
+// TaskLoss is what a missed task takes: nothing unless its assignee put the gems on the line, and
+// never more than they hold when the deadline passes, so no loss leaves a hidden debt.
+func TaskLoss(loseIfMissed bool, stake, balance int) int {
+	if !loseIfMissed {
+		return 0
+	}
+	return min(stake, max(balance, 0))
 }
 
 // SplitPrice divides the price of a shared reward between people in proportion to the balance

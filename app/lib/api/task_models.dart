@@ -1,4 +1,4 @@
-/// Wire models for agreed tasks: a chore with a stake in gems. Parsing is tolerant, so a malformed
+/// Wire models for agreed tasks: a chore worth gems. Parsing is tolerant, so a malformed
 /// row is dropped instead of failing the list that carries it.
 library;
 
@@ -26,6 +26,8 @@ class GemTask {
     required this.assigneeId,
     required this.assigneeName,
     required this.stake,
+    required this.loseIfMissed,
+    required this.lost,
     required this.deadline,
     required this.daysLeft,
     required this.status,
@@ -46,6 +48,8 @@ class GemTask {
       assigneeId: (j['assigneeId'] as num?)?.toInt() ?? 0,
       assigneeName: j['assigneeName'] as String? ?? '',
       stake: stake,
+      loseIfMissed: j['loseIfMissed'] as bool? ?? false,
+      lost: (j['lost'] as num?)?.toInt() ?? 0,
       deadline: deadline,
       daysLeft: (j['daysLeft'] as num?)?.toInt() ?? 0,
       status: j['status'] as String? ?? TaskStatus.proposed,
@@ -59,6 +63,11 @@ class GemTask {
   final int assigneeId;
   final String assigneeName;
   final int stake;
+
+  /// The assignee chose to lose the gems if the deadline passes; a miss never takes more than
+  /// they held, and [lost] is what it did take.
+  final bool loseIfMissed;
+  final int lost;
 
   /// The last day it counts, as YYYY-MM-DD.
   final String deadline;

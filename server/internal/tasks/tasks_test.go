@@ -18,15 +18,7 @@ func TestADeadlineDayIsOnTimeUntilItsLastMinute(t *testing.T) {
 	}
 }
 
-func TestDeltaMovesGemsOnlyForFinalTasks(t *testing.T) {
-	for status, want := range map[string]int{Done: 40, Missed: -40, Agreed: 0, Proposed: 0, Declined: 0, Withdrawn: 0} {
-		if got := Delta(status, 40); got != want {
-			t.Errorf("Delta(%s) = %d, want %d", status, got, want)
-		}
-	}
-}
-
-func TestJudgeChargesOnlyAgreedTasksAndDropsStaleProposals(t *testing.T) {
+func TestJudgeMissesOnlyAgreedTasksAndDropsStaleProposals(t *testing.T) {
 	due := score.MustDate("2026-11-03")
 	before, after := score.MustDate("2026-11-03"), score.MustDate("2026-11-04")
 	cases := []struct {

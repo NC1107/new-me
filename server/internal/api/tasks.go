@@ -35,8 +35,11 @@ type taskJSON struct {
 	CreatorName  string `json:"creatorName"`
 	AssigneeID   int64  `json:"assigneeId"`
 	AssigneeName string `json:"assigneeName"`
-	// Stake is in gems: won when the task is done, lost when it is missed.
+	// Stake is what the task is worth in gems: earned when it is done in time.
 	Stake int `json:"stake"`
+	// LoseIfMissed is the assignee's opt-in to lose gems on a miss; Lost is what the miss took.
+	LoseIfMissed bool `json:"loseIfMissed"`
+	Lost         int  `json:"lost"`
 	// Deadline is the last day it counts, as YYYY-MM-DD on the assignee's calendar.
 	Deadline string `json:"deadline"`
 	// DaysLeft counts from the assignee's today to the deadline: 0 is due today, negative is overdue.
@@ -80,7 +83,7 @@ func (v taskView) json(t db.Task) (taskJSON, error) {
 		return taskJSON{}, err
 	}
 	return taskJSON{ID: t.ID, Title: t.Title, CreatorID: t.CreatorID, CreatorName: v.users[t.CreatorID].Name,
-		AssigneeID: t.AssigneeID, AssigneeName: v.users[t.AssigneeID].Name, Stake: t.Stake,
+		AssigneeID: t.AssigneeID, AssigneeName: v.users[t.AssigneeID].Name, Stake: t.Stake, LoseIfMissed: t.LoseIfMissed, Lost: t.Lost,
 		Deadline: string(t.Deadline), DaysLeft: score.DaysBetween(today, t.Deadline), Status: t.Status,
 		CreatedAt: wireTime(t.CreatedAt), AgreedAt: wireTimePtr(t.AgreedAt), SettledAt: wireTimePtr(t.SettledAt)}, nil
 }
@@ -149,6 +152,8 @@ type taskRequest struct {
 	AssigneeID *int64  `json:"assigneeId"`
 	Stake      *int    `json:"stake"`
 	Deadline   *string `json:"deadline"`
+	// LoseIfMissed is only for a task the person takes on for themselves.
+	LoseIfMissed *bool `json:"loseIfMissed"`
 }
 
 // apply writes the request's fields over the task and validates the result against the people
@@ -166,6 +171,15 @@ func (q taskRequest) apply(t db.Task, view taskView, partner *db.User, self int6
 	}
 	if t.AssigneeID != self && (partner == nil || t.AssigneeID != partner.ID) {
 		return t, invalid("a task is for you or your partner")
+	}
+	if q.LoseIfMissed != nil {
+		t.LoseIfMissed = *q.LoseIfMissed
+	}
+	if t.AssigneeID != t.CreatorID {
+		if q.LoseIfMissed != nil && *q.LoseIfMissed {
+			return t, invalid("only a task you take on for yourself can cost you gems")
+		}
+		t.LoseIfMissed = false
 	}
 	if q.Stake != nil {
 		t.Stake = *q.Stake
@@ -205,6 +219,9 @@ func cleanTaskTitle(raw string) (string, *httpError) {
 func (s *Server) notifyTaskProposal(to, from db.User, t db.Task) {
 	due := t.Deadline.Time().Format("Mon Jan 2")
 	body := fmt.Sprintf("%s will %s for %d gems by %s", from.Name, t.Title, t.Stake, due)
+	if t.LoseIfMissed {
+		body += ", and will lose them if it is missed"
+	}
 	if t.AssigneeID == to.ID {
 		body = fmt.Sprintf("%s asks you to do %q for %d gems by %s", from.Name, t.Title, t.Stake, due)
 	}
@@ -389,14 +406,14 @@ func (s *Server) handlePatchTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleWithdrawTask drops a proposal its creator made. An agreed task cannot be withdrawn: the
-// stake is a promise both made.
+// gems are a promise both made.
 func (s *Server) handleWithdrawTask(w http.ResponseWriter, r *http.Request) {
 	c := callerFrom(r)
 	_, ok := s.lockedTask(w, r, func(tx pgx.Tx, t db.Task) (db.Task, *httpError) {
 		if herr := s.editableProposal(t, c); herr != nil {
 			return t, herr
 		}
-		saved, err := db.SetTaskStatus(r.Context(), tx, t.ID, tasks.Withdrawn)
+		saved, err := db.SetTaskStatus(r.Context(), tx, t.ID, tasks.Withdrawn, 0)
 		if err != nil {
 			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
 		}
@@ -407,11 +424,61 @@ func (s *Server) handleWithdrawTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleCounterTask answers a proposal with a different amount. The proposal then waits for the
+// original proposer, who agrees or declines it like any other.
+func (s *Server) handleCounterTask(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Stake *int `json:"stake"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		fail(w, r, err)
+		return
+	}
+	if req.Stake == nil || *req.Stake < 1 || *req.Stake > tasks.MaxStake {
+		fail(w, r, invalid(fmt.Sprintf("a task is worth between 1 and %d gems", tasks.MaxStake)))
+		return
+	}
+	ctx := r.Context()
+	c := callerFrom(r)
+	view, err := s.taskView(ctx)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	var original db.User
+	saved, ok := s.lockedTask(w, r, func(tx pgx.Tx, t db.Task) (db.Task, *httpError) {
+		if t.Status != tasks.Proposed {
+			return t, taskStateErr("that task is not waiting for an answer")
+		}
+		if t.CreatorID == c.user.ID {
+			return t, newErr(http.StatusForbidden, codeForbidden, "the other person answers a proposal")
+		}
+		today, err := view.today(t.AssigneeID)
+		if err != nil {
+			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
+		}
+		if !tasks.CanAnswer(t.Status, t.Deadline, today) {
+			return t, taskStateErr("the deadline has passed")
+		}
+		original = view.users[t.CreatorID]
+		saved, err := db.CounterTask(ctx, tx, t.ID, c.user.ID, *req.Stake)
+		if err != nil {
+			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
+		}
+		return saved, nil
+	})
+	if !ok {
+		return
+	}
+	s.notifyTaskProposal(original, c.user, saved)
+	s.writeTask(w, r, http.StatusOK, saved)
+}
+
 func (s *Server) handleAgreeTask(w http.ResponseWriter, r *http.Request)   { s.answerTask(w, r, true) }
 func (s *Server) handleDeclineTask(w http.ResponseWriter, r *http.Request) { s.answerTask(w, r, false) }
 
 // answerTask lets the person who did not propose a task agree to it or decline it. Agreeing makes
-// it live with its stake; it needs the deadline to still be ahead.
+// it live; it needs the deadline to still be ahead.
 func (s *Server) answerTask(w http.ResponseWriter, r *http.Request, agree bool) {
 	ctx := r.Context()
 	c := callerFrom(r)
@@ -438,7 +505,7 @@ func (s *Server) answerTask(w http.ResponseWriter, r *http.Request, agree bool) 
 			}
 			next = tasks.Agreed
 		}
-		saved, err := db.SetTaskStatus(ctx, tx, t.ID, next)
+		saved, err := db.SetTaskStatus(ctx, tx, t.ID, next, 0)
 		if err != nil {
 			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
 		}
@@ -450,7 +517,7 @@ func (s *Server) answerTask(w http.ResponseWriter, r *http.Request, agree bool) 
 }
 
 // handleFinishTask marks the caller's own agreed task done before its deadline day ends, which
-// wins the stake. Finishing a done task again answers it unchanged and pushes nothing.
+// earns the gems. Finishing a done task again answers it unchanged and pushes nothing.
 func (s *Server) handleFinishTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	c := callerFrom(r)
@@ -468,19 +535,19 @@ func (s *Server) handleFinishTask(w http.ResponseWriter, r *http.Request) {
 			return t, nil
 		}
 		if t.Status == tasks.Missed {
-			return t, taskStateErr("the deadline passed, so the gems are lost")
+			return t, taskStateErr("the deadline has passed")
 		}
 		today, err := view.today(t.AssigneeID)
 		if err != nil {
 			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
 		}
 		if t.Status == tasks.Agreed && tasks.Overdue(t.Deadline, today) {
-			return t, taskStateErr("the deadline passed, so the gems are lost")
+			return t, taskStateErr("the deadline has passed")
 		}
 		if !tasks.CanFinish(t.Status, t.Deadline, today) {
 			return t, taskStateErr("only an agreed task can be marked done")
 		}
-		saved, err := db.SetTaskStatus(ctx, tx, t.ID, tasks.Done)
+		saved, err := db.SetTaskStatus(ctx, tx, t.ID, tasks.Done, 0)
 		if err != nil {
 			return t, newErr(http.StatusInternalServerError, codeInternal, "server error")
 		}

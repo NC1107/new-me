@@ -68,7 +68,7 @@ func TestSuggestFirstMatchingRuleWins(t *testing.T) {
 		{"sleep needs three nights", with(good, func(s *Stats) { s.SleepAvgMin = 300; s.SleepNights = 2 }), good, true, false, "Solid week"},
 		{"no workouts", with(good, func(s *Stats) { s.Workouts = 0 }), good, true, false, "No workouts this week"},
 		{"points dipped", with(good, func(s *Stats) { s.Points = 1800 }), good, true, false, "Gems dipped"},
-		{"solid", good, good, true, false, "try to beat 2,000 gems"},
+		{"solid", good, good, true, false, "Keep the routine going, together"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

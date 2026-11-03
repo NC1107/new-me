@@ -19,13 +19,10 @@ import '../../util/format.dart';
 import '../shell/home_tab.dart';
 import 'celebration_sheet.dart';
 import 'challenge_card.dart';
-import 'reward_proposals_card.dart';
 import 'rewards_section.dart';
-import 'task_proposals_card.dart';
 import 'tasks_section.dart';
 
-/// Everything shared on Us below the two people: the weekly challenge, answers my partner waits
-/// on, and the rewards. Also where the "we did it" celebrations play, once each.
+/// Everything shared on Us below the two people: the weekly challenge, the rewards and the tasks. Also where the "we did it" celebrations play, once each.
 class TogetherSection extends ConsumerStatefulWidget {
   const TogetherSection({super.key, required this.board});
 
@@ -143,15 +140,12 @@ class _TogetherSectionState extends ConsumerState<TogetherSection> {
           ),
         ],
         const SizedBox(height: kCardGap),
-        const RewardProposalsCard(),
-        const TaskProposalsCard(),
-        const SizedBox(height: kCardGap),
         RewardsSection(board: board, claiming: _claiming, claimError: _claimError, onClaim: _claim),
         const SizedBox(height: 28),
         Semantics(header: true, child: const Text('Tasks', style: AppText.headline)),
         const SizedBox(height: 4),
         const Text(
-          'Agree what a chore is worth. Finish it by the deadline to earn the gems, or lose them.',
+          'Set gems on a one-off task. Finish it by the deadline to earn them.',
           style: AppText.caption,
         ),
         const SizedBox(height: 10),

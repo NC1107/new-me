@@ -268,7 +268,7 @@ void main() {
       final app = _app(tester, _server(treats: [_treat(status: 'pending')]));
       await _openUs(app);
 
-      expect(find.text('Solo · 1,000 gems · waiting for Ana'), findsOneWidget);
+      expect(find.text('Solo, 1,000 gems, Ana to approve'), findsOneWidget);
       expect(find.text('REDEEM'), findsNothing);
     });
 

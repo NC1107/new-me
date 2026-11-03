@@ -16,6 +16,7 @@ import '../../util/format.dart';
 import '../../util/task_copy.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/chunky_button.dart';
+import '../../widgets/mascot.dart';
 import '../../widgets/pressable.dart';
 import 'task_sheet.dart';
 
@@ -55,6 +56,15 @@ class _TasksSectionState extends ConsumerState<TasksSection> {
     final partner = ref.watch(partnerNameProvider);
     final live = list.live;
     final waiting = list.mineOpen(userId);
+    if (live.isEmpty && waiting.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _EmptyTasks(onAdd: () => showTaskSheet(context)),
+          if (list.history.isNotEmpty) _History(list: list, userId: userId),
+        ],
+      );
+    }
     final rows = <Widget>[
       for (final t in live)
         _TaskRow(
@@ -94,15 +104,60 @@ class _TasksSectionState extends ConsumerState<TasksSection> {
             ],
           ),
         ),
-        if (list.history.isNotEmpty) ...[
-          const SizedBox(height: 28),
-          Semantics(header: true, child: const Text('Tasks settled', style: AppText.headline)),
-          const SizedBox(height: 10),
-          _TaskHistory(items: list.history.take(5).toList(), userId: userId),
-        ],
+        if (list.history.isNotEmpty) _History(list: list, userId: userId),
       ],
     );
   }
+}
+
+class _History extends StatelessWidget {
+  const _History({required this.list, required this.userId});
+
+  final TaskList list;
+  final int? userId;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SizedBox(height: 28),
+      Semantics(header: true, child: const Text('Tasks settled', style: AppText.headline)),
+      const SizedBox(height: 10),
+      _TaskHistory(items: list.history.take(5).toList(), userId: userId),
+    ],
+  );
+}
+
+/// Nothing agreed yet: say what a task is for, with the one way in.
+class _EmptyTasks extends StatelessWidget {
+  const _EmptyTasks({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Center(child: Mascot(size: 72)),
+        const SizedBox(height: 12),
+        Text(
+          'No tasks yet',
+          textAlign: TextAlign.center,
+          style: AppText.body.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'One-off jobs like calling the vet or booking the dentist.',
+          textAlign: TextAlign.center,
+          style: AppText.caption,
+        ),
+        const SizedBox(height: 16),
+        ChunkyButton.secondary(label: 'Add a task', onPressed: onAdd),
+      ],
+    ),
+  );
 }
 
 class _Rule extends StatelessWidget {
@@ -135,7 +190,8 @@ class _TaskRow extends StatelessWidget {
     final mine = task.assignedTo(userId);
     final detail =
         '${_who(task, userId)} · ${task.stake.formatted} gems · '
-        '${dueLabel(task.daysLeft, task.deadline)}';
+        '${dueLabel(task.daysLeft, task.deadline)}'
+        '${task.loseIfMissed ? ' · lost if missed' : ''}';
     final canFinish = mine && !task.overdue;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 64),
@@ -207,7 +263,9 @@ class _WaitingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final terms = '${task.stake.formatted} gems · ${dueLabel(task.daysLeft, task.deadline)}';
+    final terms =
+        '${task.stake.formatted} gems · ${dueLabel(task.daysLeft, task.deadline)}'
+        '${task.loseIfMissed ? ' · lost if missed' : ''}';
     final (icon, color, detail) = task.declined
         ? (Icons.block_rounded, kDangerText, '$terms · declined')
         : (
@@ -275,16 +333,10 @@ class _AddTaskRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 56),
         child: Row(
           children: [
-            Icon(Icons.add_rounded, size: 22, color: context.accentLip),
+            const Icon(Icons.add_rounded, size: 22, color: kInk),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                'Add a task',
-                style: AppText.label.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: context.accentLip,
-                ),
-              ),
+              child: Text('Add a task', style: AppText.label.copyWith(fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -308,8 +360,9 @@ class _TaskHistory extends StatelessWidget {
           if (i > 0) const _Rule(),
           Builder(
             builder: (context) {
-              final gems = t.done ? '+${t.stake.formatted}' : '-${t.stake.formatted}';
-              final detail = '${_who(t, userId)} ${t.done ? 'finished' : 'missed'} · $gems gems';
+              final gems = t.done ? ' · +${t.stake.formatted} gems' : '';
+              final cost = t.missed && t.lost > 0 ? ' · -${t.lost.formatted} gems' : '';
+              final detail = '${_who(t, userId)} ${t.done ? 'finished' : 'missed'}$gems$cost';
               return ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 56),
                 child: Semantics(

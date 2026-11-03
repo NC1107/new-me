@@ -147,7 +147,7 @@ func Suggest(cur, prev Stats, complete, joinedMidWeek bool) string {
 	case prev.Points > 0 && cur.Points < prev.Points:
 		return "Gems dipped. Pick one quest to do first thing each day next week."
 	}
-	return fmt.Sprintf("Solid week. Keep the routine and try to beat %s gems.", plan.Thousands(cur.Points))
+	return "Solid week. Keep the routine going, together."
 }
 
 // SummaryLine is the one-sentence push for a person: their week against the one before, plus the pair.

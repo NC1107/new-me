@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
+import 'package:newme/features/coach/coach_chat_page.dart';
 import 'package:newme/features/streaks/shared_streak_card.dart';
 import 'package:newme/features/streaks/streak_visuals.dart';
 import 'package:newme/features/today/day_card.dart';
@@ -185,6 +186,24 @@ void main() {
       );
       await TestApp(tester, server).pump(const TodayScreen());
       expect(find.text('First step'), findsNothing);
+    });
+  });
+
+  group('mascot coach', () {
+    testWidgets('the day card mascot opens the coach only when the server has one', (tester) async {
+      Map<String, dynamic> me(bool on) => {
+        ...meJson(),
+        'features': {'mealEstimate': false, 'planPolish': false, 'coachChat': on},
+      };
+      final off = TestApp(tester, fullServer()..on('GET /api/me', StubResponse(200, me(false))));
+      await off.pump(const TodayScreen());
+      expect(find.bySemanticsLabel('Ask your coach'), findsNothing);
+      expect(find.byType(Mascot), findsWidgets);
+
+      final on = TestApp(tester, fullServer()..on('GET /api/me', StubResponse(200, me(true))));
+      await on.pump(const TodayScreen(), key: UniqueKey());
+      await on.tap(find.bySemanticsLabel('Ask your coach'));
+      expect(find.byType(CoachChatPage), findsOneWidget);
     });
   });
 

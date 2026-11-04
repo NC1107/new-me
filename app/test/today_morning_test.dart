@@ -189,9 +189,12 @@ void main() {
   });
 
   group('two streaks', () {
-    testWidgets('Today labels the personal streak and Together has its own icon', (tester) async {
+    testWidgets('Today shows the personal streak bare and Together has its own icon', (
+      tester,
+    ) async {
       await TestApp(tester, fullServer()).pump(const TodayScreen());
-      expect(find.text('Your streak'), findsOneWidget);
+      expect(find.text('Your streak'), findsNothing);
+      expect(find.bySemanticsLabel('Your streak, 3 day streak'), findsOneWidget);
       expect(find.byIcon(Icons.local_fire_department_rounded), findsWidgets);
 
       await tester.pumpWidget(

@@ -194,9 +194,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final lastSynced = ref.watch(healthSyncProvider.select((s) => s.lastSyncedAt));
     final syncedAt = today.health.syncedAt ?? lastSynced;
     final now = ref.watch(clockProvider)();
-    final partner = ref.watch(partnerProvider);
     final ownBoard = ref.watch(ownBoardUserProvider);
-    final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
 
     return RefreshIndicator(
@@ -212,8 +210,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             now: now,
             localToday: today.localToday,
             streak: today.streak.current,
-            partner: partner,
-            onOpenUs: () => tabs.select(HomeTab.board),
             onStreak: () => showStreakSheet(
               context,
               streak: today.streak,

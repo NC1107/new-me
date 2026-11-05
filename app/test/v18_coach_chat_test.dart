@@ -173,9 +173,11 @@ void main() {
   });
 
   group('Entries', () {
-    testWidgets('Today has no coach button, the coach lives behind Insights', (tester) async {
-      await TestApp(tester, _server()).pump(const TodayScreen());
-      expect(find.byIcon(Icons.chat_bubble_rounded), findsNothing);
+    testWidgets('the coach opens from the mascot on Today, not from Insights', (tester) async {
+      final app = TestApp(tester, _server());
+      await app.pump(const TodayScreen());
+      await app.tap(find.bySemanticsLabel('Ask your coach'));
+      expect(find.byType(CoachChatPage), findsOneWidget);
     });
   });
 }

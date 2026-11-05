@@ -6,6 +6,7 @@ import '../../state/clock.dart';
 import '../../state/health_sync.dart';
 import '../../state/insights.dart';
 import '../../state/listening_sync.dart';
+import '../../state/me.dart';
 import '../../state/local_prefs.dart';
 import '../../state/right_now.dart';
 import '../../state/session.dart';
@@ -20,6 +21,7 @@ import '../../widgets/cached_view.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_card.dart';
 import '../../widgets/quest_copy.dart';
+import '../coach/coach_chat_page.dart';
 import '../habits/habits_strip.dart';
 import '../insights/insights_screen.dart';
 import '../log/log_kind.dart';
@@ -185,6 +187,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
   @override
   Widget build(BuildContext context) {
     final onToday = ref.watch(homeTabProvider) == HomeTab.today;
+    final coach = ref.watch(meProvider.select((m) => m.value?.data.features.coachChat ?? false));
     _maybeCelebrate(onToday);
     ref.watch(rightNowMemoryProvider);
     _maybeCelebrateMilestones(onToday);
@@ -194,9 +197,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     final lastSynced = ref.watch(healthSyncProvider.select((s) => s.lastSyncedAt));
     final syncedAt = today.health.syncedAt ?? lastSynced;
     final now = ref.watch(clockProvider)();
-    final partner = ref.watch(partnerProvider);
     final ownBoard = ref.watch(ownBoardUserProvider);
-    final tabs = ref.read(homeTabProvider.notifier);
     final insights = ref.watch(insightsProvider).value?.data;
 
     return RefreshIndicator(
@@ -212,8 +213,6 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             now: now,
             localToday: today.localToday,
             streak: today.streak.current,
-            partner: partner,
-            onOpenUs: () => tabs.select(HomeTab.board),
             onStreak: () => showStreakSheet(
               context,
               streak: today.streak,
@@ -229,6 +228,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
             streak: today.streak,
             quests: today.quests,
             onEntries: _openEntries,
+            onCoach: coach ? () => openCoachChat(context) : null,
             onPlan: today.plan == null ? null : _openPlan,
             yesterday: yesterdayStatusLine(
               localToday: today.localToday,

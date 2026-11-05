@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/food/food_card.dart';
 import 'package:newme/features/insights/insights_screen.dart';
-import 'package:newme/features/shell/home_tab.dart';
 import 'package:newme/features/today/day_counted_sheet.dart';
 import 'package:newme/features/today/day_card.dart';
 import 'package:newme/features/today/today_screen.dart';
@@ -59,7 +58,6 @@ void main() {
     expect(find.text('Monday, Oct 26'), findsOneWidget);
     expect(find.textContaining('Sam'), findsWidgets);
     expect(find.text('3'), findsOneWidget, reason: 'the streak beside the flame');
-    expect(find.text('Your streak'), findsOneWidget);
     expect(find.text('130'), findsOneWidget);
     expect(find.text('of 400 gems'), findsOneWidget);
     expect(find.text('Streak at 280'), findsOneWidget);
@@ -190,23 +188,7 @@ void main() {
     expect(find.textContaining('A freeze is ready if you need it'), findsOneWidget);
   });
 
-  testWidgets('the partner mini avatar opens Us', (tester) async {
-    final adapter = fullServer()
-      ..on(
-        'GET /api/board',
-        StubResponse(
-          200,
-          board([boardUser(2, 'Sam', 'violet'), boardUser(1, 'Nick', 'green', percent: 41)]),
-        ),
-      );
-    final app = _app(tester, adapter);
-    await app.pump(const TodayScreen());
-
-    await app.tap(find.bySemanticsLabel('Nick, 58 percent of the goal today, open Us'));
-    expect(app.container.read(homeTabProvider), HomeTab.board);
-  });
-
-  testWidgets('no partner on the board leaves the corner empty', (tester) async {
+  testWidgets('the top bar carries no partner status', (tester) async {
     final app = _app(tester, fullServer());
     await app.pump(const TodayScreen());
     expect(find.bySemanticsLabel(RegExp(r'open Us')), findsNothing);

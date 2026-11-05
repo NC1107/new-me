@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/api/models.dart';
+import 'package:newme/features/coach/coach_chat_page.dart';
 import 'package:newme/features/streaks/shared_streak_card.dart';
 import 'package:newme/features/streaks/streak_visuals.dart';
 import 'package:newme/features/today/day_card.dart';
@@ -188,10 +189,31 @@ void main() {
     });
   });
 
+  group('mascot coach', () {
+    testWidgets('the day card mascot opens the coach only when the server has one', (tester) async {
+      Map<String, dynamic> me(bool on) => {
+        ...meJson(),
+        'features': {'mealEstimate': false, 'planPolish': false, 'coachChat': on},
+      };
+      final off = TestApp(tester, fullServer()..on('GET /api/me', StubResponse(200, me(false))));
+      await off.pump(const TodayScreen());
+      expect(find.bySemanticsLabel('Ask your coach'), findsNothing);
+      expect(find.byType(Mascot), findsWidgets);
+
+      final on = TestApp(tester, fullServer()..on('GET /api/me', StubResponse(200, me(true))));
+      await on.pump(const TodayScreen(), key: UniqueKey());
+      await on.tap(find.bySemanticsLabel('Ask your coach'));
+      expect(find.byType(CoachChatPage), findsOneWidget);
+    });
+  });
+
   group('two streaks', () {
-    testWidgets('Today labels the personal streak and Together has its own icon', (tester) async {
+    testWidgets('Today shows the personal streak bare and Together has its own icon', (
+      tester,
+    ) async {
       await TestApp(tester, fullServer()).pump(const TodayScreen());
-      expect(find.text('Your streak'), findsOneWidget);
+      expect(find.text('Your streak'), findsNothing);
+      expect(find.bySemanticsLabel('Your streak, 3 day streak'), findsOneWidget);
       expect(find.byIcon(Icons.local_fire_department_rounded), findsWidgets);
 
       await tester.pumpWidget(

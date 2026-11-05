@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/insights.dart';
-import '../../state/me.dart';
 import '../../state/today.dart';
 import '../../theme/accent.dart';
 import '../../theme/quest_style.dart';
@@ -12,8 +11,6 @@ import '../../util/format.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/quest_copy.dart';
-import '../coach/coach_chat_page.dart';
-import '../coach/coach_entry_card.dart';
 import '../progress/progress_entry_card.dart';
 import '../progress/progress_screen.dart';
 import 'body_insights.dart';
@@ -26,7 +23,7 @@ import 'workouts_screen.dart';
 /// Opens the Insights hub from Today.
 Future<void> openInsights(BuildContext context) => pushPage(context, const InsightsScreen());
 
-/// The coach and Progress rows, then one card for each insight with its headline number.
+/// The Progress row, then one card for each insight with its headline number.
 class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
 
@@ -41,10 +38,6 @@ class InsightsScreen extends ConsumerWidget {
         final data = insights.value!.data;
         final today = ref.watch(todayProvider.select((v) => v.value?.data.localToday));
         return [
-          if (ref.watch(meProvider.select((m) => m.value?.data.features.coachChat ?? false))) ...[
-            CoachEntryCard(onTap: () => openCoachChat(context)),
-            const SizedBox(height: kCardGap),
-          ],
           ProgressEntryCard(onTap: () => openProgress(context)),
           const SizedBox(height: kCardGap),
           _HubCard(

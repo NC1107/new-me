@@ -85,6 +85,7 @@ class DayCard extends StatelessWidget {
     required this.day,
     required this.streak,
     required this.onEntries,
+    this.onCoach,
     this.onPlan,
     this.quests = const [],
     this.yesterday,
@@ -95,6 +96,9 @@ class DayCard extends StatelessWidget {
   final List<Quest> quests;
   final Streak streak;
   final VoidCallback onEntries;
+
+  /// Null when the server has no coach, so the mascot stays plain.
+  final VoidCallback? onCoach;
 
   /// Opens today's plan; null when the server has none.
   final VoidCallback? onPlan;
@@ -115,7 +119,7 @@ class DayCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Mascot(size: 56, state: day.counted ? MascotState.happy : MascotState.idle),
+              _CoachMascot(happy: day.counted, onTap: onCoach),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -192,6 +196,51 @@ class DayCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CoachMascot extends StatelessWidget {
+  const _CoachMascot({required this.happy, required this.onTap});
+
+  final bool happy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final mascot = Mascot(size: 56, state: happy ? MascotState.happy : MascotState.idle);
+    final tap = onTap;
+    if (tap == null) return mascot;
+    final palette = accentById('violet');
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Ask your coach',
+      excludeSemantics: true,
+      onTap: tap,
+      child: Pressable(
+        onTap: tap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            mascot,
+            Positioned(
+              right: -4,
+              bottom: -2,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: palette.tint,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: kSurface, width: 2),
+                ),
+                child: Icon(Icons.chat_bubble_rounded, size: 12, color: palette.lip),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

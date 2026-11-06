@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newme/features/log/log_kind.dart';
 import 'package:newme/features/log/log_sheet.dart';
+import 'package:newme/features/log/recent_meals.dart';
 import 'package:newme/widgets/chunky_button.dart';
 import 'package:newme/widgets/mascot.dart';
 
@@ -271,7 +272,7 @@ void main() {
     expect(find.text('Added Chicken bowl'), findsOneWidget);
   });
 
-  testWidgets('recent meals show whole names, five at first, and the rest under Show more', (
+  testWidgets('recent meals show whole names in a scrolling box the search narrows', (
     tester,
   ) async {
     const long = "Dave's Killer Toast, Butter, Chicken Breakfast Sausage, Scrambled Eggs";
@@ -290,13 +291,23 @@ void main() {
 
     expect(find.text(long), findsOneWidget);
     expect(find.text('640 kcal · 43 g protein'), findsOneWidget);
-    expect(find.text('Meal 4'), findsOneWidget);
-    expect(find.text('Meal 5'), findsNothing);
+    expect(find.textContaining('Show'), findsNothing);
     expect(find.bySemanticsLabel("$long, 640 kcal · 43 g protein"), findsOneWidget);
+    final box = tester.getSize(find.ancestor(of: find.text(long), matching: find.byType(ListView)));
+    expect(box.height, lessThanOrEqualTo(kRecentMealsHeight));
 
-    await app.tap(find.text('Show 3 more'));
+    await tester.enterText(find.byType(TextField).first, 'meal 7');
+    await app.settle();
     expect(find.text('Meal 7'), findsOneWidget);
-    expect(find.text('Show fewer'), findsOneWidget);
+    expect(find.text('Meal 1'), findsNothing);
+    expect(find.text(long), findsNothing);
+
+    await tester.enterText(find.byType(TextField).first, 'zzz');
+    await app.settle();
+    expect(find.text('No recent meal matches'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, '');
+    await app.settle();
 
     await app.tap(find.text(long));
     expect(app.body('POST /api/logs')['name'], long);

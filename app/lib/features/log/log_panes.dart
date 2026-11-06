@@ -300,6 +300,9 @@ class MealPane extends StatefulWidget {
 
 class _MealPaneState extends State<MealPane> {
   final _name = TextEditingController();
+
+  /// What the search box holds, which also narrows the recent meals.
+  String _query = '';
   final _nameFocus = FocusNode();
   final _kcal = TextEditingController();
   final _protein = TextEditingController();
@@ -484,6 +487,7 @@ class _MealPaneState extends State<MealPane> {
           onEstimate: widget.canEstimate ? _applyBreakdown : null,
           onBusyChanged: (busy) => setState(() => _estimating = busy),
           onEnterByHand: _entries.isEmpty ? _nameFocus.requestFocus : null,
+          onQueryChanged: (query) => setState(() => _query = query),
         ),
         const SizedBox(height: 16),
         if (_entries.isNotEmpty)
@@ -526,7 +530,12 @@ class _MealPaneState extends State<MealPane> {
           if (meals.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: RecentMeals(meals: meals, enabled: !widget.busy, onLog: _logRecent),
+            child: RecentMeals(
+              meals: meals,
+              query: _query,
+              enabled: !widget.busy,
+              onLog: _logRecent,
+            ),
           );
         },
       ),

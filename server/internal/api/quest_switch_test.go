@@ -73,7 +73,7 @@ func TestChangingATargetKeepsTodaysLogsAndLeavesThePastAlone(t *testing.T) {
 	h.clock.Set(ny(2026, time.November, 4, 9, 0))
 	h.logMeal(nick, "Eggs", 300, 30).expect(http.StatusCreated)
 	h.patch("/api/me", nick.Token, obj{"questTemplates": []obj{
-		{"key": "protein", "enabled": false}, {"key": "meals_logged", "target": 4},
+		{"key": "protein", "enabled": false}, {"key": "meals_logged", "enabled": true, "target": 4},
 	}}).expect(http.StatusOK)
 
 	today := h.get("/api/today", nick.Token).expect(http.StatusOK)

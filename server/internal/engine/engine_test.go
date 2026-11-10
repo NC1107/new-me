@@ -209,14 +209,14 @@ func TestRecomputeDayScoresAndStores(t *testing.T) {
 	noon := time.Date(2026, 10, 27, 12, 0, 0, 0, ny)
 
 	empty := recompute(t, database, u, day, noon)
-	if empty.BasePoints != 0 || empty.MaxBase != 135 || empty.Counted || empty.FinalizedAt != nil {
-		t.Fatalf("empty day = %+v; steps are excluded so max is 135", empty)
+	if empty.BasePoints != 0 || empty.MaxBase != 115 || empty.Counted || empty.FinalizedAt != nil {
+		t.Fatalf("empty day = %+v; steps are excluded so max is 115", empty)
 	}
 
 	logPushups(t, database, u, day, 30)
 	putSteps(t, database, u, day, 8000)
 	full := recompute(t, database, u, day, noon)
-	if full.BasePoints != 175 || full.BonusPoints != 35 || full.MaxBase != 235 || full.Percent != 74 || !full.Counted {
+	if full.BasePoints != 175 || full.BonusPoints != 35 || full.MaxBase != 215 || full.Percent != 81 || !full.Counted {
 		t.Fatalf("pushups and steps = %+v", full)
 	}
 	if full.Points() != 210 {
@@ -228,7 +228,7 @@ func TestRecomputeDayScoresAndStores(t *testing.T) {
 		t.Fatalf("stored = %+v %v", stored, err)
 	}
 	quests, err := db.GetDayQuests(ctx, database.Pool, u.ID, day)
-	if err != nil || len(quests) != 8 {
+	if err != nil || len(quests) != 7 {
 		t.Fatalf("snapshot = %d quests, %v", len(quests), err)
 	}
 }
@@ -240,8 +240,8 @@ func TestRecomputeDayCountsAtSeventyPercent(t *testing.T) {
 
 	putSteps(t, database, u, day, 8000)
 	stepsOnly := recompute(t, database, u, day, noon)
-	if stepsOnly.BasePoints != 100 || stepsOnly.MaxBase != 235 || stepsOnly.Percent != 42 || stepsOnly.Counted {
-		t.Fatalf("steps alone = %+v; 100 of 235 is under the line", stepsOnly)
+	if stepsOnly.BasePoints != 100 || stepsOnly.MaxBase != 215 || stepsOnly.Percent != 46 || stepsOnly.Counted {
+		t.Fatalf("steps alone = %+v; 100 of 215 is under the line", stepsOnly)
 	}
 	logPushups(t, database, u, day, 30)
 	if _, _, err := db.InsertActivityLog(ctx, database.Pool, db.NewActivityLog{
@@ -250,7 +250,7 @@ func TestRecomputeDayCountsAtSeventyPercent(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := recompute(t, database, u, day, noon)
-	if row.BasePoints != 195 || row.MaxBase != 235 || row.Percent != 82 || !row.Counted {
+	if row.BasePoints != 195 || row.MaxBase != 215 || row.Percent != 90 || !row.Counted {
 		t.Fatalf("75%% day = %+v", row)
 	}
 }
@@ -352,5 +352,21 @@ func TestStreakForTreatsUnscoredDaysAsMisses(t *testing.T) {
 	got, err := engine.StreakFor(ctx, database.Pool, u, now, ny)
 	if err != nil || got.Count != 0 {
 		t.Fatalf("streak with nothing stored = %+v %v", got, err)
+	}
+}
+
+func TestCalorieProgressCreditsTheRangeAndNothingOverIt(t *testing.T) {
+	high := 2700
+	q := db.DayQuest{Key: db.QuestCalories, Target: 2200, TargetAlt: &high, Points: 20}
+	for _, tc := range []struct{ kcal, want int }{
+		{0, 0}, {1500, 1500}, {2200, 2200}, {2700, 2200}, {2701, 0},
+	} {
+		if got := engine.CalorieProgress(q, tc.kcal); got != tc.want {
+			t.Errorf("CalorieProgress(%d kcal) = %d, want %d", tc.kcal, got, tc.want)
+		}
+	}
+	got, _ := byKey(engine.QuestResults([]db.DayQuest{q}, db.DayInputs{Kcal: 2450, Meals: 1}), db.QuestCalories)
+	if got.Actual != got.Target {
+		t.Fatalf("one meal of 2,450 kcal is the whole range: %+v", got)
 	}
 }

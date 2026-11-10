@@ -50,6 +50,7 @@ String questSourceLine(String key) => switch (key) {
   'reading' => 'Reading you log, plus linked audiobook listening',
   'yoga' => 'Yoga you log, or a yoga workout from Apple Health',
   'meals_logged' => 'Counted from the meals you log',
+  'calories' => 'Added up from the meals you log',
   'protein' => 'Added up from the meals you log',
   'produce' => 'Meals, and servings you log',
   _ => 'Counted from what you log',
@@ -59,6 +60,7 @@ String questSourceLine(String key) => switch (key) {
 bool entryFeedsQuest(String questKey, LogEntry entry) => switch (entry) {
   MealLog(:final produce) =>
     questKey == 'meals_logged' ||
+        questKey == 'calories' ||
         questKey == 'protein' ||
         (questKey == 'produce' && !produce.isEmpty),
   ActivityLog(:final type) => switch (questKey) {

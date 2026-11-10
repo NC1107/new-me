@@ -41,6 +41,7 @@ class FoodSearchBox extends ConsumerStatefulWidget {
     this.onEstimate,
     this.onBusyChanged,
     this.collapsed = false,
+    this.onQueryChanged,
   });
 
   final ValueChanged<SavedFood> onPick;
@@ -50,6 +51,9 @@ class FoodSearchBox extends ConsumerStatefulWidget {
   /// Turns on describing a meal in this field; receives the worked-out meal.
   final ValueChanged<MealBreakdown>? onEstimate;
   final ValueChanged<bool>? onBusyChanged;
+
+  /// Receives the trimmed text whenever it changes, picks and clears included.
+  final ValueChanged<String>? onQueryChanged;
 
   /// Keeps the empty, focused field from listing foods, for when the meal already has items.
   final bool collapsed;
@@ -90,9 +94,16 @@ class _FoodSearchBoxState extends ConsumerState<FoodSearchBox> {
 
   bool get _wantsRemote => _query.length >= _remoteMinChars;
 
+  String _lastQuery = '';
+
   @override
   void initState() {
     super.initState();
+    _text.addListener(() {
+      if (_query == _lastQuery) return;
+      _lastQuery = _query;
+      widget.onQueryChanged?.call(_query);
+    });
     _focus.addListener(() {
       if (_focus.hasFocus && widget.browseOnFocus && _saved.isEmpty && _query.isEmpty) {
         _searchSaved();

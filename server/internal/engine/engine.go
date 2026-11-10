@@ -116,6 +116,8 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 		return score.ReadingProgressBasis(minutes, in.ReadingPages, q.Target, *q.TargetAlt)
 	case db.QuestMealsLogged:
 		return in.Meals, q.Target
+	case db.QuestCalories:
+		return CalorieProgress(q, in.Kcal), q.Target
 	case db.QuestProtein:
 		return tenthsOfGrams(in.ProteinG), q.Target * 10
 	case db.QuestYoga:
@@ -123,6 +125,16 @@ func progress(q db.DayQuest, in db.DayInputs) (actual, target int) {
 		return actual, q.Target
 	}
 	return 0, q.Target
+}
+
+// CalorieProgress measures the day's calories against the snapshot's range, target to
+// target_alt, as an amount toward the low end: what was eaten while under it, all of it inside
+// the range, and nothing once over the high end, since the range is a ceiling as well as a floor.
+func CalorieProgress(q db.DayQuest, kcal int) int {
+	if q.TargetAlt != nil && kcal > *q.TargetAlt {
+		return 0
+	}
+	return min(kcal, q.Target)
 }
 
 // wholeUnits rounds down so a fractional reading never earns a unit it has not reached.
@@ -148,6 +160,8 @@ func Actuals(q db.DayQuest, in db.DayInputs) (actual int, actualAlt *int) {
 		return score.ReadingMinutes(in.ReadingMinutes, in.ListeningMinutes), &in.ReadingPages
 	case db.QuestMealsLogged:
 		return in.Meals, nil
+	case db.QuestCalories:
+		return in.Kcal, nil
 	case db.QuestProtein:
 		return wholeUnits(in.ProteinG), nil
 	case db.QuestYoga:

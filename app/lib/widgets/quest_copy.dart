@@ -43,6 +43,7 @@ String questTitle(Quest q, {Units units = Units.metric}) {
     'sleep' => 'Sleep ${durationLabel(t)}',
     'exercise' => 'Exercise ${t.formatted} min',
     'meals_logged' => 'Log ${t.formatted} ${t == 1 ? 'meal' : 'meals'}',
+    'calories' => 'Eat ${t.formatted} to ${(q.targetAlt ?? t).formatted} kcal',
     'protein' => 'Eat ${t.formatted} g protein',
     'yoga' => 'Yoga or stretch ${t.formatted} ${shortUnit(q.unit)}',
     'water' => 'Drink ${units.volume(t)}',
@@ -57,7 +58,8 @@ String questTitle(Quest q, {Units units = Units.metric}) {
 bool titleStatesTarget(Quest q) => switch (q.key) {
   'pushups' => false,
   'reading' => q.unitAlt == null,
-  'sleep_regularity' || 'produce' => false,
+  // The range's caption says whether the day is under, in or over it, which a bare amount cannot.
+  'sleep_regularity' || 'produce' || 'calories' => false,
   _ => true,
 };
 
@@ -83,6 +85,7 @@ String questProgress(Quest q, {Units units = Units.metric}) {
         '${q.target == 1 ? 'serving' : 'servings'}';
   }
   if (q.key == 'sleep_regularity') return steadyBedtimeProgress(q);
+  if (q.key == 'calories') return calorieProgress(q);
   if (q.key == 'sleep') {
     return q.actual == 0
         ? 'No night from Health yet'
@@ -189,4 +192,13 @@ const kProduceMealsNote =
 double questFraction(Quest q) {
   if (q.done) return 1;
   return q.points == 0 ? 0 : q.basePoints / q.points;
+}
+
+/// Where the day's calories sit against the range: how far under, inside, or how far over.
+String calorieProgress(Quest q) {
+  final high = q.targetAlt ?? q.target;
+  if (q.actual == 0) return 'Nothing logged yet';
+  if (q.actual < q.target) return '${(q.target - q.actual).formatted} kcal to reach the range';
+  if (q.actual <= high) return 'In range at ${q.actual.formatted} kcal';
+  return '${(q.actual - high).formatted} kcal over the range';
 }

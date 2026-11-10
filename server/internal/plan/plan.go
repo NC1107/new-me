@@ -138,6 +138,13 @@ func finishing(q Quest) (candidate, bool) {
 	case db.QuestMealsLogged:
 		return candidate{fmt.Sprintf("Meals: log %d more %s.", left, plural(left, "meal", "meals")),
 			fmt.Sprintf("logging %d more %s", left, plural(left, "meal", "meals")), frac}, true
+	case db.QuestCalories:
+		// Over the range there is nothing left to suggest; eating less later cannot undo it.
+		if q.TargetAlt != nil && q.Actual > *q.TargetAlt {
+			return candidate{}, false
+		}
+		return candidate{fmt.Sprintf("Calories: %s kcal to reach your range.", Thousands(left)),
+			fmt.Sprintf("%s kcal more food", Thousands(left)), frac}, true
 	case db.QuestProtein:
 		return candidate{fmt.Sprintf("Protein: %d g to go.", left), fmt.Sprintf("%d g more protein", left), frac}, true
 	case db.QuestYoga:
@@ -206,6 +213,8 @@ func doneText(q Quest) string {
 		return fmt.Sprintf("%s done: %d min", title, q.Actual)
 	case db.QuestProduce:
 		return fmt.Sprintf("%s done: %d %s", title, q.Actual, plural(q.Actual, "serving", "servings"))
+	case db.QuestCalories:
+		return fmt.Sprintf("%s in range: %s kcal", title, Thousands(q.Actual))
 	}
 	return title + " done"
 }

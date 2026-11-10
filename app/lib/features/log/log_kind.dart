@@ -46,7 +46,7 @@ enum LogKind {
   static LogKind? forQuest(String key) => switch (key) {
     'pushups' => LogKind.pushups,
     'reading' => LogKind.reading,
-    'meals_logged' || 'protein' => LogKind.meal,
+    'meals_logged' || 'calories' || 'protein' => LogKind.meal,
     'yoga' => LogKind.yoga,
     'water' => LogKind.water,
     'produce' => LogKind.produce,

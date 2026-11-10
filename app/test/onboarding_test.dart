@@ -272,11 +272,11 @@ void main() {
     expect(infoNoteWith('Paluch'), findsOneWidget);
     expect(find.text('165 g'), findsOneWidget, reason: 'protein per kilogram for the goal');
     expect(find.text('2,350 kcal'), findsOneWidget);
-    expect(find.text('3 meals'), findsOneWidget);
+    expect(find.text('3 meals'), findsNothing);
     expect(
-      find.textContaining('no research figure'),
-      findsOneWidget,
-      reason: 'meals have no formula',
+      find.textContaining('calorie target'),
+      findsNothing,
+      reason: 'the calorie range is sized by the Calories row, not a row of its own',
     );
     await app.tapButton('Use these');
 
@@ -284,7 +284,8 @@ void main() {
     expect(patch['targets'], {'kcal': 2350});
     final templates = {for (final t in patch['questTemplates'] as List) (t as Map)['key']: t};
     expect(templates['protein'], {'key': 'protein', 'enabled': true, 'target': 165});
-    expect(templates['meals_logged'], {'key': 'meals_logged', 'enabled': true, 'target': 3});
+    expect(templates['calories'], {'key': 'calories', 'enabled': true});
+    expect(templates.containsKey('meals_logged'), isFalse);
     expect(app.lastBody('POST /api/targets/apply'), {
       'keys': ['fat', 'carbs'],
     });

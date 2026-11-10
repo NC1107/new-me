@@ -217,5 +217,16 @@ void main() {
         'Not started',
       );
     });
+
+    test('the calorie range names both ends and says under, in or over', () {
+      Quest kcal(int actual) =>
+          q('calories', {'unit': 'kcal', 'target': 2200, 'targetAlt': 2700, 'actual': actual});
+      expect(questTitle(kcal(0)), 'Eat 2,200 to 2,700 kcal');
+      expect(titleStatesTarget(kcal(0)), isFalse);
+      expect(questProgress(kcal(0)), 'Nothing logged yet');
+      expect(questProgress(kcal(1500)), '700 kcal to reach the range');
+      expect(questProgress(kcal(2450)), 'In range at 2,450 kcal');
+      expect(questProgress(kcal(2900)), '200 kcal over the range');
+    });
   });
 }

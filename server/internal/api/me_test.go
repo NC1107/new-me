@@ -26,7 +26,10 @@ func TestGetMe(t *testing.T) {
 	if !got.isNull("backdateUntil") {
 		t.Fatal("at noon the backdate window is closed")
 	}
-	if got.length("questTemplates") != 12 || got.str("questTemplates.0.key") != "steps" ||
+	if got.length("questTemplates") != 13 || got.str("questTemplates.0.key") != "steps" ||
+		got.str("questTemplates.3.key") != "calories" || !got.flag("questTemplates.3.enabled") ||
+		got.num("questTemplates.3.target") != 10 || got.str("questTemplates.3.title") != "Calories" ||
+		got.str("questTemplates.12.key") != "meals_logged" || got.flag("questTemplates.12.enabled") ||
 		got.flag("questTemplates.5.enabled") || got.str("questTemplates.5.key") != "yoga" ||
 		got.str("questTemplates.6.key") != "exercise" || !got.flag("questTemplates.6.enabled") ||
 		got.num("questTemplates.6.target") != 30 || got.num("questTemplates.6.points") != 85 ||
@@ -130,7 +133,7 @@ func TestTemplateEditsApplyToTodayAndAfter(t *testing.T) {
 		},
 		"targets": obj{"protein": 140},
 	}).expect(http.StatusOK)
-	if got.num("questTemplates.1.target") != 10 || got.flag("questTemplates.3.enabled") ||
+	if got.num("questTemplates.1.target") != 10 || got.flag("questTemplates.12.enabled") ||
 		got.num("questTemplates.2.targetAlt") != 25 {
 		t.Fatalf("templates after edit = %s", got.Body)
 	}

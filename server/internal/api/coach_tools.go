@@ -141,7 +141,7 @@ var coachQuestTarget = map[string]string{
 // coachQuestBounds mirrors quest_target_ok, so a bad figure is refused with a sentence instead
 // of a database error.
 var coachQuestBounds = map[string][2]int{
-	db.QuestSteps: {1, 100000}, db.QuestPushups: {1, 500}, db.QuestReading: {1, 1440}, db.QuestMealsLogged: {1, 20},
+	db.QuestSteps: {1, 100000}, db.QuestPushups: {1, 500}, db.QuestReading: {1, 1440}, db.QuestMealsLogged: {1, 20}, db.QuestCalories: {5, 30},
 	db.QuestYoga: {1, 1440}, db.QuestExercise: {5, 300}, db.QuestSleep: {240, 720}, db.QuestWater: {250, 6000},
 	db.QuestProduce: {1, 30}, db.QuestBreathing: {1, 60},
 }

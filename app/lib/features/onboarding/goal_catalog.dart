@@ -120,6 +120,15 @@ final Map<String, GoalSpec> kGoalSpecs = {
       label: (v) => '$v meals',
     ),
     GoalSpec(
+      questKey: 'calories',
+      question: 'How close to your calorie target?',
+      noResearch:
+          'There is no research figure for how wide the range should be, so it is your call.',
+      options: _plain([5, 10, 15, 20]),
+      defaultValue: 10,
+      label: (v) => 'Within $v% of your calorie target',
+    ),
+    GoalSpec(
       questKey: 'protein',
       question: 'How much protein a day?',
       targetKey: 'protein',
@@ -252,9 +261,9 @@ const List<Focus> kFocuses = [
   Focus(
     id: 'eat',
     title: 'Eat well',
-    subtitle: 'Log meals and hit your protein',
+    subtitle: 'Eat in your calorie range and hit your protein',
     icon: Icons.restaurant_rounded,
-    questKeys: ['meals_logged', 'protein'],
+    questKeys: ['calories', 'protein'],
   ),
   Focus(
     id: 'sleep',

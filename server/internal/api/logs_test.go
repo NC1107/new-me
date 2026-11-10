@@ -18,7 +18,7 @@ func TestCreateLogReturnsTheLogAndTheUpdatedDay(t *testing.T) {
 		t.Fatalf("log = %s", got.Body)
 	}
 	if got.str("day.date") != "2026-11-02" || got.num("day.basePoints") != 38 || got.num("day.bonusPoints") != 0 ||
-		got.num("day.maxBase") != 135 {
+		got.num("day.maxBase") != 115 {
 		t.Fatalf("day = %s", got.Body)
 	}
 	if got.str("day.quests.1.key") != "pushups" || got.num("day.quests.1.actual") != 15 {
@@ -174,8 +174,8 @@ func TestDeleteLogRescoresAndIsPrivate(t *testing.T) {
 	id := strconv.Itoa(meal.num("log.id"))
 	h.delete("/api/logs/"+id, nadia.Token).expect(http.StatusNotFound)
 	got := h.delete("/api/logs/"+id, nick.Token).expect(http.StatusOK)
-	if q := got.at("day.quests.3").(map[string]any); q["key"] != "meals_logged" || q["actual"].(float64) != 1 || q["done"].(bool) {
-		t.Fatalf("meals quest after delete = %v", q)
+	if actual, _ := dayQuest(got, "protein"); actual != 10 {
+		t.Fatalf("protein quest after delete = %d, want the Rice meal's 10 g: %s", actual, got.Body)
 	}
 	h.delete("/api/logs/abc", nick.Token).expect(http.StatusNotFound)
 	h.delete("/api/logs/999999", nick.Token).expect(http.StatusNotFound)

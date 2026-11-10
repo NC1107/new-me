@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func TestTodayHasNoReadinessWithoutData_ButAlwaysAPlan(t *testing.T) {
 	if !got.isNull("readiness") {
 		t.Fatalf("readiness = %v", got.at("readiness"))
 	}
-	if got.length("plan.items") != 4 || got.str("plan.summary") == "" || got.str("plan.items.0.kind") != "todo" {
+	if got.length("plan.items") != 3 || got.str("plan.summary") == "" || got.str("plan.items.0.kind") != "todo" {
 		t.Fatalf("plan = %s", got.Body)
 	}
 }
@@ -97,14 +98,13 @@ func TestTodayPlanNamesWhatIsDoneAndWhatIsLeft(t *testing.T) {
 		"done|Push-ups done by your Strength workout, 42 min",
 		"todo|Steps: 3,200 to go (about 30 min).",
 		"todo|Reading: 14 more minutes.",
-		"todo|Meals: log 2 more meals.",
 		"todo|Protein: 100 g to go.",
 		"habit|Vitamins at 18:00",
 	}
 	if strings.Join(texts, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("plan items:\n%s\nwant:\n%s", strings.Join(texts, "\n"), strings.Join(want, "\n"))
 	}
-	if !strings.HasPrefix(got.str("plan.summary"), "1 of 5 goals done. Easiest next: Steps: 3,200 to go (about 30 min).") {
+	if !strings.HasPrefix(got.str("plan.summary"), "1 of 4 goals done. Easiest next: Steps: 3,200 to go (about 30 min).") {
 		t.Fatalf("summary = %q", got.str("plan.summary"))
 	}
 }
@@ -131,19 +131,19 @@ func (h *harness) settlePolish() { h.srv.polisher.Wait() }
 func TestPlanSummaryIsPolishedOnceADayFromTheSameFacts(t *testing.T) {
 	fake, srv := newFakeClaude(t)
 	fake.reply = func(map[string]any) any {
-		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 4 quests. Reading is the easiest: 20 more minutes."}}}
+		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 3 quests. Reading is the easiest: 20 more minutes."}}}
 	}
 	h := newHarness(t, withPolish(fake, srv.URL))
 	nick := h.joinAdmin("Nick", "green")
 
 	// The first read answers at once with the deterministic summary and asks for the wording.
 	first := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if !strings.HasPrefix(first.str("plan.summary"), "0 of 4 goals done.") {
+	if !strings.HasPrefix(first.str("plan.summary"), "0 of 3 goals done.") {
 		t.Fatalf("first summary = %q", first.str("plan.summary"))
 	}
 	h.settlePolish()
 	second := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if second.str("plan.summary") != "You have finished 0 of 4 quests. Reading is the easiest: 20 more minutes." {
+	if second.str("plan.summary") != "You have finished 0 of 3 quests. Reading is the easiest: 20 more minutes." {
 		t.Fatalf("summary = %q", second.str("plan.summary"))
 	}
 	req := fake.requests[0]
@@ -185,9 +185,13 @@ func TestPlanSummaryIsPolishedOnceADayFromTheSameFacts(t *testing.T) {
 func TestTodayDoesNotWaitForClaude(t *testing.T) {
 	fake, srv := newFakeClaude(t)
 	release := make(chan struct{})
+	var releaseOnce sync.Once
+	// A failed assertion below must still let the held reply go, or the server's shutdown
+	// waits on it for the whole test timeout.
+	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 	fake.reply = func(map[string]any) any {
 		<-release
-		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 4 quests."}}}
+		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 3 quests."}}}
 	}
 	h := newHarness(t, withPolish(fake, srv.URL))
 	nick := h.joinAdmin("Nick", "green")
@@ -197,15 +201,15 @@ func TestTodayDoesNotWaitForClaude(t *testing.T) {
 	select {
 	case got := <-done:
 		got.expect(http.StatusOK)
-		if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 goals done.") {
+		if !strings.HasPrefix(got.str("plan.summary"), "0 of 3 goals done.") {
 			t.Fatalf("summary = %q", got.str("plan.summary"))
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("GET /api/today is waiting for Claude")
 	}
-	close(release)
+	releaseOnce.Do(func() { close(release) })
 	h.settlePolish()
-	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.str("plan.summary") != "You have finished 0 of 4 quests." {
+	if got := h.get("/api/today", nick.Token).expect(http.StatusOK); got.str("plan.summary") != "You have finished 0 of 3 quests." {
 		t.Fatalf("the polished wording shows on the next read: %q", got.str("plan.summary"))
 	}
 }
@@ -218,7 +222,7 @@ func TestPolishFallsBackWhenClaudeFailsOrInventsNumbers(t *testing.T) {
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	h.settlePolish()
-	if !strings.HasPrefix(got.str("plan.summary"), "0 of 4 goals done.") {
+	if !strings.HasPrefix(got.str("plan.summary"), "0 of 3 goals done.") {
 		t.Fatalf("summary = %q", got.str("plan.summary"))
 	}
 	// The failed call gave its claim back, but is not repeated on every read.
@@ -236,13 +240,13 @@ func TestPolishFallsBackWhenClaudeFailsOrInventsNumbers(t *testing.T) {
 	fake.mu.Lock()
 	fake.status = http.StatusOK
 	fake.reply = func(map[string]any) any {
-		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 4 quests."}}}
+		return obj{"content": []obj{{"type": "text", "text": "You have finished 0 of 3 quests."}}}
 	}
 	fake.mu.Unlock()
 	h.clock.Set(h.clock.Now().Add(11 * time.Minute))
 	h.get("/api/today", nick.Token).expect(http.StatusOK)
 	h.settlePolish()
-	if again := h.get("/api/today", nick.Token).expect(http.StatusOK); again.str("plan.summary") != "You have finished 0 of 4 quests." {
+	if again := h.get("/api/today", nick.Token).expect(http.StatusOK); again.str("plan.summary") != "You have finished 0 of 3 quests." {
 		t.Fatalf("the retry should have stored wording: %q", again.str("plan.summary"))
 	}
 
@@ -254,7 +258,7 @@ func TestPolishFallsBackWhenClaudeFailsOrInventsNumbers(t *testing.T) {
 	h.get("/api/today", nadia.Token).expect(http.StatusOK)
 	h.settlePolish()
 	other := h.get("/api/today", nadia.Token).expect(http.StatusOK)
-	if !strings.HasPrefix(other.str("plan.summary"), "0 of 4 goals done.") {
+	if !strings.HasPrefix(other.str("plan.summary"), "0 of 3 goals done.") {
 		t.Fatalf("a made-up number must be rejected: %q", other.str("plan.summary"))
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/nc1107/new-me/server/internal/score"
+	"github.com/nc1107/new-me/server/internal/targets"
 )
 
 // Quest keys and the activity types and health metrics that feed them.
@@ -13,11 +14,15 @@ const (
 	QuestPushups     = "pushups"
 	QuestReading     = "reading"
 	QuestMealsLogged = "meals_logged"
-	QuestProtein     = "protein"
-	QuestYoga        = "yoga"
-	QuestExercise    = "exercise"
-	QuestSleep       = "sleep"
-	QuestWater       = "water"
+	// QuestCalories is eating within a range around the person's calorie target. Its template
+	// target is the range's half-width in percent; a day's snapshot holds the range itself in
+	// kcal, the low end as target and the high end as target_alt.
+	QuestCalories = "calories"
+	QuestProtein  = "protein"
+	QuestYoga     = "yoga"
+	QuestExercise = "exercise"
+	QuestSleep    = "sleep"
+	QuestWater    = "water"
 	// QuestSleepRegularity, QuestProduce and QuestBreathing are the v17 opt-in quests.
 	QuestSleepRegularity = "sleep_regularity"
 	QuestProduce         = "produce"
@@ -60,6 +65,7 @@ var QuestTitles = map[string]string{
 	QuestPushups:         "Push-ups",
 	QuestReading:         "Reading",
 	QuestMealsLogged:     "Meals",
+	QuestCalories:        "Calories",
 	QuestProtein:         "Protein",
 	QuestYoga:            "Yoga",
 	QuestExercise:        "Exercise",
@@ -75,6 +81,11 @@ const DefaultReadingMinutes = 20
 
 // DefaultProteinTarget is the protein goal snapshotted until the user sets their own.
 const DefaultProteinTarget = 100
+
+// DefaultCalorieRangePct is the calorie range's half-width a person starts with. No published
+// figure sets it; 10% is wide enough for an ordinary day's variation and narrow enough that a
+// day well over or under the target falls outside.
+const DefaultCalorieRangePct = 10
 
 // QuestTemplate is a user's standing definition of one quest. Points are fixed at creation.
 // TargetAlt and UnitAlt are the second target of the reading quest, in pages.
@@ -148,7 +159,7 @@ func DefaultTemplates() []QuestTemplate {
 		{Key: QuestSteps, Target: 8000, Unit: "steps", Enabled: true, Position: 0},
 		{Key: QuestPushups, Target: 30, Unit: "reps", Enabled: true, Position: 1},
 		{Key: QuestReading, Target: DefaultReadingMinutes, Unit: "minutes", TargetAlt: intPtr(score.PagesForMinutes(DefaultReadingMinutes)), UnitAlt: strPtr("pages"), Enabled: true, Position: 2},
-		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Enabled: true, Position: 3},
+		{Key: QuestCalories, Target: DefaultCalorieRangePct, Unit: "%", Enabled: true, Position: 3},
 		{Key: QuestProtein, Target: DefaultProteinTarget, Unit: "g", Enabled: true, Position: 4},
 		{Key: QuestYoga, Target: 20, Unit: "minutes", Enabled: false, Position: 5},
 		{Key: QuestExercise, Target: 30, Unit: "min", Enabled: true, Position: 6},
@@ -157,6 +168,7 @@ func DefaultTemplates() []QuestTemplate {
 		{Key: QuestSleepRegularity, Target: DefaultRegularityWindowMin, Unit: "min", Enabled: false, Position: 9},
 		{Key: QuestProduce, Target: DefaultProduceServings, Unit: "servings", Enabled: false, Position: 10},
 		{Key: QuestBreathing, Target: DefaultBreathingMin, Unit: "min", Enabled: false, Position: 11},
+		{Key: QuestMealsLogged, Target: 2, Unit: "meals", Enabled: false, Position: 12},
 	}
 	for i := range templates {
 		templates[i].Points = EffortPoints(templates[i], 0).Points
@@ -223,7 +235,9 @@ func UpsertQuestTemplate(ctx context.Context, q Querier, userID int64, t QuestTe
 // that already has quests, or has been scored, is left exactly as it is, so a template that is
 // enabled or edited later applies from the next day instead of joining a day in progress.
 // Protein follows the profile target, and for a person who has not set one and was given the
-// per-kilogram default, 1.6 g/kg of the latest weight on or before the date.
+// per-kilogram default, 1.6 g/kg of the latest weight on or before the date. Calories becomes
+// the range around the profile's calorie target, rounded to 50 kcal and never starting below
+// the least daily energy for the person's sex, and is left out while there is no target.
 func EnsureSnapshot(ctx context.Context, q Querier, userID int64, date score.Date) error {
 	_, err := q.Exec(ctx, `
 		INSERT INTO day_quests (user_id, local_date, key, target, unit, target_alt, unit_alt, points, position, exercise)
@@ -233,13 +247,23 @@ func EnsureSnapshot(ctx context.Context, q Querier, userID int64, date score.Dat
 		               SELECT (round((h.value * $3 / 5)::numeric) * 5)::int FROM health_daily h
 		               WHERE h.user_id = t.user_id AND h.metric = 'weight_kg' AND h.local_date <= $2::date
 		               ORDER BY h.local_date DESC LIMIT 1) END,
-		           t.target) ELSE t.target END,
-		       t.unit, t.target_alt, t.unit_alt, t.points, t.position, t.exercise
+		           t.target)
+		       WHEN t.key = 'calories' THEN r.low
+		       ELSE t.target END,
+		       CASE WHEN t.key = 'calories' THEN 'kcal' ELSE t.unit END,
+		       CASE WHEN t.key = 'calories' THEN GREATEST(r.high, r.low) ELSE t.target_alt END,
+		       t.unit_alt, t.points, t.position, t.exercise
 		FROM quest_templates t JOIN users u ON u.id = t.user_id
+		CROSS JOIN LATERAL (SELECT
+		    GREATEST((round(u.kcal_target * (100 - t.target) / 5000.0) * 50)::int,
+		             CASE WHEN u.sex = 'male' THEN $4::int ELSE $5::int END) AS low,
+		    (round(u.kcal_target * (100 + t.target) / 5000.0) * 50)::int AS high) r
 		WHERE t.user_id = $1 AND t.enabled
+		  AND (t.key <> 'calories' OR u.kcal_target IS NOT NULL)
 		  AND NOT EXISTS (SELECT 1 FROM day_quests d WHERE d.user_id = $1 AND d.local_date = $2::date)
 		  AND NOT EXISTS (SELECT 1 FROM day_scores s WHERE s.user_id = $1 AND s.local_date = $2::date)
-		ON CONFLICT (user_id, local_date, key) DO NOTHING`, userID, date, score.ProteinPerKg)
+		ON CONFLICT (user_id, local_date, key) DO NOTHING`, userID, date, score.ProteinPerKg,
+		targets.FloorKcalMale, targets.FloorKcalFemale)
 	return err
 }
 

@@ -114,7 +114,7 @@ func TestRepairWindowAndRepairByReachingOneHundredPercent(t *testing.T) {
 	}
 
 	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
-	if p := h.get("/api/today", nick.Token).expect(http.StatusOK); p.num("repair.progressPercent") != 55 {
+	if p := h.get("/api/today", nick.Token).expect(http.StatusOK); p.num("repair.progressPercent") != 65 {
 		t.Fatalf("progress = %s", p.Body)
 	}
 	h.logActivity(nick, "reading", "minutes", 20).expect(http.StatusCreated)

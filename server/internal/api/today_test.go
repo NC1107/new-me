@@ -24,21 +24,20 @@ func TestTodayScoresAKnownFixture(t *testing.T) {
 	fixtureDay(h, nick)
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if got.num("day.basePoints") != 200 || got.num("day.bonusPoints") != 19 || got.num("day.points") != 219 ||
-		got.num("day.maxBase") != 235 || got.num("day.percent") != 85 || got.num("day.goalPercent") != 121 || !got.flag("day.counted") ||
+	if got.num("day.basePoints") != 180 || got.num("day.bonusPoints") != 15 || got.num("day.points") != 195 ||
+		got.num("day.maxBase") != 215 || got.num("day.percent") != 83 || got.num("day.goalPercent") != 119 || !got.flag("day.counted") ||
 		got.num("day.streakLine") != 70 {
 		t.Fatalf("day = %s", got.Body)
 	}
 
 	want := map[string]questView{
-		"steps":        {target: 8000, actual: 7000, points: 100, base: 88},
-		"pushups":      {target: 30, actual: 30, points: 75, base: 75, bonus: 15, done: true},
-		"reading":      {target: 20, actual: 12, points: 20, base: 17},
-		"meals_logged": {target: 2, actual: 2, points: 20, base: 20, bonus: 4, done: true},
-		"protein":      {target: 100, actual: 0, points: 20},
-		"exercise":     {target: 30, points: 85},
-		"sleep":        {target: 420, points: 20},
-		"water":        {target: 2200, points: 20},
+		"steps":    {target: 8000, actual: 7000, points: 100, base: 88},
+		"pushups":  {target: 30, actual: 30, points: 75, base: 75, bonus: 15, done: true},
+		"reading":  {target: 20, actual: 12, points: 20, base: 17},
+		"protein":  {target: 100, actual: 0, points: 20},
+		"exercise": {target: 30, points: 85},
+		"sleep":    {target: 420, points: 20},
+		"water":    {target: 2200, points: 20},
 	}
 	have := questsByKey(got)
 	if len(have) != len(want) {
@@ -71,7 +70,7 @@ func TestStepsStayOutOfTheMaximumUntilHealthIsConnected(t *testing.T) {
 	h.logActivity(nick, "pushups", "reps", 30).expect(http.StatusCreated)
 
 	before := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if before.num("day.maxBase") != 135 || before.flag("health.stepsEverSynced") || before.num("day.percent") != 55 {
+	if before.num("day.maxBase") != 115 || before.flag("health.stepsEverSynced") || before.num("day.percent") != 65 {
 		t.Fatalf("before connecting = %s", before.Body)
 	}
 	if q := questsByKey(before)["steps"]; q.target != 8000 || q.base != 0 {
@@ -80,7 +79,7 @@ func TestStepsStayOutOfTheMaximumUntilHealthIsConnected(t *testing.T) {
 
 	h.putHealth(nick, "2026-11-02", "steps", 0).expect(http.StatusOK)
 	after := h.get("/api/today", nick.Token).expect(http.StatusOK)
-	if after.num("day.maxBase") != 235 || !after.flag("health.stepsEverSynced") || after.num("day.percent") != 31 {
+	if after.num("day.maxBase") != 215 || !after.flag("health.stepsEverSynced") || after.num("day.percent") != 34 {
 		t.Fatalf("after connecting = %s", after.Body)
 	}
 }

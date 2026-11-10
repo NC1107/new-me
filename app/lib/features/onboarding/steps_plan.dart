@@ -152,7 +152,8 @@ List<PlanGoal> planGoals(
   }
 
   return [
-    for (final k in questKeys)
+    // The calorie range is sized by the Calories row below, so it has no row of its own.
+    for (final k in questKeys.where((k) => k != 'calories'))
       switch (k) {
         'steps' => goal(k, 'Steps', 7000, 500),
         'exercise' => goal(k, 'Exercise', 22, 5),

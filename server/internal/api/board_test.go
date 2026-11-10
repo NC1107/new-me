@@ -31,20 +31,20 @@ func TestBoardShowsTodayStreakAndSyncForEachPerson(t *testing.T) {
 	h.logActivity(nadia, "pushups", "reps", 15).expect(http.StatusCreated)
 
 	got := h.get("/api/board", nadia.Token).expect(http.StatusOK)
-	if got.num("users.0.today.points") != 38 || got.num("users.0.today.percent") != 28 || got.num("users.0.today.goalPercent") != 40 || got.flag("users.0.today.counted") ||
+	if got.num("users.0.today.points") != 38 || got.num("users.0.today.percent") != 33 || got.num("users.0.today.goalPercent") != 46 || got.flag("users.0.today.counted") ||
 		!got.isNull("users.0.syncedAt") || got.num("users.0.streak.current") != 0 {
 		t.Fatalf("Nadia = %s", got.Body)
 	}
-	if got.num("users.1.today.points") != 219 || got.num("users.1.today.percent") != 85 || got.num("users.1.today.goalPercent") != 121 || !got.flag("users.1.today.counted") ||
+	if got.num("users.1.today.points") != 195 || got.num("users.1.today.percent") != 83 || got.num("users.1.today.goalPercent") != 119 || !got.flag("users.1.today.counted") ||
 		got.isNull("users.1.syncedAt") || got.num("users.1.streak.current") != 1 {
 		t.Fatalf("Nick = %s", got.Body)
 	}
-	if got.num("users.1.week.points") != 219 || got.num("users.1.season.points") != 219 {
+	if got.num("users.1.week.points") != 195 || got.num("users.1.season.points") != 195 {
 		t.Fatalf("Nick totals = %s", got.Body)
 	}
 
 	if got.length("users.1.last7") != 7 || got.str("users.1.last7.0.date") != "2026-10-27" ||
-		got.str("users.1.last7.6.date") != "2026-11-02" || got.num("users.1.last7.6.percent") != 85 || got.num("users.1.last7.6.goalPercent") != 121 ||
+		got.str("users.1.last7.6.date") != "2026-11-02" || got.num("users.1.last7.6.percent") != 83 || got.num("users.1.last7.6.goalPercent") != 119 ||
 		!got.flag("users.1.last7.6.counted") || got.flag("users.1.last7.6.rest") || got.num("users.1.last7.0.percent") != 0 {
 		t.Fatalf("Nick last7 = %s", got.Body)
 	}
@@ -143,8 +143,8 @@ func TestBoardScoresTodayEvenWhenNothingStoredItYet(t *testing.T) {
 		SELECT id, '2026-11-02', 'pushups', 15, gen_random_uuid() FROM users WHERE name = 'Nadia'`)
 
 	got := h.get("/api/board", nadia.Token).expect(http.StatusOK)
-	if got.num("users.0.today.points") != 38 || got.num("users.0.today.goalPercent") != 40 ||
-		got.num("users.0.last7.6.percent") != 28 {
+	if got.num("users.0.today.points") != 38 || got.num("users.0.today.goalPercent") != 46 ||
+		got.num("users.0.last7.6.percent") != 33 {
 		t.Fatalf("Nadia's unscored day = %s", got.Body)
 	}
 }

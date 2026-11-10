@@ -12,7 +12,7 @@ func TestQuestsCarryTheirEffortWorthAndWhy(t *testing.T) {
 
 	got := h.get("/api/today", nick.Token).expect(http.StatusOK)
 	byKey := questsByKey(got)
-	want := map[string]int{"steps": 100, "pushups": 75, "reading": 20, "meals_logged": 20, "protein": 20,
+	want := map[string]int{"steps": 100, "pushups": 75, "reading": 20, "protein": 20,
 		"exercise": 85, "sleep": 20, "water": 20}
 	for key, points := range want {
 		if byKey[key].points != points {
